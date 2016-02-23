@@ -1,6 +1,7 @@
 function CPArtwork(_width, _height) {
     var
-        MAX_UNDO = 30;
+        MAX_UNDO = 30,
+        EMPTY_CANVAS_COLOR = 0x800000FF;
     
     var
         layers = [],
@@ -8,8 +9,9 @@ function CPArtwork(_width, _height) {
         
         hasUnsavedChanges,
         
-        fusion, undoBuffer, opacityBuffer,
+        curSelection = new CPRect(),
         
+        fusion, undoBuffer, opacityBuffer,
         fusionArea, undoArea, opacityArea,
         
         clipBoard = null,
@@ -24,10 +26,12 @@ function CPArtwork(_width, _height) {
         sampleAllLayers = false,
         lockAlpha = false,
         
-        curColor;
+        curColor,
+        
+        that = this;
     
-    this.width = width;
-    this.height = height;
+    this.width = _width;
+    this.height = _height;
 
     function getDefaultLayerName() {
         return "Layer 1"; //TODO
@@ -61,14 +65,40 @@ function CPArtwork(_width, _height) {
         }
     }
     
-    function fusionLayers() {
+    function initEmptyArtwork() {
+        var
+            defaultLayer = new CPLayer(that.width, that.height, getDefaultLayerName());
+        
+        layers = [];
+        defaultLayer.clearAll(EMPTY_CANVAS_COLOR);
+        layers.push(defaultLayer);
+        
+        curLayer = defaultLayer;
+        
+        fusionArea = new CPRect(0, 0, that.width, that.height);
+        undoArea = new CPRect();
+        opacityArea = new CPRect();
+        activeLayer = 0;
+        curSelection.makeEmpty();
+    
+        undoBuffer = new CPLayer(that.width, that.height);
+        // we reserve a double sized buffer to be used as a 16bits per channel buffer
+        opacityBuffer = new CPLayer(that.width, that.height);
+    
+        fusion = new CPLayer(that.width, that.height);
+        
+        undoList = [];
+        redoList = [];
+    }
+
+    this.fusionLayers = function() {
         if (fusionArea.isEmpty()) {
             return;
         }
 
         mergeOpacityBuffer(curColor, false);
 
-        fusion.clear(fusionArea, 0x00ffffff);
+        fusion.clearAll(fusionArea, 0x00ffffff);
         
         var 
             fullAlpha = true, 
@@ -91,34 +121,10 @@ function CPArtwork(_width, _height) {
         });
 
         fusionArea.makeEmpty();
+        
+        return fusion.getImageData();
     }
     
-    function initEmptyArtwork() {}
-        var
-            defaultLayer = new CPLayer(width, height, getDefaultLayerName());
-        
-        layers = [];
-        defaultLayer.clear(0xFFFFFFFF);
-        layers.add(defaultLayer);
-        
-        curLayer = defaultLayer;
-        
-        fusionArea = new CPRect(0, 0, width, height);
-        undoArea = new CPRect();
-        opacityArea = new CPRect();
-        activeLayer = 0;
-        curSelection.makeEmpty();
-    
-        undoBuffer = new CPLayer(width, height);
-        // we reserve a double sized buffer to be used as a 16bits per channel buffer
-        opacityBuffer = new CPLayer(width, height);
-    
-        fusion = new CPLayer(width, height);
-        
-        undoList = [];
-        redoList = [];
-    }
-
     this.getActiveLayerIndex = function() {
         for (var i = 0; i < layers.length; i++) {
             if (layers[i] == curLayer) {

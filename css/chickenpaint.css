@@ -1,0 +1,13 @@
+.chickenpaint-canvas {
+	background-image:url(checkerboard.png);
+	background-repeat:repeat;
+	background-position:top left;
+	display:block;
+	position:relative;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+.chickenpaint-canvas-container {
+	background-color: #606060;
+}

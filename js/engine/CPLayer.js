@@ -12,13 +12,15 @@ function CPLayer(width, height, name) {
         BLUE_BYTE_OFFSET = 2,
         ALPHA_BYTE_OFFSET = 3,
         
+        imageData = new ImageData(width, height),
+        
         that = this;
         
     name = name || "";
-    width |= 0;
-    height |= 0;
+    width = width | 0;
+    height = height | 0;
     
-    this.data = new ImageData(width, height),
+    this.data = imageData.data,
     this.alpha = 100;
     this.visible = true;
     
@@ -38,10 +40,10 @@ function CPLayer(width, height, name) {
             b = color & 0xFF;
         
         for (var i = 0; i < width * height * BYTES_PER_PIXEL; ) {
-            this.data[i++] = r;
-            this.data[i++] = g;
-            this.data[i++] = b;
-            this.data[i++] = a;
+            that.data[i++] = r;
+            that.data[i++] = g;
+            that.data[i++] = b;
+            that.data[i++] = a;
         }
     };
     
@@ -53,17 +55,17 @@ function CPLayer(width, height, name) {
             b = color & 0xFF;
         
         var
-            rect = this.getBounds().clip(rect);
+            rect = that.getBounds().clip(rect);
             yStride = (width - rect.getWidth()) * BYTES_PER_PIXEL,
             
             pixIndex = offsetOfPixel(rect.left, rect.top);
         
         for (var y = rect.top; y < rect.bottom; y++) {
             for (var x = rect.left; x < rect.right; x++) {
-                this.data[pixIndex++] = r;
-                this.data[pixIndex++] = g;
-                this.data[pixIndex++] = b;
-                this.data[pixIndex++] = a;
+                that.data[pixIndex++] = r;
+                that.data[pixIndex++] = g;
+                that.data[pixIndex++] = b;
+                that.data[pixIndex++] = a;
             }
             pixIndex += yStride;
         }
@@ -74,9 +76,10 @@ function CPLayer(width, height, name) {
     // The FullAlpha versions are the ones that work in all cases
     // others need the bottom layer to be 100% opaque but are faster
     
-    function fuseOntoOpaqueLayerNormal(fusion, rc) {
+    function fuseOntoOpaqueLayerNormal(fusion, rect) {
+        rect = that.getBounds().clip(rect);
+        
         var 
-            rect = this.getBounds().clip(rc),
             yStride = (width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = offsetOfPixel(rect.left, rect.top);
 
@@ -105,9 +108,10 @@ function CPLayer(width, height, name) {
         }
     }
 
-    function fuseOntoOpaqueLayerNoAlphaNormal(fusion, rc) {
+    function fuseOntoOpaqueLayerNoAlphaNormal(fusion, rect) {
+        rect = that.getBounds().clip(rect);
+        
         var 
-            rect = this.getBounds().clip(rc),
             yStride = (width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = offsetOfPixel(rect.left, rect.top);
 
@@ -138,9 +142,10 @@ function CPLayer(width, height, name) {
     
     // Normal Alpha Mode
     // C = A*d + B*(1-d) and d = aa / (aa + ab - aa*ab)
-    function fuseOntoLayerNormal(fusion, rc) {
+    function fuseOntoLayerNormal(fusion, rect) {
+        rect = that.getBounds().clip(rect);
+        
         var
-            rect = this.getBounds().clip(rc),
             yStride = (width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = offsetOfPixel(rect.left, rect.top);
 
@@ -171,12 +176,12 @@ function CPLayer(width, height, name) {
     }
     
     this.fusionWith = function(fusion, rect) {
-        if (alpha <= 0) {
+        if (this.alpha <= 0) {
             return;
         }
         
         // TODO non-normal blend modes
-        if (alpha >= 100) {
+        if (this.alpha >= 100) {
             fuseOntoOpaqueLayerNoAlphaNormal(fusion, r);
         } else {
             fuseOntoOpaqueLayerNormal(fusion, r);
@@ -184,12 +189,72 @@ function CPLayer(width, height, name) {
     };
     
     this.fusionWithFullAlpha = function(fusion, rect) {
-        if (alpha <= 0) {
+        if (this.alpha <= 0) {
             return;
         }
 
         //TODO non-normal blend modes
-        fuseOntoLayerNormal(fusion, r);
+        fuseOntoLayerNormal(fusion, rect);
+    };
+    
+    // Do we have any semi-transparent pixels in the entire layer?
+    this.hasAlpha = function() {
+        if (this.alpha != 100) {
+            return true;
+        }
+        
+        var 
+            pixIndex = ALPHA_BYTE_OFFSET;
+        
+        for (var y = 0; y < height; y++) {
+            var
+                alphaAnded = 0xFF;
+            
+            for (var x = 0; x < width; x++, pixIndex += BYTES_PER_PIXEL) {
+                alphaAnded &= this.data[pixIndex];
+            }
+            
+            // Only check once per row in order to reduce branching in the inner loop
+            if (alphaAnded != 0xFF) {
+                return true;
+            }
+        }
+        
+        return false;
+    };
+
+    // Do we have any semi-transparent pixels in the given rectangle?
+    this.hasAlphaInRect = function(rect) {
+        if (this.alpha != 100) {
+            return true;
+        }
+
+        rect = this.getBounds().clip(rect);
+
+        var 
+            yStride = (width - rect.getWidth()) * BYTES_PER_PIXEL,
+            pixIndex = offsetOfPixel(rect.left, rect.top) + ALPHA_BYTE_OFFSET;
+        
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            var
+                alphaAnded = 0xFF;
+            
+            for (var x = rect.left; x < rect.right; x++, pixIndex += BYTES_PER_PIXEL) {
+                alphaAnded &= this.data[pixIndex];
+            }
+            
+            // Only check once per row in order to reduce branching in the inner loop
+            if (alphaAnded != 0xFF) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Return the canvas ImageData that backs this layer
+    this.getImageData = function() {
+        return imageData;
     };
     
     this.clearAll(0xFFFFFFFF);
