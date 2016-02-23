@@ -1,3 +1,5 @@
+"use strict";
+
 function CPArtwork(_width, _height) {
     var
         MAX_UNDO = 30,
@@ -12,7 +14,7 @@ function CPArtwork(_width, _height) {
         curSelection = new CPRect(),
         
         fusion, undoBuffer, opacityBuffer,
-        fusionArea, undoArea, opacityArea,
+        fusionArea, undoArea = new CPRect(), opacityArea = new CPRect(),
         
         clipBoard = null,
         undoList = [], redoList = [],
@@ -65,30 +67,27 @@ function CPArtwork(_width, _height) {
         }
     }
     
-    function initEmptyArtwork() {
-        var
-            defaultLayer = new CPLayer(that.width, that.height, getDefaultLayerName());
-        
-        layers = [];
-        defaultLayer.clearAll(EMPTY_CANVAS_COLOR);
-        layers.push(defaultLayer);
-        
-        curLayer = defaultLayer;
-        
+    function initDynamicProps() {
         fusionArea = new CPRect(0, 0, that.width, that.height);
-        undoArea = new CPRect();
-        opacityArea = new CPRect();
-        activeLayer = 0;
-        curSelection.makeEmpty();
     
         undoBuffer = new CPLayer(that.width, that.height);
         // we reserve a double sized buffer to be used as a 16bits per channel buffer
         opacityBuffer = new CPLayer(that.width, that.height);
     
         fusion = new CPLayer(that.width, that.height);
+    }
+    
+    this.createEmptyArtwork = function() {
+        var
+            defaultLayer = new CPLayer(that.width, that.height, getDefaultLayerName());
         
-        undoList = [];
-        redoList = [];
+        defaultLayer.clearAll(EMPTY_CANVAS_COLOR);
+        
+        layers = [defaultLayer];
+        
+        curLayer = defaultLayer;
+        
+        initDynamicProps();
     }
 
     this.fusionLayers = function() {
@@ -98,21 +97,22 @@ function CPArtwork(_width, _height) {
 
         mergeOpacityBuffer(curColor, false);
 
-        fusion.clearAll(fusionArea, 0x00ffffff);
+        fusion.clearAll(fusionArea, 0x00FFFFFF);
         
         var 
-            fullAlpha = true, 
+            fusionIsSemiTransparent = true, 
             first = true;
         
         layers.forEach(function(layer) {
             if (!first) {
-                fullAlpha = fullAlpha && fusion.hasAlpha(fusionArea);
+                fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
             }
 
             if (layer.visible) {
                 first = false;
                 
-                if (fullAlpha) {
+                // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
+                if (fusionIsSemiTransparent) {
                     layer.fusionWithFullAlpha(fusion, fusionArea);
                 } else {
                     layer.fusionWith(fusion, fusionArea);
@@ -138,6 +138,14 @@ function CPArtwork(_width, _height) {
     this.getActiveLayer = function() {
         return curLayer;
     };
-
-    initEmptyArtwork();
+    
+    this.addLayer = function(layer) {
+        layers.push(layer);
+        
+        if (layers.length == 1) {
+            curLayer = layers[0];
+        }
+    }
+    
+    initDynamicProps();
 };
