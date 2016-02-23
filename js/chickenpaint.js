@@ -15,6 +15,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
     
     if (!this.artwork) {
         this.artwork = new CPArtwork(800, 600);
+        this.artwork.addEmptyLayer();
     }
     
     this.getArtwork = function() {
@@ -23,7 +24,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
     
     this.setCanvas = function(_canvas) {
         canvas = _canvas;
-    };    
+    };
+    
     this.gui = new CPMainGUI(this, uiElem);
     
     if (canvas) {

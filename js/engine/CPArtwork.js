@@ -1,6 +1,9 @@
-"use strict";
-
 function CPArtwork(_width, _height) {
+    "use strict";
+    
+    _width = _width | 0;
+    _height = _height | 0;
+    
     var
         MAX_UNDO = 30,
         EMPTY_CANVAS_COLOR = 0x800000FF;
@@ -13,8 +16,14 @@ function CPArtwork(_width, _height) {
         
         curSelection = new CPRect(),
         
-        fusion, undoBuffer, opacityBuffer,
-        fusionArea, undoArea = new CPRect(), opacityArea = new CPRect(),
+        fusion = new CPLayer(_width, _height), 
+        undoBuffer = new CPLayer(_width, _height),
+        
+        // we reserve a double sized buffer to be used as a 16bits per channel buffer
+        opacityBuffer = new CPLayer(_width, _height),
+        
+        fusionArea = new CPRect(0, 0, _width, _height), 
+        undoArea = new CPRect(), opacityArea = new CPRect(),
         
         clipBoard = null,
         undoList = [], redoList = [],
@@ -66,29 +75,15 @@ function CPArtwork(_width, _height) {
             opacityArea.makeEmpty();
         }
     }
-    
-    function initDynamicProps() {
-        fusionArea = new CPRect(0, 0, that.width, that.height);
-    
-        undoBuffer = new CPLayer(that.width, that.height);
-        // we reserve a double sized buffer to be used as a 16bits per channel buffer
-        opacityBuffer = new CPLayer(that.width, that.height);
-    
-        fusion = new CPLayer(that.width, that.height);
-    }
-    
-    this.createEmptyArtwork = function() {
+        
+    this.addEmptyLayer = function() {
         var
-            defaultLayer = new CPLayer(that.width, that.height, getDefaultLayerName());
+            layer = new CPLayer(that.width, that.height, getDefaultLayerName());
         
-        defaultLayer.clearAll(EMPTY_CANVAS_COLOR);
+        layer.clearAll(EMPTY_CANVAS_COLOR);
         
-        layers = [defaultLayer];
-        
-        curLayer = defaultLayer;
-        
-        initDynamicProps();
-    }
+        this.addLayer(layer);
+    };
 
     this.fusionLayers = function() {
         if (fusionArea.isEmpty()) {
@@ -146,6 +141,4 @@ function CPArtwork(_width, _height) {
             curLayer = layers[0];
         }
     }
-    
-    initDynamicProps();
 };

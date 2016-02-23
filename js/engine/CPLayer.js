@@ -1,3 +1,6 @@
+/**
+ * Note layer is not cleared to any specific values upon initial creation, use clearAll().
+ */
 function CPLayer(width, height, name) {
     "use strict";
     
@@ -1120,8 +1123,6 @@ function CPLayer(width, height, name) {
             this.data[i + BLUE_BYTE_OFFSET] = array[i + 3];
         }
     };
-    
-    this.clearAll(0xFFFFFFFF);
 };
 
 CPLayer.LM_NORMAL = 0;

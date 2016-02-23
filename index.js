@@ -22,4 +22,6 @@ $(document).ready(function() {
             loadChibi(files[i]);
         }
     });
+    
+    //var chickenPaint = new ChickenPaint(document.getElementById("chickenpaint-parent"));
 });
