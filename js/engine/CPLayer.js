@@ -4,9 +4,9 @@
 function CPLayer(width, height, name) {
     "use strict";
     
-    width = width | 0;
-    height = height | 0;
-    
+    // Super-constructor
+    CPColorBmp.call(this, width, height);
+        
     var
         BYTES_PER_PIXEL = 4,
         
@@ -15,28 +15,13 @@ function CPLayer(width, height, name) {
         BLUE_BYTE_OFFSET = 2,
         ALPHA_BYTE_OFFSET = 3,
         
-        imageData = new ImageData(width, height),
-        
         that = this;
         
-    this.width = width;
-    this.height = height;
-    
     this.name = name || "";
-    
-    this.data = imageData.data;
     
     this.alpha = 100;
     this.visible = true;
     this.blendMode = CPLayer.LM_NORMAL;
-    
-    function offsetOfPixel(x, y) {
-        return (y * that.width + x) * BYTES_PER_PIXEL;
-    }
-    
-    this.getBounds = function() {
-        return new CPRect(0, 0, that.width, that.height);
-    };
     
     this.clearAll = function(color) {
         var
@@ -64,7 +49,7 @@ function CPLayer(width, height, name) {
             rect = this.getBounds().clip(rect);
             yStride = (this.width - rect.getWidth()) * BYTES_PER_PIXEL,
             
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
         
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -86,7 +71,7 @@ function CPLayer(width, height, name) {
 
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
     
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -110,7 +95,7 @@ function CPLayer(width, height, name) {
         
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -142,7 +127,7 @@ function CPLayer(width, height, name) {
         
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -173,7 +158,7 @@ function CPLayer(width, height, name) {
         
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -199,7 +184,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -235,7 +220,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -272,7 +257,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -313,7 +298,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -352,7 +337,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -397,7 +382,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -442,7 +427,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -487,7 +472,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -540,7 +525,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -594,7 +579,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -650,7 +635,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -706,7 +691,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -763,7 +748,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -818,7 +803,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -871,7 +856,7 @@ function CPLayer(width, height, name) {
         
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top);
+            pixIndex = that.offsetOfPixel(rect.left, rect.top);
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -1090,7 +1075,7 @@ function CPLayer(width, height, name) {
 
         var 
             yStride = (this.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            pixIndex = offsetOfPixel(rect.left, rect.top) + ALPHA_BYTE_OFFSET;
+            pixIndex = this.offsetOfPixel(rect.left, rect.top) + ALPHA_BYTE_OFFSET;
         
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             var
@@ -1111,7 +1096,7 @@ function CPLayer(width, height, name) {
     
     // Return the canvas ImageData that backs this layer
     this.getImageData = function() {
-        return imageData;
+        return this.imageData;
     };
     
     // Load from an UInt8Array in ARGB byte order
@@ -1140,6 +1125,9 @@ CPLayer.LM_SOFTLIGHT = 11;
 CPLayer.LM_VIVIDLIGHT = 12;
 CPLayer.LM_LINEARLIGHT = 13;
 CPLayer.LM_PINLIGHT = 14;
+
+CPLayer.prototype = Object.create(CPColorBmp.prototype);
+CPLayer.prototype.constructor = CPLayer;
 
 CPLayer.prototype.makeLookUpTables = function() {
     // V - V^2 table
