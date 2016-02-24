@@ -172,7 +172,12 @@ function CPColor(rgb) {
 	};
 
 	this.clone = function() {
-	    return new CPColor(rgb);
+	    var 
+	        result = new CPColor();
+	    
+	    result.copyFrom(this);
+	    
+	    return result;
 	};
 
 	this.copyFrom = function(c) {

@@ -151,3 +151,17 @@
 .chickenpaint-tool-bezier {
 	background-position:0 -704px;
 }
+
+.chickenpaint-palette-color .chickenpaint-palette-body {
+	padding:4px;
+}
+.chickenpaint-colorpicker-show {
+    height: 20px;
+    margin-top:4px;
+}
+.chickenpaint-colorpicker-select {
+	margin-right:4px;
+}
+.chickenpaint-colorpicker-top {
+	display:flex;
+}

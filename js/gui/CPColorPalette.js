@@ -25,23 +25,20 @@ function CPColorPalette(cpController) {
     CPPalette.call(this, cpController, "color", "Color");
     
     var 
-        curColor = new CPColor(),
-        colorSelect = new CPColorSelect(cpController)/*,
-        colorSlider  new CPColorSlider(colorSelect),
-        colorShow = new CPColorShow(cpController)*/;
-        
-    cpController.on("colorChange", function(color) {
-        curColor.copyFrom(color);
-        
-        //colorSlider.setHue(curColor.getHue());
-    });
+        colorSelect = new CPColorSelect(cpController),
+        colorSlider = new CPColorSlider(cpController, colorSelect),
+        colorShow = new CPColorShow(cpController),
     
-    var
-        body = this.getBodyElement();
+        body = this.getBodyElement(),
+        topSection = document.createElement("div");
     
-    body.appendChild(colorSelect.getElement());
-    //body.appendChild(colorSlider.getElement());
-    //body.appendChild(colorShow.getElement());
+    topSection.className = 'chickenpaint-colorpicker-top';
+    
+    topSection.appendChild(colorSelect.getElement());
+    topSection.appendChild(colorSlider.getElement());
+    
+    body.appendChild(topSection);
+    body.appendChild(colorShow.getElement());
 }
 
 function CPColorSelect(cpController) {
@@ -159,33 +156,34 @@ function CPColorSelect(cpController) {
         paint();
     });
 
+    canvas.addEventListener("mousedown", startDrag);
+    
+    canvas.className = 'chickenpaint-colorpicker-select';
+    
     canvas.width = w;
     canvas.height = h;
-
-    canvas.addEventListener("mousedown", startDrag);
     
     paint();
 }
 
-/*function CPColorSlider(selecter) {
+function CPColorSlider(cpController, selecter) {
     "use strict";
 
     var 
+        that = this,
+        
         w = 24, h = 128,
         
         canvas = document.createElement("canvas"),
-        canvasContext = canvas.getContext("2d");
+        canvasContext = canvas.getContext("2d"),
         
         imageData = new ImageData(w, h),
         data = imageData.data,
         
+        capturedMouse = false,
+        
         hue = 0;
     
-    makeBitmap();
-
-    addMouseListener(this);
-    addMouseMotionListener(this);
-
     function makeBitmap() {
         var
             color = new CPColor(),
@@ -213,8 +211,9 @@ function CPColorSelect(cpController) {
         var 
             y = (hue * h) / 360;
         
-        canvasContext.globalCompositeOperation = 'xor';
-        canvasContext.strokeStyle.color = 'rgba(255, 255, 255, 0)';
+        canvasContext.globalCompositeOperation = 'exclusion';
+        canvasContext.strokeStyle = 'white';
+        canvasContext.lineWidth = 1.5;
         
         canvasContext.beginPath();
         canvasContext.moveTo(0, y);
@@ -223,78 +222,126 @@ function CPColorSelect(cpController) {
         
         canvasContext.globalCompositeOperation = 'source-over';
     }
-
-    public void mousePressed(MouseEvent e) {
-        int _hue = e.getY() * 360 / h;
+    
+    function mousePickColor(e) {
+        var
+            x = e.pageX - $(canvas).offset().left,
+            y = e.pageY - $(canvas).offset().top,
+            
+            _hue = ~~(y * 360 / h);
+        
         hue = Math.max(0, Math.min(359, _hue));
-        repaint();
+        paint();
 
         if (selecter != null) {
             selecter.setHue(hue);
         }
     }
-
-        mouseSelect(e);
+        
+    function continueDrag(e) {
+        mousePickColor(e);
+    }
+    
+    function endDrag(e) {
+        capturedMouse = false;
+        document.body.removeEventListener("mouseup", endDrag);
+        document.body.removeEventListener("mousemove", continueDrag);
+    }
+    
+    function startDrag(e) {
+        if (!capturedMouse) {
+            capturedMouse = true;
+            document.body.addEventListener("mouseup", endDrag);
+            document.body.addEventListener("mousemove", continueDrag);
+        }
+        
+        mousePickColor(e);
     }
 
-    public void mouseDragged(MouseEvent e) {
-        mousePressed(e);
-    }
-
+    this.getElement = function() {
+        return canvas;
+    };
+    
     this.setHue = function(h) {
         hue = h;
         paint();
     };
+    
+    cpController.on("colorChange", function(color) {
+        that.setHue(color.getHue());
+    });
+    
+    canvas.addEventListener("mousedown", startDrag);
+    
+    canvas.width = w;
+    canvas.height = h;
+    
+    canvas.className = 'chickenpaint-colorpicker-slider';
+    
+    makeBitmap();
+    paint();
+
 }
 
 function CPColorShow(cpController) {
     "use strict";
     
     var
-        color,
+        color = 0,
+        
+        element = document.createElement("div"),
         
         that = this;
 
-    addMouseListener(this);
-
-    cpController.on("colorChange", function() {
-        color = color.getRgb();
-        that.paint();
-    });
-    
-    public void paint(Graphics g) {
-        Dimension d = getSize();
-        g.setColor(new Color(color));
-        g.fillRect(0, 0, d.width, d.height);
-    }
-
-    public void mousePressed(MouseEvent e) {
-        String colHex = "#" + padLeft(Integer.toString(color, 16), '0', 6);
-
-        String result = JOptionPane.showInputDialog(this,
-                "Please enter a color in hex format", colHex);
-
-        if (result != null) {
-            try {
-                if (result.startsWith("#") || result.startsWith("$")) {
-                    result = result.substring(1);
-                }
-
-                int newColor = Integer.parseInt(result, 16);
-
-                controller.setCurColor(new CPColor(newColor));
-            } catch (NumberFormatException ex) {
-            }
-        }
-    }
-
-    private static String padLeft(String string, char c, int len) {
-        while (string.length() < len) {
-            string = c + string;
+    function padLeft(string, padding, len) {
+        while (string.length < len) {
+            string = padding + string;
         }
         return string;
     }
-}*/
+    
+    function paint() {
+        element.style.backgroundColor = '#' + padLeft(Number(color).toString(16), "0", 6);
+    }
+    
+    function mouseClick(e) {
+        e.preventDefault();
+        
+        var 
+            colHex = "#" + padLeft(Number(color).toString(16), "0", 6);
+
+        colHex = window.prompt("Please enter a color in hex format", colHex);
+        
+        if (colHex != null) {
+            try {
+                if (colHex.match(/^#/) || colHex.match(/^$/)) {
+                    colHex = colHex.substring(1);
+                }
+
+                var 
+                    newColor = parseInt(colHex, 16);
+
+                cpController.setCurColor(new CPColor(newColor));
+            } catch (e) {
+            }
+        }
+    }
+    
+    this.getElement = function() {
+        return element;
+    };
+    
+    cpController.on("colorChange", function(_color) {
+        color = _color.getRgb();
+        paint();
+    });
+    
+    element.className = 'chickenpaint-colorpicker-show';
+    
+    element.addEventListener("click", mouseClick);
+
+    paint();
+}
 
 CPColorPalette.prototype = Object.create(CPPalette.prototype);
 CPColorPalette.prototype.constructor = CPColorPalette;
