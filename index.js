@@ -23,5 +23,5 @@ $(document).ready(function() {
         }
     });
     
-    //var chickenPaint = new ChickenPaint(document.getElementById("chickenpaint-parent"));
+    var chickenPaint = new ChickenPaint(document.getElementById("chickenpaint-parent"));
 });

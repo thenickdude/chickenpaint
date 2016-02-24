@@ -11,3 +11,101 @@
 .chickenpaint-canvas-container {
 	background-color: #606060;
 }
+
+.chickenpaint-parent {
+	position:relative;
+}
+
+.chickenpaint-palettes {
+	position:absolute;
+	top:0;
+	left:0;
+	right:0;
+	bottom:0;
+}
+.chickenpaint-palette {
+	background-color:#eee;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+	display:inline-flex;
+	flex-direction:column;
+	position:absolute;
+}
+.chickenpaint-palette-head {
+	padding:4px;
+}
+.chickenpaint-palette-body {
+	padding:4px;
+}
+
+.chickenpaint-tools {
+	padding:0;
+	margin:0;
+	width:80px;
+	text-align:center;
+	line-height:0;
+}
+.chickenpaint-tools-button {
+	list-style-type: none;
+	display:inline-block;
+	width:32px;
+	height:32px;
+	background-color:white;
+	border:1px solid black;
+	border-radius:3px;
+	margin:2px;
+	background-image:url(icons.png);
+	background-repeat:none;
+}
+.chickenpaint-tools-button:hover {
+	border:1px solid yellow;
+}
+.chickenpaint-tools-button.selected {
+	border:1px solid red;
+}
+
+.chickenpaint-tool-move {
+	background-position:0 -32px;
+}
+.chickenpaint-tool-flood-fill {
+	background-position:0 -64px;
+}
+.chickenpaint-tool-rotate-canvas {
+	background-position:0 -928px;
+}
+.chickenpaint-tool-pencil {
+	background-position:0 -160px;
+}
+.chickenpaint-tool-pen {
+	background-position:0 -192px;
+}
+.chickenpaint-tool-airbrush {
+	background-position:0 -224px;
+}
+.chickenpaint-tool-water {
+	background-position:0 -576px;
+}
+.chickenpaint-tool-eraser {
+	background-position:0 -256px;
+}
+.chickenpaint-tool-soft-eraser {
+	background-position:0 -288px;
+}
+.chickenpaint-tool-smudge {
+	background-position:0 -768px;
+}
+.chickenpaint-tool-blender {
+	background-position:0 -896px;
+}
+.chickenpaint-tool-dodge {
+	background-position:0 -512px;
+}
+.chickenpaint-tool-burn {
+	background-position:0 -544px;
+}
+.chickenpaint-tool-blur {
+	background-position:0 -736px;
+}
+.chickenpaint-tool-color-picker {
+	background-position:0 -960px;
+}
