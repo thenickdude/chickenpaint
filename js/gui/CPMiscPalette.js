@@ -78,13 +78,22 @@ function CPMiscPalette(cpController) {
 	        listElem.appendChild(buttonElem);
 	    }
 	    
+	    listElem.addEventListener("mousedown", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                $(e.target).addClass("selected");
+            }
+	    });
+
+       listElem.addEventListener("mouseup", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                $(e.target).removeClass("selected");
+            }
+        });
+
 	    listElem.addEventListener("click", function(e) {
 	        if (e.target && e.target.nodeName == "LI") {
 	            var
 	                button = buttons[parseInt(e.target.dataset.buttonIndex, 10)];
-	            
-	            $("li", listElem).removeClass("selected");
-	            $(e.target).addClass("selected");
 	            
 	            cpController.actionPerformed({action: button.command});
 	        }
