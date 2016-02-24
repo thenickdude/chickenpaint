@@ -22,7 +22,9 @@
 function CPPaletteManager(cpController) {
 	var
 	    palettes = {
-	        tool: new CPToolPalette(cpController)
+	        tool: new CPToolPalette(cpController),
+	        misc: new CPMiscPalette(cpController),
+	        stroke: new CPStrokePalette(cpController)
 	    },
 	    
 	    paletteFrames = [],
@@ -85,19 +87,6 @@ function CPPaletteManager(cpController) {
 			desktop.add(frame);
 		}
 
-		// Stroke Palette
-
-		palStroke = new CPStrokePalette(controller);
-		{
-			palettes.put("stroke", palStroke);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palStroke);
-			paletteFrames.add(frame);
-
-			frame.pack();
-			desktop.add(frame);
-		}*/
-
 		// Swatches Palette
 /*
 		palSwatches = new CPSwatchesPalette(controller);
@@ -108,20 +97,6 @@ function CPPaletteManager(cpController) {
 			paletteFrames.add(frame);
 
 			frame.pack();
-			desktop.add(frame);
-		}
-
-		// Misc Palette
-
-		palMisc = new CPMiscPalette(controller);
-		{
-			palettes.put("misc", palMisc);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palMisc);
-			paletteFrames.add(frame);
-
-			frame.pack();
-			// frame.setSize(111, 125);
 			desktop.add(frame);
 		}
 
@@ -232,6 +207,12 @@ function CPPaletteManager(cpController) {
 	 * Rearrange the palettes from scratch into a useful arrangement.
 	 */
 	this.arrangePalettes = function() {
+	    palettes.tool.setLocation(0, 0);
+	    palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + 1, 0);
+	    palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
+	    
+	    return; //TODO
+	    
 	    var
 	        windowWidth = $(parentElem).width(),
 	        windowHeight = $(parentElem).height()

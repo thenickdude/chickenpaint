@@ -1,3 +1,7 @@
+.chickenpaint {
+	position:relative;
+}
+
 .chickenpaint-canvas {
 	background-image:url(checkerboard.png);
 	background-repeat:repeat;
@@ -12,41 +16,45 @@
 	background-color: #606060;
 }
 
-.chickenpaint-parent {
-	position:relative;
-}
-
 .chickenpaint-palettes {
 	position:absolute;
 	top:0;
 	left:0;
-	right:0;
-	bottom:0;
 }
 .chickenpaint-palette {
 	background-color:#eee;
-	border-top-left-radius: 8px;
-	border-top-right-radius: 8px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
 	display:inline-flex;
 	flex-direction:column;
 	position:absolute;
 }
 .chickenpaint-palette-head {
-	padding:4px;
+	padding:5px;
+	font-size:90%;
 }
 .chickenpaint-palette-body {
-	padding:4px;
+	
 }
 
 .chickenpaint-tools {
-	padding:0;
-	margin:0;
 	width:80px;
 	text-align:center;
 	line-height:0;
+	padding:0;
+	margin:0;
+	list-style-type:none;
 }
-.chickenpaint-tools-button {
-	list-style-type: none;
+.chickenpaint-misc-tools,
+.chickenpaint-stroke-tools {
+	display:flex;
+	line-height:0;
+	padding:0;
+	margin:0;
+	list-style-type:none;
+}
+
+.chickenpaint-toolbar-button {
 	display:inline-block;
 	width:32px;
 	height:32px;
@@ -55,12 +63,12 @@
 	border-radius:3px;
 	margin:2px;
 	background-image:url(icons.png);
-	background-repeat:none;
+	background-repeat:no-repeat;
 }
-.chickenpaint-tools-button:hover {
+.chickenpaint-toolbar-button:hover {
 	border:1px solid yellow;
 }
-.chickenpaint-tools-button.selected {
+.chickenpaint-toolbar-button.selected {
 	border:1px solid red;
 }
 
@@ -108,4 +116,35 @@
 }
 .chickenpaint-tool-color-picker {
 	background-position:0 -960px;
+}
+
+.chickenpaint-tool-zoom-in {
+	background-position:0 -416px;
+}
+.chickenpaint-tool-zoom-out {
+	background-position:0 -448px;
+}
+.chickenpaint-tool-zoom-100 {
+	background-position:0 -480px;
+}
+.chickenpaint-tool-undo {
+	background-position:0 -320px;
+	margin-left:8px;
+}
+.chickenpaint-tool-redo {
+	background-position:0 -352px;
+	margin-right:8px;
+}
+.chickenpaint-tool-send {
+	background-position:0 -384px;
+}
+
+.chickenpaint-tool-freehand {
+	background-position:0 -608px;
+}
+.chickenpaint-tool-line {
+	background-position:0 -640px;
+}
+.chickenpaint-tool-bezier {
+	background-position:0 -704px;
 }

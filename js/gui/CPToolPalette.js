@@ -22,7 +22,7 @@
 function CPToolPalette(cpController) {
     "use strict";
     
-    CPPalette.call(this, cpController, "tools", "Tools");
+    CPPalette.call(this, cpController, "tool", "Tools");
     
 	var 
 	    that = this,
@@ -123,7 +123,7 @@ function CPToolPalette(cpController) {
 	            button = buttons[i],
 	            buttonElem = document.createElement("li");
 	        
-	        buttonElem.className = "chickenpaint-tools-button " + button.className;
+	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
 	        buttonElem.dataset.buttonIndex = i;
 	        
 	        listElem.appendChild(buttonElem);
@@ -137,9 +137,20 @@ function CPToolPalette(cpController) {
 	            $("li", listElem).removeClass("selected");
 	            $(e.target).addClass("selected");
 	            
-	            alert(button.command);
+	            cpController.actionPerformed({action: button.command});
 	        }
 	    });
+	    
+       listElem.addEventListener("dblclick", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                var
+                    button = buttons[parseInt(e.target.dataset.buttonIndex, 10)];
+                
+                if (button.commandDoubleClick) {
+                    cpController.actionPerformed({action: button.commandDoubleClick});
+                }
+            }
+        });
 	    
 	    body.appendChild(listElem);
 	}

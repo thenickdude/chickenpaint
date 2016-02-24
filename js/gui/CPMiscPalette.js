@@ -1,0 +1,100 @@
+/*
+	ChibiPaint
+    Copyright (c) 2006-2008 Marc Schefer
+
+    This file is part of ChibiPaint.
+
+    ChibiPaint is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ChibiPaint is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with ChibiPaint. If not, see <http://www.gnu.org/licenses/>.
+
+ */
+
+function CPMiscPalette(cpController) {
+    "use strict";
+    
+    CPPalette.call(this, cpController, "misc", "Misc");
+    
+	var 
+	    that = this,
+
+	    buttons = [
+	        {
+	            className: "chickenpaint-tool-zoom-in",
+	            command: "CPZoomIn",
+	            toolTip: "Zoom in"
+	        },
+            {
+                className: "chickenpaint-tool-zoom-out",
+                command: "CPZoomOut",
+                toolTip: "Zoom out"
+            },
+            {
+                className: "chickenpaint-tool-zoom-100",
+                command: "CPZoom100",
+                toolTip: "Zoom 100%"
+            },
+            {
+                className: "chickenpaint-tool-undo",
+                command: "CPUndo",
+                toolTip: "Undo"
+            },
+            {
+                className: "chickenpaint-tool-redo",
+                command: "CPRedo",
+                toolTip: "Redo"
+            },
+            {
+                className: "chickenpaint-tool-send",
+                command: "CPSend",
+                toolTip: "Save pic"
+            },
+        ];
+
+	function buildButtons() {
+	    var
+	        body = that.getBodyElement(),
+	        listElem = document.createElement("ul");
+	    
+	    listElem.className = "chickenpaint-misc-tools";
+	    
+	    for (var i in buttons) {
+	        var 
+	            button = buttons[i],
+	            buttonElem = document.createElement("li");
+	        
+	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
+	        buttonElem.dataset.buttonIndex = i;
+	        
+	        listElem.appendChild(buttonElem);
+	    }
+	    
+	    listElem.addEventListener("click", function(e) {
+	        if (e.target && e.target.nodeName == "LI") {
+	            var
+	                button = buttons[parseInt(e.target.dataset.buttonIndex, 10)];
+	            
+	            $("li", listElem).removeClass("selected");
+	            $(e.target).addClass("selected");
+	            
+	            cpController.actionPerformed({action: button.command});
+	        }
+	    });
+	    
+	    body.appendChild(listElem);
+	}
+	
+	buildButtons();
+}
+
+CPMiscPalette.prototype = Object.create(CPPalette.prototype);
+CPMiscPalette.prototype.constructor = CPMiscPalette;

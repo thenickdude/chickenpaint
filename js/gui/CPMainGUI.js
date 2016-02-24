@@ -7,4 +7,12 @@ function CPMainGUI(controller, uiElem) {
     
     uiElem.appendChild(canvas.getElement());
     uiElem.appendChild(paletteManager.getElement());
+    
+    this.arrangePalettes = function() {
+        paletteManager.arrangePalettes();
+    }
+
+    this.constrainPalettes = function() {
+        paletteManager.constrainPalettes();
+    }
 }

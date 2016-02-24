@@ -140,5 +140,9 @@ function CPArtwork(_width, _height) {
         if (layers.length == 1) {
             curLayer = layers[0];
         }
-    }
+    };
+    
+    this.setBrush = function(brush) {
+        curBrush = brush;
+    };
 };
