@@ -19,13 +19,13 @@
 
  */
 
-function CPColor() {
+function CPColor(rgb) {
     "use strict";
     
     var
         that = this;
     
-	this.rgb = 0;
+	this.rgb = 0; // in RGB byte order
 	
 	this.hue = 0;
 	this.saturation = 0;
@@ -33,7 +33,7 @@ function CPColor() {
 	
 	function rgbToHsv() {
         var
-            r = that.rgb >> 16,
+            r = (that.rgb >> 16) & 0xff,
             g = (that.rgb >> 8) & 0xff,
             b = that.rgb & 0xff;
 
@@ -85,42 +85,62 @@ function CPColor() {
         // no saturation means it's just a shade of grey
         if (that.saturation == 0) {
             that.rgb = (that.value << 16) | (that.value << 8) | that.value;
+        } else {
+            var 
+                f = that.hue / 60;
+            
+            f = f - Math.floor(f);
+    
+            var 
+                s = that.saturation / 255,
+                m = ~~(that.value * (1 - s)),
+                n = ~~(that.value * (1 - s * f)),
+                k = ~~(that.value * (1 - s * (1 - f)));
+    
+            switch (~~(that.hue / 60)) {
+            case 0:
+                that.rgb = (that.value << 16) | (k << 8) | m;
+                break;
+            case 1:
+                that.rgb = (n << 16) | (that.value << 8) | m;
+                break;
+            case 2:
+                that.rgb = (m << 16) | (that.value << 8) | k;
+                break;
+            case 3:
+                that.rgb = (m << 16) | (n << 8) | that.value;
+                break;
+            case 4:
+                that.rgb = (k << 16) | (m << 8) | that.value;
+                break;
+            case 5:
+                that.rgb = (that.value << 16) | (m << 8) | n;
+                break;
+            default:
+                that.rgb = 0; // invalid hue
+                break;
+            }
         }
+    }
 
-        var 
-            f = that.hue / 60;
-        
-        f = f - Math.floor(f);
+    this.getRgb = function() {
+        return this.rgb;
+    };
+    
+    this.getSaturation = function() {
+        return this.saturation;
+    };
 
-        var 
-            s = that.saturation / 255,
-            m = ~~(that.value * (1 - s));
-            n = ~~(that.value * (1 - s * f));
-            k = ~~(that.value * (1 - s * (1 - f)));
-
-        switch (~~(that.hue / 60)) {
-        case 0:
-            rgb = (that.value << 16) | (k << 8) | m;
-            break;
-        case 1:
-            rgb = (n << 16) | (that.value << 8) | m;
-            break;
-        case 2:
-            rgb = (m << 16) | (that.value << 8) | k;
-            break;
-        case 3:
-            rgb = (m << 16) | (n << 8) | that.value;
-            break;
-        case 4:
-            rgb = (k << 16) | (m << 8) | that.value;
-            break;
-        case 5:
-            rgb = (that.value << 16) | (m << 8) | n;
-            break;
-        default:
-            that.rgb = 0; // invalid hue
-            break;
-        }
+    this.getHue = function() {
+        return this.hue;
+    };
+    
+    this.getValue = function() {
+        return this.value;
+    };
+    
+    this.setRgbComponents = function(r, g, b) {
+        this.setRgb((r << 16) | (g << 8) | b);
     }
 	
 	this.setRgb = function(rgb) {
@@ -152,7 +172,7 @@ function CPColor() {
 	};
 
 	this.clone = function() {
-	    return _.extend({}, this);
+	    return new CPColor(rgb);
 	};
 
 	this.copyFrom = function(c) {
@@ -165,4 +185,6 @@ function CPColor() {
 	this.isEqual = function(color) {
 		return this.rgb == color.rgb && this.hue == color.hue && this.saturation == color.saturation && this.value == color.value;
 	};
+	
+    this.setRgb(rgb || 0);
 }

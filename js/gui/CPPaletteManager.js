@@ -24,7 +24,8 @@ function CPPaletteManager(cpController) {
 	    palettes = {
 	        tool: new CPToolPalette(cpController),
 	        misc: new CPMiscPalette(cpController),
-	        stroke: new CPStrokePalette(cpController)
+	        stroke: new CPStrokePalette(cpController),
+	        color: new CPColorPalette(cpController)
 	    },
 	    
 	    paletteFrames = [],
@@ -45,20 +46,6 @@ function CPPaletteManager(cpController) {
 	
 	    /*
 		desktop.addContainerListener(this);
-
-		// Color Palette
-
-		palColor = new CPColorPalette(controller);
-		{
-			palettes.put("color", palColor);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palColor);
-			paletteFrames.add(frame);
-			
-			frame.pack();
-
-			desktop.add(frame);
-		}
 
 		// Brush Palette
 
@@ -207,15 +194,20 @@ function CPPaletteManager(cpController) {
 	 * Rearrange the palettes from scratch into a useful arrangement.
 	 */
 	this.arrangePalettes = function() {
+        var
+            windowWidth = $(parentElem).parents(".chickenpaint").width(),
+            windowHeight = $(parentElem).parents(".chickenpaint").height()
+        
 	    palettes.tool.setLocation(0, 0);
 	    palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + 1, 0);
 	    palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
+        palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
+
+	    return; //TODO erase this line and the ones above
 	    
-	    return; //TODO
-	    
-	    var
-	        windowWidth = $(parentElem).width(),
-	        windowHeight = $(parentElem).height()
+        var
+            windowWidth = $(parentElem).parents(".chickenpaint").width(),
+            windowHeight = $(parentElem).parents(".chickenpaint").height(),
 	        
 		    haveWidthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
 
@@ -244,7 +236,7 @@ function CPPaletteManager(cpController) {
 		
 		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
 
-		palettes.color.getContainer().setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
+		palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
 	};
 	
 	this.getElement = function() {

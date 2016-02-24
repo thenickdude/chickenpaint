@@ -37,7 +37,7 @@ function CPArtwork(_width, _height) {
         sampleAllLayers = false,
         lockAlpha = false,
         
-        curColor,
+        curColor = 0,
         
         that = this;
     
@@ -140,6 +140,18 @@ function CPArtwork(_width, _height) {
         if (layers.length == 1) {
             curLayer = layers[0];
         }
+    };
+    
+    this.setSampleAllLayers = function(b) {
+        sampleAllLayers = b;
+    };
+
+    this.setLockAlpha = function(b) {
+        lockAlpha = b;
+    };
+
+    this.setForegroundColor = function(color) {
+        curColor = color;
     };
     
     this.setBrush = function(brush) {

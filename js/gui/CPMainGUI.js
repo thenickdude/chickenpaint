@@ -9,7 +9,10 @@ function CPMainGUI(controller, uiElem) {
     uiElem.appendChild(paletteManager.getElement());
     
     this.arrangePalettes = function() {
-        paletteManager.arrangePalettes();
+        // Give the browser a chance to do the sizing of the palettes before we try to rearrange them
+        setTimeout(function() {
+            paletteManager.arrangePalettes();
+        }, 0);
     }
 
     this.constrainPalettes = function() {

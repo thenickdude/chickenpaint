@@ -237,6 +237,20 @@ function ChickenPaint(uiElem, arrayBuffer) {
         canvas = _canvas;
     };
     
+    this.setCurColor = function(color) {
+        if (!curColor.isEqual(color)) {
+            this.artwork.setForegroundColor(color.getRgb());
+
+            curColor.copyFrom(color);
+            
+            this.emitEvent('colorChange', [color]);
+        }
+    };
+
+    this.getCurColor = function() {
+        return curColor.clone();
+    };
+
     function setMode(mode) {
         curMode = mode;
         callModeListeners();
