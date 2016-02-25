@@ -331,9 +331,39 @@ function CPArtwork(_width, _height) {
             }
         }
     };
+
+    function CPBrushToolEraser() {
+    }
     
+    CPBrushToolEraser.prototype = Object.create(CPBrushToolSimpleBrush.prototype);
+    CPBrushToolEraser.prototype.constructor = CPBrushToolEraser;
+    
+    CPBrushToolEraser.prototype.mergeOpacityBuf = function(dstRect, color) {
+        var 
+            opacityData = opacityBuffer.data,
+            undoData = undoBuffer.data;
+    
+        for (var y = dstRect.top; y < dstRect.bottom; y++) {
+            var
+                dstOffset = curLayer.offsetOfPixel(dstRect.left, y) + CPColorBmp.ALPHA_BYTE_OFFSET,
+                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            
+            for (var x = dstRect.left; x < dstRect.right; x++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                var
+                    opacityAlpha = (opacityData[srcOffset++] / 255) | 0;
+                
+                if (opacityAlpha > 0) {
+                    var
+                        destAlpha = undoData[dstOffset],
+                        realAlpha = destAlpha * (255 - opacityAlpha) / 255;
+                    
+                    curLayer.data[dstOffset] = realAlpha;
+                }
+            }
+        }
+    };
+
     // TODO
-    function CPBrushToolEraser() {}
     function CPBrushToolDodge() {}
     function CPBrushToolBurn() {}
     function CPBrushToolWatercolor() {}
