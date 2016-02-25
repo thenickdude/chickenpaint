@@ -19,16 +19,12 @@
 
  */
 
-function CPGreyBmp(width, height) {
+function CPGreyBmp(width, height, bitDepth) {
     "use strict";
-    
-    width = width | 0;
-    height = height | 0;
 
-    this.width = width;
-    this.height = height;
+    CPBitmap.call(this, width, height);
     
-    this.data = new UInt8Array(width * height);
+    this.data = bitDepth == 16 ? new Uint16Array(width * height) : new UInt8Array(width * height);
 
     this.clone = function() {
         var
@@ -40,10 +36,29 @@ function CPGreyBmp(width, height) {
         
         return result;
 	};
+	
+    this.clearAll = function(value) {
+        for (var i = 0; i < this.data.length; i++) {
+            this.data[i] = value;
+        }
+    };
+    
+    this.clearRect = function(rect, value) {
+        var
+            rect = this.getBounds().clip(rect);
+            yStride = this.width - rect.getWidth(),
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
+        
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            for (var x = rect.left; x < rect.right; x++, pixIndex++) {
+                this.data[pixIndex] = value;
+            }
+        }
+    };
 
 	this.mirrorHorizontally = function() {
 		var
-		    newData = new UInt8Array(width * height); //TODO we don't need to allocate new memory for this operation!
+		    newData = new UInt8Array(width * height);
 
 		for (var y = 0; y < height; y++) {
 			for (var x = 0; x < width; x++) {
@@ -56,7 +71,11 @@ function CPGreyBmp(width, height) {
 
 	this.applyLUT = function(lut) {
 		for (var i = 0; i < this.data.length; i++) {
-			data[i] = lut.table[this.data[i]];
+			this.data[i] = lut.table[this.data[i]];
 		}
 	};
+}
+
+CPGreyBmp.prototype.offsetOfPixel = function(x, y) {
+    return y * this.width + x;
 }

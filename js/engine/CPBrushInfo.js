@@ -19,6 +19,8 @@
 
  */
 
+"use strict";
+
 function CPBrushInfo(properties) {
     "use strict";
     
@@ -44,29 +46,6 @@ function CPBrushInfo(properties) {
 	    
 	    smoothing: 0.0
     }, properties);
-
-	this.applyPressure = function(pressure) {
-		// FIXME: no variable size for smudge and oil :(
-		if (this.pressureSize && this.paintMode != CPBrushInfo.M_SMUDGE && this.paintMode != CPBrushInfo.M_OIL) {
-		    this.curSize = Math.max(0.1, this.size * pressure);
-		} else {
-		    this.curSize = Math.max(0.1, this.size);
-		}
-
-		// FIXME: what is the point of doing that?
-		if (this.curSize > 16) {
-		    this.curSize = Math.floor(this.curSize);
-		}
-
-		this.curAlpha = this.pressureAlpha ? Math.floor(this.alpha * pressure) : this.alpha;
-		curSqueeze = squeeze;
-		curAngle = angle;
-		curScattering = scattering * curSize * (pressureScattering ? pressure : 1.0);
-	};
-
-	this.clone = function() {
-	    return _.extend({}, this);
-	};
 }
 
 // Stroke modes
@@ -90,3 +69,26 @@ CPBrushInfo.M_WATER = 4;
 CPBrushInfo.M_BLUR = 5;
 CPBrushInfo.M_SMUDGE = 6;
 CPBrushInfo.M_OIL = 7;
+
+CPBrushInfo.prototype.applyPressure = function(pressure) {
+    // FIXME: no variable size for smudge and oil :(
+    if (this.pressureSize && this.paintMode != CPBrushInfo.M_SMUDGE && this.paintMode != CPBrushInfo.M_OIL) {
+        this.curSize = Math.max(0.1, this.size * pressure);
+    } else {
+        this.curSize = Math.max(0.1, this.size);
+    }
+
+    // FIXME: what is the point of doing that?
+    if (this.curSize > 16) {
+        this.curSize = Math.floor(this.curSize);
+    }
+
+    this.curAlpha = this.pressureAlpha ? Math.floor(this.alpha * pressure) : this.alpha;
+    this.curSqueeze = this.squeeze;
+    this.curAngle = this.angle;
+    this.curScattering = this.scattering * this.curSize * (this.pressureScattering ? pressure : 1.0);
+};
+
+CPBrushInfo.prototype.clone = function() {
+    return _.extend({}, this);
+};

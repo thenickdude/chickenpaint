@@ -2,49 +2,22 @@ function ChickenPaint(uiElem, arrayBuffer) {
     "use strict";
     
     var
-        //
-        // Definition of all the standard tools available
-        //
-        T_PENCIL = 0,
-        T_ERASER = 1,
-        T_PEN = 2,
-        T_SOFTERASER = 3,
-        T_AIRBRUSH = 4,
-        T_DODGE = 5,
-        T_BURN = 6,
-        T_WATER = 7,
-        T_BLUR = 8,
-        T_SMUDGE = 9,
-        T_BLENDER = 10,
-        T_MAX = 11,
-        
-        //
-        // Definition of all the modes available
-        //
-        M_DRAW = 0,
-        M_FLOODFILL = 1,
-        M_RECT_SELECTION = 2,
-        M_MOVE_TOOL = 3,
-        M_ROTATE_CANVAS = 4,
-        M_COLOR_PICKER = 5;
-    
-    var
         that = this,
         
         canvas,
         
         curColor = new CPColor(),
     
-        curBrush = T_PENCIL,
-        curMode = M_DRAW,
+        curBrush = ChickenPaint.T_PENCIL,
+        curMode = ChickenPaint.M_DRAW,
         
         tools = [];
     
     function createTools() {
-        tools = new Array(T_MAX);
+        tools = new Array(ChickenPaint.T_MAX);
         
-        tools[T_PENCIL] = new CPBrushInfo({
-            toolNb: T_PENCIL,
+        tools[ChickenPaint.T_PENCIL] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_PENCIL,
             size: 16,
             alpha: 255,
             isAA: true,
@@ -56,8 +29,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_PAINT
         });
         
-        tools[T_ERASER] = new CPBrushInfo({
-            toolNb: T_ERASER,
+        tools[ChickenPaint.T_ERASER] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_ERASER,
             size: 16,
             alpha: 255,
             isAA: true,
@@ -69,8 +42,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_ERASE
         });
         
-        tools[T_PEN] = new CPBrushInfo({
-            toolNb: T_PEN,
+        tools[ChickenPaint.T_PEN] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_PEN,
             size: 2,
             alpha: 128,
             isAA: true,
@@ -82,8 +55,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_PAINT
         });
         
-        tools[T_SOFTERASER] = new CPBrushInfo({
-            toolNb: T_SOFTERASER,
+        tools[ChickenPaint.T_SOFTERASER] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_SOFTERASER,
             size: 16,
             alpha: 64,
             isAA: false,
@@ -96,8 +69,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_ERASE
         });
         
-        tools[T_AIRBRUSH] = new CPBrushInfo({
-            toolNb: T_AIRBRUSH,
+        tools[ChickenPaint.T_AIRBRUSH] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_AIRBRUSH,
             size: 50,
             alpha: 32,
             isAA: false,
@@ -110,8 +83,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_PAINT
         });
         
-        tools[T_DODGE] = new CPBrushInfo({
-            toolNb: T_DODGE,
+        tools[ChickenPaint.T_DODGE] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_DODGE,
             size: 30,
             alpha: 32,
             isAA: false,
@@ -124,8 +97,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_DODGE
         });
         
-        tools[T_BURN] = new CPBrushInfo({
-            toolNb: T_BURN,
+        tools[ChickenPaint.T_BURN] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_BURN,
             size: 30,
             alpha: 32,
             isAA: false,
@@ -138,8 +111,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_BURN
         });
         
-        tools[T_WATER] = new CPBrushInfo({
-            toolNb: T_WATER,
+        tools[ChickenPaint.T_WATER] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_WATER,
             size: 30,
             alpha: 70,
             isAA: false,
@@ -154,8 +127,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             bleed: 0.6
         });
         
-        tools[T_BLUR] = new CPBrushInfo({
-            toolNb: T_BLUR,
+        tools[ChickenPaint.T_BLUR] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_BLUR,
             size: 20,
             alpha: 255,
             isAA: false,
@@ -168,8 +141,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             paintMode: CPBrushInfo.M_BLUR
         });
         
-        tools[T_SMUDGE] = new CPBrushInfo({
-            toolNb: T_SMUDGE,
+        tools[ChickenPaint.T_SMUDGE] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_SMUDGE,
             size: 20,
             alpha: 128,
             isAA: false,
@@ -184,8 +157,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             bleed: 1.0
         });
         
-        tools[T_BLENDER] = new CPBrushInfo({
-            toolNb: T_BLENDER,
+        tools[ChickenPaint.T_BLENDER] = new CPBrushInfo({
+            toolNb: ChickenPaint.T_BLENDER,
             size: 20,
             alpha: 60,
             isAA: false,
@@ -250,6 +223,32 @@ function ChickenPaint(uiElem, arrayBuffer) {
     this.getCurColor = function() {
         return curColor.clone();
     };
+    
+    this.getCurColorRgb = function() {
+        return curColor.getRgb();
+    };
+
+    this.setCurColorRgb = function(color) {
+        setCurColor(new CPColor(color));
+    };
+
+    this.setBrushSize = function(size) {
+        tools[curBrush].size = Math.max(1, Math.min(200, size));
+        callToolListeners();
+    };
+
+    this.getBrushSize = function() {
+        return tools[curBrush].size;
+    };
+
+    this.setAlpha = function(alpha) {
+        tools[curBrush].alpha = alpha;
+        callToolListeners();
+    };
+
+    this.getAlpha = function() {
+        return tools[curBrush].alpha;
+    };
 
     function setMode(mode) {
         curMode = mode;
@@ -257,10 +256,14 @@ function ChickenPaint(uiElem, arrayBuffer) {
     }
     
     function setTool(tool) {
-        setMode(M_DRAW);
+        setMode(ChickenPaint.M_DRAW);
         curBrush = tool;
         that.artwork.setBrush(tools[tool]);
         callToolListeners();
+    }
+    
+    this.getBrushInfo = function() {
+        return tools[curBrush];
     }
     
     this.actionPerformed = function(e) {
@@ -290,37 +293,37 @@ function ChickenPaint(uiElem, arrayBuffer) {
                 }
             break;
             case "CPPencil":
-                setTool(T_PENCIL);
+                setTool(ChickenPaint.T_PENCIL);
             break;
             case "CPPen":
-                setTool(T_PEN);
+                setTool(ChickenPaint.T_PEN);
             break;
             case "CPEraser":
-                setTool(T_ERASER);
+                setTool(ChickenPaint.T_ERASER);
             break;
             case "CPSoftEraser":
-                setTool(T_SOFTERASER);
+                setTool(ChickenPaint.T_SOFTERASER);
             break;
             case "CPAirbrush":
-                setTool(T_AIRBRUSH);
+                setTool(ChickenPaint.T_AIRBRUSH);
             break;
             case "CPDodge":
-                setTool(T_DODGE);
+                setTool(ChickenPaint.T_DODGE);
             break;
             case "CPBurn":
-                setTool(T_BURN);
+                setTool(ChickenPaint.T_BURN);
             break;
             case "CPWater":
-                setTool(T_WATER);
+                setTool(ChickenPaint.T_WATER);
             break;
             case "CPBlur":
-                setTool(T_BLUR);
+                setTool(ChickenPaint.T_BLUR);
             break;
             case "CPSmudge":
-                setTool(T_SMUDGE);
+                setTool(ChickenPaint.T_SMUDGE);
             break;
             case "CPBlender":
-                setTool(T_BLENDER);
+                setTool(ChickenPaint.T_BLENDER);
             break;
     
             // Modes
@@ -485,8 +488,37 @@ function ChickenPaint(uiElem, arrayBuffer) {
         canvas.paint();
     }
     
+    setTool(ChickenPaint.T_PEN);
+    
     this.gui.arrangePalettes();
 }
 
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);
 ChickenPaint.prototype.constructor = ChickenPaint;
+
+//
+// Definition of all the modes available
+//
+
+ChickenPaint.M_DRAW = 0;
+ChickenPaint.M_FLOODFILL = 1;
+ChickenPaint.M_RECT_SELECTION = 2;
+ChickenPaint.M_MOVE_TOOL = 3;
+ChickenPaint.M_ROTATE_CANVAS = 4;
+ChickenPaint.M_COLOR_PICKER = 5;
+
+//
+// Definition of all the standard tools available
+//
+ChickenPaint.T_PENCIL = 0;
+ChickenPaint.T_ERASER = 1;
+ChickenPaint.T_PEN = 2;
+ChickenPaint.T_SOFTERASER = 3;
+ChickenPaint.T_AIRBRUSH = 4;
+ChickenPaint.T_DODGE = 5;
+ChickenPaint.T_BURN = 6;
+ChickenPaint.T_WATER = 7;
+ChickenPaint.T_BLUR = 8;
+ChickenPaint.T_SMUDGE = 9;
+ChickenPaint.T_BLENDER = 10;
+ChickenPaint.T_MAX = 11;

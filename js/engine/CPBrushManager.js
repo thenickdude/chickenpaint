@@ -20,12 +20,14 @@
  */
 
 function CPBrushManager() {
+    "use strict";
+    
     var 
         MAX_SQUEEZE = 10;
     
     /*CPBrushDab {
         // the brush
-        UInt8Array brush;
+        Uint8Array brush;
         int width, height;
         
         // and where and how to apply it
@@ -33,8 +35,8 @@ function CPBrushManager() {
     }*/
     
     var
-        brush = new UInt8Array(201 * 201),
-        brushAA = new UInt8Array(202 * 202),
+        brush = new Uint8Array(201 * 201),
+        brushAA = new Uint8Array(202 * 202),
 
 	    cacheBrush,
 	    cacheSize, cacheSqueeze, cacheAngle,
@@ -84,11 +86,11 @@ function CPBrushManager() {
     
             offset = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
+        for (var j = 0; j < intSize; j++) {
+            for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (x + 0.5 - center),
-                    y = (y + 0.5 - center),
+                    x = (i + 0.5 - center),
+                    y = (j + 0.5 - center),
                     dx = (x * cosA - y * sinA) * xFactor,
                     dy = (y * cosA + x * sinA),
 
@@ -120,11 +122,11 @@ function CPBrushManager() {
 
             offset = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
+        for (var j = 0; j < intSize; j++) {
+            for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (x + 0.5 - center),
-                    y = (y + 0.5 - center),
+                    x = (i + 0.5 - center),
+                    y = (j + 0.5 - center),
                     dx = (x * cosA - y * sinA) * xFactor,
                     dy = (y * cosA + x * sinA),
 
@@ -140,8 +142,8 @@ function CPBrushManager() {
                     
                     for (var oy = 0; oy < 4; oy++) {
                         for (var ox = 0; ox < 4; ox++) {
-                            x = x + ox * (1.0 / 4.0) - center;
-                            y = y + oy * (1.0 / 4.0) - center;
+                            x = i + ox * (1.0 / 4.0) - center;
+                            y = j + oy * (1.0 / 4.0) - center;
                             dx = (x * cosA - y * sinA) * xFactor;
                             dy = (y * cosA + x * sinA);
 
@@ -173,11 +175,11 @@ function CPBrushManager() {
 
             offset = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
+        for (var j = 0; j < intSize; j++) {
+            for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (x + 0.5 - center),
-                    y = (y + 0.5 - center),
+                    x = (i + 0.5 - center),
+                    y = (j + 0.5 - center),
                     dx = Math.abs(x * cosA - y * sinA),
                     dy = Math.abs(y * cosA + x * sinA);
 
@@ -212,11 +214,11 @@ function CPBrushManager() {
 
             offset = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
+        for (var j = 0; j < intSize; j++) {
+            for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (x + 0.5 - center),
-                    y = (y + 0.5 - center),
+                    x = (i + 0.5 - center),
+                    y = (j + 0.5 - center),
                     dx = Math.abs(x * cosA - y * sinA),
                     dy = Math.abs(y * cosA + x * sinA);
 
@@ -230,8 +232,8 @@ function CPBrushManager() {
                     
                     for (var oy = 0; oy < 4; oy++) {
                         for (var ox = 0; ox < 4; ox++) {
-                            x = x + ox * (1.0 / 4.0) - center;
-                            y = y + oy * (1.0 / 4.0) - center;
+                            x = i + ox * (1.0 / 4.0) - center;
+                            y = j + oy * (1.0 / 4.0) - center;
                             dx = Math.abs(x * cosA - y * sinA);
                             dy = Math.abs(y * cosA + x * sinA);
 
@@ -260,11 +262,11 @@ function CPBrushManager() {
 
             offset = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
+        for (var j = 0; j < intSize; j++) {
+            for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (x + 0.5 - center),
-                    y = (y + 0.5 - center),
+                    x = (u + 0.5 - center),
+                    y = (j + 0.5 - center),
                     dx = (x * cosA - y * sinA) * xFactor,
                     dy = (y * cosA + x * sinA),
 
@@ -284,7 +286,7 @@ function CPBrushManager() {
     /**
      * Build and return a brush that conforms to the given brush settings.
      * 
-     * @returns a UInt8Array
+     * @returns a Uint8Array
      */ 
     function getBrush(brushInfo) {
         if (cacheBrush != null && brushInfo.curSize == cacheSize && brushInfo.curSqueeze == cacheSqueeze

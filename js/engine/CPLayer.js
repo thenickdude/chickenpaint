@@ -23,44 +23,6 @@ function CPLayer(width, height, name) {
     this.visible = true;
     this.blendMode = CPLayer.LM_NORMAL;
     
-    this.clearAll = function(color) {
-        var
-            a = (color >> 24) & 0xFF,
-            r = (color >> 16) & 0xFF,
-            g = (color >> 8) & 0xFF,
-            b = color & 0xFF;
-        
-        for (var i = 0; i < this.width * this.height * BYTES_PER_PIXEL; ) {
-            that.data[i++] = r;
-            that.data[i++] = g;
-            that.data[i++] = b;
-            that.data[i++] = a;
-        }
-    };
-    
-    this.clearRect = function(rect, color) {
-        var
-            a = (color >> 24) & 0xFF,
-            r = (color >> 16) & 0xFF,
-            g = (color >> 8) & 0xFF,
-            b = color & 0xFF;
-        
-        var
-            rect = this.getBounds().clip(rect);
-            yStride = (this.width - rect.getWidth()) * BYTES_PER_PIXEL,
-            
-            pixIndex = this.offsetOfPixel(rect.left, rect.top);
-        
-        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-            for (var x = rect.left; x < rect.right; x++) {
-                that.data[pixIndex++] = r;
-                that.data[pixIndex++] = g;
-                that.data[pixIndex++] = b;
-                that.data[pixIndex++] = a;
-            }
-        }
-    };
-
     // Layer blending functions
     //
     // The FullAlpha versions are the ones that work in all cases
@@ -1039,7 +1001,62 @@ function CPLayer(width, height, name) {
         }
     };
     
-    // Do we have any semi-transparent pixels in the entire layer?
+    this.clearAll = function(color) {
+        var
+            a = (color >> 24) & 0xFF,
+            r = (color >> 16) & 0xFF,
+            g = (color >> 8) & 0xFF,
+            b = color & 0xFF;
+        
+        for (var i = 0; i < this.width * this.height * BYTES_PER_PIXEL; ) {
+            this.data[i++] = r;
+            this.data[i++] = g;
+            this.data[i++] = b;
+            this.data[i++] = a;
+        }
+    };
+    
+    this.clearRect = function(rect, color) {
+        var
+            a = (color >> 24) & 0xFF,
+            r = (color >> 16) & 0xFF,
+            g = (color >> 8) & 0xFF,
+            b = color & 0xFF;
+        
+        var
+            rect = this.getBounds().clip(rect),
+            yStride = (this.width - rect.getWidth()) * BYTES_PER_PIXEL,
+            
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
+        
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            for (var x = rect.left; x < rect.right; x++) {
+                this.data[pixIndex++] = r;
+                this.data[pixIndex++] = g;
+                this.data[pixIndex++] = b;
+                this.data[pixIndex++] = a;
+            }
+        }
+    };
+    
+    this.getAlpha = function() {
+        return this.alpha;
+    };
+
+    this.getBlendMode = function() {
+        return this.blendMode;
+    };
+
+    this.copyFrom = function(layer) {
+        this.name = layer.name;
+        this.blendMode = layer.blendMode;
+        this.alpha = layer.alpha;
+        this.visible = layer.visible;
+
+        this.copyDataFrom(layer);
+    };
+    
+    // Do we have any non-opaque pixels in the entire layer?
     this.hasAlpha = function() {
         if (this.alpha != 100) {
             return true;

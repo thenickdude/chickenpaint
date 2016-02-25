@@ -26,11 +26,7 @@
 function CPColorBmp(width, height) {
     "use strict";
     
-    width = width | 0;
-    height = height | 0;
-
-    this.width = width;
-    this.height = height;
+    CPBitmap.call(this, width, height);
     
     var
         RED_BYTE_OFFSET = 0,
@@ -58,8 +54,8 @@ function CPColorBmp(width, height) {
 	// Pixel access with friendly clipping. Pixel will be an integer in ARGB format
 	//
 	this.getPixel = function(x, y) {
-		x = Math.max(0, Math.min(width - 1, x));
-		y = Math.max(0, Math.min(height - 1, y));
+		x = Math.max(0, Math.min(this.width - 1, x));
+		y = Math.max(0, Math.min(this.height - 1, y));
 
 		var
 		    pixIndex = this.getOffsetOfPixel(x, y);
@@ -69,10 +65,6 @@ function CPColorBmp(width, height) {
 		    | (data[pixIndex + GREEN_BYTE_OFFSET]  << 8) 
 		    | data[pixIndex + BLUE_BYTE_OFFSET];
 	}
-
-    this.getBounds = function() {
-        return new CPRect(0, 0, this.width, this.height);
-    };
 
 	//
 	// Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
@@ -475,6 +467,8 @@ CPColorBmp.GREEN_BYTE_OFFSET = 1;
 CPColorBmp.BLUE_BYTE_OFFSET = 2;
 CPColorBmp.ALPHA_BYTE_OFFSET = 3;
 
+CPColorBmp.prototype = Object.create(CPBitmap.prototype);
+CPColorBmp.prototype.constructor = CPColorBmp;
 
 CPColorBmp.prototype.offsetOfPixel = function(x, y) {
     return (y * this.width + x) * CPColorBmp.BYTES_PER_PIXEL;

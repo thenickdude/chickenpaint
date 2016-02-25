@@ -1,6 +1,11 @@
 "use strict";
 
 function CPRect(left, top, right, bottom) {
+    // TODO remove me
+    if ((left !== undefined || top !== undefined) && (right === undefined || bottom === undefined)) {
+        throw "Bad args to CPRect";
+    }
+    
     this.left = ~~left;
     this.top = ~~top;
     this.right = ~~right;
@@ -121,4 +126,18 @@ CPRect.prototype.moveTo = function(x, y) {
 
 CPRect.prototype.equals = function(that) {
     return this.left == that.left && this.right == that.right && this.top == that.top && this.bottom == that.bottom;
+};
+
+/**
+ * Add h pixels to both the left and right sides of the rectangle, and v pixels to both the top and bottom sides.
+ *  
+ * @param h
+ * @param v
+ */
+CPRect.prototype.grow = function(h, v) {
+    // TODO checks for rectangles with zero-extent
+    this.left -= h;
+    this.right += h;
+    this.top -= v;
+    this.bottom += v;
 };

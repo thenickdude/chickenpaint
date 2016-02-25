@@ -50,7 +50,7 @@ function CPColorSelect(cpController) {
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
-        imageData = new ImageData(w, h),
+        imageData = canvasContext.createImageData(w, h),
         data = imageData.data,
         color = new CPColor(),
         
@@ -177,7 +177,7 @@ function CPColorSlider(cpController, selecter) {
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
-        imageData = new ImageData(w, h),
+        imageData = canvasContext.createImageData(w, h),
         data = imageData.data,
         
         capturedMouse = false,
