@@ -24,6 +24,8 @@ function CPCanvas(controller) {
 //        AffineTransform transform = new AffineTransform();
         interpolation = false,
         
+        showGrid = false,
+        
         mouseX = 0, mouseY = 0,
         
         brushPreview = false,
@@ -99,17 +101,16 @@ function CPCanvas(controller) {
             brushPreview = true;
 
             var 
+                pf = coordToDocument({x: e.pageX, y: e.pageY}),
                 r = getBrushPreviewOval();
             
             r.grow(2, 2);
             
+            // If a brush preview was drawn previously, stretch the repaint region to remove that old copy
             if (oldPreviewRect != null) {
                 r.union(oldPreviewRect);
                 oldPreviewRect = null;
             }
-
-            var 
-                pf = coordToDocument({x: e.pageX, y: e.pageY});
             
             if (artwork.isPointWithin(pf.x, pf.y)) {
                 setCursor(defaultCursor); // FIXME find a cursor that everyone likes
@@ -117,10 +118,10 @@ function CPCanvas(controller) {
                 setCursor(defaultCursor);
             }
 
-            repaintRegion(r.left, r.top, r.getWidth(), r.getHeight());
+            repaintRect(r);
         }
     };
-        
+    
     CPDefaultMode.prototype.paint = function() {
         if (brushPreview && curSelectedMode == curDrawMode) {
             brushPreview = false;
@@ -213,7 +214,7 @@ function CPCanvas(controller) {
             r.union(new Rectangle(Math.min(dragLineFrom.x, p.x), Math.min(dragLineFrom.y, p.y), Math
                     .abs(dragLineFrom.x - p.x) + 1, Math.abs(dragLineFrom.y - p.y) + 1));
             dragLineTo = (Point) p.clone();
-            repaintRegion(r.x, r.y, r.width, r.height);
+            repaintRect(r);
         }
 
         public void mouseReleased(MouseEvent e) {
@@ -231,7 +232,7 @@ function CPCanvas(controller) {
                 Rectangle r = new Rectangle(Math.min(dragLineFrom.x, dragLineTo.x), Math.min(dragLineFrom.y,
                         dragLineTo.y), Math.abs(dragLineFrom.x - dragLineTo.x) + 1, Math.abs(dragLineFrom.y
                         - dragLineTo.y) + 1);
-                repaintRegion(r.x, r.y, r.width, r.height);
+                repaintRect(r);
 
                 activeMode = defaultMode; // yield control to the default mode
             }
@@ -609,7 +610,6 @@ function CPCanvas(controller) {
     // Grid options
     // FIXME: these shouldn't be public
     this.gridSize = 32;
-    this.showGrid = false;
     
     function requestFocusInWindow() {
         // TODO
@@ -619,7 +619,9 @@ function CPCanvas(controller) {
         canvas.style.cursor = cursor;
     }
     
-    function repaintRegion(x, y, width, height) {
+    function repaintRect(rect) {
+        updateRegion.union(rect);
+        
         that.paint(); //TODO
     };
     
@@ -629,18 +631,24 @@ function CPCanvas(controller) {
     };
     
     this.paint = function() {
-        canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-        
         var
             imageData = artwork.fusionLayers();
         
-        if (!updateRegion.isEmpty()) {
+        if (updateRegion.isEmpty()) {
+            canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+            
+            canvasContext.putImageData(
+                imageData, 0, 0, 0, 0, canvas.width, canvas.height
+            );
+        } else {
+            canvasContext.clearRect(updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top);
+
+            canvasContext.putImageData(
+                imageData, 0, 0, updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top
+            );
+
             updateRegion.makeEmpty();
         }
-        
-        canvasContext.putImageData(
-            imageData, 0, 0, 0, 0, canvas.width, canvas.height
-        );
         
         canvasContext.globalCompositeOperation = 'exclusion';
         canvasContext.strokeStyle = 'white';
@@ -682,7 +690,7 @@ function CPCanvas(controller) {
         if (oldPreviewRect != null) {
             var r = oldPreviewRect;
             oldPreviewRect = null;
-            repaintRegion(r.x, r.y, r.width, r.height);
+            repaintRect(r);
         }
     }
 
@@ -726,7 +734,7 @@ function CPCanvas(controller) {
                 oldPreviewRect = null;
             }
 
-            repaintRegion(r.left, r.top, r.getWidth(), r.getHeight());
+            repaintRect(r);
         }
     });
     
@@ -813,14 +821,13 @@ function CPCanvas(controller) {
             document.body.addEventListener("mouseup", handleMouseUp);
         }
     });
-    
 
     container.addEventListener("mousemove", function(e) {
         var
-            canvasOffset =  $(canvas).offset();
+            pt = coordToDocument({x: e.pageX, y: e.pageY});
         
-        mouseX = e.pageX - canvasOffset.left;
-        mouseY = e.pageY - canvasOffset.top;
+        mouseX = pt.x;
+        mouseY = pt.y;
         
         if (!dontStealFocus) {
             requestFocusInWindow();
@@ -838,8 +845,6 @@ function CPCanvas(controller) {
     artwork.on("updateRegion", function(region) {
         updateRegion.union(region);
         
-        var r = getRefreshArea(region);
-        
-        repaintRegion(r.left, r.top, r.getWidth(), r.getHeight());
+        repaintRect(updateRegion);  //getRefreshArea(updateRegion));
     });
 }

@@ -36,6 +36,7 @@ function CPArtwork(_width, _height) {
         brushManager = new CPBrushManager(),
         
         lastX = 0.0, lastY = 0.0, lastPressure = 0.0,
+        brushBuffer = null,
         
         sampleAllLayers = false,
         lockAlpha = false,
@@ -87,7 +88,7 @@ function CPArtwork(_width, _height) {
     }
     
     function callListenersUpdateRegion(region) {
-        that.emit("updateRegion", [region]);
+        that.emitEvent("updateRegion", [region]);
     }
 
     function callListenersLayerChange() {
@@ -147,7 +148,7 @@ function CPArtwork(_width, _height) {
         undoArea.clip(that.getBounds());
         if (!undoArea.isEmpty()) {
             mergeOpacityBuffer(curColor, false);
-            addUndo(new CPUndoPaint());
+            that.addUndo(new CPUndoPaint());
         }
         brushBuffer = null;
     }
@@ -182,9 +183,10 @@ function CPArtwork(_width, _height) {
 
         undoArea.union(dstRect);
         opacityArea.union(dstRect);
-        invalidateFusionRect(dstRect);
 
         this.paintDabImplementation(srcRect, dstRect, dab);
+        
+        invalidateFusionRect(dstRect);
     }
 
     function CPBrushToolSimpleBrush() {
@@ -256,7 +258,7 @@ function CPArtwork(_width, _height) {
         for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
             var 
                 srcOffset = srcRect.left + by * w,
-                dstOffset = dstRect.left + y * width;
+                dstOffset = dstRect.left + y * that.width;
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
                 var 
@@ -296,7 +298,6 @@ function CPArtwork(_width, _height) {
                     
                     opacityData[dstOffset] = opacityAlpha;
                 }
-
             }
         }
     };
@@ -358,7 +359,7 @@ function CPArtwork(_width, _height) {
     }
     
     /**
-     * Merge
+     * Merge the opacity buffer from the current drawing operation to the 
      */
     function mergeOpacityBuffer(color, clear) {
         if (!opacityArea.isEmpty()) {
@@ -366,7 +367,7 @@ function CPArtwork(_width, _height) {
                 paintingModes[curBrush.paintMode].mergeOpacityBuf(opacityArea, color);
             } else {
                 // FIXME: it would be nice to be able to set the paper color
-                paintingModes[CPBrushInfo.M_PAINT].mergeOpacityBuf(opacityArea, 0xffffff);
+                paintingModes[CPBrushInfo.M_PAINT].mergeOpacityBuf(opacityArea, 0x00ffffff);
             }
 
             if (lockAlpha) {
@@ -390,37 +391,41 @@ function CPArtwork(_width, _height) {
         this.addLayer(layer);
     };
 
+    /**
+     * Merge together the visible layers and return the resulting ImageData for display to the screen.
+     * 
+     * The image is cached, so repeat calls are cheap.
+     */
     this.fusionLayers = function() {
-        if (fusionArea.isEmpty()) {
-            return fusion.getImageData();
-        }
-
-        mergeOpacityBuffer(curColor, false);
-
-        fusion.clearRect(fusionArea, 0x00FFFFFF);
-        
-        var 
-            fusionIsSemiTransparent = true, 
-            first = true;
-        
-        layers.forEach(function(layer) {
-            if (!first) {
-                fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
-            }
-
-            if (layer.visible) {
-                first = false;
-                
-                // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
-                if (fusionIsSemiTransparent) {
-                    layer.fusionWithFullAlpha(fusion, fusionArea);
-                } else {
-                    layer.fusionWith(fusion, fusionArea);
+        // Is there anything to update from last call?
+        if (!fusionArea.isEmpty()) {
+            mergeOpacityBuffer(curColor, false);
+            
+            fusion.clearRect(fusionArea, 0x00FFFFFF);
+            
+            var 
+                fusionIsSemiTransparent = true, 
+                first = true;
+            
+            layers.forEach(function(layer) {
+                if (!first) {
+                    fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
                 }
-            }
-        });
-
-        fusionArea.makeEmpty();
+    
+                if (layer.visible) {
+                    first = false;
+                    
+                    // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
+                    if (fusionIsSemiTransparent) {
+                        layer.fusionWithFullAlpha(fusion, fusionArea);
+                    } else {
+                        layer.fusionWith(fusion, fusionArea);
+                    }
+                }
+            });
+    
+            fusionArea.makeEmpty();
+        }
         
         return fusion.getImageData();
     }
@@ -437,6 +442,71 @@ function CPArtwork(_width, _height) {
     
     this.getActiveLayer = function() {
         return curLayer;
+    };
+    
+    //
+    // Undo / Redo
+    //
+
+    function canUndo() {
+        return undoList.length > 0;
+    }
+
+    function canRedo() {
+        return redoList.length > 0;
+    }
+    
+    this.undo = function() {
+        if (!canUndo()) {
+            return;
+        }
+        hasUnsavedChanges = true;
+        
+        var
+            undo = undoList.pop();
+        
+        undo.undo();
+        
+        redoList.push(undo);
+    }
+
+    this.redo = function() {
+        if (!canRedo()) {
+            return;
+        }
+        hasUnsavedChanges = true;
+
+        var
+            redo = redoList.pop();
+        
+        redo.redo();
+        
+        undoList.push(redo);
+    }
+
+    this.addUndo = function(undo) {
+        hasUnsavedChanges = true;
+        
+        if (undoList.length == 0 || !undoList[undoList.length - 1].merge(undo)) {
+            if (undoList.length >= MAX_UNDO) {
+                undoList.unshift();
+            }
+            undoList.push(undo);
+        } else {
+            // Two merged changes can mean no change at all
+            // don't leave a useless undo in the list
+            if (undoList[undoList.length - 1].noChange()) {
+                undoList.pop();
+            }
+        }
+        if (redoList.length > 0) {
+            redoList = [];
+        }
+    }
+
+    this.clearHistory = function() {
+        undoList = [];
+        redoList = [];
     };
     
     // Gets the current selection rect
@@ -508,6 +578,35 @@ function CPArtwork(_width, _height) {
 
         paintingModes[curBrush.paintMode].endStroke();
     };
+    
+    // ////////////////////////////////////////////////////
+    // Undo classes
+
+    function CPUndoPaint() {
+        var
+            layer = that.getActiveLayerIndex(),
+            rect = undoArea.clone(),
+            data = undoBuffer.copyRectXOR(curLayer, rect);
+
+        undoArea.makeEmpty();
+
+        this.undo = function() {
+            getLayer(layer).setRectXOR(data, rect);
+            that.invalidateFusionRect(rect);
+        };
+
+        this.redo = function() {
+            getLayer(layer).setRectXOR(data, rect);
+            that.invalidateFusionRect(rect);
+        };
+
+        that.getMemoryUsed = function(undone, param) {
+            return undoBuffer.getMemorySize();
+        };
+    }
+    
+    CPUndoPaint.prototype = Object.create(CPUndo.prototype);
+    CPUndoPaint.prototype.constructor = CPUndoPaint;
 };
 
 CPArtwork.prototype = Object.create(EventEmitter.prototype);

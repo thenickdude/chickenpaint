@@ -76,7 +76,7 @@ function CPColorBmp(width, height) {
 	        w = rect.getWidth(),
 	        h = rect.getHeight(),
 	        
-	        buffer = new UInt8Array(w * h),
+	        buffer = new Uint8Array(w * h),
 	        
 	        outputIndex = 0,
 	        
@@ -472,4 +472,8 @@ CPColorBmp.prototype.constructor = CPColorBmp;
 
 CPColorBmp.prototype.offsetOfPixel = function(x, y) {
     return (y * this.width + x) * CPColorBmp.BYTES_PER_PIXEL;
-}
+};
+
+CPColorBmp.prototype.getMemorySize = function() {
+    return this.data.length;
+};
