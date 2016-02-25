@@ -23,12 +23,24 @@ function CPGreyBmp(width, height, bitDepth) {
     "use strict";
 
     CPBitmap.call(this, width, height);
+
+    this.bitDepth = bitDepth;
     
-    this.data = bitDepth == 16 ? new Uint16Array(width * height) : new UInt8Array(width * height);
+    switch (bitDepth) {
+        case 32:
+            this.data = new Uint32Array(width * height);
+        break;
+        case 16:
+            this.data = new Uint16Array(width * height);
+        break;
+        case 8:
+        default:
+            this.data = new Uint8Array(width * height);
+    }
 
     this.clone = function() {
         var
-            result = new CPGreyBmp(this.width, this.height);
+            result = new CPGreyBmp(this.width, this.height, this.bitDepth);
         
         for (var i = 0; i < this.data.length; i++) {
             result.data[i] = this.data[i];

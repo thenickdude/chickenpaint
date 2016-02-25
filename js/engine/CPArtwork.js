@@ -24,10 +24,9 @@ function CPArtwork(_width, _height) {
         undoBuffer = new CPLayer(_width, _height),
         
         /* 
-         * We use this 16-bit per pixel buffer so we can accurately accumulate small changes to layer opacity during a 
-         * brush stroke
+         * We use this buffer so we can accurately accumulate small changes to layer opacity during a brush stroke.
          */
-        opacityBuffer = new CPGreyBmp(_width, _height, 16),
+        opacityBuffer = new CPGreyBmp(_width, _height, 32),
         
         fusionArea = new CPRect(0, 0, _width, _height), 
         undoArea = new CPRect(), opacityArea = new CPRect(),
@@ -441,8 +440,231 @@ function CPArtwork(_width, _height) {
         }
     };
     
+    /* Brushes derived from this class use the opacity buffer as a simple alpha layer (32-bit pixels in ARGB order) */
+    function CPBrushToolDirectBrush() {
+    }
+    
+    CPBrushToolDirectBrush.prototype = Object.create(CPBrushToolSimpleBrush.prototype);
+    CPBrushToolDirectBrush.prototype.constructor = CPBrushToolDirectBrush;
+
+    CPBrushToolDirectBrush.prototype.mergeOpacityBuf = function(dstRect, color) {
+        var 
+            opacityData = opacityBuffer.data,
+            undoData = undoBuffer.data;
+    
+        for (var y = dstRect.top; y < dstRect.bottom; y++) {
+            var
+                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
+                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            
+            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                var
+                    color1 = opacityData[srcOffset],
+                    alpha1 = (color1 >>> 24);
+                
+                if (alpha1 <= 0) {
+                    continue;
+                }
+                
+                var 
+                // Pretty sure fusion.alpha is always 100 and the commented section is a copy/paste error
+                    alpha2 = undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] /* * fusion.alpha / 100 */, 
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                
+                if (newAlpha > 0) {
+                    var
+                        realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                        invAlpha = 255 - realAlpha;
+
+                    for (var i = 0; i < 3; i++) {
+                        var 
+                            channel1 = (opacityData[srcOffset] >> (16 - 8 * i)) & 0xFF,
+                            channel2 = undoData[dstOffset + i];
+                        
+                        curLayer.data[dstOffset + i] = ((channel1 * realAlpha + channel2 * invAlpha) / 255) | 0;
+                    }
+                    curLayer.data[dstOffset + i] = newAlpha;
+                }
+            }
+        }
+    };
+    
+    function CPBrushToolWatercolor() {
+        var 
+            WCMEMORY = 50,
+            WXMAXSAMPLERADIUS = 64;
+
+        var
+            previousSamples = [];
+
+        /**
+         * Average out a bunch of samples around the given pixel (x, y).
+         * 
+         * dx, dy controls the spread of the samples.
+         * 
+         * @returns CPColorFloat
+         */
+        function sampleColor(x, y, dx, dy) {
+            var
+                samples = [],
+                
+                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer();
+            
+            x = x | 0;
+            y = y | 0;
+
+            samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, y)));
+
+            for (var r = 0.25; r < 1.001; r += .25) {
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * dx), y)));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * dx), y)));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, ~~(y + r * dy))));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, ~~(y - r * dy))));
+
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+            }
+
+            var
+                average = new CPColorFloat(0, 0, 0);
+            
+            for (var i = 0; i < samples.length; i++) {
+                var
+                    sample = samples[i];
+                
+                average.r += sample.r;
+                average.g += sample.g;
+                average.b += sample.b;
+            }
+            
+            average.r /= samples.length;
+            average.g /= samples.length;
+            average.b /= samples.length;
+
+            return average;
+        }
+        
+        // Blend the brush stroke with full color into the opacityBuffer
+        function paintDirect(srcRect, dstRect, brush, brushWidth, alpha, color1) {
+            var
+                opacityData = opacityBuffer.data,
+
+                by = srcRect.top;
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var
+                    srcOffset = srcRect.left + by * brushWidth,
+                    dstOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
+                    var 
+                        alpha1 = ((brush[srcOffset] & 0xff) * alpha / 255) | 0;
+                    
+                    if (alpha1 <= 0) {
+                        continue;
+                    }
+
+                    var
+                        color2 = opacityData[dstOffset],
+                        alpha2 = (color2 >>> 24),
+
+                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                    
+                    if (newAlpha > 0) {
+                        var 
+                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                            invAlpha = 255 - realAlpha;
+
+                        // The usual alpha blending formula C = A * alpha + B * (1 - alpha)
+                        // has to rewritten in the form C = A + (1 - alpha) * B - (1 - alpha) *A
+                        // that way the rounding up errors won't cause problems
+
+                        var 
+                            newColor = newAlpha << 24
+                                | ((color1 >>> 16 & 0xff) + (((color2 >>> 16 & 0xff) * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
+                                | ((color1 >>> 8 & 0xff) + (((color2 >>> 8 & 0xff) * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
+                                | ((color1 & 0xff) + (((color2 & 0xff) * invAlpha - (color1 & 0xff) * invAlpha) / 255));
+
+                        opacityData[dstOffset] = newColor;
+                    }
+                }
+            }
+        }
+        
+        this.beginStroke = function(x, y, pressure) {
+            previousSamples = null;
+
+            CPBrushToolDirectBrush.prototype.beginStroke.call(this, x, y, pressure);
+        };
+
+        this.paintDabImplementation = function(srcRect, dstRect, dab) {
+            if (previousSamples == null) {
+                // Seed the previousSamples list to capacity with a bunch of copies of one sample to get us started
+                var 
+                    startColor = sampleColor(
+                        ~~((dstRect.left + dstRect.right) / 2),
+                        ~~((dstRect.top + dstRect.bottom) / 2), 
+                        Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getWidth() * 2 / 6)), 
+                        Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getHeight() * 2 / 6))
+                    );
+
+                previousSamples = [];
+                
+                for (var i = 0; i < WCMEMORY; i++) {
+                    previousSamples.push(startColor);
+                }
+            }
+            
+            var 
+                wcColor = new CPColorFloat(0, 0, 0);
+            
+            for (var i = 0; i < previousSamples.length; i++) {
+                var
+                    sample = previousSamples[i];
+                
+                wcColor.r += sample.r;
+                wcColor.g += sample.g;
+                wcColor.b += sample.b;
+            }
+            wcColor.r /= previousSamples.length;
+            wcColor.g /= previousSamples.length;
+            wcColor.b /= previousSamples.length;
+
+            // resaturation
+            wcColor.mixWith(createCPColorFloatFromInt(curColor), curBrush.resat * curBrush.resat);
+
+            var
+                newColor = wcColor.toInt();
+
+            // bleed
+            wcColor.mixWith(
+                sampleColor(
+                    (dstRect.left + dstRect.right) / 2,
+                    (dstRect.top + dstRect.bottom) / 2,
+                    Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getWidth() * 2 / 6)),
+                    Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getHeight() * 2 / 6))
+                ), 
+                curBrush.bleed
+            );
+
+            previousSamples.push(wcColor);
+            previousSamples.shift();
+
+            paintDirect(srcRect, dstRect, dab.brush, dab.width, Math.max(1, dab.alpha / 4), newColor);
+            mergeOpacityBuffer(0, false);
+            
+            if (sampleAllLayers) {
+                fusionLayers();
+            }
+        };
+    }
+    
+    CPBrushToolWatercolor.prototype = Object.create(CPBrushToolDirectBrush.prototype);
+    CPBrushToolWatercolor.prototype.constructor = CPBrushToolWatercolor;
+    
     // TODO
-    function CPBrushToolWatercolor() {}
     function CPBrushToolBlur() {}
     function CPBrushToolSmudge() {}
     function CPBrushToolOil() {}

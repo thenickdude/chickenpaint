@@ -27,12 +27,6 @@ function CPColorBmp(width, height) {
     "use strict";
     
     CPBitmap.call(this, width, height);
-    
-    var
-        RED_BYTE_OFFSET = 0,
-        GREEN_BYTE_OFFSET = 1,
-        BLUE_BYTE_OFFSET = 2,
-        ALPHA_BYTE_OFFSET = 3;
 
     // The ImageData object that holds the image data
     this.imageData = new ImageData(this.width, this.height);
@@ -51,19 +45,19 @@ function CPColorBmp(width, height) {
 	};
 
 	//
-	// Pixel access with friendly clipping. Pixel will be an integer in ARGB format
+	// Pixel access with friendly clipping. Pixel will be 32-bit integer in ARGB format
 	//
 	this.getPixel = function(x, y) {
 		x = Math.max(0, Math.min(this.width - 1, x));
 		y = Math.max(0, Math.min(this.height - 1, y));
 
 		var
-		    pixIndex = this.getOffsetOfPixel(x, y);
+		    pixIndex = this.offsetOfPixel(x, y);
 		
-		return (data[pixIndex + ALPHA_BYTE_OFFSET] << 24) 
-		    | (data[pixIndex + RED_BYTE_OFFSET]    << 16) 
-		    | (data[pixIndex + GREEN_BYTE_OFFSET]  << 8) 
-		    | data[pixIndex + BLUE_BYTE_OFFSET];
+		return (this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] << 24) 
+		    | (this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]    << 16) 
+		    | (this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET]  << 8) 
+		    | this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET];
 	}
 
 	//
@@ -141,7 +135,7 @@ function CPColorBmp(width, height) {
         for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
             for (var x = dstRect.left; x < dstRect.right; x++) {
                 var 
-                    alpha1 = bmp.data[srcOffset + ALPHA_BYTE_OFFSET];
+                    alpha1 = bmp.data[srcOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
     
                 if (alpha1 <= 0) {
                     dstOffset += CPColorBmp.BYTES_PER_PIXEL;
@@ -157,7 +151,7 @@ function CPColorBmp(width, height) {
                 }
 
                 var
-                    alpha2 = this.data[dstOffset + ALPHA_BYTE_OFFSET],
+                    alpha2 = this.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
                     newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
                 
                 if (newAlpha > 0) {
