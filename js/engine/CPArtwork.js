@@ -6,7 +6,11 @@ function CPArtwork(_width, _height) {
     
     var
         MAX_UNDO = 30,
-        EMPTY_CANVAS_COLOR = 0xFFFFFFFF;
+        EMPTY_CANVAS_COLOR = 0xFFFFFFFF,
+        
+        BURN_CONSTANT = 260,
+        BLUR_MIN = 64,
+        BLUR_MAX = 1;
     
     var
         layers = [],
@@ -363,9 +367,81 @@ function CPArtwork(_width, _height) {
         }
     };
 
+    function CPBrushToolDodge() {
+    }
+    
+    CPBrushToolDodge.prototype = Object.create(CPBrushToolSimpleBrush.prototype);
+    CPBrushToolDodge.prototype.constructor = CPBrushToolDodge;
+    
+    CPBrushToolDodge.prototype.mergeOpacityBuf = function(dstRect, color) {
+        var 
+            opacityData = opacityBuffer.data,
+            undoData = undoBuffer.data;
+    
+        for (var y = dstRect.top; y < dstRect.bottom; y++) {
+            var
+                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
+                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            
+            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                var
+                    opacityAlpha = (opacityData[srcOffset] / 255) | 0;
+                
+                if (opacityAlpha > 0 && undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
+                    opacityAlpha += 255;
+                    
+                    for (var i = 0; i < 3; i++) {
+                        var channel = (undoData[dstOffset + i] * opacityAlpha / 255) | 0;
+                    
+                        if (channel > 255) {
+                            channel = 255;
+                        }
+                        
+                        curLayer.data[dstOffset + i] = channel;
+                    }
+                }
+            }
+        }
+    };
+
+    function CPBrushToolBurn() {
+    }
+    
+    CPBrushToolBurn.prototype = Object.create(CPBrushToolSimpleBrush.prototype);
+    CPBrushToolBurn.prototype.constructor = CPBrushToolBurn;
+    
+    CPBrushToolBurn.prototype.mergeOpacityBuf = function(dstRect, color) {
+        var 
+            opacityData = opacityBuffer.data,
+            undoData = undoBuffer.data;
+    
+        for (var y = dstRect.top; y < dstRect.bottom; y++) {
+            var
+                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
+                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            
+            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                var
+                    opacityAlpha = (opacityData[srcOffset] / 255) | 0;
+                
+                if (opacityAlpha > 0 && undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
+                    for (var i = 0; i < 3; i++) {
+                        var channel = undoData[dstOffset + i];
+                        
+                        channel = (channel - (BURN_CONSTANT - channel) * opacityAlpha / 255) | 0;
+                    
+                        if (channel < 0) {
+                            channel = 0;
+                        }
+                        
+                        curLayer.data[dstOffset + i] = channel;
+                    }
+                }
+            }
+        }
+    };
+    
     // TODO
-    function CPBrushToolDodge() {}
-    function CPBrushToolBurn() {}
     function CPBrushToolWatercolor() {}
     function CPBrushToolBlur() {}
     function CPBrushToolSmudge() {}
