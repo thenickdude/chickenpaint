@@ -252,7 +252,7 @@ function CPArtwork(_width, _height) {
         }
     };
 
-    CPBrushToolSimpleBrush.prototype.paintOpacity = function(srcRect, dstRect, brush, w, alpha) {
+    CPBrushToolSimpleBrush.prototype.paintOpacity = function(srcRect, dstRect, brush, brushWidth, alpha) {
         var 
             opacityData = opacityBuffer.data,
             
@@ -260,7 +260,7 @@ function CPArtwork(_width, _height) {
         
         for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
             var 
-                srcOffset = srcRect.left + by * w,
+                srcOffset = srcRect.left + by * brushWidth,
                 dstOffset = dstRect.left + y * that.width;
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
@@ -280,7 +280,7 @@ function CPArtwork(_width, _height) {
         }
     };
 
-    CPBrushToolSimpleBrush.prototype.paintFlow = function(srcRect, dstRect, brush, w, alpha) {
+    CPBrushToolSimpleBrush.prototype.paintFlow = function(srcRect, dstRect, brush, brushWidth, alpha) {
         var 
             opacityData = opacityBuffer.data,
 
@@ -288,7 +288,7 @@ function CPArtwork(_width, _height) {
         
         for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
             var 
-                srcOffset = srcRect.left + by * w,
+                srcOffset = srcRect.left + by * brushWidth,
                 dstOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
@@ -305,7 +305,7 @@ function CPArtwork(_width, _height) {
         }
     };
 
-    CPBrushToolSimpleBrush.prototype.paintOpacityFlow = function(srcRect, dstRect, brush, w, opacity, flow) {
+    CPBrushToolSimpleBrush.prototype.paintOpacityFlow = function(srcRect, dstRect, brush, brushWidth, opacity, flow) {
         var 
             opacityData = opacityBuffer.data,
 
@@ -313,7 +313,7 @@ function CPArtwork(_width, _height) {
         
         for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
             var 
-                srcOffset = srcRect.left + by * w,
+                srcOffset = srcRect.left + by * brushWidth,
                 dstOffset = dstRect.left + y * width;
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
@@ -664,10 +664,159 @@ function CPArtwork(_width, _height) {
     CPBrushToolWatercolor.prototype = Object.create(CPBrushToolDirectBrush.prototype);
     CPBrushToolWatercolor.prototype.constructor = CPBrushToolWatercolor;
     
+    function CPBrushToolOil() {
+
+        function oilAccumBuffer(srcRect, dstRect, buffer, w, alpha) {
+            var
+                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer(),
+
+                by = srcRect.top;
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var 
+                    srcOffset = srcRect.left + by * w,
+                    dstOffset = layerToSample.offsetOfPixel(dstRect.left, y);
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                    var
+                        alpha1 = (layerToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] * alpha / 255) | 0;
+                    
+                    if (alpha1 <= 0) {
+                        continue;
+                    }
+
+                    var
+                        color2 = buffer[srcOffset],
+                        alpha2 = color2 >>> 24,
+
+                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                    
+                    if (newAlpha > 0) {
+                        var 
+                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                            invAlpha = 255 - realAlpha,
+                            
+                            color1Red = layerToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
+                            color1Green = layerToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                            color1Blue = layerToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+
+                            newColor = newAlpha << 24
+                                | (color1Red + (((color2 >>> 16 & 0xff) * invAlpha - color1Red * invAlpha) / 255)) << 16
+                                | (color1Green + (((color2 >>> 8 & 0xff) * invAlpha - color1Green * invAlpha) / 255)) << 8
+                                | (color1Blue + (((color2 & 0xff) * invAlpha - color1Blue * invAlpha) / 255));
+
+                        buffer[srcOffset] = newColor;
+                    }
+                }
+            }
+        }
+
+        function oilResatBuffer(srcRect, dstRect, buffer, w, alpha1, color1) {
+            var
+                by = srcRect.top;
+            
+            if (alpha1 <= 0) {
+                return;
+            }
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var 
+                    srcOffset = srcRect.left + by * w;
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++) {
+                    var
+                        color2 = buffer[srcOffset],
+                        alpha2 = (color2 >>> 24),
+    
+                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                    
+                    if (newAlpha > 0) {
+                        var 
+                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                            invAlpha = 255 - realAlpha,
+                            
+                            newColor = newAlpha << 24
+                                | ((color1 >>> 16 & 0xff) + (((color2 >>> 16 & 0xff) * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
+                                | ((color1 >>> 8 & 0xff) + (((color2 >>> 8 & 0xff) * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
+                                | ((color1 & 0xff) + (((color2 & 0xff) * invAlpha - (color1 & 0xff) * invAlpha) / 255));
+                        
+                        buffer[srcOffset] = newColor;
+                    }
+                }
+            }
+        }
+
+        function oilPasteBuffer(srcRect, dstRect, buffer, brush, w, alpha) {
+            var
+                opacityData = opacityBuffer.data,
+    
+                by = srcRect.top;
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var 
+                    bufferOffset = srcRect.left + by * w, // Brush buffer is 1 integer per pixel
+                    opacityOffset = dstRect.left + y * that.width, // Opacity buffer is 1 integer per pixel
+                    layerOffset = curLayer.offsetOfPixel(dstRect.left, y); // 4 bytes per pixel 
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, bufferOffset++, layerOffset += CPColorBmp.BYTES_PER_PIXEL, opacityOffset++) {
+                    var 
+                        color1 = buffer[bufferOffset],
+                        alpha1 = ((color1 >>> 24) * (brush[bufferOffset] & 0xff) * alpha / (255 * 255)) | 0;
+                    
+                    if (alpha1 <= 0) {
+                        continue;
+                    }
+
+                    var
+                        alpha2 = curLayer.data[layerOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+
+                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                    
+                    if (newAlpha > 0) {
+                        var 
+                            color2Red = curLayer.data[layerOffset + CPColorBmp.RED_BYTE_OFFSET],
+                            color2Green = curLayer.data[layerOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                            color2Blue = curLayer.data[layerOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                            
+                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                            invAlpha = 255 - realAlpha,
+
+                            newColor = newAlpha << 24
+                                | ((color1 >>> 16 & 0xff) + ((color2Red * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
+                                | ((color1 >>> 8 & 0xff) + ((color2Green * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
+                                | ((color1 & 0xff) + ((color2Blue * invAlpha - (color1 & 0xff) * invAlpha) / 255));
+
+                        opacityData[opacityOffset] = newColor;
+                    }
+                }
+            }
+        }
+        
+        this.paintDabImplementation = function(srcRect, dstRect, dab) {
+            if (brushBuffer == null) {
+                brushBuffer = new Uint32Array(dab.width * dab.height); // Initialized to 0 for us by the browser
+                
+                oilAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, 255);
+            } else {
+                oilResatBuffer(srcRect, dstRect, brushBuffer, dab.width, ~~((curBrush.resat <= 0.0) ? 0 : Math.max(1, (curBrush.resat * curBrush.resat) * 255)), curColor & 0xFFFFFF);
+                oilPasteBuffer(srcRect, dstRect, brushBuffer, dab.brush, dab.width, dab.alpha);
+                oilAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, ~~(curBrush.bleed * 255));
+            }
+            
+            mergeOpacityBuffer(0, false);
+            
+            if (sampleAllLayers) {
+                fusionLayers();
+            }
+        };
+    }
+    
+    CPBrushToolOil.prototype = Object.create(CPBrushToolDirectBrush.prototype);
+    CPBrushToolOil.prototype.constructor = CPBrushToolOil;
+    
     // TODO
     function CPBrushToolBlur() {}
     function CPBrushToolSmudge() {}
-    function CPBrushToolOil() {}
     
     var paintingModes = [
         new CPBrushToolSimpleBrush(), new CPBrushToolEraser(), new CPBrushToolDodge(),
