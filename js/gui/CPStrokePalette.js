@@ -50,7 +50,7 @@ function CPStrokePalette(cpController) {
 	        body = that.getBodyElement(),
 	        listElem = document.createElement("ul");
 	    
-	    listElem.className = "chickenpaint-stroke-tools";
+	    listElem.className = "chickenpaint-stroke-tools list-unstyled";
 	    
 	    for (var i in buttons) {
 	        var 

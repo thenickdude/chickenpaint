@@ -1,5 +1,17 @@
 .chickenpaint {
 	position:relative;
+	
+	/* 
+	 * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
+	 * html/body itself
+	 */
+	font-family: sans-serif;
+	-ms-text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+	
+	@import 'bootstrap/bootstrap.less';
+	
+	@icon-font-path: "fonts/";
 }
 
 .chickenpaint canvas {
@@ -35,9 +47,22 @@
 .chickenpaint-palette-head {
 	padding:5px;
 	font-size:90%;
+	cursor:default; /* No text selection cursor on palette titles */
 }
 .chickenpaint-palette-body {
 	
+}
+
+.chickenpaint-palette-head,
+.chickenpaint-palette-color,
+.chickenpaint-palette-tool,
+.chickenpaint-palette-misc,
+.chickenpaint-palette-stroke {
+    /* Prevent drag operations from beginning text selection */
+   -webkit-user-select: none;
+   -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .chickenpaint-tools {
@@ -59,8 +84,8 @@
 
 .chickenpaint-toolbar-button {
 	display:inline-block;
-	width:32px;
-	height:32px;
+	width:34px; /* 32 + 2 pixels for the borders */
+	height:34px; 
 	background-color:white;
 	border:1px solid black;
 	border-radius:3px;

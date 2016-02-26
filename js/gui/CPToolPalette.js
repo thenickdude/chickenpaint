@@ -116,7 +116,7 @@ function CPToolPalette(cpController) {
 	        body = that.getBodyElement(),
 	        listElem = document.createElement("ul");
 	    
-	    listElem.className = "chickenpaint-tools";
+	    listElem.className = "chickenpaint-tools list-unstyled";
 	    
 	    for (var i in buttons) {
 	        var 

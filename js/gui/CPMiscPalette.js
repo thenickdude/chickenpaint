@@ -65,7 +65,7 @@ function CPMiscPalette(cpController) {
 	        body = that.getBodyElement(),
 	        listElem = document.createElement("ul");
 	    
-	    listElem.className = "chickenpaint-misc-tools";
+	    listElem.className = "chickenpaint-misc-tools list-unstyled";
 	    
 	    for (var i in buttons) {
 	        var 
