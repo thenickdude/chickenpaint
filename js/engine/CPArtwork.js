@@ -440,6 +440,66 @@ function CPArtwork(_width, _height) {
         }
     };
     
+    function CPBrushToolBlur() {
+    }
+    
+    CPBrushToolBlur.prototype = Object.create(CPBrushToolSimpleBrush.prototype);
+    CPBrushToolBlur.prototype.constructor = CPBrushToolBlur;
+
+    CPBrushToolBlur.prototype.mergeOpacityBuf = function(dstRect, color) {
+        var 
+            opacityData = opacityBuffer.data,
+            undoData = undoBuffer.data,
+            
+            srcYStride = opacityBuffer.width,
+            dstYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL;
+
+        for (var y = dstRect.top; y < dstRect.bottom; y++) {
+            var 
+                dstOffset = undoBuffer.offsetOfPixel(dstRect.left, y),
+                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            
+            for (var x = dstRect.left; x < dstRect.right; x++, dstOffset += CPColorBmp.BYTES_PER_PIXEL, srcOffset++) {
+                var 
+                    opacityAlpha = (opacityData[srcOffset] / 255) | 0;
+                
+                if (opacityAlpha > 0) {
+                    var
+                        blur = (BLUR_MIN + (BLUR_MAX - BLUR_MIN) * opacityAlpha / 255) | 0,
+
+                        r = blur * undoData[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
+                        g = blur * undoData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                        b = blur * undoData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                        a = blur * undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+                        sum = blur + 4;
+                    
+                    function addSample(sampleOffset) {
+                        r += undoData[sampleOffset + CPColorBmp.RED_BYTE_OFFSET];
+                        g += undoData[sampleOffset + CPColorBmp.GREEN_BYTE_OFFSET];
+                        b += undoData[sampleOffset + CPColorBmp.BLUE_BYTE_OFFSET];
+                        a += undoData[sampleOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
+                    }
+
+                    // TODO these -1s assume pixels are 1 byte big
+                    addSample(y > 0 ? dstOffset - dstYStride : dstOffset);
+                    addSample(y < undoBuffer.height - 1 ? dstOffset + dstYStride : dstOffset);
+                    addSample(x > 0 ? dstOffset - CPColorBmp.BYTES_PER_PIXEL : dstOffset);
+                    addSample(x < undoBuffer.width - 1 ? dstOffset + CPColorBmp.BYTES_PER_PIXEL : dstOffset);
+
+                    a /= sum;
+                    r /= sum;
+                    g /= sum;
+                    b /= sum;
+                    
+                    curLayer.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = r | 0;
+                    curLayer.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = g | 0;
+                    curLayer.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = b | 0;
+                    curLayer.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = a | 0;
+                }
+            }
+        }
+    }
+    
     /* Brushes derived from this class use the opacity buffer as a simple alpha layer (32-bit pixels in ARGB order) */
     function CPBrushToolDirectBrush() {
     }
@@ -814,9 +874,193 @@ function CPArtwork(_width, _height) {
     CPBrushToolOil.prototype = Object.create(CPBrushToolDirectBrush.prototype);
     CPBrushToolOil.prototype.constructor = CPBrushToolOil;
     
-    // TODO
-    function CPBrushToolBlur() {}
-    function CPBrushToolSmudge() {}
+    function CPBrushToolSmudge() {
+        
+        /**
+         * 
+         * @param srcRect
+         * @param dstRect
+         * @param buffer Uint32Array
+         * @param w int
+         * @param alpha int
+         */
+        function smudgeAccumBuffer(srcRect, dstRect, buffer, w, alpha) {
+            var
+                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer(),
+
+                by = srcRect.top;
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var
+                    srcOffset = srcRect.left + by * w,
+                    dstOffset = layerToSample.offsetOfPixel(dstRect.left, y);
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                    var
+                        layerRed = layerToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
+                        layerGreen = layerToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                        layerBlue = layerToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                        layerAlpha = layerToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+                        
+                        opacityAlpha = 255 - alpha;
+                    
+                    if (opacityAlpha > 0) {
+                        var
+                            destColor = buffer[srcOffset],
+
+                            destAlpha = 255,
+                            newLayerAlpha = (opacityAlpha + destAlpha * (255 - opacityAlpha) / 255) | 0,
+                            realAlpha = (255 * opacityAlpha / newLayerAlpha) | 0,
+                            invAlpha = 255 - realAlpha,
+
+                            newColor = 
+                                ((layerAlpha * realAlpha + (destColor >>> 24 & 0xff) * invAlpha) / 255) << 24 & 0xff000000
+                                | ((layerRed * realAlpha + (destColor >>> 16 & 0xff) * invAlpha) / 255) << 16 & 0xff0000
+                                | ((layerGreen * realAlpha + (destColor >>> 8 & 0xff) * invAlpha) / 255) << 8 & 0xff00
+                                | ((layerBlue * realAlpha + (destColor & 0xff) * invAlpha) / 255) & 0xff;
+
+                        if (newColor == destColor) {
+                            if (layerRed > (destColor & 0xff0000)) {
+                                newColor += 1 << 16;
+                            } else if (layerRed < (destColor & 0xff0000)) {
+                                newColor -= 1 << 16;
+                            }
+
+                            if (layerGreen> (destColor & 0xff00)) {
+                                newColor += 1 << 8;
+                            } else if (layerGreen < (destColor & 0xff00)) {
+                                newColor -= 1 << 8;
+                            }
+
+                            if (layerBlue > (destColor & 0xff)) {
+                                newColor += 1;
+                            } else if (layerBlue < (destColor & 0xff)) {
+                                newColor -= 1;
+                            }
+                        }
+
+                        buffer[srcOffset] = newColor;
+                    }
+                }
+            }
+
+            if (srcRect.left > 0) {
+                var
+                    fill = srcRect.left;
+                
+                for (var y = srcRect.top; y < srcRect.bottom; y++) {
+                    var 
+                        offset = y * w,
+                        fillColor = buffer[offset + srcRect.left];
+                    
+                    for (var x = 0; x < fill; x++) {
+                        buffer[offset++] = fillColor;
+                    }
+                }
+            }
+
+            if (srcRect.right < w) {
+                var
+                    fill = w - srcRect.right;
+                
+                for (var y = srcRect.top; y < srcRect.bottom; y++) {
+                    var
+                        offset = y * w + srcRect.right,
+                        fillColor = buffer[offset - 1];
+                    
+                    for (var x = 0; x < fill; x++) {
+                        buffer[offset++] = fillColor;
+                    }
+                }
+            }
+
+            for (var y = 0; y < srcRect.top; y++) {
+                var 
+                    srcOffset = srcRect.top * w,
+                    dstOffset = y * w;
+                
+                for (var x = 0; x < w; x++, srcOffset++, dstOffset++) {
+                    buffer[dstOffset] = buffer[srcOffset];
+                }
+            }
+            
+            for (var y = srcRect.bottom; y < w; y++) {
+                var 
+                    srcOffset = (srcRect.bottom - 1) * w,
+                    dstOffset = y * w;
+                
+                for (var x = 0; x < w; x++, srcOffset++, dstOffset++) {
+                    buffer[dstOffset] = buffer[srcOffset];
+                }
+            }
+        }
+
+        /**
+         * 
+         * @param srcRect CPRect
+         * @param dstRect CPRect
+         * @param buffer Uint32Array
+         * @param brush Uint8Array
+         * @param w int
+         * @param alpha int
+         */
+        function smudgePasteBuffer(srcRect, dstRect, buffer, brush, w, alpha) {
+            var
+                undoData = undoBuffer.data,
+
+                by = srcRect.top;
+            
+            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                var 
+                    srcOffset = srcRect.left + by * w,
+                    dstOffset = curLayer.offsetOfPixel(dstRect.left, y);
+                
+                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                    var
+                        bufferColor = buffer[srcOffset],
+                        opacityAlpha = (bufferColor >>> 24) * (brush[srcOffset] & 0xff) / 255;
+                    
+                    if (opacityAlpha > 0) {
+                        curLayer.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (bufferColor >> 16) & 0xff;
+                        curLayer.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (bufferColor >> 8) & 0xff;
+                        curLayer.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = bufferColor & 0xff;
+                        curLayer.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (bufferColor >> 24) & 0xff;
+                    }
+                }
+            }
+        }
+        
+        /**
+         * @param srcRect CPRect
+         * @param dstRect CPRect
+         * @param dab CPBrushDab
+         */
+        this.paintDabImplementation = function(srcRect, dstRect, dab) {
+            if (brushBuffer == null) {
+                brushBuffer = new Uint32Array(dab.width * dab.height);
+                smudgeAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, 0);
+            } else {
+                smudgeAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, dab.alpha);
+                smudgePasteBuffer(srcRect, dstRect, brushBuffer, dab.brush, dab.width, dab.alpha);
+
+                if (lockAlpha) {
+                    restoreAlpha(dstRect);
+                }
+            }
+            
+            opacityArea.makeEmpty();
+            
+            if (sampleAllLayers) {
+                fusionLayers();
+            }
+        };
+    }
+    
+    CPBrushToolSmudge.prototype = Object.create(CPBrushToolDirectBrush.prototype);
+    CPBrushToolSmudge.prototype.constructor = CPBrushToolSmudge;
+
+    CPBrushToolSmudge.prototype.mergeOpacityBuf = function(dstRect, color) {
+    };
     
     var paintingModes = [
         new CPBrushToolSimpleBrush(), new CPBrushToolEraser(), new CPBrushToolDodge(),

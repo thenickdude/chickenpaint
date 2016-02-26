@@ -329,19 +329,19 @@ function ChickenPaint(uiElem, arrayBuffer) {
             // Modes
     
             case "CPFloodFill":
-                setMode(M_FLOODFILL);
+                setMode(ChickenPaint.M_FLOODFILL);
             break;
             case "CPRectSelection":
-                setMode(M_RECT_SELECTION);
+                setMode(ChickenPaint.M_RECT_SELECTION);
             break;
             case "CPMoveTool":
-                setMode(M_MOVE_TOOL);
+                setMode(ChickenPaint.M_MOVE_TOOL);
             break;
             case "CPRotateCanvas":
-                setMode(M_ROTATE_CANVAS);
+                setMode(ChickenPaint.M_ROTATE_CANVAS);
             break;
             case "CPColorPicker":
-                setMode(M_COLOR_PICKER);
+                setMode(ChickenPaint.M_COLOR_PICKER);
             break;
     
             // Stroke modes

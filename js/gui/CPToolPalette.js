@@ -125,6 +125,7 @@ function CPToolPalette(cpController) {
 	        
 	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
 	        buttonElem.dataset.buttonIndex = i;
+	        buttonElem.title = button.toolTip;
 	        
 	        listElem.appendChild(buttonElem);
 	    }
