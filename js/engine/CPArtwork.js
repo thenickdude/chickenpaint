@@ -98,6 +98,46 @@ function CPArtwork(_width, _height) {
         that.emit("changeLayer");
     }
     
+    //
+    // Selection methods
+    //
+
+    /**
+     * Gets the current selection rect or a rectangle covering the whole canvas if there are no selections
+     * 
+     * @returns CPRect
+     */
+    this.getSelectionAutoSelect = function() {
+        var
+            r;
+
+        if (!curSelection.isEmpty()) {
+            r = curSelection.clone();
+        } else {
+            r = this.getBounds();
+        }
+
+        return r;
+    };
+
+    /**
+     * Gets the current selection rect
+     * 
+     * @returns CPRect
+     */ 
+    this.getSelection = function() {
+        return curSelection.clone();
+    };
+
+    function setSelection(r) {
+        curSelection.set(r);
+        curSelection.clip(getBounds());
+    }
+
+    function setSelection() {
+        curSelection.makeEmpty();
+    }
+    
     function invalidateFusionRect(rect) {
         fusionArea.union(rect);
         
@@ -151,7 +191,7 @@ function CPArtwork(_width, _height) {
         undoArea.clip(that.getBounds());
         if (!undoArea.isEmpty()) {
             mergeOpacityBuffer(curColor, false);
-            that.addUndo(new CPUndoPaint());
+            addUndo(new CPUndoPaint());
         }
         brushBuffer = null;
     }
@@ -1205,7 +1245,7 @@ function CPArtwork(_width, _height) {
         undoList.push(redo);
     }
 
-    this.addUndo = function(undo) {
+    function addUndo(undo) {
         hasUnsavedChanges = true;
         
         if (undoList.length == 0 || !undoList[undoList.length - 1].merge(undo)) {
@@ -1252,8 +1292,96 @@ function CPArtwork(_width, _height) {
         }
     };
     
-    this.isPointWithin = function(x, y) {
-        return x >= 0 && y >= 0 && x < this.width && y < this.height;
+    this.floodFill = function(x, y) {
+        undoBuffer.copyFrom(curLayer);
+        undoArea = getBounds();
+
+        curLayer.floodFill(~~x, ~~y, curColor | 0xff000000);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.fill = function(color) {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.clearRect(r, color);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.clear = function() {
+        this.fill(0xffffff);
+    };
+
+    this.hFlip = function() {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.copyRegionHFlip(r, undoBuffer);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.vFlip = function() {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.copyRegionVFlip(r, undoBuffer);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.monochromaticNoise = function() {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.fillWithNoise(r);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.colorNoise = function() {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.fillWithColorNoise(r);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+    
+    this.invert = function() {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.invert(r);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
     };
     
     this.setSampleAllLayers = function(b) {
@@ -1336,3 +1464,7 @@ CPArtwork.prototype.constructor = CPArtwork;
 CPArtwork.prototype.getBounds = function() {
     return new CPRect(0, 0, this.width, this.height);
 }
+
+CPArtwork.prototype.isPointWithin = function(x, y) {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+};

@@ -195,8 +195,8 @@ function CPPaletteManager(cpController) {
 	 */
 	this.arrangePalettes = function() {
         var
-            windowWidth = $(parentElem).parents(".chickenpaint").width(),
-            windowHeight = $(parentElem).parents(".chickenpaint").height()
+            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
+            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height()
         
 	    palettes.tool.setLocation(0, 0);
 	    palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + 1, 0);
@@ -206,8 +206,8 @@ function CPPaletteManager(cpController) {
 	    return; //TODO erase this line and the ones above
 	    
         var
-            windowWidth = $(parentElem).parents(".chickenpaint").width(),
-            windowHeight = $(parentElem).parents(".chickenpaint").height(),
+            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
+            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height(),
 	        
 		    haveWidthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
 

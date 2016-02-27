@@ -1,6 +1,4 @@
 .chickenpaint {
-	position:relative;
-	
 	/* 
 	 * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
 	 * html/body itself
@@ -12,6 +10,16 @@
 	@import 'bootstrap/bootstrap.less';
 	
 	@icon-font-path: "fonts/";
+}
+
+.chickenpaint .navbar {
+    margin-bottom: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.chickenpaint-main-section {
+	position:relative;
 }
 
 .chickenpaint canvas {

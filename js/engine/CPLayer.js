@@ -1039,6 +1039,115 @@ function CPLayer(width, height, name) {
         }
     };
     
+    /**
+     * @param rect CPRect
+     * @param source CPLayer
+     */
+    this.copyRegionHFlip = function(rect, source) {
+        rect = this.getBounds().clip(rect);
+
+        for (var y = rect.top; y < rect.bottom; y++) {
+            var
+                dstOffset = this.offsetOfPixel(rect.left, y),
+                srcOffset = source.offsetOfPixel(rect.right - 1, y);
+            
+            for (var x = rect.left; x < rect.right; x++, srcOffset -= CPColorBmp.BYTES_PER_PIXEL * 2) {
+                for (var i = 0; i < CPColorBmp.BYTES_PER_PIXEL; i++) {
+                    this.data[dstOffset++] = source.data[srcOffset++];
+                }
+            }
+        }
+    };
+
+    /**
+     * @param rect CPRect
+     * @param source CPLayer
+     */
+    this.copyRegionVFlip = function(rect, source) {
+        rect = this.getBounds().clip(rect);
+        
+        var
+            widthBytes = rect.getWidth() * CPColorBmp.BYTES_PER_PIXEL;
+
+        for (var y = rect.top; y < rect.bottom; y++) {
+            var
+                dstOffset = this.offsetOfPixel(rect.left, y),
+                srcOffset = source.offsetOfPixel(rect.left, rect.bottom - 1 - (y - rect.top));
+            
+            for (var x = 0; x < widthBytes; x++) {
+                this.data[dstOffset++] = source.data[srcOffset++];
+            }
+        }
+    }
+
+    /**
+     * @param r CPRect
+     */
+    this.fillWithNoise = function(rect) {
+        rect = this.getBounds().clip(rect);
+
+        var
+            value,
+            yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+            
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
+
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            for (var x = rect.left; x < rect.right; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+                value = (Math.random() * 0x100) | 0;
+
+                this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = value;
+                this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = value;
+                this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = value;
+                this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
+            }
+        }
+    };
+
+    /**
+     * @param r CPRect
+     */
+    this.fillWithColorNoise = function(rect) {
+        rect = this.getBounds().clip(rect);
+
+        var
+            value,
+            yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+            
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
+
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            for (var x = rect.left; x < rect.right; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+                value = (Math.random() * 0x1000000) | 0;
+
+                this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (value >> 16) & 0xFF;
+                this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (value >> 8) & 0xFF;
+                this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = value & 0xFF;
+                this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
+            }
+        }
+    };
+
+    /**
+     * @param r CPRect
+     */
+    this.invert = function(rect) {
+        rect = this.getBounds().clip(rect);
+
+        var
+            yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+            
+            pixIndex = this.offsetOfPixel(rect.left, rect.top);
+
+        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+            for (var x = rect.left; x < rect.right; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+                this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] ^= 0xFF;
+                this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] ^= 0xFF;
+                this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] ^= 0xFF;
+            }
+        }
+    }
+    
     this.getAlpha = function() {
         return this.alpha;
     };
