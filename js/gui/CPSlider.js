@@ -129,7 +129,7 @@ function CPSlider(minValue, maxValue, centerMode) {
             return;
         }
         
-        document.body.removeEventListener("mouseup", mouseUp);
+        window.removeEventListener("mouseup", mouseUp);
         document.body.removeEventListener("mousemove", mouseDragged);
     }
     
@@ -169,7 +169,7 @@ function CPSlider(minValue, maxValue, centerMode) {
         		    return;
     		}
     		
-    		document.body.addEventListener("mouseup", mouseUp);
+    		window.addEventListener("mouseup", mouseUp);
     		document.body.addEventListener("mousemove", mouseDragged);
 		}
 	});

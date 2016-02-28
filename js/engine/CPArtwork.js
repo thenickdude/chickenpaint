@@ -494,8 +494,17 @@ function CPArtwork(_width, _height) {
             undoData = undoBuffer.data,
             
             srcYStride = opacityBuffer.width,
-            dstYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL;
+            dstYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL,
+            
+            r, g, b, a;
 
+        function addSample(sampleOffset) {
+            r += undoData[sampleOffset + CPColorBmp.RED_BYTE_OFFSET];
+            g += undoData[sampleOffset + CPColorBmp.GREEN_BYTE_OFFSET];
+            b += undoData[sampleOffset + CPColorBmp.BLUE_BYTE_OFFSET];
+            a += undoData[sampleOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
+        }
+        
         for (var y = dstRect.top; y < dstRect.bottom; y++) {
             var 
                 dstOffset = undoBuffer.offsetOfPixel(dstRect.left, y),
@@ -509,20 +518,13 @@ function CPArtwork(_width, _height) {
                     var
                         blur = (BLUR_MIN + (BLUR_MAX - BLUR_MIN) * opacityAlpha / 255) | 0,
 
-                        r = blur * undoData[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
-                        g = blur * undoData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                        b = blur * undoData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-                        a = blur * undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
                         sum = blur + 4;
                     
-                    function addSample(sampleOffset) {
-                        r += undoData[sampleOffset + CPColorBmp.RED_BYTE_OFFSET];
-                        g += undoData[sampleOffset + CPColorBmp.GREEN_BYTE_OFFSET];
-                        b += undoData[sampleOffset + CPColorBmp.BLUE_BYTE_OFFSET];
-                        a += undoData[sampleOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
-                    }
+                    r = blur * undoData[dstOffset + CPColorBmp.RED_BYTE_OFFSET];
+                    g = blur * undoData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET];
+                    b = blur * undoData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET];
+                    a = blur * undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
 
-                    // TODO these -1s assume pixels are 1 byte big
                     addSample(y > 0 ? dstOffset - dstYStride : dstOffset);
                     addSample(y < undoBuffer.height - 1 ? dstOffset + dstYStride : dstOffset);
                     addSample(x > 0 ? dstOffset - CPColorBmp.BYTES_PER_PIXEL : dstOffset);

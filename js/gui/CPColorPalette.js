@@ -124,14 +124,14 @@ function CPColorSelect(cpController) {
     
     function endDrag(e) {
         capturedMouse = false;
-        document.body.removeEventListener("mouseup", endDrag);
+        window.removeEventListener("mouseup", endDrag);
         document.body.removeEventListener("mousemove", continueDrag);
     }
     
     function startDrag(e) {
         if (!capturedMouse) {
             capturedMouse = true;
-            document.body.addEventListener("mouseup", endDrag);
+            window.addEventListener("mouseup", endDrag);
             document.body.addEventListener("mousemove", continueDrag);
         }
         
@@ -244,14 +244,14 @@ function CPColorSlider(cpController, selecter) {
     
     function endDrag(e) {
         capturedMouse = false;
-        document.body.removeEventListener("mouseup", endDrag);
+        window.removeEventListener("mouseup", endDrag);
         document.body.removeEventListener("mousemove", continueDrag);
     }
     
     function startDrag(e) {
         if (!capturedMouse) {
             capturedMouse = true;
-            document.body.addEventListener("mouseup", endDrag);
+            window.addEventListener("mouseup", endDrag);
             document.body.addEventListener("mousemove", continueDrag);
         }
         

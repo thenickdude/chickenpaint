@@ -849,7 +849,7 @@ function CPCanvas(controller) {
         mouseDown = false;
         activeMode.mouseReleased(e);
         
-        document.body.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("mouseup", handleMouseUp);
     }
     
     container.addEventListener("mousedown", function(e) {
@@ -859,7 +859,7 @@ function CPCanvas(controller) {
             requestFocusInWindow();
             activeMode.mousePressed(e);
             
-            document.body.addEventListener("mouseup", handleMouseUp);
+            window.addEventListener("mouseup", handleMouseUp);
         }
     });
 
