@@ -179,9 +179,8 @@ function CPCanvas(controller) {
         
     CPFreehandMode.prototype.mouseMoved = CPFreehandMode.prototype.paint = function(e) {
     };
-    
 
-    function CPLineMode() {}
+    // TODO
     function CPBezierMode() {}
     function CPColorPickerMode() {}
     function CPRectSelectionMode() {}
@@ -191,63 +190,83 @@ function CPCanvas(controller) {
     function CPMoveToolMode() {}
     function CPRotateCanvasMode() {}
     
-    /*
     function CPLineMode() {
         var
             dragLine = false,
-            dragLineFrom, dragLineTo;
+            dragLineFrom, dragLineTo,
+            LINE_PREVIEW_WIDTH = 1;
 
-        public void mousePressed(MouseEvent e) {
+        this.mousePressed = function(e) {
             if (!dragLine && e.button == BUTTON_PRIMARY) {
-                Point p = e.getPoint();
-
                 dragLine = true;
-                dragLineFrom = dragLineTo = (Point) p.clone();
+                dragLineFrom = dragLineTo = coordToDocument({x: e.pageX, y: e.pageY});
             }
-        }
+        };
 
-        public void mouseDragged(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mouseDragged = function(e) {
+            var
+                p = coordToDocument({x: e.pageX, y: e.pageY}),
 
-            Rectangle r = new Rectangle(Math.min(dragLineFrom.x, dragLineTo.x), Math.min(dragLineFrom.y, dragLineTo.y),
-                    Math.abs(dragLineFrom.x - dragLineTo.x) + 1, Math.abs(dragLineFrom.y - dragLineTo.y) + 1);
-            r.union(new Rectangle(Math.min(dragLineFrom.x, p.x), Math.min(dragLineFrom.y, p.y), Math
-                    .abs(dragLineFrom.x - p.x) + 1, Math.abs(dragLineFrom.y - p.y) + 1));
-            dragLineTo = (Point) p.clone();
+                // The old line position that we'll invalidate for redraw
+                r = new CPRect(
+                    Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH, 
+                    Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH,
+                    Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1, 
+                    Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1
+                );
+                
+            // The new line position
+            r.union(new CPRect(
+                Math.min(dragLineFrom.x, p.x) - LINE_PREVIEW_WIDTH, 
+                Math.min(dragLineFrom.y, p.y) - LINE_PREVIEW_WIDTH, 
+                Math.max(dragLineFrom.x, p.x) + LINE_PREVIEW_WIDTH + 1, 
+                Math.max(dragLineFrom.y, p.y) + LINE_PREVIEW_WIDTH + 1
+            ));
+            
+            dragLineTo = p;
+            
             repaintRect(r);
-        }
+        };
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function(e) {
             if (dragLine && e.button == BUTTON_PRIMARY) {
-                Point p = e.getPoint();
-                Point2D.Float pf = coordToDocument(p);
+                var 
+                    pf = coordToDocument({x: e.pageX, y: e.pageY}),
+                    from = dragLineFrom;
 
                 dragLine = false;
 
-                Point2D.Float from = coordToDocument(dragLineFrom);
                 artwork.beginStroke(from.x, from.y, 1);
                 artwork.continueStroke(pf.x, pf.y, 1);
                 artwork.endStroke();
 
-                Rectangle r = new Rectangle(Math.min(dragLineFrom.x, dragLineTo.x), Math.min(dragLineFrom.y,
-                        dragLineTo.y), Math.abs(dragLineFrom.x - dragLineTo.x) + 1, Math.abs(dragLineFrom.y
-                        - dragLineTo.y) + 1);
+                var
+                    r = new CPRect(
+                        Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH, 
+                        Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH, 
+                        Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1, 
+                        Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1
+                    );
+                
                 repaintRect(r);
 
                 activeMode = defaultMode; // yield control to the default mode
             }
-        }
+        };
 
-        public void paint(Graphics2D g2d) {
+        this.paint = function() {
             if (dragLine) {
-                g2d.drawLine(dragLineFrom.x, dragLineFrom.y, dragLineTo.x, dragLineTo.y);
+                canvasContext.strokeWidth = LINE_PREVIEW_WIDTH;
+                canvasContext.beginPath();
+                canvasContext.moveTo(dragLineFrom.x, dragLineFrom.y);
+                canvasContext.lineTo(dragLineTo.x, dragLineTo.y);
+                canvasContext.stroke();
             }
-        }
+        };
     }
 
+    /*
     function CPBezierMode() {
-
-        // bezier drawing
         var 
             BEZIER_POINTS = 500,
             BEZIER_POINTS_PREVIEW = 100,
@@ -256,8 +275,8 @@ function CPCanvas(controller) {
             dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
 
-        public void mousePressed(MouseEvent e) {
-            Point2D.Float p = coordToDocument(e.getPoint());
+        this.mousePressed = function(e) {
+            Point2D.Float p = coordToDocument({x: e.pageX, y: e.pageY});
 
             if (!dragBezier && !spacePressed && e.button == BUTTON_PRIMARY) {
                 dragBezier = true;
@@ -266,8 +285,8 @@ function CPCanvas(controller) {
             }
         }
 
-        public void mouseDragged(MouseEvent e) {
-            Point2D.Float p = coordToDocument(e.getPoint());
+        this.mouseDragged = function(e) {
+            Point2D.Float p = coordToDocument({x: e.pageX, y: e.pageY});
 
             if (dragBezier && dragBezierMode == 0) {
                 dragBezierP2 = dragBezierP3 = (Point2D.Float) p.clone();
@@ -275,7 +294,7 @@ function CPCanvas(controller) {
             }
         }
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function(e) {
             if (dragBezier && e.button == BUTTON_PRIMARY) {
                 if (dragBezierMode == 0) {
                     dragBezierMode = 1;
@@ -316,8 +335,8 @@ function CPCanvas(controller) {
             }
         }
 
-        public void mouseMoved(MouseEvent e) {
-            Point2D.Float p = coordToDocument(e.getPoint());
+        this.mouseMoved = function(e) {
+            Point2D.Float p = coordToDocument({x: e.pageX, y: e.pageY});
 
             if (dragBezier && dragBezierMode == 1) {
                 dragBezierP1 = (Point2D.Float) p.clone();
@@ -330,7 +349,7 @@ function CPCanvas(controller) {
             }
         }
 
-        public void paint(Graphics2D g2d) {
+        this.paint = function() {
             if (dragBezier) {
                 CPBezier bezier = new CPBezier();
 
@@ -363,8 +382,8 @@ function CPCanvas(controller) {
 
         var mouseButton;
 
-        public void mousePressed(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mousePressed = function (e) {
+            Point p = {x: e.pageX, y: e.pageY};
             Point2D.Float pf = coordToDocument(p);
 
             mouseButton = e.button;
@@ -376,8 +395,8 @@ function CPCanvas(controller) {
             setCursor(crossCursor);
         }
 
-        public void mouseDragged(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mouseDragged = function (e) {
+            Point p = {x: e.pageX, y: e.pageY};
             Point2D.Float pf = coordToDocument(p);
 
             if (artwork.isPointWithin(pf.x, pf.y)) {
@@ -385,7 +404,7 @@ function CPCanvas(controller) {
             }
         }
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function (e) {
             if (e.button == mouseButton) {
                 setCursor(defaultCursor);
                 activeMode = defaultMode; // yield control to the default mode
@@ -400,8 +419,8 @@ function CPCanvas(controller) {
             dragMoveOffset,
             dragMoveButton;
 
-        public void mousePressed(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mousePressed = function (e) {
+            Point p = {x: e.pageX, y: e.pageY};
 
             if (!dragMiddle && (e.button == BUTTON_WHEEL || spacePressed)) {
                 repaintBrushPreview();
@@ -415,16 +434,16 @@ function CPCanvas(controller) {
             }
         }
 
-        public void mouseDragged(MouseEvent e) {
+        this.mouseDragged = function (e) {
             if (dragMiddle) {
-                Point p = e.getPoint();
+                Point p = {x: e.pageX, y: e.pageY};
 
                 setOffset(dragMoveOffset.x + p.x - dragMoveX, offsetY = dragMoveOffset.y + p.y - dragMoveY);
                 repaint();
             }
         }
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function (e) {
             if (dragMiddle && e.button == dragMoveButton) {
                 dragMiddle = false;
                 setCursor(defaultCursor);
@@ -435,8 +454,8 @@ function CPCanvas(controller) {
     }
 
     function CPFloodFillMode() {
-        public void mousePressed(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mousePressed = function (e) {
+            Point p = {x: e.pageX, y: e.pageY};
             Point2D.Float pf = coordToDocument(p);
 
             if (artwork.isPointWithin(pf.x, pf.y)) {
@@ -454,8 +473,8 @@ function CPCanvas(controller) {
             firstClick,
             curRect = new CPRect();
 
-        public void mousePressed(MouseEvent e) {
-            Point p = coordToDocumentInt(e.getPoint());
+        this.mousePressed = function (e) {
+            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
 
             curRect.makeEmpty();
             firstClick = p;
@@ -463,8 +482,8 @@ function CPCanvas(controller) {
             repaint();
         }
 
-        public void mouseDragged(MouseEvent e) {
-            Point p = coordToDocumentInt(e.getPoint());
+        this.mouseDragged = function (e) {
+            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
             boolean square = e.isShiftDown();
             int squareDist = Math.max(Math.abs(p.x - firstClick.x), Math.abs(p.y - firstClick.y));
 
@@ -487,14 +506,14 @@ function CPCanvas(controller) {
             repaint();
         }
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function (e) {
             artwork.rectangleSelection(curRect);
 
             activeMode = defaultMode; // yield control to the default mode
             repaint();
         }
 
-        public void paint(Graphics2D g2d) {
+        this.paint(Graphics2D g2d) {
             if (!curRect.isEmpty()) {
                 g2d.draw(coordToDisplay(curRect));
             }
@@ -505,8 +524,8 @@ function CPCanvas(controller) {
 
         var firstClick;
 
-        public void mousePressed(MouseEvent e) {
-            Point p = coordToDocumentInt(e.getPoint());
+        this.mousePressed = function (e) {
+            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
             firstClick = p;
 
             artwork.beginPreviewMode(e.isAltDown());
@@ -516,13 +535,13 @@ function CPCanvas(controller) {
             artwork.move(0, 0);
         }
 
-        public void mouseDragged(MouseEvent e) {
-            Point p = coordToDocumentInt(e.getPoint());
+        this.mouseDragged = function (e) {
+            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
             artwork.move(p.x - firstClick.x, p.y - firstClick.y);
             repaint();
         }
 
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased = function (e) {
             artwork.endPreviewMode();
             activeMode = defaultMode; // yield control to the default mode
             repaint();
@@ -537,8 +556,8 @@ function CPCanvas(controller) {
             initTransform,
             dragged = false;
 
-        public void mousePressed(MouseEvent e) {
-            Point p = e.getPoint();
+        this.mousePressed = function (e) {
+            Point p = {x: e.pageX, y: e.pageY};
             firstClick = (Point) p.clone();
 
             initAngle = getRotation();
@@ -549,10 +568,10 @@ function CPCanvas(controller) {
             repaintBrushPreview();
         }
 
-        public void mouseDragged(MouseEvent e) {
+        this.mouseDragged = function (e) {
             dragged = true;
 
-            Point p = e.getPoint();
+            Point p = {x: e.pageX, y: e.pageY};
             Dimension d = getSize();
             Point2D.Float center = new Point2D.Float(d.width / 2.f, d.height / 2.f);
 
@@ -596,7 +615,7 @@ function CPCanvas(controller) {
             }
         }
         
-        public void mouseReleased(MouseEvent e) {
+        this.mouseReleased= function (e) {
             if (dragged) {
                 finishRotation();
             } else {
@@ -622,7 +641,9 @@ function CPCanvas(controller) {
     function repaintRect(rect) {
         updateRegion.union(rect);
         
-        that.paint(); //TODO
+        //TODO schedule a repaint using requestanimationframe()
+
+        that.paint();
     };
     
     // Get the DOM element for the drawing area
@@ -630,11 +651,19 @@ function CPCanvas(controller) {
         return container;
     };
     
+    this.repaint = function() {
+        //TODO schedule a repaint using requestanimationframe()
+        utionRegion.makeEmpty();
+        
+        this.paint();
+    };
+    
     this.paint = function() {
         var
             imageData = artwork.fusionLayers();
         
         if (updateRegion.isEmpty()) {
+            // Redraw entire canvas
             canvasContext.clearRect(0, 0, canvas.width, canvas.height);
             
             canvasContext.putImageData(

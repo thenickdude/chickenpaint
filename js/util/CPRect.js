@@ -17,7 +17,7 @@ CPRect.prototype.makeEmpty = function() {
     this.top = 0;
     this.right = 0;
     this.bottom = 0;
-}
+};
 
 CPRect.prototype.union = function(that) {
     if (this.isEmpty()) {
@@ -28,7 +28,7 @@ CPRect.prototype.union = function(that) {
         this.right = Math.max(this.right, that.right);
         this.bottom = Math.max(this.bottom, that.bottom);
     }
-}
+};
 
 /**
  * Clip this rectangle to fit within `that`.
@@ -48,11 +48,11 @@ CPRect.prototype.clip = function(that) {
     }
     
     return this;
-}
+};
 
 CPRect.prototype.isInside = function(that) {
     return this.left >= that.left && this.top >= that.top && this.right <= that.right && this.bottom <= that.bottom;
-}
+};
 
 // First makes dstRect the same width and height (not modifying its top/left)
 // Clips the dstRect with this rectangle and changes the srcRect so that
