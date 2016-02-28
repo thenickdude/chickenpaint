@@ -845,25 +845,7 @@ function CPCanvas(controller) {
         that.paint();
     });
     
-    function handleMouseUp(e) {
-        mouseDown = false;
-        activeMode.mouseReleased(e);
-        
-        window.removeEventListener("mouseup", handleMouseUp);
-    }
-    
-    container.addEventListener("mousedown", function(e) {
-        if (!mouseDown) {
-            mouseDown = true;
-            
-            requestFocusInWindow();
-            activeMode.mousePressed(e);
-            
-            window.addEventListener("mouseup", handleMouseUp);
-        }
-    });
-
-    container.addEventListener("mousemove", function(e) {
+    function handleMouseMove(e) {
         var
             pt = coordToDocument({x: e.pageX, y: e.pageY});
         
@@ -881,7 +863,32 @@ function CPCanvas(controller) {
         }
         
         CPTablet.getRef().mouseDetect();
+    }
+    
+    function handleMouseUp(e) {
+        mouseDown = false;
+        activeMode.mouseReleased(e);
+        
+        window.removeEventListener("mouseup", handleMouseUp);
+        container.addEventListener("mousemove", handleMouseMove);
+    }
+    
+    container.addEventListener("mousedown", function(e) {
+        if (!mouseDown) {
+            mouseDown = true;
+            
+            requestFocusInWindow();
+            activeMode.mousePressed(e);
+            
+            window.addEventListener("mouseup", handleMouseUp);
+            
+            // Track the drag even if it leaves the canvas:
+            container.removeEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mousemove", handleMouseMove);
+        }
     });
+
+    container.addEventListener("mousemove", handleMouseMove);
     
     artwork.on("updateRegion", function(region) {
         updateRegion.union(region);

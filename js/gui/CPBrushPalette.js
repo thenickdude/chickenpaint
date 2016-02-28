@@ -235,7 +235,7 @@ CPBrushPalette.CPBrushPreview = function(controller) {
 	    if (mouseCaptured) {
     	    mouseCaptured = false;
     	    window.removeEventListener('mouseup', handleMouseUp);
-    	    document.body.removeEventListener('mousemove', handleMouseDrag);
+    	    window.removeEventListener('mousemove', handleMouseDrag);
 	    }
 	}
 	
@@ -247,8 +247,8 @@ CPBrushPalette.CPBrushPreview = function(controller) {
 	    if (!mouseCaptured) {
 	        mouseCaptured = true;
 	        
-	        document.body.addEventListener('mousemove', handleMouseDrag);
 	        window.addEventListener('mouseup', handleMouseUp);
+	        window.addEventListener('mousemove', handleMouseDrag);
 	        
 	        handleMouseDrag(e);
 	    }
