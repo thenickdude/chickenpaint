@@ -755,11 +755,11 @@ function CPCanvas(controller) {
             rect.grow(2, 2);
             
             if (oldPreviewRect != null) {
-                rect = rect.union(oldPreviewRect);
+                rect.union(oldPreviewRect);
                 oldPreviewRect = null;
             }
 
-            repaintRect(r);
+            repaintRect(rect);
         }
     });
     

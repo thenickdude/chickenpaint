@@ -181,6 +181,11 @@ function ChickenPaint(uiElem, arrayBuffer) {
         that.emitEvent('toolChange', [curBrush, tools[curBrush]]);
     }
     
+    // TODO make me private
+    this.callToolListeners = function() {
+        callToolListeners();
+    }
+    
     function callModeListeners() {
         that.emitEvent('modeChange', [curMode]);
     }

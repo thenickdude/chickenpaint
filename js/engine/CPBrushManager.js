@@ -38,7 +38,7 @@ function CPBrushManager() {
         brush = new Uint8Array(201 * 201),
         brushAA = new Uint8Array(202 * 202),
 
-	    cacheBrush,
+	    cacheBrush = null,
 	    cacheSize, cacheSqueeze, cacheAngle,
 	    cacheType,
 
@@ -46,9 +46,8 @@ function CPBrushManager() {
 
     function getBrushWithAA(brushInfo, dx, dy) {
         var
-            nonAABrush = getBrush(brushInfo);
+            nonAABrush = getBrush(brushInfo),
 
-        var 
             intSize = Math.ceil(brushInfo.curSize),
             intSizeAA = Math.ceil(brushInfo.curSize) + 1;
 
@@ -265,7 +264,7 @@ function CPBrushManager() {
         for (var j = 0; j < intSize; j++) {
             for (var i = 0; i < intSize; i++) {
                 var 
-                    x = (u + 0.5 - center),
+                    x = (i + 0.5 - center),
                     y = (j + 0.5 - center),
                     dx = (x * cosA - y * sinA) * xFactor,
                     dy = (y * cosA + x * sinA),

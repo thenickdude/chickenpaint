@@ -57,7 +57,8 @@ function CPToolPalette(cpController) {
             {
                 className: "chickenpaint-tool-pen",
                 command: "CPPen",
-                toolTip: "Pen"
+                toolTip: "Pen",
+                selected: true // TODO a better mechanism for the controller to let us know the initial tool 
             },
             {
                 className: "chickenpaint-tool-airbrush",
@@ -126,6 +127,10 @@ function CPToolPalette(cpController) {
 	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
 	        buttonElem.dataset.buttonIndex = i;
 	        buttonElem.title = button.toolTip;
+	        
+	        if (button.selected) {
+	            buttonElem.className = buttonElem.className + " selected";
+	        }
 	        
 	        listElem.appendChild(buttonElem);
 	    }

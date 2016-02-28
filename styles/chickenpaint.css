@@ -6899,3 +6899,24 @@ button.chickenpaint .close {
 .chickenpaint-colorpicker-top {
   display: flex;
 }
+.chickenpaint-colorpicker-top {
+  display: flex;
+}
+.chickenpaint-checkbox-slider-group {
+  display: flex;
+  flex-direction: horiztonal;
+  align-content: flex-start;
+  align-items: center;
+}
+.chickenpaint-palette-brush .chickenpaint-slider {
+  margin-left: 23px;
+}
+.chickenpaint-palette-brush .chickenpaint-checkbox-slider-group .chickenpaint-slider {
+  margin-left: 3px;
+}
+.chickenpaint-palette-brush .chickenpaint-palette-body {
+  padding: 4px;
+}
+.chickenpaint-slider {
+  margin: 1px;
+}

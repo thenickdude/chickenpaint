@@ -31,6 +31,8 @@ function CPArtwork(_width, _height) {
         fusionArea = new CPRect(0, 0, _width, _height), 
         undoArea = new CPRect(), opacityArea = new CPRect(),
         
+        rnd = new CPRandom(),
+        
         clipBoard = null,
         undoList = [], redoList = [],
         

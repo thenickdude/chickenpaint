@@ -31,7 +31,8 @@ function CPStrokePalette(cpController) {
 	        {
 	            className: "chickenpaint-tool-freehand",
 	            command: "CPFreeHand",
-	            toolTip: "Free-hand"
+	            toolTip: "Free-hand",
+	            selected: true
 	        },
             {
                 className: "chickenpaint-tool-line",
@@ -59,6 +60,10 @@ function CPStrokePalette(cpController) {
 	        
 	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
 	        buttonElem.dataset.buttonIndex = i;
+	        
+            if (button.selected) {
+                buttonElem.className = buttonElem.className + " selected";
+            }
 	        
 	        listElem.appendChild(buttonElem);
 	    }

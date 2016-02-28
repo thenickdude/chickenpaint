@@ -25,7 +25,8 @@ function CPPaletteManager(cpController) {
 	        tool: new CPToolPalette(cpController),
 	        misc: new CPMiscPalette(cpController),
 	        stroke: new CPStrokePalette(cpController),
-	        color: new CPColorPalette(cpController)
+	        color: new CPColorPalette(cpController),
+	        brush: new CPBrushPalette(cpController),
 	    },
 	    
 	    paletteFrames = [],
@@ -46,19 +47,6 @@ function CPPaletteManager(cpController) {
 	
 	    /*
 		desktop.addContainerListener(this);
-
-		// Brush Palette
-
-		palBrush = new CPBrushPalette(controller);
-		{
-			palettes.put("brush", palBrush);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palBrush);
-			paletteFrames.add(frame);
-
-			frame.pack();
-			desktop.add(frame);
-		}
 
 		// Layers Palette
 
@@ -196,17 +184,6 @@ function CPPaletteManager(cpController) {
 	this.arrangePalettes = function() {
         var
             windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
-            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height()
-        
-	    palettes.tool.setLocation(0, 0);
-	    palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + 1, 0);
-	    palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
-        palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
-
-	    return; //TODO erase this line and the ones above
-	    
-        var
-            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
             windowHeight = $(parentElem).parents(".chickenpaint-main-section").height(),
 	        
 		    haveWidthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
@@ -216,9 +193,9 @@ function CPPaletteManager(cpController) {
 		var 
 		    bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight();
 
-		palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
+/*		palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
 
-		palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY());
+		palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY()); TODO */
 
 		palettes.tool.setLocation(0, 0);
 		
@@ -230,11 +207,11 @@ function CPPaletteManager(cpController) {
 			palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
 		}
 		
-		palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0);
+/*		TODO palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0);
 
 		palettes.textures.setSize(Math.min(palettes.layers.getX() - palettes.textures.getX(), 480), palettes.textures.getHeight());
 		
-		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
+		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight()); */
 
 		palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
 	};
