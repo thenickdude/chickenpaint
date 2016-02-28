@@ -232,7 +232,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
     };
 
     this.setCurColorRgb = function(color) {
-        setCurColor(new CPColor(color));
+        this.setCurColor(new CPColor(color));
     };
 
     this.setBrushSize = function(size) {

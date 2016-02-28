@@ -182,7 +182,6 @@ function CPCanvas(controller) {
 
     // TODO
     function CPBezierMode() {}
-    function CPColorPickerMode() {}
     function CPRectSelectionMode() {}
     function CPMoveCanvasMode() {}
     function CPFloodFillMode() {}
@@ -376,43 +375,39 @@ function CPCanvas(controller) {
                 g2d.drawLine((int) p2.x, (int) p2.y, (int) p3.x, (int) p3.y);
             }
         }
-    }
+    }*/
 
     function CPColorPickerMode() {
+        var 
+            mouseButton;
 
-        var mouseButton;
-
-        this.mousePressed = function (e) {
-            Point p = {x: e.pageX, y: e.pageY};
-            Point2D.Float pf = coordToDocument(p);
-
+        this.mousePressed = function(e) {
             mouseButton = e.button;
 
-            if (artwork.isPointWithin(pf.x, pf.y)) {
-                controller.setCurColorRgb(artwork.colorPicker(pf.x, pf.y));
-            }
-
             setCursor(crossCursor);
-        }
+            
+            this.mouseDragged(e);
+        };
 
-        this.mouseDragged = function (e) {
-            Point p = {x: e.pageX, y: e.pageY};
-            Point2D.Float pf = coordToDocument(p);
+        this.mouseDragged = function(e) {
+            var pf = coordToDocument({x: e.pageX, y: e.pageY});
 
             if (artwork.isPointWithin(pf.x, pf.y)) {
                 controller.setCurColorRgb(artwork.colorPicker(pf.x, pf.y));
             }
-        }
+        };
 
-        this.mouseReleased = function (e) {
+        this.mouseReleased = function(e) {
             if (e.button == mouseButton) {
                 setCursor(defaultCursor);
                 activeMode = defaultMode; // yield control to the default mode
             }
-        }
+        };
     }
+    
+    CPColorPickerMode.prototype.paint = function() {};
 
-    function CPMoveCanvasMode() {
+    /*function CPMoveCanvasMode() {
         var
             dragMiddle = false,
             dragMoveX, dragMoveY,
@@ -420,7 +415,8 @@ function CPCanvas(controller) {
             dragMoveButton;
 
         this.mousePressed = function (e) {
-            Point p = {x: e.pageX, y: e.pageY};
+            var
+                p = {x: e.pageX, y: e.pageY};
 
             if (!dragMiddle && (e.button == BUTTON_WHEEL || spacePressed)) {
                 repaintBrushPreview();

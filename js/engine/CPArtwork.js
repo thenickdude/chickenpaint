@@ -1270,6 +1270,14 @@ function CPArtwork(_width, _height) {
         redoList = [];
     };
     
+    this.colorPicker = function(x, y) {
+        // not really necessary and could potentially the repaint
+        // of the canvas to miss that area
+        // fusionLayers();
+
+        return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
+    }
+
     // Gets the current selection rect
     this.getSelection = function() {
         return curSelection.clone();
