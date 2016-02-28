@@ -1304,7 +1304,7 @@ function CPArtwork(_width, _height) {
     
     this.floodFill = function(x, y) {
         undoBuffer.copyFrom(curLayer);
-        undoArea = getBounds();
+        undoArea = this.getBounds();
 
         curLayer.floodFill(~~x, ~~y, curColor | 0xff000000);
 

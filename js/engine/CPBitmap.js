@@ -9,3 +9,7 @@ function CPBitmap(width, height) {
 CPBitmap.prototype.getBounds = function() {
     return new CPRect(0, 0, this.width, this.height);
 };
+
+CPBitmap.prototype.isInside = function(x, y) {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+};

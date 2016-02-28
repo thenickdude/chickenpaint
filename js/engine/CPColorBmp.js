@@ -259,111 +259,233 @@ function CPColorBmp(width, height) {
 		}
 	};
 
-	//
-	// Flood fill algorithm
-	//
-/* TODO
-	static class CPFillLine {
-
-		int x1, x2, y, dy;
-
-		CPFillLine(int x1, int x2, int y, int dy) {
-			this.x1 = x1;
-			this.x2 = x2;
-			this.y = y;
-			this.dy = dy;
-		}
-	}
-
-	public void floodFill(int x, int y, int color) {
-		if (!isInside(x, y)) {
+	/**
+	 * Flood fill the given color starting from the given point
+	 * @param x int
+	 * @param y int
+	 * @param color int
+	 */
+	this.floodFill = function(x, y, color) {
+		if (!this.isInside(x, y)) {
 			return;
 		}
 
-		int oldColor, colorMask;
-		oldColor = getPixel(x, y);
-
-		// If we are filling 100% transparent areas
-		// then we need to ignore the residual color information
-		// (it would also be possible to clear it when erasing, but then
-		// the performance impact would be on the eraser rather than
-		// on this low importance flood fill)
-
-		if ((oldColor & 0xff000000) == 0) {
-			colorMask = 0xff000000;
-			oldColor = 0;
+		var
+		    oldColor = this.getPixel(x, y),
+		    
+		    oldAlpha = (oldColor >> 24) & 0xFF,
+		    oldRed = (oldColor >> 16) & 0xFF,
+		    oldGreen = (oldColor >> 8) & 0xFF,
+		    oldBlue = oldColor & 0xFF,
+		    
+            colorAlpha = (color >> 24) & 0xFF,
+            colorRed = (color >> 16) & 0xFF,
+            colorGreen = (color >> 8) & 0xFF,
+            colorBlue = color & 0xFF,
+            
+            stack = [],
+            clip = this.getBounds(),
+		    
+		    data = this.data;
+		
+        // Change the left and right bounds from pixel indexes into byte indexes for easy clipping
+        clip.left *= CPColorBmp.BYTES_PER_PIXEL;
+        clip.right *= CPColorBmp.BYTES_PER_PIXEL;
+        
+        stack.push({x1: x * CPColorBmp.BYTES_PER_PIXEL, x2: x * CPColorBmp.BYTES_PER_PIXEL, y: y, dy: -1});
+        stack.push({x1: x * CPColorBmp.BYTES_PER_PIXEL, x2: x * CPColorBmp.BYTES_PER_PIXEL, y: y + 1, dy: 1});
+		
+		/* 
+		 * If we are filling 100% transparent areas then we need to ignore the residual color information
+		 * (it would also be possible to clear it when erasing, but then the performance impact would be on the eraser 
+		 * rather than on this low importance flood fill)
+		 */
+		if (oldAlpha == 0) {
+		    if (colorAlpha == 0) {
+		        return;
+		    }
+		    
+		    while (stack.length > 0) {
+                var
+                    line = stack.pop();
+        
+                if (line.y < clip.top || line.y >= clip.bottom) {
+                    continue;
+                }
+        
+                var
+                    lineOffset = this.offsetOfPixel(0, line.y),
+        
+                    left = line.x1, next;
+                
+                while (
+                    left >= clip.left 
+                    && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == 0
+                ) {
+                    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                    
+                    left -= CPColorBmp.BYTES_PER_PIXEL;
+                }
+                
+                if (left >= line.x1) {
+                    while (
+                        left <= line.x2 
+                        && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != oldAlpha
+                    ) {
+                        left += CPColorBmp.BYTES_PER_PIXEL;
+                    }
+                    next = left + CPColorBmp.BYTES_PER_PIXEL;
+                    if (left > line.x2) {
+                        continue;
+                    }
+                } else {
+                    left += CPColorBmp.BYTES_PER_PIXEL;
+                    if (left < line.x1) {
+                        stack.push({x1: left, x2: line.x1 - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+                    }
+                    next = line.x1 + CPColorBmp.BYTES_PER_PIXEL;
+                }
+        
+                do {
+                    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                    
+                    while (
+                        next < clip.right 
+                        && data[next + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                    ) {
+                        data[next + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                        data[next + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                        data[next + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                        data[next + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                        
+                        next += CPColorBmp.BYTES_PER_PIXEL;
+                    }
+                    stack.push({x1: left, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y + line.dy, dy: line.dy});
+        
+                    if (next - CPColorBmp.BYTES_PER_PIXEL > line.x2) {
+                        stack.push({x1: line.x2 + CPColorBmp.BYTES_PER_PIXEL, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+                    }
+        
+                    left = next + CPColorBmp.BYTES_PER_PIXEL;
+                    while (
+                        left <= line.x2 && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != oldAlpha
+                    ) {
+                        left += CPColorBmp.BYTES_PER_PIXEL;
+                    }
+        
+                    next = left + CPColorBmp.BYTES_PER_PIXEL;
+                } while (left <= line.x2);
+		    }
 		} else {
-			colorMask = 0xffffffff;
-		}
+            if (color == oldColor) {
+                return;
+            }
 
-		if (color == oldColor) {
-			return;
-		}
-
-		LinkedList stack = new LinkedList();
-		stack.addLast(new CPFillLine(x, x, y, -1));
-		stack.addLast(new CPFillLine(x, x, y + 1, 1));
-
-		CPRect clip = new CPRect(width, height);
-		while (!stack.isEmpty()) {
-			CPFillLine line = (CPFillLine) stack.removeFirst();
-
-			if (line.y < clip.top || line.y >= clip.bottom) {
-				continue;
-			}
-
-			int lineOffset = line.y * width;
-
-			int left = line.x1, next;
-			while (left >= clip.left && (data[left + lineOffset] & colorMask) == oldColor) {
-				data[left + lineOffset] = color;
-				left--;
-			}
-			if (left >= line.x1) {
-				while (left <= line.x2 && (data[left + lineOffset] & colorMask) != oldColor) {
-					left++;
-				}
-				next = left + 1;
-				if (left > line.x2) {
-					continue;
-				}
-			} else {
-				left++;
-				if (left < line.x1) {
-					stack.addLast(new CPFillLine(left, line.x1 - 1, line.y - line.dy, -line.dy));
-				}
-				next = line.x1 + 1;
-			}
-
-			do {
-				data[left + lineOffset] = color;
-				while (next < clip.right && (data[next + lineOffset] & colorMask) == oldColor) {
-					data[next + lineOffset] = color;
-					next++;
-				}
-				stack.addLast(new CPFillLine(left, next - 1, line.y + line.dy, line.dy));
-
-				if (next - 1 > line.x2) {
-					stack.addLast(new CPFillLine(line.x2 + 1, next - 1, line.y - line.dy, -line.dy));
-				}
-
-				left = next + 1;
-				while (left <= line.x2 && (data[left + lineOffset] & colorMask) != oldColor) {
-					left++;
-				}
-
-				next = left + 1;
-			} while (left <= line.x2);
+    		while (stack.length > 0) {
+    			var
+    			    line = stack.pop();
+    
+    			if (line.y < clip.top || line.y >= clip.bottom) {
+    				continue;
+    			}
+    
+    			var
+    			    lineOffset = this.offsetOfPixel(0, line.y),
+    
+    			    left = line.x1, next;
+    			
+    			while (
+			        left >= clip.left 
+		            && data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+		            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+		            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+		            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+	            ) {
+    			    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                    
+    				left -= CPColorBmp.BYTES_PER_PIXEL;
+    			}
+    			
+    			if (left >= line.x1) {
+    				while (
+    				    left <= line.x2 
+    				    && !(
+        			        data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+                            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+                            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+                            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                        )
+                    ) {
+    					left += CPColorBmp.BYTES_PER_PIXEL;
+    				}
+    				next = left + CPColorBmp.BYTES_PER_PIXEL;
+    				if (left > line.x2) {
+    					continue;
+    				}
+    			} else {
+    				left += CPColorBmp.BYTES_PER_PIXEL;
+    				if (left < line.x1) {
+    					stack.push({x1: left, x2: line.x1 - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+    				}
+    				next = line.x1 + CPColorBmp.BYTES_PER_PIXEL;
+    			}
+    
+    			do {
+                    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                    
+    				while (
+				        next < clip.right 
+                        && data[next + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+                        && data[next + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+                        && data[next + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+                        && data[next + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                    ) {
+                        data[next + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                        data[next + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                        data[next + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                        data[next + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                        
+    					next += CPColorBmp.BYTES_PER_PIXEL;
+    				}
+    				stack.push({x1: left, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y + line.dy, dy: line.dy});
+    
+    				if (next - CPColorBmp.BYTES_PER_PIXEL > line.x2) {
+    					stack.push({x1: line.x2 + CPColorBmp.BYTES_PER_PIXEL, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+    				}
+    
+    				left = next + CPColorBmp.BYTES_PER_PIXEL;
+    				while (
+				        left <= line.x2 && !(
+                            data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+                            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+                            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+                            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                        )
+                    ) {
+    					left += CPColorBmp.BYTES_PER_PIXEL;
+    				}
+    
+    				next = left + CPColorBmp.BYTES_PER_PIXEL;
+    			} while (left <= line.x2);
+    		}
 		}
 	}
 
-	//
-	// Box Blur algorithm
-	//
-
-	public void boxBlur(CPRect r, int radiusX, int radiusY) {
-		CPRect rect = new CPRect(0, 0, width, height);
-		rect.clip(r);
+	/*
+    this.boxBlur = function(r, radiusX, radiusY) {
+        r = this.getBounds().clip(r);
 
 		int w = rect.getWidth();
 		int h = rect.getHeight();

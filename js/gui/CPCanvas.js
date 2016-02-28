@@ -57,12 +57,22 @@ function CPCanvas(controller) {
 
         curDrawMode, curSelectedMode, activeMode;
 
+    // Parent class with empty event handlers for those drawing modes that don't need every event
+    function CPDrawingMode() {
+    };
+    
+    CPDrawingMode.prototype.mouseMoved = CPDrawingMode.prototype.paint = CPDrawingMode.prototype.mousePressed 
+        = CPDrawingMode.prototype.mouseDragged = CPDrawingMode.prototype.mouseReleased = function() {};
+    
     //
     // Default UI Mode when not doing anything: used to start the other modes
     //
 
     function CPDefaultMode() {
     }
+    
+    CPDefaultMode.prototype = Object.create(CPDrawingMode.prototype);
+    CPDefaultMode.prototype.constructor = CPDefaultMode;
     
     CPDefaultMode.prototype.mousePressed = function(e) {
         // FIXME: replace the moveToolMode hack by a new and improved system
@@ -181,6 +191,7 @@ function CPCanvas(controller) {
     };
 
     // TODO
+    
     function CPBezierMode() {}
     function CPRectSelectionMode() {}
     function CPMoveCanvasMode() {}
@@ -405,7 +416,8 @@ function CPCanvas(controller) {
         };
     }
     
-    CPColorPickerMode.prototype.paint = function() {};
+    CPColorPickerMode.prototype = Object.create(CPDrawingMode.prototype);
+    CPColorPickerMode.prototype.constructor = CPColorPickerMode;
 
     /*function CPMoveCanvasMode() {
         var
@@ -447,23 +459,27 @@ function CPCanvas(controller) {
                 activeMode = defaultMode; // yield control to the default mode
             }
         }
-    }
+    }*/
 
     function CPFloodFillMode() {
-        this.mousePressed = function (e) {
-            Point p = {x: e.pageX, y: e.pageY};
-            Point2D.Float pf = coordToDocument(p);
-
-            if (artwork.isPointWithin(pf.x, pf.y)) {
-                artwork.floodFill(pf.x, pf.y);
-                repaint();
-            }
-
-            activeMode = defaultMode; // yield control to the default mode
-        }
     }
+    
+    CPFloodFillMode.prototype = Object.create(CPDrawingMode.prototype);
+    CPFloodFillMode.prototype.constructor = CPFloodFillMode;
 
-    function CPRectSelectionMode() {
+    CPFloodFillMode.prototype.mousePressed = function(e) {
+        var 
+            pf = coordToDocument({x: e.pageX, y: e.pageY});
+    
+        if (artwork.isPointWithin(pf.x, pf.y)) {
+            artwork.floodFill(pf.x, pf.y);
+            that.repaint();
+        }
+    
+        activeMode = defaultMode; // yield control to the default mode
+    };
+
+    /*function CPRectSelectionMode() {
 
         var
             firstClick,
@@ -649,7 +665,7 @@ function CPCanvas(controller) {
     
     this.repaint = function() {
         //TODO schedule a repaint using requestanimationframe()
-        utionRegion.makeEmpty();
+        updateRegion.makeEmpty();
         
         this.paint();
     };
