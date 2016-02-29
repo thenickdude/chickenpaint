@@ -693,7 +693,7 @@ function CPCanvas(controller) {
         
         canvasContext.globalCompositeOperation = 'exclusion';
         canvasContext.strokeStyle = 'white';
-        canvasContext.lineWidth = 1.5;
+        canvasContext.lineWidth = 1.0;
         
         activeMode.paint(canvasContext);
         

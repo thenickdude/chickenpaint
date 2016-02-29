@@ -78,7 +78,7 @@ function CPBrushPalette(controller) {
 
     sizeSlider.on('valueChange', function(value) {
         controller.setBrushSize(value);
-        this.title = "Brush Size: " + value;
+        this.title = "Brush size: " + value;
     });
 	
 	resatSlider.on('valueChange', function(value) {
@@ -196,21 +196,18 @@ CPBrushPalette.prototype.constructor = CPBrushPalette;
 
 CPBrushPalette.CPBrushPreview = function(controller) {
     var 
-        w = 64, 
-        h = 64,
-        
         size = 16,
         
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
         mouseCaptured = false;
-
+    
 	function paint() {
 	    canvasContext.clearRect(0, 0, canvas.width, canvas.height);
 	    
 	    canvasContext.beginPath();
-	    canvasContext.arc(w / 2, h / 2, size / 2, 0, Math.PI * 2);
+	    canvasContext.arc(canvas.width / 2, canvas.height / 2, size / 2 * window.devicePixelRatio, 0, Math.PI * 2);
 	    canvasContext.stroke();
 	}
 	
@@ -220,8 +217,8 @@ CPBrushPalette.CPBrushPreview = function(controller) {
             
             pt = {x: e.pageX - offset.left, y: e.pageY - offset.top},
         
-            x = pt.x - w / 2,
-            y = pt.y - h / 2,
+            x = pt.x - $(canvas).width() / 2,
+            y = pt.y - $(canvas).height() / 2,
 
             newSize = Math.round(Math.sqrt(x * x + y * y) * 2);
         
@@ -261,13 +258,21 @@ CPBrushPalette.CPBrushPreview = function(controller) {
 		}
 	});
 	
-	canvas.className = 'chickenpaint-brush-preview';
+    canvas.width = 64; 
+    canvas.height = 64;
+    
+    if (window.devicePixelRatio > 1) {
+        canvas.style.width = canvas.width + 'px';
+        canvas.style.height = canvas.height + 'px';
+        
+        canvas.width = canvas.width * window.devicePixelRatio;
+        canvas.height = canvas.height * window.devicePixelRatio;
+    }
 	
-    canvas.width = w;
-    canvas.height = h;
+	canvas.className = 'chickenpaint-brush-preview';
 
     canvasContext.strokeStyle = 'black';
-    canvasContext.strokeWidth = 1.0;
+    canvasContext.lineWidth = 1.0 * window.devicePixelRatio;
     
 	paint();
 }

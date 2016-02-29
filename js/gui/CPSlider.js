@@ -24,9 +24,6 @@ function CPSlider(minValue, maxValue, centerMode) {
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
-        minValue = 0, 
-        maxValue = maxValue,
-        
         valueRange = maxValue - minValue,
         
         dragNormal = false, dragPrecise = false,
@@ -66,6 +63,10 @@ function CPSlider(minValue, maxValue, centerMode) {
 				g.drawString(title, 2, 14);
 			}*/
 		} else {
+		    var
+		        textX = 2 * window.devicePixelRatio,
+		        textY = canvas.height * 0.75
+		    
 	        canvasContext.save();
 	        canvasContext.save();
 
@@ -78,7 +79,7 @@ function CPSlider(minValue, maxValue, centerMode) {
 		    canvasContext.clip();
 		    
 		    canvasContext.fillStyle = 'white';
-			canvasContext.fillText(that.title, 2, 14);
+			canvasContext.fillText(that.title, textX, textY);
 			
 			// Remove the clip region
 			canvasContext.restore();
@@ -92,7 +93,7 @@ function CPSlider(minValue, maxValue, centerMode) {
 			canvasContext.clip();
 			
 	        canvasContext.fillStyle = 'black';
-            canvasContext.fillText(that.title, 2, 14);
+            canvasContext.fillText(that.title, textX, textY);
 			
 	        canvasContext.restore();
 		}
@@ -180,10 +181,18 @@ function CPSlider(minValue, maxValue, centerMode) {
 	
 	canvas.className = 'chickenpaint-slider';
 	
-    canvas.width = 150;
-    canvas.height = 20;
+	canvas.width = 150;
+	canvas.height = 20;
+	
+	if (window.devicePixelRatio > 1) {
+	    canvas.style.width = canvas.width + 'px';
+	    canvas.style.height = canvas.height + 'px';
+	    
+	    canvas.width = canvas.width * window.devicePixelRatio;
+	    canvas.height = canvas.height * window.devicePixelRatio;
+	}
     
-    canvasContext.font = '9pt sans-serif';
+    canvasContext.font = (canvas.height * 0.5) + 'pt sans-serif';
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);

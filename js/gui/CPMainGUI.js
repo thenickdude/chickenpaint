@@ -190,35 +190,29 @@ function CPMainGUI(controller, uiElem) {
                             title: "Invert the image colors"
                         },
                         {
-                            name: "Blur",
-                            mnemonic: "B",
-                            children: [
-                                {
-                                    name: "Box blur...",
-                                    action: "CPFXBoxBlur",
-                                    mnemonic: "B",
-                                    title: "Blur effect"
-                                }
-                            ]
+                            name: "-"
                         },
-/*                        {
-                            name: "Noise",
-                            mnemonic: "N",
-                            children: [*/
-                                {
-                                    name: "Render monochromatic",
-                                    action: "CPMNoise",
-                                    mnemonic: "M",
-                                    title: "Fills the selection with noise"
-                                },
-                                {
-                                    name: "Render color",
-                                    action: "CPCNoise",
-                                    mnemonic: "C",
-                                    title: "Fills the selection with colored noise"
-                                }
-                            /*]
-                        },*/
+                        {
+                            name: "Box blur...",
+                            action: "CPFXBoxBlur",
+                            mnemonic: "B",
+                            title: "Blur effect"
+                        },
+                        {
+                            name: "-"
+                        },
+                        {
+                            name: "Monochromatic noise",
+                            action: "CPMNoise",
+                            mnemonic: "M",
+                            title: "Fills the selection with noise"
+                        },
+                        {
+                            name: "Color noise",
+                            action: "CPCNoise",
+                            mnemonic: "C",
+                            title: "Fills the selection with colored noise"
+                        }
                     ],
                 },
                 {
