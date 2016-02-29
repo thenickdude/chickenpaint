@@ -203,7 +203,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             int iterations = ((Integer) iter.getValue()).intValue();
 
             artwork.boxBlur(blur, blur, iterations);
-            canvas.repaint();
+            canvas.repaintAll();
         }*/
     }
 
@@ -225,7 +225,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             int size = ((Integer) sizeSpinner.getValue()).intValue();
 
             canvas.gridSize = size;
-            canvas.repaint();
+            canvas.repaintAll();
         }*/
 
     }
@@ -463,11 +463,11 @@ function ChickenPaint(uiElem, arrayBuffer) {
             break;
             case "CPSelectAll":
                 this.artwork.rectangleSelection(this.artwork.getSize());
-                canvas.repaint();
+                canvas.repaintAll();
             break;
             case "CPDeselectAll":
                 this.artwork.rectangleSelection(new CPRect());
-                canvas.repaint();
+                canvas.repaintAll();
             break;
             case "CPHFlip":
                 this.artwork.hFlip();
@@ -547,10 +547,6 @@ function ChickenPaint(uiElem, arrayBuffer) {
     };
     
     this.gui = new CPMainGUI(this, uiElem);
-    
-    if (canvas) {
-        canvas.paint();
-    }
     
     setTool(ChickenPaint.T_PEN);
     

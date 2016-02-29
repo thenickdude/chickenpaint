@@ -129,3 +129,15 @@ CPTransform.prototype.getTranslateX = function() {
 CPTransform.prototype.getTranslateY = function() {
     return this.m[5];
 };
+
+CPTransform.prototype.clone = function() {
+    var
+        result = new CPTransform();
+    
+    result.m[0] = this.m[0];
+    result.m[1] = this.m[1];
+    result.m[2] = this.m[2];
+    result.m[3] = this.m[3];
+    result.m[4] = this.m[4];
+    result.m[5] = this.m[5];
+};

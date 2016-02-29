@@ -440,4 +440,8 @@ function CPMainGUI(controller, uiElem) {
     lowerArea.appendChild(paletteManager.getElement());
     
     uiElem.appendChild(lowerArea);
+    
+    setTimeout(function() {
+        canvas.resize();
+    }, 0);
 }

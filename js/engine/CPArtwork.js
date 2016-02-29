@@ -1410,6 +1410,103 @@ function CPArtwork(_width, _height) {
         this.setSelection(newSelection);
     };
     
+    // temp awful hack
+    var
+        moveInitSelect = null, // CPRect
+        movePrevX, movePrevY, movePrevX2, movePrevY2,
+        moveModeCopy, prevModeCopy;
+    
+    this.beginPreviewMode = function(copy) {
+        // !!!! awful awful hack !!! will break as soon as CPMultiUndo is used for other things
+        // FIXME: ASAP!
+        if (!copy && undoList.length > 0 && redoList.length == 0 && undoList[undoList.length - 1] instanceof CPMultiUndo
+                && undoList[undoList.length - 1].undoes[0] instanceof CPUndoPaint
+                && undoList[undoList.length - 1].undoes[0].layer == this.getActiveLayerIndex()) {
+            this.undo();
+            copy = prevModeCopy;
+        } else {
+            movePrevX = 0;
+            movePrevY = 0;
+
+            undoBuffer.copyFrom(curLayer);
+            undoArea.makeEmpty();
+
+            opacityBuffer.clearAll();
+            opacityArea.makeEmpty();
+        }
+
+        moveInitSelect = null;
+        moveModeCopy = copy;
+    }
+
+    this.endPreviewMode = function() {
+        var 
+            undo = new CPUndoPaint(),
+            undoArray;
+        
+        if (moveInitSelect != null) {
+            undoArray = [undo, new CPUndoRectangleSelection(moveInitSelect, this.getSelection())];
+            
+            undo = new CPMultiUndo(undoArray);
+        } else {
+            // !!!!!!
+            // FIXME: this is required just to make the awful move hack work
+            undoArray = [undo];
+            undo = new CPMultiUndo(undoArray);
+        }
+        
+        addUndo(undo);
+
+        moveInitSelect = null;
+        movePrevX = movePrevX2;
+        movePrevY = movePrevY2;
+        prevModeCopy = moveModeCopy;
+    };
+
+    this.move = function(offsetX, offsetY) {
+        var
+            srcRect;
+
+        offsetX += movePrevX;
+        offsetY += movePrevY;
+
+        if (moveInitSelect == null) {
+            srcRect = this.getSelectionAutoSelect();
+            if (!this.getSelection().isEmpty()) {
+                moveInitSelect = this.getSelection();
+            }
+        } else {
+            srcRect = moveInitSelect.clone();
+        }
+        curLayer.copyFrom(undoBuffer);
+
+        if (!moveModeCopy) {
+            curLayer.clearRect(srcRect, 0);
+        }
+
+        curLayer.pasteAlphaRect(undoBuffer, srcRect, srcRect.left + offsetX, srcRect.top + offsetY);
+
+        undoArea = new CPRect();
+        if (!moveModeCopy) {
+            undoArea.union(srcRect);
+        }
+        srcRect.translate(offsetX, offsetY);
+        undoArea.union(srcRect);
+
+        invalidateFusion();
+
+        if (moveInitSelect != null) {
+            var
+                sel = moveInitSelect.clone();
+            sel.translate(offsetX, offsetY);
+            this.setSelection(sel);
+        }
+
+        // this is a really bad idea :D
+        movePrevX2 = offsetX;
+        movePrevY2 = offsetY;
+    };
+    
     this.setSampleAllLayers = function(b) {
         sampleAllLayers = b;
     };
@@ -1459,19 +1556,20 @@ function CPArtwork(_width, _height) {
 
     function CPUndoPaint() {
         var
-            layer = that.getActiveLayerIndex(),
             rect = undoArea.clone(),
             data = undoBuffer.copyRectXOR(curLayer, rect);
+        
+        this.layer = that.getActiveLayerIndex();
 
         undoArea.makeEmpty();
 
         this.undo = function() {
-            that.getLayer(layer).setRectXOR(data, rect);
+            that.getLayer(this.layer).setRectXOR(data, rect);
             invalidateFusionRect(rect);
         };
 
         this.redo = function() {
-            that.getLayer(layer).setRectXOR(data, rect);
+            that.getLayer(this.layer).setRectXOR(data, rect);
             invalidateFusionRect(rect);
         };
 
@@ -1483,6 +1581,10 @@ function CPArtwork(_width, _height) {
     CPUndoPaint.prototype = Object.create(CPUndo.prototype);
     CPUndoPaint.prototype.constructor = CPUndoPaint;
     
+    /**
+     * @param from CPRect
+     * @param to CPRect
+     */
     function CPUndoRectangleSelection(from, to) {
         from = from.clone();
         to = to.clone();
@@ -1502,6 +1604,51 @@ function CPArtwork(_width, _height) {
     
     CPUndoRectangleSelection.prototype = Object.create(CPUndo.prototype);
     CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
+    
+    /**
+     * Used to encapsulate multiple undo operation as one
+     * 
+     * @param undoes CPUndo[] List of undo operations to encapsulate
+     */
+    function CPMultiUndo(undoes) {
+        this.undoes = undoes;
+    }
+
+    CPMultiUndo.prototype = Object.create(CPUndo.prototype);
+    CPMultiUndo.prototype.constructor = CPMultiUndo;
+
+    CPMultiUndo.prototype.undo = function() {
+        for (var i = this.undoes.length - 1; i >= 0; i--) {
+            this.undoes[i].undo();
+        }
+    };
+
+    CPMultiUndo.prototype.redo = function() {
+        for (var i = 0; i < this.undoes.length; i++) {
+            this.undoes[i].redo();
+        }
+    };
+
+    CPMultiUndo.prototype.noChange = function() {
+        for (var i = 0; i < undoes.length; i++) {
+            if (!undoes[i].noChange()) {
+                return false;
+            }
+        }
+        
+        return true;
+    };
+
+    CPMultiUndo.prototype.getMemoryUsed = function(undone, param) {
+        var
+            total = 0;
+        
+        for (var i = 0; i < undoes.length; i++) {
+            total += undoes[i].getMemoryUsed(undone, param);
+        }
+        
+        return total;
+    };
 };
 
 CPArtwork.prototype = Object.create(EventEmitter.prototype);

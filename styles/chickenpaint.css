@@ -6739,6 +6739,7 @@ button.chickenpaint .close {
 }
 .chickenpaint-canvas {
   position: relative;
+  width: 100%;
 }
 .chickenpaint-palettes {
   position: absolute;

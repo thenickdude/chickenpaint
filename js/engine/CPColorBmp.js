@@ -126,7 +126,7 @@ function CPColorBmp(width, height) {
             srcYStride = (bmp.width - dstRect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
             dstYStride = (this.width - dstRect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
             
-            srcOffset = bmp.offsetOfPixel(srcRectCpy.left, srcRectCpy.top)
+            srcOffset = bmp.offsetOfPixel(srcRectCpy.left, srcRectCpy.top),
             dstOffset = this.offsetOfPixel(dstRect.left, dstRect.top);
     
         for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
@@ -142,7 +142,7 @@ function CPColorBmp(width, height) {
 
                 if (alpha1 == 255) {
                     for (var i = 0; i < CPColorBmp.BYTES_PER_PIXEL; i++) {
-                        this.data[dstOffset++] = that.data[srcOffset++];
+                        this.data[dstOffset++] = bmp.data[srcOffset++];
                     }
                     continue;
                 }
