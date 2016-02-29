@@ -70,10 +70,9 @@ function CPColorBmp(width, height) {
 	        w = rect.getWidth(),
 	        h = rect.getHeight(),
 	        
-	        buffer = new Uint8Array(w * h),
+	        buffer = new Uint8Array(w * h * CPColorBmp.BYTES_PER_PIXEL),
 	        
 	        outputIndex = 0,
-	        
 	        bmp1Index = this.offsetOfPixel(rect.left, rect.top), 
 	        bmp2Index = bmp.offsetOfPixel(rect.left, rect.top),
 	        
@@ -82,12 +81,10 @@ function CPColorBmp(width, height) {
 	        
 	        widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
 		
-		for (var y = rect.top; y < rect.bottom; y++) {
-		    for (var x = 0; x < widthBytes; x++) {
-	            buffer[outputIndex++] = this.data[bmp1Index++] ^ bmp.data[bmp2Index++];
+		for (var y = rect.top; y < rect.bottom; y++, bmp1Index += bmp1YSkip, bmp2Index += bmp2YSkip) {
+		    for (var x = 0; x < widthBytes; x++, outputIndex++, bmp1Index++, bmp2Index++) {
+	            buffer[outputIndex] = this.data[bmp1Index] ^ bmp.data[bmp2Index];
 			}
-			bmp1Index += bmp1YSkip;
-			bmp2Index += bmp2YSkip;
 		}
 
 		return buffer;
@@ -109,7 +106,7 @@ function CPColorBmp(width, height) {
         
         for (var y = rect.top; y < rect.bottom; y++) {
             for (var x = 0; x < widthBytes; x++) {
-                this.data[bmp1Index++] ^= buffer.data[bufferIndex++];
+                this.data[bmp1Index++] ^= buffer[bufferIndex++];
             }
             bmp1Index += bmp1YSkip;
         }

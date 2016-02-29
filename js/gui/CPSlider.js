@@ -192,7 +192,7 @@ function CPSlider(minValue, maxValue, centerMode) {
 	    canvas.height = canvas.height * window.devicePixelRatio;
 	}
     
-    canvasContext.font = (canvas.height * 0.5) + 'pt sans-serif';
+    canvasContext.font = (canvas.height * 0.47) + 'pt sans-serif';
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);

@@ -187,7 +187,7 @@ function CPArtwork(_width, _height) {
             lastY = ny;
             lastPressure = np;
         }
-    }
+    };
 
     CPBrushToolBase.prototype.endStroke = function() {
         undoArea.clip(that.getBounds());
@@ -196,7 +196,7 @@ function CPArtwork(_width, _height) {
             addUndo(new CPUndoPaint());
         }
         brushBuffer = null;
-    }
+    };
 
     CPBrushToolBase.prototype.createAndPaintDab = function(x, y, pressure) {
         curBrush.applyPressure(pressure);
@@ -210,7 +210,7 @@ function CPArtwork(_width, _height) {
             dab = brushManager.getDab(x, y, curBrush);
         
         this.paintDab(dab);
-    }
+    };
 
     CPBrushToolBase.prototype.paintDab = function(dab) {
         var
@@ -1205,6 +1205,10 @@ function CPArtwork(_width, _height) {
         return -1;
     };
     
+    this.getLayer = function(i) {
+        return layers[i];
+    };
+    
     this.getActiveLayer = function() {
         return curLayer;
     };
@@ -1452,13 +1456,13 @@ function CPArtwork(_width, _height) {
         undoArea.makeEmpty();
 
         this.undo = function() {
-            getLayer(layer).setRectXOR(data, rect);
-            that.invalidateFusionRect(rect);
+            that.getLayer(layer).setRectXOR(data, rect);
+            invalidateFusionRect(rect);
         };
 
         this.redo = function() {
-            getLayer(layer).setRectXOR(data, rect);
-            that.invalidateFusionRect(rect);
+            that.getLayer(layer).setRectXOR(data, rect);
+            invalidateFusionRect(rect);
         };
 
         that.getMemoryUsed = function(undone, param) {
