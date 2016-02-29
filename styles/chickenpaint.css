@@ -6738,15 +6738,7 @@ button.chickenpaint .close {
   display: block;
 }
 .chickenpaint-canvas {
-  background-image: url(checkerboard.png);
-  background-repeat: repeat;
-  background-position: top left;
   position: relative;
-  margin-left: auto;
-  margin-right: auto;
-}
-.chickenpaint-canvas-container {
-  background-color: #606060;
 }
 .chickenpaint-palettes {
   position: absolute;
@@ -6767,11 +6759,7 @@ button.chickenpaint .close {
   cursor: default;
   /* No text selection cursor on palette titles */
 }
-.chickenpaint-palette-head,
-.chickenpaint-palette-color,
-.chickenpaint-palette-tool,
-.chickenpaint-palette-misc,
-.chickenpaint-palette-stroke {
+.chickenpaint-palette {
   /* Prevent drag operations from beginning text selection */
   -webkit-user-select: none;
   -moz-user-select: none;

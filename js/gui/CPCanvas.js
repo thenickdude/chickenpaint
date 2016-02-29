@@ -13,6 +13,11 @@ function CPCanvas(controller) {
         
         canvasContext = canvas.getContext("2d"),
         
+        artworkCanvas = document.createElement("canvas"),
+        artworkCanvasContext = artworkCanvas.getContext("2d"),
+        
+        checkerboardPattern = createCheckerboardPattern(),
+        
         artwork = controller.getArtwork(),
 
         spacePressed = false,
@@ -21,7 +26,7 @@ function CPCanvas(controller) {
         zoom = 1, minZoom = 0.05, maxZoom = 16.0,
         offsetX = 0, offsetY = 0,
         canvasRotation = 0.0,
-//        AffineTransform transform = new AffineTransform();
+        transform = new CPTransform(),
         interpolation = false,
         
         showGrid = false,
@@ -36,7 +41,11 @@ function CPCanvas(controller) {
         
         dontStealFocus = false,
         
-        // We'll need to refresh the whole thing at least once
+        /* The area of the document that should have its layers fused and repainted to the screen
+         * (i.e. an area modified by drawing tools). 
+         * 
+         * Initially set to the size of the artwork so we can repaint the whole thing.
+         */
         updateRegion = new CPRect(0, 0, artwork.width, artwork.height),
         
         //
@@ -107,7 +116,7 @@ function CPCanvas(controller) {
     };
 
     CPDefaultMode.prototype.mouseMoved = function(e) {
-        if (!spacePressed) {
+        if (!spacePressed && curSelectedMode == curDrawMode) {
             brushPreview = true;
 
             var 
@@ -193,7 +202,6 @@ function CPCanvas(controller) {
     // TODO
     
     function CPBezierMode() {}
-    function CPRectSelectionMode() {}
     function CPMoveCanvasMode() {}
     function CPFloodFillMode() {}
     function CPRectSelectionMode() {}
@@ -300,7 +308,7 @@ function CPCanvas(controller) {
 
             if (dragBezier && dragBezierMode == 0) {
                 dragBezierP2 = dragBezierP3 = (Point2D.Float) p.clone();
-                repaint();
+                that.repaintAll();
             }
         }
 
@@ -338,7 +346,7 @@ function CPCanvas(controller) {
                         artwork.continueStroke(x[i], y[i], 1);
                     }
                     artwork.endStroke();
-                    repaint();
+                    that.repaintAll();
 
                     activeMode = defaultMode; // yield control to the default mode
                 }
@@ -350,12 +358,12 @@ function CPCanvas(controller) {
 
             if (dragBezier && dragBezierMode == 1) {
                 dragBezierP1 = (Point2D.Float) p.clone();
-                repaint(); // FIXME: repaint only the bezier region
+                that.repaintAll(); // FIXME: repaint only the bezier region
             }
 
             if (dragBezier && dragBezierMode == 2) {
                 dragBezierP2 = (Point2D.Float) p.clone();
-                repaint(); // FIXME: repaint only the bezier region
+                that.repaintAll(); // FIXME: repaint only the bezier region
             }
         }
 
@@ -447,7 +455,7 @@ function CPCanvas(controller) {
                 Point p = {x: e.pageX, y: e.pageY};
 
                 setOffset(dragMoveOffset.x + p.x - dragMoveX, offsetY = dragMoveOffset.y + p.y - dragMoveY);
-                repaint();
+                that.repaintAll();
             }
         }
 
@@ -473,31 +481,33 @@ function CPCanvas(controller) {
     
         if (artwork.isPointWithin(pf.x, pf.y)) {
             artwork.floodFill(pf.x, pf.y);
-            that.repaint();
+            that.repaintAll();
         }
     
         activeMode = defaultMode; // yield control to the default mode
     };
 
-    /*function CPRectSelectionMode() {
-
+    function CPRectSelectionMode() {
         var
             firstClick,
             curRect = new CPRect();
 
         this.mousePressed = function (e) {
-            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
+            var
+                p = coordToDocument({x: e.pageX, y: e.pageY});
 
             curRect.makeEmpty();
             firstClick = p;
 
-            repaint();
-        }
+            that.repaintAll();
+        };
 
-        this.mouseDragged = function (e) {
-            Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
-            boolean square = e.isShiftDown();
-            int squareDist = Math.max(Math.abs(p.x - firstClick.x), Math.abs(p.y - firstClick.y));
+        this.mouseDragged = function(e) {
+            var
+                p = coordToDocument({x: e.pageX, y: e.pageY}),
+                square = e.shiftKey,
+                
+                squareDist = ~~Math.max(Math.abs(p.x - firstClick.x), Math.abs(p.y - firstClick.y));
 
             if (p.x >= firstClick.x) {
                 curRect.left = firstClick.x;
@@ -515,24 +525,27 @@ function CPCanvas(controller) {
                 curRect.bottom = firstClick.y;
             }
 
-            repaint();
-        }
+            that.repaintAll();
+        };
 
         this.mouseReleased = function (e) {
             artwork.rectangleSelection(curRect);
-
+            curRect.makeEmpty();
+            
             activeMode = defaultMode; // yield control to the default mode
-            repaint();
-        }
+            that.repaintAll();
+        };
 
-        this.paint(Graphics2D g2d) {
+        this.paint = function() {
             if (!curRect.isEmpty()) {
-                g2d.draw(coordToDisplay(curRect));
+                canvasContext.beginPath();
+                canvasContext.rect(curRect.left + 0.5, curRect.top + 0.5, curRect.getWidth(), curRect.getHeight());
+                canvasContext.stroke();
             }
-        }
-    }
+        };
+    };
 
-    function CPMoveToolMode() {
+    /*function CPMoveToolMode() {
 
         var firstClick;
 
@@ -550,13 +563,13 @@ function CPCanvas(controller) {
         this.mouseDragged = function (e) {
             Point p = coordToDocumentInt({x: e.pageX, y: e.pageY});
             artwork.move(p.x - firstClick.x, p.y - firstClick.y);
-            repaint();
+            that.repaintAll();
         }
 
         this.mouseReleased = function (e) {
             artwork.endPreviewMode();
             activeMode = defaultMode; // yield control to the default mode
-            repaint();
+            that.repaintAll();
         }
     }
 
@@ -597,7 +610,7 @@ function CPCanvas(controller) {
 
             setRotation(initAngle + deltaAngle);
             setOffset((int) rotTrans.getTranslateX(), (int) rotTrans.getTranslateY());
-            repaint();
+            that.repaintAll();
         }
 
         /**
@@ -623,7 +636,7 @@ function CPCanvas(controller) {
                 setRotation(initAngle + deltaAngle);
                 setOffset((int) rotTrans.getTranslateX(), (int) rotTrans.getTranslateY());
                 
-                repaint();
+                that.repaintAll();
             }
         }
         
@@ -650,70 +663,81 @@ function CPCanvas(controller) {
         canvas.style.cursor = cursor;
     }
     
+    /**
+     * Schedule a repaint for an area of the screen for later.
+     * 
+     * @param rect CPRect Region that should be repainted using display coordinates
+     */
     function repaintRect(rect) {
-        updateRegion.union(rect);
-        
         //TODO schedule a repaint using requestanimationframe()
 
+        canvasContext.save();
+        
+        canvasContext.beginPath();
+        canvasContext.rect(rect.left, rect.top, rect.getWidth(), rect.getHeight());
+        canvasContext.clip();
+        
         that.paint();
-    };
-    
-    // Get the DOM element for the drawing area
-    this.getElement = function() {
-        return container;
-    };
-    
-    this.repaint = function() {
-        //TODO schedule a repaint using requestanimationframe()
-        updateRegion.makeEmpty();
         
-        this.paint();
+        canvasContext.restore();
     };
     
-    this.paint = function() {
+    function updateScrollBars() {
+        //TODO
+    }
+
+    function updateTransform() {
+        transform.setToIdentity();
+        transform.translate(offsetX, offsetY);
+        transform.scale(zoom, zoom);
+        transform.rotate(canvasRotation);
+
+        updateScrollBars();
+        that.repaintAll();
+    }
+    
+    function rectToDisplay(rect) {
         var
-            imageData = artwork.fusionLayers();
-        
-        if (updateRegion.isEmpty()) {
-            // Redraw entire canvas
-            canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-            
-            canvasContext.putImageData(
-                imageData, 0, 0, 0, 0, canvas.width, canvas.height
-            );
-        } else {
-            canvasContext.clearRect(updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top);
+            points = [];
 
-            canvasContext.putImageData(
-                imageData, 0, 0, updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top
-            );
-
-            updateRegion.makeEmpty();
-        }
+        points.push(coordToDisplayInt({x: r.left, y: r.top}));
+        points.push(coordToDisplayInt({x: r.right - 1, y: r.top}));
+        points.push(coordToDisplayInt({x: r.right - 1, y: r.bottom - 1}));
+        points.push(coordToDisplayInt({x: r.left, y: r.bottom - 1}));
         
-        canvasContext.globalCompositeOperation = 'exclusion';
-        canvasContext.strokeStyle = 'white';
-        canvasContext.lineWidth = 1.0;
-        
-        activeMode.paint(canvasContext);
-        
-        canvasContext.globalCompositeOperation = 'source-over';
-    };
+        return points;
+    }
+    
+    /**
+     * Convert an {x: pageX, y: pageY} pair from a mouse event into document coordinates.
+     */
+    function coordToDocument(coord) {
+        var
+            canvasOffset =  $(canvas).offset();
+    
+        return transform.getInverted().transformPoint(coord.x - canvasOffset.left, coord.y - canvasOffset.top);
+    }
     
     function coordToDisplay(p) {
-        return p;
+        return transform.transformPoint(p.x, p.y);
     }
 
     function coordToDisplayInt(p) {
-        return {x: ~~p.x, y: ~~p.y};
+        var
+            result = coordToDisplay(p);
+        
+        result.x = result.x | 0;
+        result.y = result.y | 0;
+        
+        return result;
     }
     
     function getRefreshArea(r) {
         var
-            p1 = coordToDisplayInt({x: r.left - 1, y: r.top - 1}),
-            p2 = coordToDisplayInt({x: r.left - 1, y: r.bottom}),
-            p3 = coordToDisplayInt({x: r.right, y: r.top - 1}),
-            p4 = coordToDisplayInt({x: r.right, y: r.bottom}),
+            p1 = coordToDisplay({x: r.left - 1, y: r.top - 1}),
+            p2 = coordToDisplay({x: r.left - 1, y: r.bottom}),
+            p3 = coordToDisplay({x: r.right, y: r.top - 1}),
+            p4 = coordToDisplay({x: r.right, y: r.bottom}),
 
             r2 = new CPRect();
 
@@ -735,6 +759,9 @@ function CPCanvas(controller) {
         }
     }
 
+    /**
+     * Get a rectangle that encloses the preview brush, in screen coordinates.
+     */
     function getBrushPreviewOval() {
         var brushSize = ~~(controller.getBrushSize() * zoom);
         
@@ -745,16 +772,263 @@ function CPCanvas(controller) {
             mouseY + brushSize / 2
         );
     }
-    
+
     /**
-     * Convert an {x: pageX, y: pageY} pair from a mouse event into document coordinates.
+     * Adjust the current offset to bring the center of the artwork to the center of the canvas
      */
-    function coordToDocument(coord) {
+    function centerCanvas() {
         var
-            canvasOffset =  $(canvas).offset();
-    
-        return {x: coord.x - canvasOffset.left, y: coord.y - canvasOffset.top};
+            width = canvas.width,
+            height = canvas.height,
+        
+            artworkCenter = coordToDisplay({x: artwork.width / 2, y: artwork.height / 2});
+        
+        that.setOffset(
+            Math.round(offsetX + width / 2.0 - artworkCenter.x),
+            Math.round(offsetY + height / 2.0 - artworkCenter.y)
+        );
     }
+    
+    this.setZoom = function(_zoom) {
+        zoom = _zoom;
+        updateTransform();
+    };
+
+    this.getZoom = function() {
+        return zoom;
+    };
+
+    this.setOffset = function(x, y) {
+        offsetX = x;
+        offsetY = y;
+        updateTransform();
+    };
+
+    this.getOffset = function() {
+        return {x: offsetX, y: offsetY};
+    }
+
+    this.setRotation = function(angle) {
+        canvasRotation = angle % (2 * Math.PI);
+        updateTransform();
+    };
+
+    /**
+     * Get canvas rotation in radians.
+     * 
+     * @return float
+     */
+    this.getRotation = function() {
+        return canvasRotation;
+    };
+    
+    function zoomOnPoint(zoom, centerX, centerY) {
+        zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+        
+        if (that.getZoom() != zoom) {
+            var 
+                offset = that.getOffset();
+            
+            that.setOffset(
+                offset.x + ~~((centerX - offset.x) * (1 - zoom / that.getZoom())), 
+                offset.y + ~~((centerY - offset.y) * (1 - zoom / that.getZoom()))
+            );
+            
+            that.setZoom(zoom);
+
+            /*CPController.CPViewInfo viewInfo = new CPController.CPViewInfo();
+            viewInfo.zoom = zoom;
+            viewInfo.offsetX = offsetX;
+            viewInfo.offsetY = offsetY;
+            controller.callViewListeners(viewInfo); TODO */
+
+            that.repaintAll();
+        }
+    }
+    
+    // More advanced zoom methods
+    function zoomOnCenter(zoom) {
+        var 
+            width = $(canvas).width(),
+            height = $(canvas).height()
+            
+        zoomOnPoint(zoom, width / 2, height / 2);
+    }
+
+    this.zoomIn = function() {
+        zoomOnCenter(this.getZoom() * 2);
+    };
+
+    this.zoomOut = function() {
+        zoomOnCenter(this.getZoom() * 0.5);
+    };
+
+    this.zoom100 = function() {
+        zoomOnCenter(1);
+        centerCanvas();
+    };
+
+    this.resetRotation = function() {
+        var
+            center = {x: canvas.width / 2, y: canvas.height / 2},
+
+            rotTrans = new CPTransform();
+        
+        rotTrans.rotate(-this.getRotation(), center.x, center.y);
+        rotTrans.concatenate(transform);
+
+        this.setOffset(~~rotTrans.getTranslateX(), ~~rotTrans.getTranslateY());
+        this.setRotation(0);
+    };
+    
+    function createCheckerboardPattern() {
+        var
+            checkerboardCanvas = document.createElement("canvas"),
+        
+            checkerboardContext = checkerboardCanvas.getContext("2d"),
+            imageData = checkerboardContext.createImageData(64, 64),
+            data = imageData.data,
+            pixelOffset = 0;
+        
+        for (var j = 0; j < 64; j++) {
+            for (var i = 0; i < 64; i++) {
+                if ((i & 0x8) != 0 ^ (j & 0x8) != 0) {
+                    // White
+                    data[pixelOffset++] = 0xff;
+                    data[pixelOffset++] = 0xff;
+                    data[pixelOffset++] = 0xff;
+                    data[pixelOffset++] = 0xff;
+                } else {
+                    // Grey
+                    data[pixelOffset++] = 0xcc;
+                    data[pixelOffset++] = 0xcc;
+                    data[pixelOffset++] = 0xcc;
+                    data[pixelOffset++] = 0xff;
+                }
+            }
+        }
+        
+        checkerboardCanvas.width = 64;
+        checkerboardCanvas.height = 64;
+        checkerboardContext.putImageData(imageData, 0, 0);
+        
+        return canvasContext.createPattern(checkerboardCanvas, 'repeat');
+    }
+    
+    function handleMouseMove(e) {
+        var
+            offset = $(canvas).offset();
+        
+        mouseX = e.pageX - offset.left;
+        mouseY = e.pageY - offset.top;
+        
+        if (!dontStealFocus) {
+            requestFocusInWindow();
+        }
+
+        if (mouseDown) {
+            activeMode.mouseDragged(e);
+        } else {
+            activeMode.mouseMoved(e);
+        }
+        
+        CPTablet.getRef().mouseDetect();
+    }
+    
+    function handleMouseUp(e) {
+        mouseDown = false;
+        activeMode.mouseReleased(e);
+        
+        window.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("mousemove", handleMouseMove);
+        container.addEventListener("mousemove", handleMouseMove);
+    }
+    
+    function handleMouseDown(e) {
+        if (!mouseDown) {
+            mouseDown = true;
+            
+            requestFocusInWindow();
+            activeMode.mousePressed(e);
+            
+            window.addEventListener("mouseup", handleMouseUp);
+            
+            // Track the drag even if it leaves the canvas:
+            container.removeEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mousemove", handleMouseMove);
+        }
+    }
+    
+    // Get the DOM element for the drawing area
+    this.getElement = function() {
+        return container;
+    };
+    
+    this.repaintAll = function() {
+        //TODO schedule a repaint using requestanimationframe()
+        this.paint();
+    };
+    
+    this.paint = function() {
+        if (!updateRegion.isEmpty()) {
+            var
+                imageData = artwork.fusionLayers();
+            
+            artworkCanvasContext.putImageData(
+                imageData, 0, 0, updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top
+            );
+
+            updateRegion.makeEmpty();
+        }
+
+        canvasContext.fillStyle = '#606060';
+        canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Transform the coordinate system to bring the document into the right position on the screen (translate/zoom/etc)
+        canvasContext.save();
+        {
+            canvasContext.setTransform(transform.m[0], transform.m[1], transform.m[2], transform.m[3], transform.m[4], transform.m[5]);
+            
+            canvasContext.fillStyle = checkerboardPattern;
+            canvasContext.fillRect(0, 0, artwork.width, artwork.height);
+            
+            canvasContext.drawImage(
+                artworkCanvas, 0, 0, artworkCanvas.width, artworkCanvas.height
+            );
+        }
+        canvasContext.restore();
+        
+        // The rest of the drawing happens using the screen coordinate system
+        
+        // This XOR mode guarantees contrast over all colors
+        canvasContext.globalCompositeOperation = 'exclusion';
+        canvasContext.strokeStyle = 'white';
+        canvasContext.lineWidth = 1.0;
+        
+        // Draw selection
+        if (!artwork.getSelection().isEmpty()) {
+            canvasContext.setLineDash([3, 2]);
+            
+            canvasContext.beginPath();
+            
+            var
+                selectRect = coordToDisplay(artwork.getSelection());
+            
+            // Ensure the selection line fills a complete pixel by offsetting the midpoint to the middle of the pixel
+            canvasContext.rect(selectRect.left + 0.5, selectRect.top + 0.5, selectRect.getWidth(), selectRect.getHeight());
+            
+            canvasContext.stroke();
+            
+            canvasContext.setLineDash([]);
+        }
+        
+        // TODO draw grid
+        
+        // Additional drawing by the current mode
+        activeMode.paint(canvasContext);
+        
+        canvasContext.globalCompositeOperation = 'source-over';
+    };
     
     controller.on("toolChange", function(tool, toolInfo) {
         if (curSelectedMode == curDrawMode) {
@@ -827,14 +1101,19 @@ function CPCanvas(controller) {
     curSelectedMode = curDrawMode;
     activeMode = defaultMode;
     
-    canvas.width = artwork.width;
-    canvas.height = artwork.height;
+    artworkCanvas.width = artwork.width;
+    artworkCanvas.height = artwork.height;
+    
+    canvas.width = 1280;
+    canvas.height = 1024;
     canvas.className = "chickenpaint-canvas";
+    
+    if (!canvasContext.setLineDash) { 
+        canvasContext.setLineDash = function () {} // For IE 10 and older
+    }
     
     container.appendChild(canvas);
     container.className = "chickenpaint-canvas-container";
-    
-    controller.setCanvas(this);
     
     container.addEventListener("mouseenter", function() {
         mouseIn = true;
@@ -845,54 +1124,16 @@ function CPCanvas(controller) {
         that.paint();
     });
     
-    function handleMouseMove(e) {
-        var
-            pt = coordToDocument({x: e.pageX, y: e.pageY});
-        
-        mouseX = pt.x;
-        mouseY = pt.y;
-        
-        if (!dontStealFocus) {
-            requestFocusInWindow();
-        }
-
-        if (mouseDown) {
-            activeMode.mouseDragged(e);
-        } else {
-            activeMode.mouseMoved(e);
-        }
-        
-        CPTablet.getRef().mouseDetect();
-    }
-    
-    function handleMouseUp(e) {
-        mouseDown = false;
-        activeMode.mouseReleased(e);
-        
-        window.removeEventListener("mouseup", handleMouseUp);
-        container.addEventListener("mousemove", handleMouseMove);
-    }
-    
-    container.addEventListener("mousedown", function(e) {
-        if (!mouseDown) {
-            mouseDown = true;
-            
-            requestFocusInWindow();
-            activeMode.mousePressed(e);
-            
-            window.addEventListener("mouseup", handleMouseUp);
-            
-            // Track the drag even if it leaves the canvas:
-            container.removeEventListener("mousemove", handleMouseMove);
-            window.addEventListener("mousemove", handleMouseMove);
-        }
-    });
-
+    container.addEventListener("mousedown", handleMouseDown);
     container.addEventListener("mousemove", handleMouseMove);
     
     artwork.on("updateRegion", function(region) {
         updateRegion.union(region);
         
-        repaintRect(updateRegion);  //getRefreshArea(updateRegion));
+        repaintRect(getRefreshArea(updateRegion));
     });
+    
+    centerCanvas();
+    
+    controller.setCanvas(this);
 }

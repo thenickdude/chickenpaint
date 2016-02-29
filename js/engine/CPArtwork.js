@@ -48,7 +48,6 @@ function CPArtwork(_width, _height) {
         
         curColor = 0,
         
-        
         that = this;
     
     // FIXME: 2007-01-13 I'm moving this to the CPRect class
@@ -1400,6 +1399,17 @@ function CPArtwork(_width, _height) {
         invalidateFusion();
     };
     
+    this.rectangleSelection = function(r) {
+        var
+            newSelection = r.clone();
+        
+        newSelection.clip(this.getBounds());
+
+        addUndo(new CPUndoRectangleSelection(this.getSelection(), newSelection));
+
+        this.setSelection(newSelection);
+    };
+    
     this.setSampleAllLayers = function(b) {
         sampleAllLayers = b;
     };
@@ -1472,6 +1482,26 @@ function CPArtwork(_width, _height) {
     
     CPUndoPaint.prototype = Object.create(CPUndo.prototype);
     CPUndoPaint.prototype.constructor = CPUndoPaint;
+    
+    function CPUndoRectangleSelection(from, to) {
+        from = from.clone();
+        to = to.clone();
+
+        this.undo = function() {
+            that.setSelection(from);
+        };
+
+        this.redo = function() {
+            that.setSelection(to);
+        };
+
+        this.noChange = function() {
+            return from.equals(to);
+        };
+    }
+    
+    CPUndoRectangleSelection.prototype = Object.create(CPUndo.prototype);
+    CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
 };
 
 CPArtwork.prototype = Object.create(EventEmitter.prototype);
