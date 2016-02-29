@@ -47,6 +47,13 @@ function CPCanvas(controller) {
          */
         updateRegion = new CPRect(0, 0, artwork.width, artwork.height),
         
+        /**
+         * The area of the canvas that should be repainted to the screen during the next repaint internal (in canvas
+         * coordinates).
+         */
+        repaintRegion = new CPRect(0, 0, 0, 0),
+        scheduledRepaint = false,
+        
         //
         // Modes system: modes control the way the GUI is reacting to the user input
         // All the tools are implemented through modes
@@ -696,25 +703,6 @@ function CPCanvas(controller) {
         canvas.style.cursor = cursor;
     }
     
-    /**
-     * Schedule a repaint for an area of the screen for later.
-     * 
-     * @param rect CPRect Region that should be repainted using display coordinates
-     */
-    function repaintRect(rect) {
-        //TODO schedule a repaint using requestanimationframe()
-
-        canvasContext.save();
-        
-        canvasContext.beginPath();
-        canvasContext.rect(rect.left, rect.top, rect.getWidth(), rect.getHeight());
-        canvasContext.clip();
-        
-        that.paint();
-        
-        canvasContext.restore();
-    };
-    
     function updateScrollBars() {
         //TODO
     }
@@ -1022,12 +1010,55 @@ function CPCanvas(controller) {
         return canvas;
     };
     
+    /**
+     * Schedule a repaint for the current repaint region.
+     */
+    function repaint() {
+        if (!scheduledRepaint) {
+            scheduledRepaint = true;
+            window.requestAnimationFrame(function() {
+                that.paint();
+            });
+        }
+    }
+    
+    /**
+     * Schedule a repaint for the entire screen.
+     */
     this.repaintAll = function() {
-        //TODO schedule a repaint using requestanimationframe()
-        this.paint();
+        repaintRegion.left = 0;
+        repaintRegion.top = 0;
+        repaintRegion.right = canvas.width;
+        repaintRegion.bottom = canvas.height;
+        
+        repaint();
+    };
+    
+    /**
+     * Schedule a repaint for an area of the screen for later.
+     * 
+     * @param rect CPRect Region that should be repainted using display coordinates
+     */
+    function repaintRect(rect) {
+        repaintRegion.set(rect);
+        
+        repaint();
     };
     
     this.paint = function() {
+        scheduledRepaint = false;
+        
+        /* Clip to the area of the screen we want to repaint */
+        if (!repaintRegion.isEmpty()) {
+            canvasContext.save();
+            
+            canvasContext.beginPath();
+            
+            canvasContext.rect(repaintRegion.left, repaintRegion.top, repaintRegion.getWidth(), repaintRegion.getHeight());
+            canvasContext.clip();
+        }
+        
+        /* Copypixels that changed in the document into our local fused image cache */
         if (!updateRegion.isEmpty()) {
             var
                 imageData = artwork.fusionLayers();
@@ -1082,6 +1113,12 @@ function CPCanvas(controller) {
         activeMode.paint(canvasContext);
         
         canvasContext.globalCompositeOperation = 'source-over';
+        
+        if (!repaintRegion.isEmpty()) {
+            repaintRegion.makeEmpty();
+            
+            canvasContext.restore();
+        }
     };
     
     this.resize = function() {

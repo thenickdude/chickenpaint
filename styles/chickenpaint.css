@@ -6738,8 +6738,8 @@ button.chickenpaint .close {
   display: block;
 }
 .chickenpaint-canvas {
-  position: relative;
   width: 100%;
+  height: 700px;
 }
 .chickenpaint-palettes {
   position: absolute;
