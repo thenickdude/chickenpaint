@@ -10,6 +10,13 @@
 	@import 'bootstrap/bootstrap.less';
 	
 	@icon-font-path: "fonts/";
+	
+	font-size:14px;
+}
+
+/* Restore the hidden modal rule from Bootstrap */ 
+.modal-open {
+    overflow: hidden;
 }
 
 .chickenpaint .navbar {
@@ -89,10 +96,23 @@
 	background-image:url(icons.png);
 	background-repeat:no-repeat;
 }
-.chickenpaint-toolbar-button:hover {
+.chickenpaint-small-toolbar-button {
+	display:inline-block;
+	width:18px; /* 16 + 2 pixels for the borders */
+	height:18px; 
+	background-color:white;
+	border:1px solid black;
+	border-radius:3px;
+	margin:2px;
+	background-image:url(smallicons.png);
+	background-repeat:no-repeat;
+}
+.chickenpaint-toolbar-button:hover,
+.chickenpaint-small-toolbar-button:hover {
 	border:1px solid yellow;
 }
-.chickenpaint-toolbar-button.selected {
+.chickenpaint-toolbar-button.selected,
+.chickenpaint-small-toolbar-button.selected {
 	border:1px solid red;
 }
 
@@ -173,6 +193,14 @@
 	background-position:0 -704px;
 }
 
+.chickenpaint-add-layer {
+	background-position:0 0;
+}
+.chickenpaint-remove-layer {
+	background-position:0 -16px;
+}
+
+
 .chickenpaint-palette-color .chickenpaint-palette-body {
 	padding:4px;
 }
@@ -208,4 +236,14 @@
 
 .chickenpaint-slider {
     margin:1px;
+}
+
+.chickenpaint-palette-layers .chickenpaint-palette-body {
+    display:flex;
+    flex-direction:column;
+    height:100%;
+}
+.chickenpaint-layers-widget {
+    flex-grow:1;
+    overflow-y:auto;
 }

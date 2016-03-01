@@ -279,7 +279,7 @@ function CPLayer(width, height, name) {
                             channel = (alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha;
                         
                         // binary magic to clamp negative values to zero without using a condition
-                        fusion.data[pixIndex] = channel & (~r >>> 24); 
+                        fusion.data[pixIndex] = channel & (~channel >>> 24); 
                     }
                     fusion.data[pixIndex++] = newAlpha;
                 } else {
@@ -506,7 +506,7 @@ function CPLayer(width, height, name) {
                 if (newAlpha > 0) {
                     var
                         alpha12 = (alpha1 * alpha2 / 255) | 0,
-                        alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0;
+                        alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
                         alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 
                     for (var i = 0; i < 3; i++, pixIndex++) {
@@ -1275,5 +1275,22 @@ CPLayer.prototype.makeLookUpTables = function() {
         CPLayer.prototype.softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255.) | 0;
     }
 };
+
+CPLayer.prototype.setAlpha = function(alpha) {
+    this.alpha = alpha;
+};
+
+CPLayer.prototype.setBlendMode = function(blendMode) {
+    this.blendMode = blendMode;
+};
+
+CPLayer.prototype.getAlpha = function() {
+    return this.alpha;
+};
+
+CPLayer.prototype.getBlendMode = function() {
+    return this.blendMode;
+};
+
 
 CPLayer.prototype.makeLookUpTables();

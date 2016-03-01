@@ -24,7 +24,6 @@
 function CPBrushPalette(controller) {
     CPPalette.call(this, controller, "brush", "Brush");
 
-    
 	var
 	    alphaCB = new CPBrushPalette.CPCheckBox(), 
 	    alphaSlider = new CPSlider(1, 255),
@@ -43,7 +42,7 @@ function CPBrushPalette(controller) {
         brushPreview = new CPBrushPalette.CPBrushPreview(controller),
 	
         tipCombo = document.createElement("select"),
-        tipNames = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
+        TIP_NAMES = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
         
         body = this.getBodyElement();
 
@@ -59,15 +58,15 @@ function CPBrushPalette(controller) {
 	    return group;
 	}
 	
-	function fillTipCombo() {
-	    for (var i = 0; i < tipNames.length; i++) {
+	function fillCombobox(combo, optionNames) {
+	    for (var i = 0; i < optionNames.length; i++) {
 	        var 
 	            option = document.createElement("option");
 	        
-	        option.innerHTML = tipNames[i];
+	        option.appendChild(document.createTextNode(optionNames[i]));
 	        option.value = i;
 	        
-	        tipCombo.appendChild(option);
+	        combo.appendChild(option);
 	    }
 	}
 	
@@ -127,7 +126,7 @@ function CPBrushPalette(controller) {
 	});
 	
 	tipCombo.className = 'form-control';
-	fillTipCombo();
+	fillCombobox(tipCombo, TIP_NAMES);
 	
 	body.appendChild(tipCombo);
     

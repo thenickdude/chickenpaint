@@ -124,7 +124,7 @@ function CPChibiFile() {
         
         layer.loadFromARGB(stream.readBytes(layer.width * layer.height * 4));
 
-        artwork.addLayer(layer);
+        artwork.addLayerObject(layer);
         
         // Skip any trailing data to reach the end of the chunk
         stream.skip(chunk.chunkSize - payloadOffset - layer.width * layer.height * 4);

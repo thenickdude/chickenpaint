@@ -27,6 +27,7 @@ function CPPaletteManager(cpController) {
 	        stroke: new CPStrokePalette(cpController),
 	        color: new CPColorPalette(cpController),
 	        brush: new CPBrushPalette(cpController),
+	        layers: new CPLayersPalette(cpController)
 	    },
 	    
 	    paletteFrames = [],
@@ -48,22 +49,8 @@ function CPPaletteManager(cpController) {
 	    /*
 		desktop.addContainerListener(this);
 
-		// Layers Palette
-
-		palLayers = new CPLayersPalette(controller);
-		{
-			palettes.put("layers", palLayers);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palLayers);
-			paletteFrames.add(frame);
-
-			frame.pack();
-			frame.setSize(170, 300);
-			desktop.add(frame);
-		}
 
 		// Swatches Palette
-/*
 		palSwatches = new CPSwatchesPalette(controller);
 		{
 			palettes.put("swatches", palSwatches);
@@ -193,9 +180,9 @@ function CPPaletteManager(cpController) {
 		var 
 		    bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight();
 
-/*		palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
+		palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
 
-		palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY()); TODO */
+		palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY());
 
 		palettes.tool.setLocation(0, 0);
 		

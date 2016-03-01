@@ -13,6 +13,7 @@
  */
   /*! normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css */
   /*! Source: https://github.com/h5bp/html5-boilerplate/blob/master/src/css/main.css */
+  font-size: 14px;
 }
 .chickenpaint html {
   font-family: sans-serif;
@@ -6726,6 +6727,10 @@ button.chickenpaint .close {
     display: none !important;
   }
 }
+/* Restore the hidden modal rule from Bootstrap */
+.modal-open {
+  overflow: hidden;
+}
 .chickenpaint .navbar {
   margin-bottom: 0;
   border-bottom-right-radius: 0;
@@ -6795,10 +6800,24 @@ button.chickenpaint .close {
   background-image: url(icons.png);
   background-repeat: no-repeat;
 }
-.chickenpaint-toolbar-button:hover {
+.chickenpaint-small-toolbar-button {
+  display: inline-block;
+  width: 18px;
+  /* 16 + 2 pixels for the borders */
+  height: 18px;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 3px;
+  margin: 2px;
+  background-image: url(smallicons.png);
+  background-repeat: no-repeat;
+}
+.chickenpaint-toolbar-button:hover,
+.chickenpaint-small-toolbar-button:hover {
   border: 1px solid yellow;
 }
-.chickenpaint-toolbar-button.selected {
+.chickenpaint-toolbar-button.selected,
+.chickenpaint-small-toolbar-button.selected {
   border: 1px solid red;
 }
 .chickenpaint-tool-move {
@@ -6875,6 +6894,12 @@ button.chickenpaint .close {
 .chickenpaint-tool-bezier {
   background-position: 0 -704px;
 }
+.chickenpaint-add-layer {
+  background-position: 0 0;
+}
+.chickenpaint-remove-layer {
+  background-position: 0 -16px;
+}
 .chickenpaint-palette-color .chickenpaint-palette-body {
   padding: 4px;
 }
@@ -6908,4 +6933,13 @@ button.chickenpaint .close {
 }
 .chickenpaint-slider {
   margin: 1px;
+}
+.chickenpaint-palette-layers .chickenpaint-palette-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chickenpaint-layers-widget {
+  flex-grow: 1;
+  overflow-y: auto;
 }
