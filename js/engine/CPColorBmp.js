@@ -224,18 +224,18 @@ function CPColorBmp(width, height) {
 	// Copies the Alpha channel from another bitmap. Assumes both bitmaps are the same width.
 	//
 	this.copyAlphaFrom = function(bmp, rect) {
-	    rect.clip(this.getBounds());
+	    rect = this.getBounds().clip(rect);
 
         var 
             w = rect.getWidth(),
             h = rect.getHeight(),
             
-            pixIndex = this.offsetOfPixel(rect.left, rect.top),
+            pixIndex = this.offsetOfPixel(rect.left, rect.top) + CPColorBmp.ALPHA_BYTE_OFFSET /* Apply offset here so we don't have to do it per-pixel*/,
             ySkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL;
         
         for (var y = 0; y < h; y++) {
             for (var x = 0; x < w; x++) {
-                this.data[pixIndex + CPColorBmp.ALPHA_BYTE_INDEX] = bmp.data[pixIndex + CPColorBmp.ALPHA_BYTE_INDEX];
+                this.data[pixIndex] = bmp.data[pixIndex];
                 pixIndex += CPColorBmp.BYTES_PER_PIXEL;
             }
             pixIndex += ySkip;

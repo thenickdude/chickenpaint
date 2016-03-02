@@ -1240,7 +1240,7 @@ function CPArtwork(_width, _height) {
     }
     
     function restoreAlpha(rect) {
-        this.getActiveLayer().copyAlphaFrom(undoBuffer, rect);
+        that.getActiveLayer().copyAlphaFrom(undoBuffer, rect);
     }
     
     /**
