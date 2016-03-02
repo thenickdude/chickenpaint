@@ -449,14 +449,16 @@ function CPArtwork(_width, _height) {
         var 
             opacityData = opacityBuffer.data,
             
-            by = srcRect.top;
-        
-        for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
-            var 
-                srcOffset = srcRect.left + by * brushWidth,
-                dstOffset = dstRect.left + y * that.width;
+            srcOffset = srcRect.left + srcRect.top * brushWidth,
+            dstOffset = dstRect.left + dstRect.top * that.width,
             
-            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
+            dstWidth = dstRect.getWidth(),
+            
+            srcYStride = brushWidth - dstWidth,
+            dstYStride = that.width - dstWidth;
+        
+        for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
+            for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
                 var 
                     brushAlpha = brush[srcOffset] * alpha;
                 
@@ -468,7 +470,6 @@ function CPArtwork(_width, _height) {
                         opacityData[dstOffset] = brushAlpha;
                     }
                 }
-
             }
         }
     };
@@ -1684,6 +1685,10 @@ function CPArtwork(_width, _height) {
         curBrush = brush;
     };
     
+    this.setBrushTexture = function(texture) {
+        brushManager.setTexture(texture);
+    }
+    
     // ///////////////////////////////////////////////////////////////////////////////////
     // Paint engine
     // ///////////////////////////////////////////////////////////////////////////////////
@@ -1847,7 +1852,7 @@ function CPArtwork(_width, _height) {
      */
     function CPUndoRemoveLayer(layerIndex, layer) {
         this.undo = function() {
-            layers.add(layerIndex, layer);
+            layers.splice(layerIndex, 0, layer);
             that.setActiveLayerIndex(layerIndex);
             
             invalidateFusion();
@@ -1855,7 +1860,7 @@ function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            layers.remove(layerIndex);
+            layers.splice(layerIndex, 1);
             that.setActiveLayerIndex(layerIndex < layers.length ? layerIndex : layerIndex - 1);
             
             invalidateFusion();

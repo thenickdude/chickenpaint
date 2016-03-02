@@ -21,14 +21,16 @@ function CPCanvas(controller) {
 
         spacePressed = false,
         
-        // canvas transformations
+        // Canvas transformations
         zoom = 1, minZoom = 0.05, maxZoom = 16.0,
         offsetX = 0, offsetY = 0,
         canvasRotation = 0.0,
         transform = new CPTransform(),
         interpolation = false,
         
+        // Grid options
         showGrid = false,
+        gridSize = 32,
         
         mouseX = 0, mouseY = 0,
         
@@ -668,10 +670,6 @@ function CPCanvas(controller) {
         };
     }
     
-    // Grid options
-    // FIXME: these shouldn't be public
-    this.gridSize = 32;
-    
     /**
      * Stroke the polygon represented by the array of `points` (x:?, y:?} to the given canvas context. 
      * 
@@ -1107,7 +1105,35 @@ function CPCanvas(controller) {
             canvasContext.setLineDash([]);
         }
         
-        // TODO draw grid
+        // Draw grid
+        if (showGrid) {
+            var
+                bounds = artwork.getBounds();
+            
+            canvasContext.beginPath();
+            
+            // Vertical lines
+            for (var i = gridSize - 1; i < bounds.right; i += gridSize) {
+                var
+                    p1 = coordToDisplay({x: i, y: bounds.top}),
+                    p2 = coordToDisplay({x: i, y: bounds.bottom});
+                
+                canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
+                canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
+            }
+
+            // Horizontal lines
+            for (var i = gridSize - 1; i < bounds.bottom; i += gridSize) {
+                var
+                    p1 = coordToDisplay({x: 0, y: i}),
+                    p2 = coordToDisplay({x: bounds.right - 1, y: i});
+                    
+                canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
+                canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
+            }
+
+            canvasContext.stroke();
+        }
         
         // Additional drawing by the current mode
         activeMode.paint(canvasContext);
@@ -1119,6 +1145,11 @@ function CPCanvas(controller) {
             
             canvasContext.restore();
         }
+    };
+    
+    this.showGrid = function(show) {
+        showGrid = show;
+        this.repaintAll();
     };
     
     this.resize = function() {

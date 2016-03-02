@@ -20,7 +20,7 @@
  */
 
 function CPLookUpTable() {
-    this.table = new UInt8Array(256);
+    this.table = new Uint8Array(256);
 
     this.loadIdentity = function() {
         for (var i = 0; i < 256; i++) {

@@ -28,7 +28,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AA,
+            type: CPBrushInfo.B_ROUND_AA,
             paintMode: CPBrushInfo.M_PAINT
         });
         
@@ -41,7 +41,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: false,
-            brushType: CPBrushInfo.B_ROUND_AA,
+            type: CPBrushInfo.B_ROUND_AA,
             paintMode: CPBrushInfo.M_ERASE
         });
         
@@ -54,7 +54,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: true,
             pressureAlpha: false,
-            brushType: CPBrushInfo.B_ROUND_AA,
+            type: CPBrushInfo.B_ROUND_AA,
             paintMode: CPBrushInfo.M_PAINT
         });
         
@@ -68,7 +68,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_ERASE
         });
         
@@ -82,7 +82,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_PAINT
         });
         
@@ -96,7 +96,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_DODGE
         });
         
@@ -110,7 +110,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_BURN
         });
         
@@ -124,7 +124,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.02,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AA,
+            type: CPBrushInfo.B_ROUND_AA,
             paintMode: CPBrushInfo.M_WATER,
             resat: 0.3,
             bleed: 0.6
@@ -140,7 +140,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.05,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_PIXEL,
+            type: CPBrushInfo.B_ROUND_PIXEL,
             paintMode: CPBrushInfo.M_BLUR
         });
         
@@ -154,7 +154,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.01,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_SMUDGE,
             resat: 0.0,
             bleed: 1.0
@@ -170,7 +170,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             spacing: 0.1,
             pressureSize: false,
             pressureAlpha: true,
-            brushType: CPBrushInfo.B_ROUND_AIRBRUSH,
+            type: CPBrushInfo.B_ROUND_AIRBRUSH,
             paintMode: CPBrushInfo.M_OIL,
             resat: 0.0,
             bleed: 0.07

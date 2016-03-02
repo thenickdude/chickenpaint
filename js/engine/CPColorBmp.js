@@ -251,9 +251,7 @@ function CPColorBmp(width, height) {
 			this.data = this.imageData.data;
 		}
 
-		for (var i = 0; i < this.data.length; i++) { 
-		    this.data[i] = bmp.data[i];
-		}
+		this.data.set(bmp.data);
 	};
 
 	/**

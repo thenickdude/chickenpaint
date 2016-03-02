@@ -27,7 +27,8 @@ function CPPaletteManager(cpController) {
 	        stroke: new CPStrokePalette(cpController),
 	        color: new CPColorPalette(cpController),
 	        brush: new CPBrushPalette(cpController),
-	        layers: new CPLayersPalette(cpController)
+	        layers: new CPLayersPalette(cpController),
+	        textures: new CPTexturePalette(cpController)
 	    },
 	    
 	    paletteFrames = [],
@@ -193,11 +194,10 @@ function CPPaletteManager(cpController) {
 			palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
 		}
 		
-/*		TODO palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0);
+		// palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0); TODO
 
-		palettes.textures.setSize(Math.min(palettes.layers.getX() - palettes.textures.getX(), 480), palettes.textures.getHeight());
-		
-		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight()); */
+		palettes.textures.setWidth(Math.min(palettes.layers.getX() - palettes.textures.getX(), 480));
+		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
 
 		palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
 	};

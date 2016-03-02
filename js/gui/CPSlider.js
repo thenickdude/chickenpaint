@@ -39,39 +39,41 @@ function CPSlider(minValue, maxValue, centerMode) {
 	function paint() {
 	    var
 	        width = canvas.width,
-	        height = canvas.height;
-	    
+	        height = canvas.height,
+            textX = 2 * window.devicePixelRatio,
+            textY = canvas.height * 0.75;
+
 		if (centerMode) {
-		    // TODO
-			/*if (that.value >= valueRange / 2) {
-				g.drawString(this.title, 2, 14);
+            canvasContext.save();
+            
+            canvasContext.fillStyle = 'white';
 
-				g.fillRect(width / 2, 0, (that.value - valueRange / 2) * width / valueRange, height);
-				
-				g.setColor(Color.WHITE);
-				
-				g.setClip(width / 2, 0, (that.value - valueRange / 2) * width / valueRange, height);
-				g.drawString(title, 2, 14);
+            canvasContext.fillRect(0, 0, width, height);
+            
+            canvasContext.fillStyle = 'black';
+
+            canvasContext.fillText(that.title, textX, textY);
+            canvasContext.beginPath();
+            
+		    if (that.value >= valueRange / 2) {
+				canvasContext.rect(width / 2, 0, (that.value - valueRange / 2) * width / valueRange, height);
 			} else {
-				g.drawString(title, 2, 14);
-
-				g.fillRect(that.value * width / valueRange, 0, (valueRange/2 - that.value) * width / valueRange, height);
-
-				g.setColor(Color.WHITE);
-				
-				g.setClip(that.value * width / valueRange, 0, (valueRange/2 - that.value) * width / valueRange, height);
-				g.drawString(title, 2, 14);
-			}*/
+			    canvasContext.rect(that.value * width / valueRange, 0, (valueRange / 2 - that.value) * width / valueRange, height);
+			}
+		    
+            canvasContext.fill();
+            canvasContext.clip();
+            
+            canvasContext.fillStyle = 'white';
+            canvasContext.fillText(that.title, textX, textY);
+		    
+		    canvasContext.restore();
 		} else {
-		    var
-		        textX = 2 * window.devicePixelRatio,
-		        textY = canvas.height * 0.75
+	        canvasContext.save();
+	        canvasContext.save();
 		    
-	        canvasContext.save();
-	        canvasContext.save();
+            canvasContext.fillStyle = 'black';
 
-		    canvasContext.fillStyle = 'black';
-		    
 		    canvasContext.beginPath();
 		    canvasContext.rect(0, 0, that.value * width / valueRange, height);
 		    canvasContext.fill();
@@ -139,6 +141,8 @@ function CPSlider(minValue, maxValue, centerMode) {
         
         if (this.value != _value) {
             this.value = _value;
+            
+            // The event listeners would like to update our title property at this point to reflect the new value
             this.emitEvent('valueChange', [this.value]);
         
             paint();

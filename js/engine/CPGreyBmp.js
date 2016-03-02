@@ -42,9 +42,7 @@ function CPGreyBmp(width, height, bitDepth) {
         var
             result = new CPGreyBmp(this.width, this.height, this.bitDepth);
         
-        for (var i = 0; i < this.data.length; i++) {
-            result.data[i] = this.data[i];
-        }
+        result.data.set(this.data);
         
         return result;
 	};
@@ -70,7 +68,7 @@ function CPGreyBmp(width, height, bitDepth) {
 
 	this.mirrorHorizontally = function() {
 		var
-		    newData = new UInt8Array(width * height);
+		    newData = new Uint8Array(width * height);
 
 		for (var y = 0; y < height; y++) {
 			for (var x = 0; x < width; x++) {
@@ -85,6 +83,43 @@ function CPGreyBmp(width, height, bitDepth) {
 		for (var i = 0; i < this.data.length; i++) {
 			this.data[i] = lut.table[this.data[i]];
 		}
+	};
+	
+	this.toCanvas = function() {
+        var
+            imageData = this.toImageData(),
+            
+            canvas = document.createElement("canvas"),
+            context = canvas.getContext("2d");
+        
+        canvas.width = this.width;
+        canvas.height = this.height;
+        
+        context.putImageData(imageData, 0, 0);
+        
+        return canvas;
+    };
+	
+	this.toImageData = function() {
+	    var
+	        canvas = document.createElement("canvas"),
+	        context = canvas.getContext("2d"),
+	        imageData = context.createImageData(this.width, this.height),
+	        
+	        srcIndex = 0,
+	        dstIndex = 0;
+	    
+	    for (var y = 0; y < this.height; y++) {
+	        for (var x = 0; x < this.width; x++) {
+	            imageData.data[dstIndex++] = this.data[srcIndex];
+	            imageData.data[dstIndex++] = this.data[srcIndex];
+	            imageData.data[dstIndex++] = this.data[srcIndex];
+	            imageData.data[dstIndex++] = 0xFF;
+	            srcIndex++;
+	        }
+	    }
+	    
+	    return imageData;
 	};
 }
 

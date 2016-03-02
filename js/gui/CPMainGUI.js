@@ -27,6 +27,10 @@ function CPMainGUI(controller, uiElem) {
                 entryElem = $('<li role="separator" class="divider"></li>');
             } else {
                 entryElem = $('<li><a href="#" data-action="' + entry.action + '">' + entry.name + '</a></li>');
+                
+                if (entry.checkbox) {
+                    $("a", entryElem).data("checkbox", true);
+                }
             }
             
             if (entry.title) {
@@ -335,8 +339,23 @@ function CPMainGUI(controller, uiElem) {
         recurseFillMenu($(".navbar-nav", bar), menuEntries);
 
         $(bar).on('click', 'a:not(.dropdown-toggle)', function(e) {
+            var
+                target = $(e.target),
+                action = target.data('action'),
+                checkbox = target.data('checkbox'),
+                selected;
+            
+            if (checkbox) {
+                target.toggleClass("selected");
+                selected = target.hasClass("selected");
+            } else {
+                selected = false;
+            }
+            
             controller.actionPerformed({
-                "action": ($(e.target).data('action'))
+                action: action,
+                checkbox: checkbox,
+                selected: selected
             });
             
             e.preventDefault();

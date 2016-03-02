@@ -57,11 +57,11 @@ function CPPalette(cpController, className, title) {
     };
     
     this.getX = function() {
-        return parseInt(containerElement.style.left, 10);
+        return parseInt(containerElement.style.left, 10) || 0;
     };
     
     this.getY = function() {
-        return parseInt(containerElement.style.top, 10);
+        return parseInt(containerElement.style.top, 10) || 0;
     };
     
     this.setLocation = function(x, y) {
@@ -69,8 +69,16 @@ function CPPalette(cpController, className, title) {
         containerElement.style.top = y + "px";
     };
     
-    this.setSize = function(width, height) {
+    this.setWidth = function(width) {
         containerElement.style.width = width + "px";
+    };
+
+    this.setHeight = function(height) {
         containerElement.style.height = height + "px";
-    }
+    };
+    
+    this.setSize = function(width, height) {
+        this.setWidth(width);
+        this.setHeight(height);
+    };
 }

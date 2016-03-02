@@ -42,7 +42,8 @@ function CPBrushManager() {
 	    cacheSize, cacheSqueeze, cacheAngle,
 	    cacheType,
 
-	    texture; // A CPGreyBmp
+	    texture, // A CPGreyBmp
+	    that = this; 
 
     function getBrushWithAA(brushInfo, dx, dy) {
         var
@@ -323,7 +324,8 @@ function CPBrushManager() {
     function applyTexture(dab, textureAmount) {
         var 
             amount = Math.floor(textureAmount * 255),
-            offset = 0;
+            offset = 0,
+            texture = that.texture;
         
         for (var y = 0; y < dab.height; y++) {
             for (var x = 0; x < dab.width; x++) {
@@ -396,13 +398,11 @@ function CPBrushManager() {
 		dab.x = ~~nx;
 		dab.y = ~~ny;
 
-		if (brushInfo.texture > 0.0 && texture != null) {
+		if (brushInfo.texture > 0.0 && this.texture != null) {
 			// we need a brush bitmap that can be modified everytime
 			// the one in "brush" can be kept in cache so if we are using it, make a copy
 			if (dab.brush == brush) {
-			    for (var i = 0; i < dab.width * dab.height; i++) {
-			        brushAA[i] = brush[i];
-			    }
+			    brushAA.set(brush);
 				dab.brush = brushAA;
 			}
 			applyTexture(dab, brushInfo.texture);

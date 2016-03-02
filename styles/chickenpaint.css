@@ -6776,17 +6776,14 @@ button.chickenpaint .close {
   width: 80px;
   text-align: center;
   line-height: 0;
-  padding: 0;
-  margin: 0;
-  list-style-type: none;
+  margin-bottom: 0 !important;
 }
 .chickenpaint-misc-tools,
 .chickenpaint-stroke-tools {
   display: flex;
   line-height: 0;
   padding: 0;
-  margin: 0;
-  list-style-type: none;
+  margin-bottom: 0 !important;
 }
 .chickenpaint-toolbar-button {
   display: inline-block;
@@ -6943,4 +6940,50 @@ button.chickenpaint .close {
 .chickenpaint-layers-widget {
   flex-grow: 1;
   overflow-y: auto;
+}
+.chickenpaint-layer-add-remove {
+  margin-bottom: 0;
+}
+.chickenpaint .nav a.selected::before {
+  content: "\e013";
+  position: absolute;
+  left: 5px;
+  font-size: 12px;
+  font-family: 'Glyphicons Halflings';
+  font-style: normal;
+  font-weight: 400;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.chickenpaint-palette-textures .chickenpaint-palette-body {
+  display: flex;
+  flex-direction: row;
+}
+.chickenpaint-texture-swatches {
+  flex-grow: 1;
+  line-height: 0;
+  overflow-y: auto;
+}
+.chickenpaint-texture-swatches canvas {
+  display: inline-block;
+  margin: 3px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+}
+.chickenpaint-texture-options {
+  text-align: center;
+  padding: 4px;
+}
+.chickenpaint-texture-options > canvas {
+  margin: 0 auto 3px auto;
+  border: 1px solid black;
+}
+.chickenpaint-texture-options .popover {
+  background-color: #f4f4f4;
+}
+.chickenpaint-texture-options .popover canvas {
+  margin-bottom: 7px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
 }
