@@ -247,22 +247,6 @@ function ChickenPaint(uiElem, arrayBuffer) {
         that.emitEvent('viewChange', [viewInfo]);
     }
 
-    curColor.setRgb(0);
-    
-    createTools();
-    
-    if (arrayBuffer) {
-        var 
-            chibiReader = new CPChibiFile();
-        
-        this.artwork = chibiReader.read(arrayBuffer);
-    }
-    
-    if (!this.artwork) {
-        this.artwork = new CPArtwork(800, 600);
-        this.artwork.addEmptyLayer();
-    }
-    
     this.getArtwork = function() {
         return this.artwork;
     };
@@ -545,6 +529,22 @@ function ChickenPaint(uiElem, arrayBuffer) {
         
         // callCPEventListeners(); TODO
     };
+    
+    curColor.setRgb(0);
+    
+    createTools();
+    
+    if (arrayBuffer) {
+        var 
+            chibiReader = new CPChibiFile();
+        
+        this.artwork = chibiReader.read(arrayBuffer);
+    }
+    
+    if (!this.artwork) {
+        this.artwork = new CPArtwork(800, 600);
+        this.artwork.addEmptyLayer();
+    }
     
     this.gui = new CPMainGUI(this, uiElem);
     

@@ -6928,7 +6928,8 @@ button.chickenpaint .close {
 .chickenpaint-palette-brush .chickenpaint-checkbox-slider-group .chickenpaint-slider {
   margin-left: 3px;
 }
-.chickenpaint-palette-brush .chickenpaint-palette-body {
+.chickenpaint-palette-brush .chickenpaint-palette-body,
+.chickenpaint-palette-layers .chickenpaint-palette-body {
   padding: 4px;
 }
 .chickenpaint-slider {

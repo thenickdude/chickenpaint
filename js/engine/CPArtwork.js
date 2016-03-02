@@ -1273,7 +1273,7 @@ function CPArtwork(_width, _height) {
         
         layer.clearAll(EMPTY_CANVAS_COLOR);
         
-        this.addLayer(layer);
+        this.addLayerObject(layer);
     };
 
     /**

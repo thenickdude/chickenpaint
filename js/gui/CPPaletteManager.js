@@ -181,7 +181,6 @@ function CPPaletteManager(cpController) {
 		    bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight();
 
 		palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
-
 		palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY());
 
 		palettes.tool.setLocation(0, 0);

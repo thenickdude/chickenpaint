@@ -25,26 +25,27 @@ function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers");
     
     var
-        layerH = 32, eyeW = 24,
+        MODE_NAMES = [
+              "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
+              "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light"
+        ],
         
+        layerH = 32, eyeW = 24;
+    
+    var
         body = this.getBodyElement(),
 
         layerWidget = new CPLayerWidget(),
         alphaSlider = new CPSlider(0, 100),
         blendCombo = document.createElement("select"),
     
-        renameField,
+        renameField = new CPRenameField(),
     
         cbSampleAllLayers = document.createElement("input"),
         cbLockAlpha = document.createElement("input"),
         
         addButton = document.createElement("li"),
-        removeButton = document.createElement("li"),
-
-        MODE_NAMES = [
-            "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
-            "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light"
-        ];
+        removeButton = document.createElement("li");
     
     function fillCombobox(combo, optionNames) {
         for (var i = 0; i < optionNames.length; i++) {
@@ -73,7 +74,7 @@ function CPLayersPalette(controller) {
         return div;
     }
 
-    function showRenameControl(layerNb) {
+    function showRenameControl(layerIndex) {
         var
             d = layerWidget.getSize(),
             artwork = controller.getArtwork(),
@@ -83,13 +84,22 @@ function CPLayersPalette(controller) {
         renameField.setVisible(true);
         renameField.requestFocus();
 
-        renameField.setLocation(eyeW, d.height - (layerNb + 1) * layerH);
+        renameField.setLocation(eyeW, d.height - (layerIndex + 1) * layerH);
 
-        renameField.setText(layers[layerNb].name);
+        renameField.setText(layers[layerIndex].name);
         renameField.selectAll();
 
-        renameField.layerNb = layerNb;
+        renameField.layerIndex = layerIndex;
     }
+    
+    var
+        parentSetSize = this.setSize;
+    
+    this.setSize = function(w, h) {
+        parentSetSize.call(this, w, h);
+        
+        layerWidget.resize();
+    };
 
     function CPLayerWidget() {
         var 
@@ -102,7 +112,7 @@ function CPLayersPalette(controller) {
             canvasContext = canvas.getContext("2d");
 
         /**
-         * Get the actaul size of the component on screen in pixels.
+         * Get the actual size of the component on screen in pixels.
          */
         function getRealSize() {
             return {width: $(canvas).width(), height: $(canvas).height()};
@@ -112,7 +122,7 @@ function CPLayersPalette(controller) {
             var
                 d = getRealSize();
             
-            return (d.height - p.y) / layerH;
+            return Math.floor((d.height - point.y) / layerH);
         }
         
         /**
@@ -124,27 +134,43 @@ function CPLayersPalette(controller) {
                 d = {width: canvas.width, height: canvas.height};
 
             if (selected) {
-                g.setColor(new Color(0xB0B0C0));
+                canvasContext.fillStyle = '#B0B0C0';
             } else {
-                g.setColor(Color.white);
+                canvasContext.fillStyle = 'white';
             }
-            g.fillRect(0, 0, d.width, layerH);
-            g.setColor(Color.black);
-            g.drawLine(0, 0, d.width, 0);
-            g.drawLine(eyeW, 0, eyeW, layerH);
+            canvasContext.fillRect(0, 0, d.width, layerH);
 
-            g.drawString(layer.name, eyeW + 6, 12);
-            g.drawLine(eyeW + 6, layerH / 2, d.width - 6, layerH / 2);
-            g.drawString(modeNames[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6, 27);
+            canvasContext.beginPath();
+            canvasContext.moveTo(0, 0);
+            canvasContext.lineTo(d.width, 0);
+            canvasContext.stroke();
+            
+            canvasContext.beginPath();
+            canvasContext.moveTo(eyeW, 0);
+            canvasContext.lineTo(eyeW, layerH);
+            canvasContext.stroke();
 
+            canvasContext.fillStyle = 'black';
+            canvasContext.fillText(layer.name, eyeW + 6, 12);
+            
+            canvasContext.beginPath();
+            canvasContext.moveTo(eyeW + 6, layerH / 2);
+            canvasContext.lineTo(d.width - 6, layerH / 2);
+            canvasContext.stroke();
+
+            canvasContext.fillText(MODE_NAMES[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6, 27);
+
+            canvasContext.beginPath();
             if (layer.visible) {
-                g.fillOval(eyeW / 2 - 5, layerH / 2 - 5, 10, 10);
+                canvasContext.arc(eyeW / 2, layerH / 2, 10, 0, Math.PI * 2);
+                canvasContext.fill();
             } else {
-                g.drawOval(eyeW / 2 - 5, layerH / 2 - 5, 10, 10);
+                canvasContext.arc(eyeW / 2, layerH / 2, 10, 0, Math.PI * 2);
+                canvasContext.stroke();
             }
         }
 
-        function paint() {
+        this.paint = function() {
             var
                 artwork = controller.getArtwork(),
                 layers = artwork.getLayers(),
@@ -153,11 +179,13 @@ function CPLayersPalette(controller) {
 
             canvasContext.save();
             
+            canvasContext.font = (layerH * 0.25) + "pt sans-serif";
+
             canvasContext.fillStyle = '#606060';
             canvasContext.fillRect(0, 0, d.width, d.height - layers.length * layerH);
 
             canvasContext.strokeStyle = 'black';
-            
+
             // Draw the list of layers, with the first layer at the bottom of the control
             canvasContext.translate(0, d.height - layerH);
             
@@ -185,8 +213,10 @@ function CPLayersPalette(controller) {
             var
                 artwork = controller.getArtwork();
             
-            canvas.width = 60;
-            canvas.height = layerH * artwork.getLayerCount();
+            canvas.width = $(canvas).parent().width();
+            canvas.height = Math.max(layerH * artwork.getLayerCount(), $(canvas).parent().height());
+            
+            this.paint();
         };
         
         this.getElement = function() {
@@ -194,56 +224,66 @@ function CPLayersPalette(controller) {
         };
         
         canvas.addEventListener("click", function(e) {
-            var 
-                offset = $(canvas).offset(),
-                
-                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                
-                artwork = controller.getArtwork(),
-                layerIndex = getLayerIndex(p);
-
-            if (e.getClickCount() == 2 && layerIndex >= 0 && layerIndex < artwork.getLayerCount() && mouseLoc.x > eyeW) {
-                showRenameControl(layerIndex);
-            } else if (renameField.isVisible()) {
+            if (renameField.isVisible()) {
                 renameField.renameAndHide();
             }
         });
+        
+        canvas.addEventListener("ondblclick", function(e) {
+            var 
+                offset = $(canvas).offset(),
+                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
+                
+                layerIndex = getLayerIndex(mouseLoc);
 
-        /*public void mousePressed(MouseEvent e) {
+            showRenameControl(layerIndex);
+        });
+
+        canvas.addEventListener("mousedown", function(e) {
+            var
+                offset = $(canvas).offset(),
+                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top};
+
             // click, moved from mouseClicked due
             // to problems with focus and stuff
-            if ((e.getModifiers() & InputEvent.BUTTON1_MASK) != 0) {
-                Point p = e.getPoint();
-                CPArtwork artwork = controller.getArtwork();
-
-                int layerIndex = getLayerNb(p);
-                if (layerIndex >= 0 && layerIndex < artwork.getLayersNb()) {
-                    CPLayer layer = artwork.getLayer(layerIndex);
-                    if (p.x < eyeW) {
-                        artwork.setLayerVisibility(layerIndex, !layer.visible);
-                    } else {
-                        artwork.setActiveLayer(layerIndex);
+            
+            switch (e.button) {
+                case 0: /* Left button */
+                    var
+                        artwork = controller.getArtwork(),
+    
+                        layerIndex = getLayerIndex(mouseLoc);
+                    
+                    if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
+                        var
+                            layer = artwork.getLayer(layerIndex);
+                        
+                        if (mouseLoc.x < eyeW) {
+                            artwork.setLayerVisibility(layerIndex, !layer.visible);
+                        } else {
+                            artwork.setActiveLayer(layerIndex);
+                        }
                     }
-
-                }
+                break;
+                case 2: /* Right button */
+                    var
+                        d = {w: canvas.width, h: canvas.height},
+                        artwork = controller.getArtwork(),
+                        layers = artwork.getLayers(),
+    
+                        layerOver = (d.height - mouseLoc.y) / layerH;
+                    
+                    if (layerOver < layers.length) {
+                        layerDrag = true;
+                        layerDragY = mouseLoc.y;
+                        layerDragNb = layerOver;
+                        repaint();
+                    }
+                break;
             }
+        });
 
-            if ((e.getModifiers() & InputEvent.BUTTON1_MASK) != 0) {
-                Dimension d = getSize();
-                CPArtwork artwork = controller.getArtwork();
-                Object[] layers = artwork.getLayers();
-
-                int layerOver = (d.height - e.getPoint().y) / layerH;
-                if (layerOver < layers.length) {
-                    layerDrag = true;
-                    layerDragY = e.getPoint().y;
-                    layerDragNb = layerOver;
-                    repaint();
-                }
-            }
-        }
-
-        public void mouseReleased(MouseEvent e) {
+/*TODO        public void mouseReleased(MouseEvent e) {
             if (layerDrag && (e.getModifiers() & InputEvent.BUTTON1_MASK) != 0) {
                 Dimension d = getSize();
                 CPArtwork artwork = controller.getArtwork();
@@ -272,53 +312,51 @@ function CPLayersPalette(controller) {
             }
         }*/
         
+        canvasContext.strokeStyle = 'black';
+        
         container.className = "chickenpaint-layers-widget";
         container.appendChild(canvas);
-        
-        this.resize();
     }
 
-    /*class CPRenameField extends JTextField implements FocusListener, ActionListener {
+    function CPRenameField() {
+        var
+            layerIndex = -1,
+            textBox = document.createElement("input");
 
-        int layerNb;
+        this.renameAndHide = function() {
+            var 
+                artwork = controller.getArtwork();
 
-        public CPRenameField() {
-            setSize(new Dimension(100, 20));
-
-            layerNb = -1;
-            setVisible(false);
-            setEnabled(false);
-
-            addActionListener(this);
-            addFocusListener(this);
-        }
-
-        public void actionPerformed(ActionEvent e) {
-            renameAndHide();
-        }
-
-        public void focusGained(FocusEvent e) {
-            // FIXME: hack to avoid losing the focus to the main canvas
-            controller.canvas.dontStealFocus = true;
-        }
-
-        public void focusLost(FocusEvent e) {
-            controller.canvas.dontStealFocus = false;
-            renameAndHide();
-        }
-
-        public void renameAndHide() {
-            CPArtwork artwork = controller.getArtwork();
-
-            if (layerNb >= 0 && layerNb < artwork.getLayersNb()) {
-                artwork.setLayerName(layerNb, getText());
+            if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
+                artwork.setLayerName(layerIndex, textBox.value);
             }
 
-            layerNb = -1;
-            setVisible(false);
-            setEnabled(false);
+            layerIndex = -1;
+            textBox.style.display = 'none';
         }
-    }*/
+
+        this.isVisible = function() {
+            return textBox.style.display == 'none';
+        };
+        
+        textBox.style.display = 'none';
+
+        textBox.addEventListener("keypress", function(e) {
+            if (e.characterCode == 13) {// Enter
+                renameAndHide();
+            }
+        });
+        
+        textBox.addEventListener("focus", function(e) {
+            // FIXME: hack to avoid losing the focus to the main canvas
+            controller.canvas.dontStealFocus = true;
+        });
+        
+        textBox.addEventListener("blur", function(e) {
+            controller.canvas.dontStealFocus = false;
+            renameAndHide();
+        });
+    }
     
     blendCombo.className = "form-control";
     blendCombo.title = "Layer blending mode";
@@ -400,7 +438,7 @@ function CPLayersPalette(controller) {
     alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
 
     // add listeners
-    controller.getArtwork().on("layerChange", function() {
+    controller.getArtwork().on("changeLayer", function() {
         var
             artwork = this;
         
@@ -412,8 +450,7 @@ function CPLayersPalette(controller) {
             blendCombo.setSelectedIndex(artwork.getActiveLayer().getBlendMode());
         }
 
-        layerWidget.repaint();
-        layerWidget.revalidate();
+        layerWidget.paint();
     });
 }
 
