@@ -104,12 +104,14 @@ function CPLayersPalette(controller) {
     function CPLayerWidget() {
         var 
             layerDrag, layerDragReally,
-            layerDragNb, layerDragY,
+            layerDragIndex, layerDragY,
             
             container = document.createElement("div"),
             
             canvas = document.createElement("canvas"),
-            canvasContext = canvas.getContext("2d");
+            canvasContext = canvas.getContext("2d"),
+            
+            that = this;
 
         /**
          * Get the actual size of the component on screen in pixels.
@@ -169,6 +171,42 @@ function CPLayersPalette(controller) {
                 canvasContext.stroke();
             }
         }
+        
+        function mouseReleased(e) {
+            if (e.button == 0) {
+                var
+                    d = {width: canvas.width, height: canvas.height},
+                    offset = $(canvas).offset(),
+                    
+                    artwork = controller.getArtwork(),
+                    layers = artwork.getLayers();
+
+                layerDragY = e.pageY - offset.top;
+                
+                var
+                    layerOver = Math.floor((d.height - layerDragY) / layerH);
+
+                if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragIndex
+                        && layerOver != layerDragIndex + 1) {
+                    artwork.moveLayer(layerDragIndex, layerOver);
+                }
+
+                layerDrag = false;
+                layerDragReally = false;
+                that.paint();
+                
+                window.removeEventListener("mousemove", mouseDragged);
+                window.removeEventListener("mouseup", mouseReleased);
+            }
+        }
+
+        function mouseDragged(e) {
+            if (layerDrag) {
+                layerDragReally = true;
+                layerDragY = e.pageY - $(canvas).offset().top;
+                that.paint();
+            }
+        }
 
         this.paint = function() {
             var
@@ -199,9 +237,9 @@ function CPLayersPalette(controller) {
                 canvasContext.strokeRect(0, layerDragY - layerH / 2, d.width, layerH);
 
                 var
-                    layerOver = (d.height - layerDragY) / layerH;
+                    layerOver = Math.floor((d.height - layerDragY) / layerH);
                 
-                if (layerOver <= layers.length && layerOver != layerDragNb && layerOver != layerDragNb + 1) {
+                if (layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
                     canvasContext.fillRect(0, d.height - layerOver * layerH - 2, d.width, 4);
                 }
             }
@@ -246,71 +284,38 @@ function CPLayersPalette(controller) {
 
             // click, moved from mouseClicked due
             // to problems with focus and stuff
-            
-            switch (e.button) {
-                case 0: /* Left button */
-                    var
-                        artwork = controller.getArtwork(),
-    
-                        layerIndex = getLayerIndex(mouseLoc);
+            if (e.button == 0) { /* Left button */
+                var
+                    d = {width: canvas.width, height: canvas.height},
                     
-                    if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
-                        var
-                            layer = artwork.getLayer(layerIndex);
-                        
-                        if (mouseLoc.x < eyeW) {
-                            artwork.setLayerVisibility(layerIndex, !layer.visible);
-                        } else {
-                            artwork.setActiveLayer(layerIndex);
-                        }
-                    }
-                break;
-                case 2: /* Right button */
-                    var
-                        d = {w: canvas.width, h: canvas.height},
-                        artwork = controller.getArtwork(),
-                        layers = artwork.getLayers(),
-    
-                        layerOver = (d.height - mouseLoc.y) / layerH;
+                    artwork = controller.getArtwork(),
+                    layers = artwork.getLayers(),
                     
-                    if (layerOver < layers.length) {
-                        layerDrag = true;
-                        layerDragY = mouseLoc.y;
-                        layerDragNb = layerOver;
-                        repaint();
+                    layerOver = Math.floor((d.height - mouseLoc.y) / layerH),
+                    layerIndex = getLayerIndex(mouseLoc);
+                
+                if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
+                    var
+                        layer = artwork.getLayer(layerIndex);
+                    
+                    if (mouseLoc.x < eyeW) {
+                        artwork.setLayerVisibility(layerIndex, !layer.visible);
+                    } else {
+                        artwork.setActiveLayerIndex(layerIndex);
                     }
-                break;
+                }
+                
+                if (layerOver < layers.length) {
+                    layerDrag = true;
+                    layerDragY = mouseLoc.y;
+                    layerDragIndex = layerOver;
+                    that.paint();
+                    
+                    window.addEventListener("mousemove", mouseDragged);
+                    window.addEventListener("mouseup", mouseReleased);
+                }
             }
         });
-
-/*TODO        public void mouseReleased(MouseEvent e) {
-            if (layerDrag && (e.getModifiers() & InputEvent.BUTTON1_MASK) != 0) {
-                Dimension d = getSize();
-                CPArtwork artwork = controller.getArtwork();
-                Object[] layers = artwork.getLayers();
-
-                layerDrag = true;
-                layerDragY = e.getPoint().y;
-                int layerOver = (d.height - layerDragY) / layerH;
-
-                if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragNb
-                        && layerOver != layerDragNb + 1) {
-                    artwork.moveLayer(layerDragNb, layerOver);
-                }
-
-                layerDrag = false;
-                layerDragReally = false;
-                repaint();
-            }
-        }
-
-        public void mouseDragged(MouseEvent e) {
-            if (layerDrag) {
-                layerDragReally = true;
-                layerDragY = e.getPoint().y;
-                repaint();
-            }
-        }*/
         
         canvasContext.strokeStyle = 'black';
         
@@ -447,7 +452,7 @@ function CPLayersPalette(controller) {
         }
 
         if (artwork.getActiveLayer().getBlendMode() != parseInt(blendCombo.value, 10)) {
-            blendCombo.setSelectedIndex(artwork.getActiveLayer().getBlendMode());
+            blendCombo.value = artwork.getActiveLayer().getBlendMode();
         }
 
         layerWidget.paint();

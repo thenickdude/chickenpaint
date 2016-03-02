@@ -179,7 +179,7 @@ function CPArtwork(_width, _height) {
         addUndo(new CPUndoAddLayer(activeLayerIndex));
 
         layers.splice(activeLayerIndex + 1, 0, newLayer);
-        this.setActiveLayer(activeLayerIndex + 1);
+        this.setActiveLayerIndex(activeLayerIndex + 1);
 
         invalidateFusion();
         callListenersLayerChange();
@@ -204,7 +204,7 @@ function CPArtwork(_width, _height) {
             addUndo(new CPUndoRemoveLayer(activeLayerIndex, curLayer));
             
             layers.splice(activeLayerIndex, 1);
-            this.setActiveLayer(activeLayerIndex < layers.length ? activeLayerIndex : activeLayerIndex - 1);
+            this.setActiveLayerIndex(activeLayerIndex < layers.length ? activeLayerIndex : activeLayerIndex - 1);
             
             invalidateFusion();
             callListenersLayerChange();
@@ -226,11 +226,42 @@ function CPArtwork(_width, _height) {
         }
         
         layers.splice(activeLayerIndex + 1, 0, newLayer);
-        this.setActiveLayer(activeLayerIndex + 1);
+        this.setActiveLayerIndex(activeLayerIndex + 1);
         
         invalidateFusion();
         callListenersLayerChange();
     };
+    
+    function moveLayerReal(from, to) {
+        var
+            layer = layers.splice(from, 1)[0];
+        
+        if (to <= from) {
+            layers.splice(to, 0, layer);
+            that.setActiveLayerIndex(to);
+        } else {
+            layers.splice(to - 1, 0, layer);
+            that.setActiveLayerIndex(to - 1);
+        }
+
+        invalidateFusion();
+        callListenersLayerChange();
+    }
+    
+    /**
+     * Move a layer in the stack from one index to another.
+     * 
+     * @param from int
+     * @param to int
+     */
+    this.moveLayer = function(from, to) {
+        if (from < 0 || from >= this.getLayerCount() || to < 0 || to > this.getLayerCount() || from == to) {
+            return;
+        }
+        
+        addUndo(new CPUndoMoveLayer(from, to));
+        moveLayerReal(from, to);
+    }
     
     this.setLayerAlpha = function(layerIndex, alpha) {
         var
@@ -1327,7 +1358,7 @@ function CPArtwork(_width, _height) {
         return fusion.getImageData();
     }
     
-    this.setActiveLayer = function(i) {
+    this.setActiveLayerIndex = function(i) {
         if (i < 0 || i >= layers.length) {
             return;
         }
@@ -1721,15 +1752,18 @@ function CPArtwork(_width, _height) {
         this.newVis = _newVis;
     }
     
+    CPUndoLayerVisible.prototype = Object.create(CPUndo.prototype);
+    CPUndoLayerVisible.prototype.constructor = CPUndoLayerVisible;
+    
     CPUndoLayerVisible.prototype.redo = function() {
-        getLayer(this.layerIndex).visible = this.newVis;
+        that.getLayer(this.layerIndex).visible = this.newVis;
         
         invalidateFusion();
         callListenersLayerChange();
     };
 
     CPUndoLayerVisible.prototype.undo = function() {
-        getLayer(this.layerIndex).visible = this.oldVis;
+        that.getLayer(this.layerIndex).visible = this.oldVis;
         
         invalidateFusion();
         callListenersLayerChange();
@@ -1747,24 +1781,21 @@ function CPArtwork(_width, _height) {
         return this.oldVis == this.newVis;
     };
     
-    CPUndoLayerVisible.prototype = Object.create(CPUndo.prototype);
-    CPUndoLayerVisible.prototype.constructor = CPUndoLayerVisible;
-
     function CPUndoAddLayer(layerIndex) {
         this.undo = function() {
-            layers.remove(layerIndex + 1);
-            setActiveLayer(layerIndex);
+            layers.splice(layerIndex + 1, 1);
+            that.setActiveLayerIndex(layerIndex);
             invalidateFusion();
             callListenersLayerChange();
         }
 
         this.redo = function() {
             var
-                newLayer = new CPLayer(that.width, that.height);
-            newLayer.name = that.getDefaultLayerName();
-            layers.add(layerIndex + 1, newLayer);
-
-            setActiveLayer(layerIndex + 1);
+                newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName());
+            
+            layers.splice(layerIndex + 1, 0, newLayer);
+            that.setActiveLayerIndex(layerIndex + 1);
+            
             invalidateFusion();
             callListenersLayerChange();
         }
@@ -1775,32 +1806,33 @@ function CPArtwork(_width, _height) {
 
     function CPUndoDuplicateLayer(layerIndex) {
         this.undo = function() {
-            //TODO
-            layers.remove(layer + 1);
-            setActiveLayer(layer);
+            layers.splice(layerIndex + 1, 1);
+            that.setActiveLayerIndex(layerIndex);
+            
             invalidateFusion();
             callListenersLayerChange();
         };
 
         this.redo = function() {
-            //TODO
             var
                 copySuffix = " Copy",
 
-                sourceLayer = layers.elementAt(layer),
-                newLayer,
+                sourceLayer = layers[layerIndex],
+                newLayer = new CPLayer(that.width, that.height),
+                
                 newLayerName = sourceLayer.name;
             
             if (!newLayerName.endsWith(copySuffix)) {
                 newLayerName += copySuffix;
             }
             
-            newLayer = new CPLayer(width, height, newLayerName);
             newLayer.copyFrom(sourceLayer);
+            newLayer.name = newLayerName;
             
-            layers.add(layer + 1, newLayer);
+            layers.splice(layerIndex + 1, 0, newLayer);
 
-            setActiveLayer(layer + 1);
+            that.setActiveLayerIndex(layerIndex + 1);
+            
             invalidateFusion();
             callListenersLayerChange();
         };
@@ -1816,7 +1848,7 @@ function CPArtwork(_width, _height) {
     function CPUndoRemoveLayer(layerIndex, layer) {
         this.undo = function() {
             layers.add(layerIndex, layer);
-            that.setActiveLayer(layerIndex);
+            that.setActiveLayerIndex(layerIndex);
             
             invalidateFusion();
             callListenersLayerChange();
@@ -1824,7 +1856,7 @@ function CPArtwork(_width, _height) {
 
         this.redo = function() {
             layers.remove(layerIndex);
-            that.setActiveLayer(layerIndex < layers.length ? layerIndex : layerIndex - 1);
+            that.setActiveLayerIndex(layerIndex < layers.length ? layerIndex : layerIndex - 1);
             
             invalidateFusion();
             callListenersLayerChange();
@@ -1838,8 +1870,25 @@ function CPArtwork(_width, _height) {
     CPUndoRemoveLayer.prototype = Object.create(CPUndo.prototype);
     CPUndoRemoveLayer.prototype.constructor = CPUndoRemoveLayer;
     
+    function CPUndoMoveLayer(from, to) {
+        this.undo = function() {
+            if (to <= from) {
+                moveLayerReal(to, from + 1);
+            } else {
+                moveLayerReal(to - 1, from);
+            }
+        };
+
+        this.redo = function() {
+            moveLayerReal(from, to);
+        };
+    }
+    
+    CPUndoMoveLayer.prototype = Object.create(CPUndo.prototype);
+    CPUndoMoveLayer.prototype.constructor = CPUndoMoveLayer;
+
     function CPUndoLayerAlpha(layerIndex, alpha) {
-        this.from = that.getLayer(layerindex).getAlpha();
+        this.from = that.getLayer(layerIndex).getAlpha();
         this.to = alpha;
         this.layerIndex = layerIndex;
     }

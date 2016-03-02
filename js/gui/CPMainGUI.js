@@ -10,28 +10,31 @@ function CPMainGUI(controller, uiElem) {
     function recurseFillMenu(menuElem, entries) {
         for (var i = 0; i < entries.length; i++) {
             var 
-                entry = entries[i];
+                entry = entries[i],
+                entryElem;
 
             if (entry.children) {
-                var
-                    parent = $(
-                        '<li class="dropdown">'
-                            + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
-                            + '<ul class="dropdown-menu">'
-                            + '</ul>'
-                        + '</li>'
-                    );
+                entryElem = $(
+                    '<li class="dropdown">'
+                        + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
+                        + '<ul class="dropdown-menu">'
+                        + '</ul>'
+                    + '</li>'
+                );
                 
-                menuElem.append(parent);
-                
-                recurseFillMenu($(".dropdown-menu", parent), entry.children);
+                recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
             } else if (entry.name == '-') {
-                menuElem.append('<li role="separator" class="divider"></li>');
+                entryElem = $('<li role="separator" class="divider"></li>');
             } else {
-                menuElem.append('<li><a href="#" data-action="' + entry.action + '">' + entry.name + '</a></li>');
+                entryElem = $('<li><a href="#" data-action="' + entry.action + '">' + entry.name + '</a></li>');
             }
+            
+            if (entry.title) {
+                entryElem.attr('title', entry.title);
+            }
+            
+            menuElem.append(entryElem);
         }
-        
     }
     
     function createMainMenu(listener) {
@@ -129,7 +132,7 @@ function CPMainGUI(controller, uiElem) {
                     children: [
                         {
                             name: "Duplicate",
-                            action: "CPDuplicate",
+                            action: "CPLayerDuplicate",
                             mnemonic: "D",
                             shortcut: "CTRL SHIFT D",
                             title: "Creates a copy of the currently selected layer"
