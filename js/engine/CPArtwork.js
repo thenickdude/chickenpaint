@@ -173,7 +173,7 @@ function CPArtwork(_width, _height) {
 
     this.addLayer = function() {
         var
-            newLayer = new CPLayer(this.width, this.height, getDefaultLayerName()),
+            newLayer = new CPLayer(this.width, this.height, this.getDefaultLayerName()),
             activeLayerIndex = this.getActiveLayerIndex();
         
         addUndo(new CPUndoAddLayer(activeLayerIndex));
@@ -1235,8 +1235,20 @@ function CPArtwork(_width, _height) {
     this.width = _width;
     this.height = _height;
 
-    function getDefaultLayerName() {
-        return "Layer 1"; //TODO
+    this.getDefaultLayerName = function() {
+        var
+            prefix = "Layer ",
+            highestLayerNb = 0;
+        
+        for (var i = 0; i < layers.length; i++) {
+            var
+                layer = layers[i];
+            
+            if (/^Layer [0-9]+$/.test(layer.name)) {
+                highestLayerNb = Math.max(highestLayerNb, parseInt(layer.name.substring(prefix.length), 10));
+            }
+        }
+        return prefix + (highestLayerNb + 1);
     }
     
     function restoreAlpha(rect) {
@@ -1269,7 +1281,7 @@ function CPArtwork(_width, _height) {
     
     this.addEmptyLayer = function() {
         var
-            layer = new CPLayer(that.width, that.height, getDefaultLayerName());
+            layer = new CPLayer(that.width, that.height, this.getDefaultLayerName());
         
         layer.clearAll(EMPTY_CANVAS_COLOR);
         
@@ -1669,6 +1681,10 @@ function CPArtwork(_width, _height) {
         paintingModes[curBrush.paintMode].endStroke();
     };
     
+    this.hasAlpha = function() {
+        return fusion.hasAlpha();
+    };
+    
     // ////////////////////////////////////////////////////
     // Undo classes
 
@@ -1745,7 +1761,7 @@ function CPArtwork(_width, _height) {
         this.redo = function() {
             var
                 newLayer = new CPLayer(that.width, that.height);
-            newLayer.name = getDefaultLayerName();
+            newLayer.name = that.getDefaultLayerName();
             layers.add(layerIndex + 1, newLayer);
 
             setActiveLayer(layerIndex + 1);
