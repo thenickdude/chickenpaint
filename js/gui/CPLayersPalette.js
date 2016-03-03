@@ -121,10 +121,7 @@ function CPLayersPalette(controller) {
         }
         
         function getLayerIndex(point) {
-            var
-                d = getRealSize();
-            
-            return Math.floor((d.height - point.y) / layerH);
+            return Math.floor((canvas.height - point.y / $(canvas).height() * canvas.height) / layerH);
         }
         
         /**
@@ -153,41 +150,40 @@ function CPLayersPalette(controller) {
             canvasContext.stroke();
 
             canvasContext.fillStyle = 'black';
-            canvasContext.fillText(layer.name, eyeW + 6, 12);
+            canvasContext.fillText(layer.name, eyeW + 6 * window.devicePixelRatio, 12 * window.devicePixelRatio);
             
             canvasContext.beginPath();
-            canvasContext.moveTo(eyeW + 6, layerH / 2);
-            canvasContext.lineTo(d.width - 6, layerH / 2);
+            canvasContext.moveTo(eyeW + 6 * window.devicePixelRatio, layerH / 2);
+            canvasContext.lineTo(d.width - 6 * window.devicePixelRatio, layerH / 2);
             canvasContext.stroke();
 
-            canvasContext.fillText(MODE_NAMES[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6, 27);
+            canvasContext.fillText(MODE_NAMES[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6 * window.devicePixelRatio, 27 * window.devicePixelRatio);
 
             canvasContext.beginPath();
             if (layer.visible) {
-                canvasContext.arc(eyeW / 2, layerH / 2, 10, 0, Math.PI * 2);
+                canvasContext.arc(eyeW / 2, layerH / 2, 10 * window.devicePixelRatio, 0, Math.PI * 2);
                 canvasContext.fill();
             } else {
-                canvasContext.arc(eyeW / 2, layerH / 2, 10, 0, Math.PI * 2);
+                canvasContext.arc(eyeW / 2, layerH / 2, 10 * window.devicePixelRatio, 0, Math.PI * 2);
                 canvasContext.stroke();
             }
         }
         
-        function mouseReleased(e) {
+        function mouseUp(e) {
             if (e.button == 0) {
                 var
                     d = {width: canvas.width, height: canvas.height},
                     offset = $(canvas).offset(),
                     
                     artwork = controller.getArtwork(),
-                    layers = artwork.getLayers();
+                    layers = artwork.getLayers(),
+                    
+                    mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
+                    layerOver = getLayerIndex(mouseLoc);
 
-                layerDragY = e.pageY - offset.top;
+                //layerDragY = e.pageY - offset.top;
                 
-                var
-                    layerOver = Math.floor((d.height - layerDragY) / layerH);
-
-                if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragIndex
-                        && layerOver != layerDragIndex + 1) {
+                if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
                     artwork.moveLayer(layerDragIndex, layerOver);
                 }
 
@@ -196,7 +192,7 @@ function CPLayersPalette(controller) {
                 that.paint();
                 
                 window.removeEventListener("mousemove", mouseDragged);
-                window.removeEventListener("mouseup", mouseReleased);
+                window.removeEventListener("mouseup", mouseUp);
             }
         }
 
@@ -213,7 +209,9 @@ function CPLayersPalette(controller) {
                 artwork = controller.getArtwork(),
                 layers = artwork.getLayers(),
                 
-                d = {width: canvas.width, height: canvas.height};
+                d = {width: canvas.width, height: canvas.height},
+                
+                canvasScaleFactor = canvas.height / $(canvas).height();
 
             canvasContext.save();
             
@@ -234,10 +232,10 @@ function CPLayersPalette(controller) {
 
             if (layerDragReally) {
                 canvasContext.translate(0, layers.length * layerH - (d.height - layerH));
-                canvasContext.strokeRect(0, layerDragY - layerH / 2, d.width, layerH);
+                canvasContext.strokeRect(0, layerDragY * canvasScaleFactor  - layerH / 2, d.width, layerH);
 
                 var
-                    layerOver = Math.floor((d.height - layerDragY) / layerH);
+                    layerOver = getLayerIndex({x: 0, y: layerDragY});
                 
                 if (layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
                     canvasContext.fillRect(0, d.height - layerOver * layerH - 2, d.width, 4);
@@ -249,10 +247,34 @@ function CPLayersPalette(controller) {
 
         this.resize = function() {
             var
-                artwork = controller.getArtwork();
+                artwork = controller.getArtwork(),
+                
+                parentHeight = $(canvas).parent().height(),
+                parentWidth = $(canvas).parent().width();
             
-            canvas.width = $(canvas).parent().width();
-            canvas.height = Math.max(layerH * artwork.getLayerCount(), $(canvas).parent().height());
+            layerH = 32;
+            eyeW = 24;
+            
+            canvas.width = parentWidth;
+            canvas.height = Math.max(layerH * artwork.getLayerCount(), parentHeight);
+            
+            if (!window.devicePixelRatio) {
+                window.devicePixelRatio = 1.0;
+            }
+            
+            // Did we trigger a scrollbar to appear?
+            if (canvas.height > parentHeight) {
+                // Take the scrollbar width into account in our width
+                canvas.width = canvas.width - 15;
+            }
+            
+            if (window.devicePixelRatio > 1) {
+                canvas.width = canvas.width * window.devicePixelRatio;
+                canvas.height = canvas.height * window.devicePixelRatio;
+                
+                layerH *= window.devicePixelRatio;
+                eyeW *= window.devicePixelRatio;
+            }
             
             this.paint();
         };
@@ -291,28 +313,27 @@ function CPLayersPalette(controller) {
                     artwork = controller.getArtwork(),
                     layers = artwork.getLayers(),
                     
-                    layerOver = Math.floor((d.height - mouseLoc.y) / layerH),
                     layerIndex = getLayerIndex(mouseLoc);
                 
                 if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
                     var
                         layer = artwork.getLayer(layerIndex);
                     
-                    if (mouseLoc.x < eyeW) {
+                    if (mouseLoc.x / $(canvas).width() * canvas.width < eyeW) {
                         artwork.setLayerVisibility(layerIndex, !layer.visible);
                     } else {
                         artwork.setActiveLayerIndex(layerIndex);
                     }
                 }
                 
-                if (layerOver < layers.length) {
+                if (layerIndex < layers.length) {
                     layerDrag = true;
                     layerDragY = mouseLoc.y;
-                    layerDragIndex = layerOver;
+                    layerDragIndex = layerIndex;
                     that.paint();
                     
                     window.addEventListener("mousemove", mouseDragged);
-                    window.addEventListener("mouseup", mouseReleased);
+                    window.addEventListener("mouseup", mouseUp);
                 }
             }
         });
@@ -455,7 +476,7 @@ function CPLayersPalette(controller) {
             blendCombo.value = artwork.getActiveLayer().getBlendMode();
         }
 
-        layerWidget.paint();
+        layerWidget.resize();
     });
 }
 

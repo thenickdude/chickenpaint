@@ -6937,9 +6937,16 @@ button.chickenpaint .close {
   flex-direction: column;
   height: 100%;
 }
-.chickenpaint-layers-widget {
+.chickenpaint-palette-layers .chickenpaint-palette-body > * {
+  flex-shrink: 0;
+}
+.chickenpaint-palette-layers .chickenpaint-palette-body > .chickenpaint-layers-widget {
   flex-grow: 1;
+  flex-shrink: 1;
   overflow-y: auto;
+}
+.chickenpaint-layers-widget canvas {
+  width: 100%;
 }
 .chickenpaint-layer-add-remove {
   margin-bottom: 0;
