@@ -450,25 +450,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
             break;
     
             case "CPAbout":
-                alert(
-                    "ChibiPaint by Codexus\n" 
-                    + "Version " + VERSION_STRING + "\n\n" 
-                    + "Copyright (c) 2006-2008 Marc Schefer. All Rights Reserved.\n"
-                    + "Modifications by Nicholas Sherlock\n"
-                    + "Includes icons from the Tango Desktop Project\n"
-                    + "ChibiPaint is free software: you can redistribute it and/or modify\n"
-                    + "it under the terms of the GNU General Public License as published by\n"
-                    + "the Free Software Foundation, either version 3 of the License, or\n"
-                    + "(at your option) any later version.\n\n"
-
-                    + "ChibiPaint is distributed in the hope that it will be useful,\n"
-                    + "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-                    + "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-                    + "GNU General Public License for more details.\n\n"
-
-                    + "You should have received a copy of the GNU General Public License\n"
-                    + "along with ChibiPaint. If not, see <http://www.gnu.org/licenses/>.\n"
-                );
+                showAboutDialog();
             break;
             case "CPTest":
             break;
@@ -591,7 +573,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
     
     if (!this.artwork) {
         this.artwork = new CPArtwork(800, 600);
-        this.artwork.addEmptyLayer();
+        this.artwork.addBackgroundLayer();
     }
     
     mainGUI = new CPMainGUI(this, uiElem);

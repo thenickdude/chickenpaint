@@ -6,7 +6,8 @@ function CPArtwork(_width, _height) {
     
     var
         MAX_UNDO = 30,
-        EMPTY_CANVAS_COLOR = 0xFFFFFFFF,
+        EMPTY_BACKGROUND_COLOR = 0xFFFFFFFF,
+        EMPTY_LAYER_COLOR = 0x00FFFFFF,
         
         BURN_CONSTANT = 260,
         BLUR_MIN = 64,
@@ -49,7 +50,7 @@ function CPArtwork(_width, _height) {
         sampleAllLayers = false,
         lockAlpha = false,
         
-        curColor = 0,
+        curColor = 0xFF000000, // Opaque black
         
         that = this;
     
@@ -175,6 +176,8 @@ function CPArtwork(_width, _height) {
         var
             newLayer = new CPLayer(this.width, this.height, this.getDefaultLayerName()),
             activeLayerIndex = this.getActiveLayerIndex();
+        
+        newLayer.clearAll(EMPTY_LAYER_COLOR); // Transparent white
         
         addUndo(new CPUndoAddLayer(activeLayerIndex));
 
@@ -824,7 +827,7 @@ function CPArtwork(_width, _height) {
 
                     var
                         color2 = opacityData[dstOffset],
-                        alpha2 = (color2 >>> 24),
+                        alpha2 = color2 >>> 24,
 
                         newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
                     
@@ -1311,11 +1314,11 @@ function CPArtwork(_width, _height) {
         }
     }
     
-    this.addEmptyLayer = function() {
+    this.addBackgroundLayer = function() {
         var
             layer = new CPLayer(that.width, that.height, this.getDefaultLayerName());
         
-        layer.clearAll(EMPTY_CANVAS_COLOR);
+        layer.clearAll(EMPTY_BACKGROUND_COLOR);
         
         this.addLayerObject(layer);
     };
@@ -1819,7 +1822,7 @@ function CPArtwork(_width, _height) {
         this.redo = function() {
             var
                 newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName());
-            
+            newLayer.clearAll(EMPTY_LAYER_COLOR);
             layers.splice(layerIndex + 1, 0, newLayer);
             that.setActiveLayerIndex(layerIndex + 1);
             
