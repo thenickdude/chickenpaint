@@ -238,7 +238,7 @@ function CPLayersPalette(controller) {
                     layerOver = getLayerIndex({x: 0, y: layerDragY});
                 
                 if (layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
-                    canvasContext.fillRect(0, d.height - layerOver * layerH - 2, d.width, 4);
+                    canvasContext.fillRect(0, d.height - layerOver * layerH - 2, d.width, 4 * window.devicePixelRatio);
                 }
             }
             

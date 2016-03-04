@@ -56,9 +56,6 @@
 	font-size:90%;
 	cursor:default; /* No text selection cursor on palette titles */
 }
-.chickenpaint-palette-body {
-	
-}
 
 .chickenpaint-palette {
     /* Prevent drag operations from beginning text selection */
@@ -197,10 +194,6 @@
 	background-position:0 -16px;
 }
 
-
-.chickenpaint-palette-color .chickenpaint-palette-body {
-	padding:4px;
-}
 .chickenpaint-colorpicker-show {
     height: 20px;
     margin-top:4px;
@@ -228,7 +221,9 @@
     margin-left: 3px;
 }
 .chickenpaint-palette-brush .chickenpaint-palette-body,
-.chickenpaint-palette-layers .chickenpaint-palette-body {
+.chickenpaint-palette-layers .chickenpaint-palette-body,
+.chickenpaint-palette-swatches .chickenpaint-palette-body,
+.chickenpaint-palette-color .chickenpaint-palette-body {
     padding:4px;
 }
 
@@ -299,4 +294,41 @@
 .chickenpaint-texture-options .popover canvas {
 	margin-bottom:7px;
 	box-shadow:0 0 3px rgba(0, 0, 0, 0.4);
+}
+
+.chickenpaint-palette-swatches .chickenpaint-palette-body {
+	display:flex;
+	flex-direction:row;
+	position:relative;
+}
+.chickenpaint-color-swatches {
+	margin-bottom:0 !important;
+	display:flex;
+	flex-direction:row;
+	flex-wrap:wrap;
+	align-items:flex-start;
+	align-content:flex-start;
+	overflow-y:auto;
+	width:130px;
+	background-color:rgba(0,0,0,0.1);
+}
+.chickenpaint-color-swatch-wrapper {
+	margin:1px;
+}
+.chickenpaint-color-swatch {
+	width:16px;
+	height:16px;
+	border:1px solid black;
+	display:block;
+}
+
+.chickenpaint-color-swatch-add {
+	background-position:0 0;
+}
+.chickenpaint-color-swatch-settings {
+	background-position:0 -32px;
+}
+
+.chickenpaint-color-swatches-buttons .chickenpaint-small-toolbar-button {
+    display:block;
 }

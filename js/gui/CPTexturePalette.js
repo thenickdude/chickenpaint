@@ -376,7 +376,7 @@ var CPTexturePalette;
                     trigger: "manual"
                 }).
                 on("click", function() {
-                    $(this).popover("show");
+                    $(this).popover("toggle");
                 });
             
             panel.appendChild(btnCustomize);

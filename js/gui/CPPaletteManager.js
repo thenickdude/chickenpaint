@@ -28,7 +28,8 @@ function CPPaletteManager(cpController) {
 	        color: new CPColorPalette(cpController),
 	        brush: new CPBrushPalette(cpController),
 	        layers: new CPLayersPalette(cpController),
-	        textures: new CPTexturePalette(cpController)
+	        textures: new CPTexturePalette(cpController),
+	        swatches: new CPSwatchesPalette(cpController)
 	    },
 	    
 	    paletteFrames = [],
@@ -194,7 +195,7 @@ function CPPaletteManager(cpController) {
 			palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
 		}
 		
-		// palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0); TODO
+		palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0);
 
 		palettes.textures.setWidth(Math.min(palettes.layers.getX() - palettes.textures.getX(), 480));
 		palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
