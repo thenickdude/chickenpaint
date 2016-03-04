@@ -6844,6 +6844,13 @@
   width: 100%;
   height: 700px;
 }
+.chickenpaint-canvas[data-cursor="grabbing"] {
+  cursor: -webkit-grabbing;
+  cursor: grabbing;
+}
+.chickenpaint-canvas[data-cursor="crosshair"] {
+  cursor: crosshair;
+}
 .chickenpaint-palettes {
   position: absolute;
   top: 0;

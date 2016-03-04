@@ -703,7 +703,7 @@ function CPCanvas(controller) {
     }
     
     function setCursor(cursor) {
-        canvas.style.cursor = cursor;
+        canvas.dataset.cursor = cursor;
     }
     
     function updateScrollBars() {
@@ -1001,10 +1001,9 @@ function CPCanvas(controller) {
             activeMode.mousePressed(e);
             
             // Track the drag even if it leaves the canvas:
-            window.addEventListener("mouseup", handleMouseUp);
-            
             canvas.removeEventListener("mousemove", handleMouseMove);
             window.addEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mouseup", handleMouseUp);
         }
     }
     
@@ -1246,6 +1245,10 @@ function CPCanvas(controller) {
     if (!canvasContext.setLineDash) { 
         canvasContext.setLineDash = function () {} // For IE 10 and older
     }
+    
+    canvas.addEventListener("contextmenu", function(e) {
+        e.preventDefault();
+    })
     
     canvas.addEventListener("mouseenter", function() {
         mouseIn = true;
