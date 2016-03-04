@@ -24,28 +24,18 @@
 function CPBrushInfo(properties) {
     "use strict";
     
-    // Set brush setting fields with default values, then apply the supplied 'properties' on top 
-    _.extend(this, {
-        isAA: false, isAirbrush: false,
-	    minSpacing: 0, spacing: 0,
-	    pressureSize: 0, pressureAlpha: 0,
-	    type: 0, paintMode: 0,
-	    strokeMode: CPBrushInfo.SM_FREEHAND,
-	    resat: 1.0, bleed: 0.0,
-
-	    texture: 1.0,
-	    
-	    pressureScattering: false,
-	    
-	    // "cur" values are current brush settings (once tablet pressure and stuff is applied)
-	    size: 0, curSize: 0,
-	    alpha: 0, curAlpha: 0,
-	    scattering: 0.0, curScattering: 0,
-	    squeeze: 0.0, curSqueeze: 0,
-	    angle: Math.PI, curAngle: 0,
-	    
-	    smoothing: 0.0
-    }, properties);
+    // Set brush setting fields with default values, then apply the supplied 'properties' on top
+    for (var propName in CPBrushInfo.DEFAULTS) {
+        if (CPBrushInfo.DEFAULTS.hasOwnProperty(propName)) {
+            this[propName] = CPBrushInfo.DEFAULTS[propName];
+        }
+    }
+    
+    for (var propName in properties) {
+        if (properties.hasOwnProperty(propName)) {
+            this[propName] = properties[propName];
+        }
+    }
 }
 
 // Stroke modes
@@ -70,6 +60,28 @@ CPBrushInfo.M_BLUR = 5;
 CPBrushInfo.M_SMUDGE = 6;
 CPBrushInfo.M_OIL = 7;
 
+CPBrushInfo.DEFAULTS = {
+    isAA: false, isAirbrush: false,
+    minSpacing: 0, spacing: 0,
+    pressureSize: 0, pressureAlpha: 0,
+    type: 0, paintMode: 0,
+    strokeMode: CPBrushInfo.SM_FREEHAND,
+    resat: 1.0, bleed: 0.0,
+
+    texture: 1.0,
+    
+    pressureScattering: false,
+    
+    // "cur" values are current brush settings (once tablet pressure and stuff is applied)
+    size: 0, curSize: 0,
+    alpha: 0, curAlpha: 0,
+    scattering: 0.0, curScattering: 0,
+    squeeze: 0.0, curSqueeze: 0,
+    angle: Math.PI, curAngle: 0,
+    
+    smoothing: 0.0
+};
+
 CPBrushInfo.prototype.applyPressure = function(pressure) {
     // FIXME: no variable size for smudge and oil :(
     if (this.pressureSize && this.paintMode != CPBrushInfo.M_SMUDGE && this.paintMode != CPBrushInfo.M_OIL) {
@@ -90,5 +102,5 @@ CPBrushInfo.prototype.applyPressure = function(pressure) {
 };
 
 CPBrushInfo.prototype.clone = function() {
-    return _.extend({}, this);
+    return new CPBrushInfo(this);
 };
