@@ -5,7 +5,9 @@ function CPMainGUI(controller, uiElem) {
         lowerArea = document.createElement("div"),
         canvas = new CPCanvas(controller),
         paletteManager = new CPPaletteManager(controller),
-        menuBar;
+        menuBar,
+        
+        that = this;
     
     function recurseFillMenu(menuElem, entries) {
         for (var i = 0; i < entries.length; i++) {
@@ -29,7 +31,9 @@ function CPMainGUI(controller, uiElem) {
                 entryElem = $('<li><a href="#" data-action="' + entry.action + '">' + entry.name + '</a></li>');
                 
                 if (entry.checkbox) {
-                    $("a", entryElem).data("checkbox", true);
+                    $("a", entryElem)
+                        .data("checkbox", true)
+                        .toggleClass("selected", entry.checked);
                 }
             }
             
@@ -274,41 +278,85 @@ function CPMainGUI(controller, uiElem) {
                             mnemonic: "D",
                             title: "Shows the grid options dialog box",
                             checkbox: true
+                        }
+                    ],
+                },
+                {
+                    name: "Palettes",
+                    mnemonic: "P",
+                    children: [
+                        {
+                            name: "Rearrange",
+                            action: "CPArrangePalettes",
+                            title: "Rearrange the palette windows"
+                        },
+                        {
+                            name: "Toggle palettes",
+                            action: "CPTogglePalettes",
+                            mnemonic: "P",
+                            shortcut: "TAB",
+                            title: "Hides or shows all palettes"
                         },
                         {
                             name: "-"
                         },
                         {
-                            name: "Palettes",
-                            mnemonic: "P",
-                            children: [
-                                {
-                                    name: "Box blur...",
-                                    action: "CPFXBoxBlur",
-                                    mnemonic: "B",
-                                    title: "Blur effect"
-                                }
-                            ]
+                            name: "Show brush",
+                            action: "CPPalBrush",
+                            mnemonic: "B",
+                            checkbox: true,
+                            checked: true
                         },
                         {
-                            name: "Noise",
-                            mnemonic: "N",
-                            children: [
-                                {
-                                    name: "Render monochromatic",
-                                    action: "CPMNoise",
-                                    mnemonic: "M",
-                                    title: "Fills the selection with noise"
-                                },
-                                {
-                                    name: "Render color",
-                                    action: "CPCNoise",
-                                    mnemonic: "C",
-                                    title: "Fills the selection with colored noise"
-                                }
-                            ]
+                            name: "Show color",
+                            action: "CPPalColor",
+                            mnemonic: "C",
+                            checkbox: true,
+                            checked: true
                         },
-                    ],
+                        {
+                            name: "Show layers",
+                            action: "CPPalLayers",
+                            mnemonic: "Y",
+                            checkbox: true,
+                            checked: true
+                        },
+                        {
+                            name: "Show misc",
+                            action: "CPPalMisc",
+                            mnemonic: "M",
+                            checkbox: true,
+                            checked: true
+                        },
+                        {
+                            name: "Show stroke",
+                            action: "CPPalStroke",
+                            mnemonic: "S",
+                            checkbox: true,
+                            checked: true
+                        },
+                        {
+                            name: "Show swatches",
+                            action: "CPPalSwatches",
+                            mnemonic: "W",
+                            checkbox: true,
+                            checked: true
+                        },
+                        {
+                            name: "Show textures",
+                            action: "CPPalTextures",
+                            mnemonic: "X",
+                            checkbox: true,
+                            checked: true
+                        },
+                        {
+                            name: "Show tools",
+                            action: "CPPalTool",
+                            mnemonic: "T",
+                            checkbox: true,
+                            checked: true
+                        }
+                    ]
                 },
                 {
                     name: "Help",
@@ -361,96 +409,40 @@ function CPMainGUI(controller, uiElem) {
             e.preventDefault();
         });
         
-        /*
-        menuItem = new JMenuItem("Rearrange");
-        menuItem.getAccessibleContext().setAccessibleDescription(
-                "Rearrange the palette windows");
-        menuItem.setActionCommand("CPArrangePalettes");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-
-        menuItem = new JMenuItem("Toggle Palettes", KeyEvent.VK_P);
-        menuItem.getAccessibleContext().setAccessibleDescription(
-                "Hides or shows all palettes");
-        menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0));
-        menuItem.setActionCommand("CPTogglePalettes");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-
-        submenu.add(new JSeparator());
-
-        menuItem = new JCheckBoxMenuItem("Show Brush", true);
-        menuItem.setMnemonic(KeyEvent.VK_B);
-        menuItem.setActionCommand("CPPalBrush");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Brush", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Color", true);
-        menuItem.setMnemonic(KeyEvent.VK_C);
-        menuItem.setActionCommand("CPPalColor");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Color", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Layers", true);
-        menuItem.setMnemonic(KeyEvent.VK_Y);
-        menuItem.setActionCommand("CPPalLayers");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Layers", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Misc", true);
-        menuItem.setMnemonic(KeyEvent.VK_M);
-        menuItem.setActionCommand("CPPalMisc");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Misc", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Stroke", true);
-        menuItem.setMnemonic(KeyEvent.VK_S);
-        menuItem.setActionCommand("CPPalStroke");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Stroke", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Swatches", true);
-        menuItem.setMnemonic(KeyEvent.VK_W);
-        menuItem.setActionCommand("CPPalSwatches");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Color Swatches", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Textures", true);
-        menuItem.setMnemonic(KeyEvent.VK_X);
-        menuItem.setActionCommand("CPPalTextures");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Textures", (JCheckBoxMenuItem) menuItem);
-
-        menuItem = new JCheckBoxMenuItem("Show Tools", true);
-        menuItem.setMnemonic(KeyEvent.VK_T);
-        menuItem.setActionCommand("CPPalTool");
-        menuItem.addActionListener(listener);
-        submenu.add(menuItem);
-        paletteItems.put("Tools", (JCheckBoxMenuItem) menuItem);
-
-        menu.add(submenu);
-*/
-        
         return bar[0];
     }
+    
+    function onPaletteVisChange(paletteName, show) {
+        var
+            palMenuEntry = $('[data-action=\"CPPal' + paletteName.substring(0, 1).toUpperCase() + paletteName.substring(1) + '\"]', menuBar);
+        
+        palMenuEntry.toggleClass("selected", show);
+    }
+    
+    this.togglePalettes = function() {
+        paletteManager.togglePalettes();
+    };
     
     this.arrangePalettes = function() {
         // Give the browser a chance to do the sizing of the palettes before we try to rearrange them
         setTimeout(function() {
             paletteManager.arrangePalettes();
         }, 0);
-    }
+    };
 
     this.constrainPalettes = function() {
         paletteManager.constrainPalettes();
-    }
+    };
+    
+    this.showPalette = function(paletteName, show) {
+        paletteManager.showPaletteByName(paletteName, show);
+    };
+    
+    paletteManager.on("paletteVisChange", onPaletteVisChange);
+    
+    window.addEventListener("resize", function() {
+        that.constrainPalettes();
+    });
 
     menuBar = createMainMenu();
     
@@ -467,3 +459,6 @@ function CPMainGUI(controller, uiElem) {
         canvas.resize();
     }, 0);
 }
+
+CPMainGUI.prototype = Object.create(EventEmitter.prototype);
+CPMainGUI.prototype.constructor = CPMainGUI;

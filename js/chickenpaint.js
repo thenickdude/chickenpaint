@@ -8,6 +8,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
         that = this,
         
         canvas,
+        mainGUI,
         
         curColor = new CPColor(),
     
@@ -546,11 +547,11 @@ function ChickenPaint(uiElem, arrayBuffer) {
         this.artwork.addEmptyLayer();
     }
     
-    this.gui = new CPMainGUI(this, uiElem);
+    mainGUI = new CPMainGUI(this, uiElem);
     
     setTool(ChickenPaint.T_PEN);
     
-    this.gui.arrangePalettes();
+    mainGUI.arrangePalettes();
 }
 
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);

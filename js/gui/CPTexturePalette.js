@@ -437,4 +437,7 @@ var CPTexturePalette;
             addTextures(loadedTextures);
         });
     }
+    
+    CPTexturePalette.prototype = Object.create(CPPalette.prototype);
+    CPTexturePalette.prototype.constructor = CPTexturePalette;
 })();

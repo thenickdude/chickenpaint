@@ -1,7 +1,7 @@
-all : styles/chickenpaint.css
+all : styles/css/chickenpaint.css
 
 clean :
-	rm -f styles/chickenpaint.css
+	rm -f styles/css/chickenpaint.css
 
-styles/chickenpaint.css : styles/chickenpaint.less
+styles/css/chickenpaint.css : styles/css/chickenpaint.less
 	lessc $< > $@

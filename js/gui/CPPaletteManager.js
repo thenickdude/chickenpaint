@@ -35,49 +35,25 @@ function CPPaletteManager(cpController) {
 	    paletteFrames = [],
 	    hiddenFrames = [],
 	    
-	    parentElem = document.createElement("div");
-	    parentElem.className = "chickenpaint-palettes";
+	    parentElem = document.createElement("div"),
+	    
+	    that = this;
+
+    function showPalette(palette, show) {
+        var
+            palElement = palette.getElement();
+        
+        if (show) {
+            parentElem.appendChild(palElement);
+        } else {
+            parentElem.removeChild(palElement);
+        }
+        that.emitEvent("paletteVisChange", [palette.name, show]);
+
+        // FIXME: focus hack
+        // controller.canvas.grabFocus(); TODO
+    }
 	
-	    for (var paletteName in palettes) {
-	        var 
-	            palFrame = palettes[paletteName].getContainer();
-	        
-	        palFrame.dataset.paletteName = paletteName;
-	        
-	        paletteFrames.push(palFrame);
-	        parentElem.appendChild(palFrame);
-	    }
-	
-	    /*
-		desktop.addContainerListener(this);
-
-
-		// Swatches Palette
-		palSwatches = new CPSwatchesPalette(controller);
-		{
-			palettes.put("swatches", palSwatches);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palSwatches);
-			paletteFrames.add(frame);
-
-			frame.pack();
-			desktop.add(frame);
-		}
-
-		// Textures Palette
-
-		palTextures = new CPTexturePalette(controller);
-		{
-			palettes.put("textures", palTextures);
-
-			CPPaletteFrame frame = new CPPaletteFrame(palTextures);
-			paletteFrames.add(frame);
-			
-			frame.pack();
-
-			desktop.add(frame);
-		}*/
-
 	this.showPaletteByName = function(paletteName, show) {
 		var 
 		    palette = palettes[paletteName];
@@ -87,35 +63,9 @@ function CPPaletteManager(cpController) {
 		}
 	}
 
-	this.showPalette = function(palette, show) {
-		var
-		    frame = palette.getContainer();
-		
-		if (show) {
-			$(parentElement).add(frame);
-		} else {
-            $(frame).remove();
-		}
-		
-		// controller.getMainGUI().setPaletteMenuItem(palette.title, show); TODO
-
-		// FIXME: focus hack
-		// controller.canvas.grabFocus(); TODO
-	}
-
-	/*
-	public void componentRemoved(ContainerEvent e) {
-		if (e.getChild() instanceof CPPaletteFrame) {
-			CPPaletteFrame frame = (CPPaletteFrame) e.getChild();
-			for (CPPalette palette : frame.getPalettesList()) {
-				controller.getMainGUI().setPaletteMenuItem(palette.title, false);
-			}
-		}
-	}
-*/
 	this.togglePalettes = function() {
 		if (hiddenFrames.length == 0) {
-		    $(".chickenpaint-palette", parentElem).each(function() {
+		    $("> .chickenpaint-palette", parentElem).each(function() {
 		        showPalette(this.dataset.paletteName, false);
 		        hiddenFrames.add(this);
 		    });
@@ -133,39 +83,40 @@ function CPPaletteManager(cpController) {
 	/**
 	 * Pop palettes that are currently outside the visible area back into view.
 	 */
-	/*public void constrainPalettes() {
-		int windowWidth = jdp.getWidth();
-		int windowHeight = jdp.getHeight();
+	this.constrainPalettes = function() {
+        var
+            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
+            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height();
 
-		for (CPPalette palette : palettes.values()) {
-			ICPPaletteContainer container = palette.getContainer();
+		for (var i in palettes) {
+		    var palette = palettes[i];
 			
-			/* Move palettes that are more than half out of the frame back into it *//*
-			if (container.getX() + container.getWidth() / 2 > windowWidth) {
-				container.setLocation(windowWidth - container.getWidth(), container.getY());
+			/* Move palettes that are more than half out of the frame back into it */
+			if (palette.getX() + palette.getWidth() / 2 > windowWidth) {
+				palette.setLocation(windowWidth - palette.getWidth(), palette.getY());
 			}
 
-			if (container.getY() + container.getHeight() / 2 > windowHeight) {
-				container.setLocation(container.getX(), windowHeight - container.getHeight());
+			if (palette.getY() + palette.getHeight() / 2 > windowHeight) {
+				palette.setLocation(palette.getX(), windowHeight - palette.getHeight());
 			}
 		}
 		
 		//Move small palettes to the front so that they aren't completely hidden
-		((JInternalFrame) palSwatches.container).moveToFront();
+		//palettes.swatches.moveToFront();
 		
 		//Special handling for the swatches palette being under the brush palette:
-		boolean widthToSpare = windowWidth - palTool.getSize().width - palMisc.getWidth() - palStroke.getWidth() - palColor.getWidth() - palBrush.getWidth() - 15 > 0;
+		var
+		    widthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
 
-		if (palSwatches.getContainer().getX() + palSwatches.getContainer().getWidth() == 
-				palBrush.getContainer().getX() + palBrush.getContainer().getWidth() &&
-				Math.abs(palSwatches.getContainer().getY() - palBrush.getContainer().getY()) < 20) {
-			palSwatches.getContainer().setLocation(palBrush.getContainer().getX() - palSwatches.getContainer().getWidth() - (widthToSpare ? 5 : 1), 0);
+		if (palettes.swatches.getX() + palettes.swatches.getWidth() ==  palettes.brush.getX() + palettes.brush.getWidth() &&
+				Math.abs(palettes.swatches.getY() - palettes.brush.getY()) < 20) {
+			palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (widthToSpare ? 5 : 1), 0);
 		}
 		
 		//Special handling for layers palette being too damn tall:
-		if (palLayers.getContainer().getY() + palLayers.getContainer().getHeight() > windowHeight)
-			palLayers.getContainer().setSize(palLayers.getContainer().getWidth(), Math.max(windowHeight - palLayers.getContainer().getY(), 200));
-	}*/
+		if (palettes.layers.getY() + palettes.layers.getHeight() > windowHeight)
+			palettes.layers.setSize(palettes.layers.getWidth(), Math.max(windowHeight - palettes.layers.getY(), 200));
+	};
 	
 	/**
 	 * Rearrange the palettes from scratch into a useful arrangement.
@@ -205,5 +156,25 @@ function CPPaletteManager(cpController) {
 	
 	this.getElement = function() {
 	    return parentElem;
-	}
+	};
+
+    parentElem.className = "chickenpaint-palettes";
+
+    for (var paletteName in palettes) {
+        var 
+            palette = palettes[paletteName],
+            palElement = palettes[paletteName].getElement();
+        
+        palette.on("paletteVisChange", function() {
+            showPalette(this, false);
+        });
+        
+        palElement.dataset.paletteName = paletteName;
+        
+        paletteFrames.push(palElement);
+        parentElem.appendChild(palElement);
+    }
 }
+
+CPPaletteManager.prototype = Object.create(EventEmitter.prototype);
+CPPaletteManager.prototype.constructor = CPPaletteManager;

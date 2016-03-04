@@ -7,7 +7,7 @@
 	-ms-text-size-adjust: 100%;
 	-webkit-text-size-adjust: 100%;
 	
-	@import 'bootstrap/bootstrap.less';
+	@import (less) url("bootstrap/bootstrap.css");
 	
 	@icon-font-path: "fonts/";
 	
@@ -44,17 +44,31 @@
 	left:0;
 }
 .chickenpaint-palette {
-	background-color:#eee;
-	border-top-left-radius: 5px;
-	border-top-right-radius: 5px;
+	background-color:#fbfbfb;
+    border: 1px solid #ddd;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
 	display:inline-flex;
 	flex-direction:column;
 	position:absolute;
+	
+	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+    box-shadow: 0 1px 1px rgba(0,0,0,.05);
 }
 .chickenpaint-palette-head {
-	padding:5px;
-	font-size:90%;
+	background-color:#ececec;
+	color:#333;
+	padding:6px;
+	padding-bottom:4px;
+
 	cursor:default; /* No text selection cursor on palette titles */
+	
+    border-bottom: 1px solid #ddd;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+.chickenpaint-palette-head h4 {
+	font-size:110%;
 }
 
 .chickenpaint-palette {
@@ -87,7 +101,7 @@
 	border:1px solid black;
 	border-radius:3px;
 	margin:2px;
-	background-image:url(icons.png);
+	background-image:url(../icons.png);
 	background-repeat:no-repeat;
 }
 .chickenpaint-small-toolbar-button {
@@ -98,7 +112,7 @@
 	border:1px solid black;
 	border-radius:3px;
 	margin:2px;
-	background-image:url(smallicons.png);
+	background-image:url(../smallicons.png);
 	background-repeat:no-repeat;
 }
 .chickenpaint-toolbar-button:hover,
@@ -220,10 +234,7 @@
 .chickenpaint-palette-brush .chickenpaint-checkbox-slider-group .chickenpaint-slider {
     margin-left: 3px;
 }
-.chickenpaint-palette-brush .chickenpaint-palette-body,
-.chickenpaint-palette-layers .chickenpaint-palette-body,
-.chickenpaint-palette-swatches .chickenpaint-palette-body,
-.chickenpaint-palette-color .chickenpaint-palette-body {
+.chickenpaint-palette-body {
     padding:4px;
 }
 
@@ -310,7 +321,6 @@
 	align-content:flex-start;
 	overflow-y:auto;
 	width:130px;
-	background-color:rgba(0,0,0,0.1);
 }
 .chickenpaint-color-swatch-wrapper {
 	margin:1px;

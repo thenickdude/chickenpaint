@@ -24,23 +24,20 @@ function CPPalette(cpController, className, title) {
     
     this.cpController = cpController;
     this.title = title;
+    this.name = className;
     
     var
         containerElement = document.createElement("div"),
         headElement = document.createElement("div"),
-        bodyElement = document.createElement("div");
+        closeButton = document.createElement("button"),
+        bodyElement = document.createElement("div"),
+        
+        dragging,
+        dragOffset,
+        
+        that = this;
     
-    containerElement.className = "chickenpaint-palette chickenpaint-palette-" + className;
-    
-    headElement.className = "chickenpaint-palette-head";
-    headElement.textContent = this.title;
-    
-    bodyElement.className = "chickenpaint-palette-body";
-    
-    containerElement.appendChild(headElement);
-    containerElement.appendChild(bodyElement);
-    
-    this.getContainer = function() {
+    this.getElement = function() {
         return containerElement;
     };
     
@@ -81,4 +78,55 @@ function CPPalette(cpController, className, title) {
         this.setWidth(width);
         this.setHeight(height);
     };
+    
+    function mouseDrag(e) {
+        that.setLocation(e.pageX - dragOffset.x, e.pageY - dragOffset.y);
+    }
+
+    function mouseDragRelease(e) {
+        dragging = false;
+        
+        window.removeEventListener("mousemove", mouseDrag);
+        window.removeEventListener("mouseup", mouseDragRelease);
+    }
+
+    closeButton.type = "button";
+    closeButton.className = "close";
+    closeButton.innerHTML = "&times;";
+    
+    containerElement.className = "chickenpaint-palette chickenpaint-palette-" + className;
+    
+    headElement.className = "chickenpaint-palette-head";
+
+    var
+        headTitle = document.createElement("h4");
+    
+    headTitle.className = 'modal-title';
+    headTitle.appendChild(document.createTextNode(this.title))
+    
+    headElement.appendChild(closeButton);
+    headElement.appendChild(headTitle);
+    
+    bodyElement.className = "chickenpaint-palette-body";
+    
+    containerElement.appendChild(headElement);
+    containerElement.appendChild(bodyElement);
+    
+    headElement.addEventListener("mousedown", function(e) {
+        if (e.button == 0) {/* Left */
+            if (e.target.nodeName == "BUTTON") {
+                that.emitEvent("paletteVisChange", [that, false]);
+            } else {
+                dragging = true;
+                
+                window.addEventListener("mousemove", mouseDrag);
+                window.addEventListener("mouseup", mouseDragRelease);
+                
+                dragOffset = {x: e.pageX - $(containerElement).position().left, y: e.pageY - $(containerElement).position().top};
+            }
+        }
+    });
 }
+
+CPPalette.prototype = Object.create(EventEmitter.prototype);
+CPPalette.prototype.constructor = EventEmitter;
