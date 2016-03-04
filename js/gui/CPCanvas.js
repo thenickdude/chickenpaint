@@ -47,7 +47,7 @@ function CPCanvas(controller) {
          * 
          * Initially set to the size of the artwork so we can repaint the whole thing.
          */
-        updateRegion = new CPRect(0, 0, artwork.width, artwork.height),
+        artworkUpdateRegion = new CPRect(0, 0, artwork.width, artwork.height),
         
         /**
          * The area of the canvas that should be repainted to the screen during the next repaint internal (in canvas
@@ -100,9 +100,14 @@ function CPCanvas(controller) {
                     && curSelectedMode != rectSelectionMode) {
                 return; // don't draw on a hidden layer
             }
+            
+            /* Switch to the new mode before trying to repaint the brush preview (the new mode
+             * might want to erase it!
+             */
+            activeMode = curSelectedMode;
+            
             repaintBrushPreview();
 
-            activeMode = curSelectedMode;
             activeMode.mousePressed(e);
         } else if (!spacePressed
                 && (e.button == BUTTON_SECONDARY || e.button == BUTTON_PRIMARY && e.altKey)) {
@@ -995,9 +1000,9 @@ function CPCanvas(controller) {
             requestFocusInWindow();
             activeMode.mousePressed(e);
             
+            // Track the drag even if it leaves the canvas:
             window.addEventListener("mouseup", handleMouseUp);
             
-            // Track the drag even if it leaves the canvas:
             canvas.removeEventListener("mousemove", handleMouseMove);
             window.addEventListener("mousemove", handleMouseMove);
         }
@@ -1038,7 +1043,7 @@ function CPCanvas(controller) {
      * @param rect CPRect Region that should be repainted using display coordinates
      */
     function repaintRect(rect) {
-        repaintRegion.set(rect);
+        repaintRegion.union(rect);
         
         repaint();
     };
@@ -1046,26 +1051,25 @@ function CPCanvas(controller) {
     this.paint = function() {
         scheduledRepaint = false;
         
-        /* Clip to the area of the screen we want to repaint */
+        /* Clip drawing to the area of the screen we want to repaint */
         if (!repaintRegion.isEmpty()) {
             canvasContext.save();
             
             canvasContext.beginPath();
-            
             canvasContext.rect(repaintRegion.left, repaintRegion.top, repaintRegion.getWidth(), repaintRegion.getHeight());
             canvasContext.clip();
         }
         
-        /* Copypixels that changed in the document into our local fused image cache */
-        if (!updateRegion.isEmpty()) {
+        /* Copy pixels that changed in the document into our local fused image cache */
+        if (!artworkUpdateRegion.isEmpty()) {
             var
                 imageData = artwork.fusionLayers();
             
             artworkCanvasContext.putImageData(
-                imageData, 0, 0, updateRegion.left, updateRegion.top, updateRegion.right - updateRegion.left, updateRegion.bottom - updateRegion.top
+                imageData, 0, 0, artworkUpdateRegion.left, artworkUpdateRegion.top, artworkUpdateRegion.right - artworkUpdateRegion.left, artworkUpdateRegion.bottom - artworkUpdateRegion.top
             );
 
-            updateRegion.makeEmpty();
+            artworkUpdateRegion.makeEmpty();
         }
 
         canvasContext.fillStyle = '#606060';
@@ -1088,7 +1092,7 @@ function CPCanvas(controller) {
         }
         canvasContext.restore();
         
-        // The rest of the drawing happens using the screen coordinate system
+        // The rest of the drawing happens using the original screen coordinate system
         
         // This XOR mode guarantees contrast over all colors
         canvasContext.globalCompositeOperation = 'exclusion';
@@ -1260,9 +1264,9 @@ function CPCanvas(controller) {
     });
     
     artwork.on("updateRegion", function(region) {
-        updateRegion.union(region);
+        artworkUpdateRegion.union(region);
         
-        repaintRect(getRefreshArea(updateRegion));
+        repaintRect(getRefreshArea(artworkUpdateRegion));
     });
     
     controller.setCanvas(this);
