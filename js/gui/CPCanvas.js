@@ -1253,7 +1253,7 @@ function CPCanvas(controller) {
     
     canvas.addEventListener("mouseleave", function() {
         mouseIn = false;
-        that.paint();
+        that.repaintAll();
     });
     
     canvas.addEventListener("mousedown", handleMouseDown);

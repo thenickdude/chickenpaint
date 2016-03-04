@@ -912,7 +912,7 @@ function CPArtwork(_width, _height) {
             mergeOpacityBuffer(0, false);
             
             if (sampleAllLayers) {
-                fusionLayers();
+                that.fusionLayers();
             }
         };
     }
@@ -1062,7 +1062,7 @@ function CPArtwork(_width, _height) {
             mergeOpacityBuffer(0, false);
             
             if (sampleAllLayers) {
-                fusionLayers();
+                that.fusionLayers();
             }
         };
     }
@@ -1247,7 +1247,7 @@ function CPArtwork(_width, _height) {
             opacityArea.makeEmpty();
             
             if (sampleAllLayers) {
-                fusionLayers();
+                that.fusionLayers();
             }
         };
     }
@@ -1454,7 +1454,7 @@ function CPArtwork(_width, _height) {
     this.colorPicker = function(x, y) {
         // not really necessary and could potentially the repaint
         // of the canvas to miss that area
-        // fusionLayers();
+        // this.fusionLayers();
 
         return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
     }
@@ -1719,6 +1719,28 @@ function CPArtwork(_width, _height) {
     
     this.hasAlpha = function() {
         return fusion.hasAlpha();
+    };
+    
+    /**
+     * Get the artwork as a single flat PNG image.
+     * 
+     * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied to the drawing before
+     * saving.
+     * 
+     * @return A binary string of the PNG file data.
+     */
+    this.getFlatPNG = function(rotation) {
+        this.fusionLayers();
+        
+        return fusion.getAsPNG(rotation);
+    };
+    
+    /**
+     * Returns true if this artwork can be exactly represented as a simple transparent PNG (i.e. doesn't have multiple 
+     * layers, and base layer's opacity is set to 100%).
+     */
+    this.isSimpleDrawing = function() {
+        return this.getLayerCount() == 1 && this.getLayer(0).getAlpha() == 100;
     };
     
     // ////////////////////////////////////////////////////

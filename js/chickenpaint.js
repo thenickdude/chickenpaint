@@ -312,6 +312,50 @@ function ChickenPaint(uiElem, arrayBuffer) {
         return tools[curBrush];
     }
     
+    /**
+     * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
+     * This function converts such a string to a Uint8Array instead.
+     */
+    function binaryStringToByteArray(s) {
+        var
+            result = new Uint8Array(s.length);
+        
+        for (var i = 0; i < s.length; i++) {
+            result[i] = s.charCodeAt(i);
+        }
+        
+        return result;
+    }
+    
+    function saveDrawing() {
+        var
+            rotation = Math.round(canvas.getRotation() / Math.PI * 2);
+
+        // Just in case:
+        rotation %= 4;
+
+        // We want [0..3] as output
+        if (rotation < 0) {
+            rotation += 4;
+        }
+        
+        var
+            png = binaryStringToByteArray(that.artwork.getFlatPNG(rotation)),
+
+            blob = new Blob([png], {type: "image/png"});
+        
+        window.saveAs(blob, "oekaki.png");
+        
+        if (!that.artwork.isSimpleDrawing()) {
+            var
+                chibiFile = new CPChibiFile();
+            
+            blob = chibiFile.serialize(that.artwork);
+            
+            window.saveAs(blob, "oekaki.chi");
+        }
+    }
+    
     this.actionPerformed = function(e) {
         if (this.artwork == null || canvas == null) {
             return; // this shouldn't happen but just in case
@@ -525,6 +569,9 @@ function ChickenPaint(uiElem, arrayBuffer) {
             break;
             case "CPArrangePalettes":
                 mainGUI.arrangePalettes();
+            break;
+            case "CPSave":
+                saveDrawing();
             break;
         }
         

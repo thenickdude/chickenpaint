@@ -249,6 +249,7 @@ var
                 mnuSave = document.createElement("a"),
                 mnuLoad  = document.createElement("a");
             
+            btnAdd.title = "Add the current brush color as a new swatch";
             btnAdd.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
             
             btnSettings.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";

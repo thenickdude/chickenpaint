@@ -28,11 +28,11 @@ function CPLayersPalette(controller) {
         MODE_NAMES = [
               "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
               "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light"
-        ],
-        
-        layerH = 32, eyeW = 24;
+        ];
     
     var
+        layerH = 32, eyeW = 24,
+        
         body = this.getBodyElement(),
 
         layerWidget = new CPLayerWidget(),
@@ -413,7 +413,7 @@ function CPLayersPalette(controller) {
     
     
     cbSampleAllLayers.type = "checkbox";
-    cbSampleAllLayers.addEventListener("click", function(e) { // TODO correct event name?
+    cbSampleAllLayers.addEventListener("click", function(e) {
         var
             artwork = controller.getArtwork();
         
@@ -478,6 +478,10 @@ function CPLayersPalette(controller) {
 
         layerWidget.resize();
     });
+    
+    setTimeout(function() {
+        alphaSlider.resize();
+    }, 50);
 }
 
 CPLayersPalette.prototype = Object.create(CPPalette.prototype);

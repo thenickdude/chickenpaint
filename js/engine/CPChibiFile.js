@@ -3,10 +3,10 @@
 function CPChibiFile() {
     
     function CPChibiHeader(stream, chunk) {
-        this.version = stream.readU32();
-        this.width = stream.readU32();
-        this.height = stream.readU32();
-        this.layersNb = stream.readU32();
+        this.version = stream.readU32BE();
+        this.width = stream.readU32BE();
+        this.height = stream.readU32BE();
+        this.layersNb = stream.readU32BE();
 
         stream.skip(chunk.chunkSize - 16);
      }
@@ -18,7 +18,7 @@ function CPChibiFile() {
              this.chunkType[i] = stream.readByte();
          }
          
-         this.chunkSize = stream.readU32();
+         this.chunkSize = stream.readU32BE();
 
          if (stream.eof) {
              throw "Truncated chunk";
@@ -42,80 +42,112 @@ function CPChibiFile() {
         CHUNK_TAG_LAYER = "LAYR",
         CHUNK_TAG_END = "ZEND";
     
-/*
-    static public boolean write(OutputStream os, CPArtwork a) {
-        try {
-            writeMagic(os);
-            os.flush();
 
-            Deflater def = new Deflater(7);
-            DeflaterOutputStream dos = new DeflaterOutputStream(os, def);
-            // OutputStream dos = os;
+    function serializeEndChunk() {
+        var
+            buffer = new Uint8Array(CHUNK_TAG_END.length + 4),
+            stream = new ArrayDataStream(buffer);
+        
+        stream.writeString(CHUNK_TAG_END);
+        stream.writeU32BE(0);
+        
+        return stream.getAsDataArray();
+    }
 
-            writeHeader(dos, a);
+    function serializeHeaderChunk(artwork) {
+        var
+            buffer = new Uint8Array(CHUNK_TAG_HEAD.length + 4 * 5),
+            stream = new ArrayDataStream(buffer);
 
-            for (CPLayer l : a.layers) {
-                writeLayer(dos, l);
-            }
+        stream.writeString(CHUNK_TAG_HEAD);
+        stream.writeU32BE(16); // ChunkSize
 
-            writeEnd(dos);
+        stream.writeU32BE(0); // Current Version: Major: 0 Minor: 0
+        stream.writeU32BE(artwork.width);
+        stream.writeU32BE(artwork.height);
+        stream.writeU32BE(artwork.getLayerCount());
+        
+        return stream.getAsDataArray();
+    }
 
-            dos.flush();
-            dos.close();
-            return true;
-        } catch (IOException e) {
-            return false;
+    function serializeLayerChunk(layer) {
+        var
+            chunkSize = 20 + layer.name.length + layer.data.length,
+        
+            buffer = new Uint8Array(CHUNK_TAG_LAYER.length + 4 + chunkSize),
+            stream = new ArrayDataStream(buffer),
+            pos;
+
+        stream.writeString(CHUNK_TAG_LAYER); // Chunk ID
+        stream.writeU32BE(chunkSize); // ChunkSize
+
+        stream.writeU32BE(20 + layer.name.length); // Offset to layer data from start of header
+        
+        stream.writeU32BE(layer.blendMode);
+        stream.writeU32BE(layer.alpha);
+        stream.writeU32BE(layer.visible ? 1 : 0); // layer visibility and future flags
+
+        stream.writeU32BE(layer.name.length);
+        stream.writeString(layer.name);
+        
+        // Convert layer bytes from RGBA to ARGB order to match the Chibi specs
+        pos = stream.pos;
+        for (var i = 0; i < layer.data.length; i += CPColorBmp.BYTES_PER_PIXEL) {
+            buffer[pos++] = layer.data[i + CPColorBmp.ALPHA_BYTE_OFFSET];
+            buffer[pos++] = layer.data[i + CPColorBmp.RED_BYTE_OFFSET];
+            buffer[pos++] = layer.data[i + CPColorBmp.GREEN_BYTE_OFFSET];
+            buffer[pos++] = layer.data[i + CPColorBmp.BLUE_BYTE_OFFSET];
         }
+        
+        return buffer;
     }
 
-    static public void writeMagic(OutputStream os) throws IOException {
-        os.write(CHI_MAGIC);
+    /**
+     * Serialize the given artwork to Chibifile format and return the result as a Blob.
+     */
+    this.serialize = function(artwork) {
+        var
+            deflator = new pako.Deflate({
+                level: 7
+            }),
+            blobParts = [],
+            magic = new Uint8Array(CHI_MAGIC.length);
+        
+        // The magic file signature is not ZLIB compressed:
+        for (var i = 0; i < CHI_MAGIC.length; i++) {
+            magic[i] = CHI_MAGIC.charCodeAt(i);
+        }
+        blobParts.push(magic);
+        
+        // The rest gets compressed
+        deflator.push(serializeHeaderChunk(artwork), false);
+
+        var
+            layers = artwork.getLayers();
+        
+        for (var i = 0; i < layers.length; i++) {
+            deflator.push(serializeLayerChunk(layers[i]), false);
+        }
+
+        deflator.push(serializeEndChunk(artwork), true);
+        
+        blobParts.push(deflator.result);
+        
+        return new Blob(blobParts, {type: "application/octect-stream"});
     }
-
-    static public void writeEnd(OutputStream os) throws IOException {
-        os.write(ZEND);
-        writeInt(os, 0);
-    }
-
-    static public void writeHeader(OutputStream os, CPArtwork a) throws IOException {
-        os.write(HEAD); // Chunk ID
-        writeInt(os, 16); // ChunkSize
-
-        writeInt(os, 0); // Current Version: Major: 0 Minor: 0
-        writeInt(os, a.width);
-        writeInt(os, a.height);
-        writeInt(os, a.getLayersNb());
-    }
-
-    static public void writeLayer(OutputStream os, CPLayer l) throws IOException {
-        byte[] title = l.name.getBytes("UTF-8");
-
-        os.write(LAYR); // Chunk ID
-        writeInt(os, 20 + l.data.length * 4 + title.length); // ChunkSize
-
-        writeInt(os, 20 + title.length); // Data offset from start of header
-        writeInt(os, l.blendMode); // layer blend mode
-        writeInt(os, l.alpha); // layer opacity
-        writeInt(os, l.visible ? 1 : 0); // layer visibility and future flags
-
-        writeInt(os, title.length);
-        os.write(title);
-
-        writeIntArray(os, l.data);
-    }
-*/
+    
     function readLayer(stream, chunk, artwork) {
         var
             layer = new CPLayer(artwork.width, artwork.height),
 
-            payloadOffset = stream.readU32();
+            payloadOffset = stream.readU32BE();
         
-        layer.blendMode = stream.readU32();
-        layer.alpha = stream.readU32();
-        layer.visible = (stream.readU32() & 1) != 0;
+        layer.blendMode = stream.readU32BE();
+        layer.alpha = stream.readU32BE();
+        layer.visible = (stream.readU32BE() & 1) != 0;
 
         var
-            titleLength = stream.readU32();
+            titleLength = stream.readU32BE();
         
         layer.name = stream.readString(titleLength);
         
@@ -140,6 +172,11 @@ function CPChibiFile() {
         return true;
     }
     
+    /**
+     * Attempt to load a chibifile from the given arraybuffer.
+     * 
+     * @returns A CPArtwork on success, or null on failure.
+     */
     this.read = function(arrayBuffer) {
         try {
             if (!hasChibiMagicMarker(arrayBuffer)) {

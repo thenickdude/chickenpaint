@@ -147,14 +147,31 @@ function CPSlider(minValue, maxValue, centerMode) {
         
             paint();
         }
-    }
+    };
     
     /**
      * Get the DOM element for the slider component.
      */
     this.getElement = function() {
         return canvas;
-    }
+    };
+    
+    this.resize = function() {
+        canvas.width = $(canvas).width() || 150;
+        canvas.height = $(canvas).height() || 20;
+        
+        if (window.devicePixelRatio > 1) {
+            // Assume our width is set to 100% or similar, so we only need to the fix the height
+            canvas.style.height = canvas.height + 'px';
+            
+            canvas.width = canvas.width * window.devicePixelRatio;
+            canvas.height = canvas.height * window.devicePixelRatio;
+        }
+        
+        canvasContext.font = (canvas.height * 0.47) + 'pt sans-serif';
+        
+        paint();
+    };
 	
 	canvas.addEventListener("mousedown", function(e) {
 		var 
@@ -185,18 +202,7 @@ function CPSlider(minValue, maxValue, centerMode) {
 	
 	canvas.className = 'chickenpaint-slider';
 	
-	canvas.width = 150;
-	canvas.height = 20;
-	
-	if (window.devicePixelRatio > 1) {
-	    canvas.style.width = canvas.width + 'px';
-	    canvas.style.height = canvas.height + 'px';
-	    
-	    canvas.width = canvas.width * window.devicePixelRatio;
-	    canvas.height = canvas.height * window.devicePixelRatio;
-	}
-    
-    canvasContext.font = (canvas.height * 0.47) + 'pt sans-serif';
+	this.resize();
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);
