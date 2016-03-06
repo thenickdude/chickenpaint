@@ -28,11 +28,20 @@ function CPColorBmp(width, height) {
     
     CPBitmap.call(this, width, height);
     
+    function createImageData(width, height) {
+        // return new ImageData(this.width, this.height); // Doesn't work on old IE
+        var
+            canvas = document.createElement("canvas"),
+            context = canvas.getContext("2d");
+
+        return context.createImageData(width, height);
+    }
+    
     var
         that = this;
 
     // The ImageData object that holds the image data
-    this.imageData = new ImageData(this.width, this.height);
+    this.imageData = createImageData(this.width, this.height);
     
     // The bitmap data array (one byte per channel in RGBA order)
     this.data = this.imageData.data;
@@ -254,7 +263,14 @@ function CPColorBmp(width, height) {
 			this.data = this.imageData.data;
 		}
 
-		this.data.set(bmp.data);
+		if ("set" in this.data) {
+		    this.data.set(bmp.data);
+		} else {
+		    // IE doesn't use Uint8ClampedArray for ImageData, so set() isn't available
+		    for (var i = 0; i < this.data.length; i++) {
+		        this.data[i] = bmp.data[i];
+		    }
+		}
 	};
 
 	/**
