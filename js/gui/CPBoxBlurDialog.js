@@ -1,6 +1,6 @@
 function CPBoxBlurDialog(parent, controller) {
     var
-        dialog = `
+        dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -13,12 +13,12 @@ function CPBoxBlurDialog(parent, controller) {
                         <div class="modal-body">
                             <form>
                                 <div class="form-group">
-                                  <label for="bluramount">Blur amount</label>
-                                  <input type="text" class="form-control" id="bluramount" value="3">
+                                    <label>Blur amount (pixels)</label>
+                                    <input type="text" class="form-control chickenpaint-blur-amount" value="3">
                                 </div>
                                 <div class="form-group">
-                                  <label for="bluriterations">Iterations</label>
-                                  <input type="text" class="form-control" id="bluriterations" value="1">
+                                    <label>Iterations (1-8, larger gives smoother blur)</label>
+                                    <input type="text" class="form-control chickenpaint-blur-iterations" value="1">
                                 </div>
                             </form>
                         </div>
@@ -29,17 +29,29 @@ function CPBoxBlurDialog(parent, controller) {
                     </div>
                 </div>
             </div>
-        </div>`;
+        `),
+        
+        blurAmountElem = $(".chickenpaint-blur-amount", dialog),
+        blurIterationsElem = $(".chickenpaint-blur-iterations", dialog),
+        applyButton = $(".chickenpaint-apply-box-blur", dialog);
 
-    dialog = $(dialog);
-    
-    $(".chickenpaint-apply-box-blur", dialog).click(function(e) {
+    applyButton.click(function(e) {
         var
-            blur = parseInt($("#bluramount").val(), 10),
-            iterations = parseInt($("#bluriterations").val(), 10);
+            blur = Math.max(parseInt(blurAmountElem.val(), 10), 1),
+            iterations = Math.min(Math.max(parseInt(blurIterationsElem.val(), 10), 1), 8);
         
         controller.getArtwork().boxBlur(blur, blur, iterations);
     });
+    
+    dialog
+        .on('shown.bs.modal', function() {
+            blurAmountElem.focus();
+        })
+        .on('keypress', function(e) {
+            if (e.keyCode == 13) {
+                applyButton.click();
+            }
+        });
     
     parent.appendChild(dialog[0]);
     

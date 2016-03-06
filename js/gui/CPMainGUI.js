@@ -7,6 +7,8 @@ function CPMainGUI(controller, uiElem) {
         paletteManager = new CPPaletteManager(controller),
         menuBar,
         
+        keyboardShortcutActions,
+        
         that = this;
     
     function recurseFillMenu(menuElem, entries) {
@@ -33,7 +35,7 @@ function CPMainGUI(controller, uiElem) {
                 if (entry.checkbox) {
                     $("a", entryElem)
                         .data("checkbox", true)
-                        .toggleClass("selected", entry.checked);
+                        .toggleClass("selected", !!entry.checked);
                 }
             }
             
@@ -255,7 +257,7 @@ function CPMainGUI(controller, uiElem) {
                             name: "-"
                         },
                         {
-                            name: "Use linear interpolation",
+                            name: "Smooth-out zoomed canvas",
                             action: "CPLinearInterpolation",
                             mnemonic: "L",
                             title: "Linear interpolation is used to give a smoothed looked to the picture when zoomed in",
@@ -270,14 +272,14 @@ function CPMainGUI(controller, uiElem) {
                             mnemonic: "G",
                             shortcut: "CTRL G",
                             title: "Displays a grid over the image",
-                            checkbox: true
+                            checkbox: true,
+                            checked: false
                         },
                         {
                             name: "Grid options...",
                             action: "CPGridOptions",
                             mnemonic: "D",
                             title: "Shows the grid options dialog box",
-                            checkbox: true
                         }
                     ],
                 },
@@ -419,6 +421,34 @@ function CPMainGUI(controller, uiElem) {
         palMenuEntry.toggleClass("selected", show);
     }
     
+    function onKeyDown(e) {
+        var 
+            keyCode = e.keyCode || e.which,
+            keyName;
+        
+        if (e.keyCode == 9) {
+            keyName = "TAB";
+        } else if (e.keyCode >= 32 && e.keyCode < 128) {
+            keyName = String.fromCharCode(e.keyCode);
+        } else {
+            return;
+        }
+        
+        if (e.shiftKey) {
+            keyName = "SHIFT " + keyName;
+        }
+        if (e.ctrlKey) {
+            keyName = "CTRL " + keyName;
+        }
+
+        if (e.keyCode == 9) {
+            controller.actionPerformed({
+                action: "CPTogglePalettes"
+            });
+            e.preventDefault();
+        }
+    }
+    
     this.togglePalettes = function() {
         paletteManager.togglePalettes();
     };
@@ -443,6 +473,7 @@ function CPMainGUI(controller, uiElem) {
     window.addEventListener("resize", function() {
         that.constrainPalettes();
     });
+    window.addEventListener("keydown", onKeyDown);
 
     menuBar = createMainMenu();
     

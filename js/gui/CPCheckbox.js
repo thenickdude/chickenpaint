@@ -27,11 +27,13 @@ function CPCheckBox(state, title) {
     }
 
     this.setValue = function(b) {
-        this.state = b;
-        
-        this.emitEvent('valueChanged', [b]);
-        
-        paint();
+        if (this.state != b) {
+            this.state = b;
+            
+            this.emitEvent('valueChange', [b]);
+            
+            paint();
+        }
     };
     
     this.getElement = function() {

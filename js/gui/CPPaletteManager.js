@@ -66,15 +66,15 @@ function CPPaletteManager(cpController) {
 	this.togglePalettes = function() {
 		if (hiddenFrames.length == 0) {
 		    $("> .chickenpaint-palette", parentElem).each(function() {
-		        showPalette(this.dataset.paletteName, false);
-		        hiddenFrames.add(this);
+		        that.showPaletteByName(this.dataset.paletteName, false);
+		        hiddenFrames.push(this);
 		    });
 		} else {
 			for (var i = 0; i < hiddenFrames.length; i++) {
 			    var 
 			        frame = hiddenFrames[i];
 			    
-                showPalette(frame.dataset.paletteName, true);
+			    that.showPaletteByName(frame.dataset.paletteName, true);
 			}
 			hiddenFrames = [];
 		}

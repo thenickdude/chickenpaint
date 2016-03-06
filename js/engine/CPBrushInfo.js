@@ -63,14 +63,16 @@ CPBrushInfo.M_OIL = 7;
 CPBrushInfo.DEFAULTS = {
     isAA: false, isAirbrush: false,
     minSpacing: 0, spacing: 0,
-    pressureSize: 0, pressureAlpha: 0,
+    
+    pressureSize: true,
+    pressureAlpha: false,
+    pressureScattering: false,
+    
     type: 0, paintMode: 0,
     strokeMode: CPBrushInfo.SM_FREEHAND,
     resat: 1.0, bleed: 0.0,
 
     texture: 1.0,
-    
-    pressureScattering: false,
     
     // "cur" values are current brush settings (once tablet pressure and stuff is applied)
     size: 0, curSize: 0,

@@ -17,7 +17,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
         
         tools = [],
         
-        boxBlurDialog;
+        boxBlurDialog, gridDialog;
     
     function createTools() {
         tools = new Array(ChickenPaint.T_MAX);
@@ -193,7 +193,10 @@ function ChickenPaint(uiElem, arrayBuffer) {
     }
 
     function showGridOptionsDialog() {
-        new CPGridDialog(uiElem, that).show();
+        if (!gridDialog) {
+            gridDialog = new CPGridDialog(uiElem, canvas);
+        }
+        gridDialog.show();
     }
     
     function callToolListeners() {
@@ -525,7 +528,7 @@ function ChickenPaint(uiElem, arrayBuffer) {
         // callCPEventListeners(); TODO
     };
     
-    curColor.setRgb(0);
+    curColor.setRgb(0xFF000000);
     
     createTools();
     

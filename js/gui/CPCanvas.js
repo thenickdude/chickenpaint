@@ -9,7 +9,6 @@ function CPCanvas(controller) {
         that = this,
     
         canvas = document.createElement("canvas"),
-        
         canvasContext = canvas.getContext("2d"),
         
         artworkCanvas = document.createElement("canvas"),
@@ -846,6 +845,15 @@ function CPCanvas(controller) {
     this.getZoom = function() {
         return zoom;
     };
+    
+    this.setGridSize = function(_gridSize) {
+        gridSize = Math.max(Math.round(_gridSize), 1);
+        this.repaintAll();
+    };
+
+    this.getGridSize = function() {
+        return gridSize;
+    };
 
     this.setOffset = function(x, y) {
         offsetX = x;
@@ -855,7 +863,26 @@ function CPCanvas(controller) {
 
     this.getOffset = function() {
         return {x: offsetX, y: offsetY};
-    }
+    };
+    
+    this.setInterpolation = function(enabled) {
+        interpolation = enabled;
+        
+        var
+            browserProperties = [
+                 "imageSmoothingEnabled", "mozImageSmoothingEnabled", "webkitImageSmoothingEnabled",
+                 "msImageSmoothingEnabled"
+            ];
+        
+        for (var i = 0; i < browserProperties.length; i++) {
+            if (browserProperties[i] in canvasContext) {
+                canvasContext[browserProperties[i]] = enabled;
+                break;
+            }
+        }
+
+        this.repaintAll();
+    };
 
     this.setRotation = function(angle) {
         canvasRotation = angle % (2 * Math.PI);
@@ -1048,6 +1075,9 @@ function CPCanvas(controller) {
     };
     
     this.paint = function() {
+        var
+            drawingWasClipped = false;
+        
         scheduledRepaint = false;
         
         /* Clip drawing to the area of the screen we want to repaint */
@@ -1057,6 +1087,8 @@ function CPCanvas(controller) {
             canvasContext.beginPath();
             canvasContext.rect(repaintRegion.left, repaintRegion.top, repaintRegion.getWidth(), repaintRegion.getHeight());
             canvasContext.clip();
+            
+            drawingWasClipped = true;
         }
         
         /* Copy pixels that changed in the document into our local fused image cache */
@@ -1079,15 +1111,12 @@ function CPCanvas(controller) {
         {
             canvasContext.setTransform(transform.m[0], transform.m[1], transform.m[2], transform.m[3], transform.m[4], transform.m[5]);
             
-            canvasContext.imageSmoothingEnabled = false;
             canvasContext.fillStyle = checkerboardPattern;
             canvasContext.fillRect(0, 0, artwork.width, artwork.height);
             
             canvasContext.drawImage(
                 artworkCanvas, 0, 0, artworkCanvas.width, artworkCanvas.height
             );
-            
-            canvasContext.imageSmoothingEnabled = true;
         }
         canvasContext.restore();
         
@@ -1143,7 +1172,11 @@ function CPCanvas(controller) {
         
         canvasContext.globalCompositeOperation = 'source-over';
         
-        if (!repaintRegion.isEmpty()) {
+        if (repaintRegion.isEmpty() && drawingWasClipped) {
+            console.log("!");
+        }
+        
+        if (drawingWasClipped) {
             repaintRegion.makeEmpty();
             
             canvasContext.restore();
@@ -1160,6 +1193,9 @@ function CPCanvas(controller) {
         canvas.height = $(canvas).height();
         
         centerCanvas();
+        
+        // Interpolation property gets reset when canvas resizes
+        this.setInterpolation(interpolation);
         
         this.repaintAll();
     };
@@ -1272,5 +1308,7 @@ function CPCanvas(controller) {
         repaintRect(getRefreshArea(artworkUpdateRegion));
     });
     
+    this.setInterpolation(false);
+
     controller.setCanvas(this);
 }
