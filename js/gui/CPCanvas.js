@@ -702,7 +702,7 @@ function CPCanvas(controller) {
     }
     
     function setCursor(cursor) {
-        canvas.dataset.cursor = cursor;
+        canvas.setAttribute("data-cursor", cursor);
     }
     
     function updateScrollBars() {

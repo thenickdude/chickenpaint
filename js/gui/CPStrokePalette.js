@@ -59,7 +59,7 @@ function CPStrokePalette(cpController) {
 	            buttonElem = document.createElement("li");
 	        
 	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
-	        buttonElem.dataset.buttonIndex = i;
+	        buttonElem.setAttribute("data-buttonIndex", i);
 	        
             if (button.selected) {
                 buttonElem.className = buttonElem.className + " selected";
@@ -71,7 +71,7 @@ function CPStrokePalette(cpController) {
 	    listElem.addEventListener("click", function(e) {
 	        if (e.target && e.target.nodeName == "LI") {
 	            var
-	                button = buttons[parseInt(e.target.dataset.buttonIndex, 10)];
+	                button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
 	            
 	            $("li", listElem).removeClass("selected");
 	            $(e.target).addClass("selected");

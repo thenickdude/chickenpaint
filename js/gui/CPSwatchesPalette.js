@@ -72,14 +72,14 @@ var
             };
             
             this.setColor = function(color) {
-                swatchElem.dataset.color = color;
+                swatchElem.setAttribute("data-color", color);
                 swatchElem.style.backgroundColor = '#' + padLeft("" + Number(color).toString(16), "0", 6);
             };
 
             this.setColor(color);
             swatchElem.href = "#";
             swatchElem.className = "chickenpaint-color-swatch dropdown-toggle";
-            swatchElem.dataset.toggle = "dropdown";
+            swatchElem.setAttribute("data-toggle", "dropdown");
             
             mnuRemove.href = "#";
             mnuRemove.innerHTML = "Remove";
@@ -144,7 +144,7 @@ var
                 colors = new Array(swatchPanel.childNodes.length);
     
             for (var i = 0; i < swatchPanel.childNodes.length; i++) {
-                colors[i] = swatchPanel.childNodes[i].dataset.color;
+                colors[i] = swatchPanel.childNodes[i].getAttribute("data-color");
             }
     
             return colors;
@@ -216,8 +216,8 @@ var
                     return;
                 }
                 
-                if (e.button == 0 /* Left */ && swatch.dataset.color !== undefined) {
-                    controller.setCurColor(new CPColor(parseInt(swatch.dataset.color, 10)));
+                if (e.button == 0 /* Left */ && swatch.getAttribute("data-color") !== undefined) {
+                    controller.setCurColor(new CPColor(parseInt(swatch.getAttribute("data-color"), 10)));
                     e.stopPropagation();
                     e.preventDefault();
                 }
@@ -253,7 +253,7 @@ var
             btnAdd.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
             
             btnSettings.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";
-            btnSettings.dataset.toggle = "dropdown";
+            btnSettings.setAttribute("data-toggle", "dropdown");
             btnSettings.addEventListener("click", function(e) {
                 $(btnSettings).dropdown();
             });

@@ -66,7 +66,7 @@ function CPPaletteManager(cpController) {
 	this.togglePalettes = function() {
 		if (hiddenFrames.length == 0) {
 		    $("> .chickenpaint-palette", parentElem).each(function() {
-		        that.showPaletteByName(this.dataset.paletteName, false);
+		        that.showPaletteByName(this.getAttribute("data-paletteName"), false);
 		        hiddenFrames.push(this);
 		    });
 		} else {
@@ -74,7 +74,7 @@ function CPPaletteManager(cpController) {
 			    var 
 			        frame = hiddenFrames[i];
 			    
-			    that.showPaletteByName(frame.dataset.paletteName, true);
+			    that.showPaletteByName(frame.getAttribute("data-paletteName"), true);
 			}
 			hiddenFrames = [];
 		}
@@ -169,7 +169,7 @@ function CPPaletteManager(cpController) {
             showPalette(this, false);
         });
         
-        palElement.dataset.paletteName = paletteName;
+        palElement.setAttribute("data-paletteName", paletteName);
         
         paletteFrames.push(palElement);
         parentElem.appendChild(palElement);
