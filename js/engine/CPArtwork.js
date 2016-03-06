@@ -199,6 +199,12 @@ function CPArtwork(_width, _height) {
         callListenersLayerChange();
     };
     
+    /**
+     * Remove the currently selected layer.
+     * 
+     * Returns true if the layer was removed, or false when removal failed because there is currently only one layer in 
+     * the document.
+     */
     this.removeLayer = function() {
         if (layers.length > 1) {
             var
@@ -211,7 +217,11 @@ function CPArtwork(_width, _height) {
             
             invalidateFusion();
             callListenersLayerChange();
+            
+            return true;
         }
+        
+        return false;
     };
 
     this.duplicateLayer = function() {
@@ -1563,6 +1573,21 @@ function CPArtwork(_width, _height) {
         undoArea = r;
 
         curLayer.invert(r);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+    
+    this.boxBlur = function(radiusX, radiusY, iterations) {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        for (var i = 0; i < iterations; i++) {
+            curLayer.boxBlur(r, radiusX, radiusY);
+        }
 
         addUndo(new CPUndoPaint());
         invalidateFusion();

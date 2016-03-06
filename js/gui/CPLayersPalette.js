@@ -449,7 +449,9 @@ function CPLayersPalette(controller) {
     removeButton.className = 'chickenpaint-small-toolbar-button chickenpaint-remove-layer';
     removeButton.title = "Delete layer";
     removeButton.addEventListener("click", function() {
-        controller.getArtwork().removeLayer();
+        if (!controller.getArtwork().removeLayer()) {
+            alert("Error: You can't remove the last remaining layer in the drawing.");
+        }
     });
     
     addRemoveContainer.appendChild(addButton);

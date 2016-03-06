@@ -15,7 +15,9 @@ function ChickenPaint(uiElem, arrayBuffer) {
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
         
-        tools = [];
+        tools = [],
+        
+        boxBlurDialog;
     
     function createTools() {
         tools = new Array(ChickenPaint.T_MAX);
@@ -183,7 +185,11 @@ function ChickenPaint(uiElem, arrayBuffer) {
     }
     
     function showBoxBlurDialog() {
-        new CPBlurDialog(uiElem, that).show();
+        if (!boxBlurDialog) {
+            boxBlurDialog = new CPBoxBlurDialog(uiElem, that);
+        }
+        
+        boxBlurDialog.show();
     }
 
     function showGridOptionsDialog() {

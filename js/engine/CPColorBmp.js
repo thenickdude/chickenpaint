@@ -27,6 +27,9 @@ function CPColorBmp(width, height) {
     "use strict";
     
     CPBitmap.call(this, width, height);
+    
+    var
+        that = this;
 
     // The ImageData object that holds the image data
     this.imageData = new ImageData(this.width, this.height);
@@ -476,100 +479,182 @@ function CPColorBmp(width, height) {
     			} while (left <= line.x2);
     		}
 		}
-	}
+	};
+	
+	/**
+	 * Premultiply the RGB channels in the given R,G,B,A channel buffer with the alpha channel.
+	 * 
+	 * @param buffer R,G,B,A channel array
+	 * @param len Number of pixels in buffer to modify
+	 */
+	function multiplyAlpha(buffer, len) {
+	    var
+	        pixIndex = 0;
+	    
+        for (var i = 0; i < len; i++) {
+            var
+                alpha = buffer[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
+            
+            // Multiply the RGB channels by alpha
+            for (var j = 0; j < 3; j++, pixIndex++) {
+                buffer[pixIndex] = Math.round(buffer[pixIndex] * alpha / 255);
+            }
+            pixIndex++; // Don't modify alpha channel
+        }
+    }
 
-	/*
-    this.boxBlur = function(r, radiusX, radiusY) {
-        r = this.getBounds().clip(r);
+	/**
+	 * Inverse of multiplyAlpha()
+	 */
+    function separateAlpha(buffer, len) {
+        var
+            pixIndex = 0;
+        
+        for (var i = 0; i < len; i++) {
+            var
+                alpha = buffer[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
+            
+            if (alpha != 0) {
+                var
+                    invAlpha = 255 / alpha;
+                
+                for (var j = 0; j < 3; j++, pixIndex++) {
+                    buffer[pixIndex] = Math.min(Math.round(buffer[pixIndex] * invAlpha), 255);
+                }
+                // Don't modify alpha channel
+                pixIndex++;
+            } else {
+                pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+            }
+        }
+    }
 
-		int w = rect.getWidth();
-		int h = rect.getHeight();
-		int l = Math.max(w, h);
+    function boxBlurLine(src, dst, len, radius) {
+        var
+            totalPixels = 0, totalChannels = [0, 0, 0, 0],
+            pixIndex, dstIndex;
+        
+        pixIndex = 0;
+        for (var i = 0; i < radius && i < len; i++) {
+            for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                totalChannels[j] += src[pixIndex++];
+            }
+            totalPixels++;
+        }
+        
+        dstIndex = 0;
+        for (var i = 0; i < len; i++) {
+            // New pixel joins the window at the right
+            if (i + radius < len) {
+                pixIndex = (i + radius) * CPColorBmp.BYTES_PER_PIXEL;
+                
+                for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                    totalChannels[j] += src[pixIndex++];
+                }
+                totalPixels++;
+            }
 
-		int[] src = new int[l];
-		int[] dst = new int[l];
+            for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                dst[dstIndex++] = Math.round(totalChannels[j] / totalPixels);
+            }
 
-		for (int j = rect.top; j < rect.bottom; j++) {
-			System.arraycopy(data, rect.left + j * width, src, 0, w);
-			multiplyAlpha(src, w);
-			boxBlurLine(src, dst, w, radiusX);
-			System.arraycopy(dst, 0, data, rect.left + j * width, w);
+            // Old pixel leaves the window at the left
+            if (i - radius >= 0) {
+                pixIndex = (i - radius) * CPColorBmp.BYTES_PER_PIXEL;
+                
+                for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                    totalChannels[j] -= src[pixIndex++];
+                }
+                totalPixels--;
+            }
+        }
+    }
+
+    /**
+     * Copy a column of pixels in the bitmap to the given R,G,B,A buffer.
+     * 
+     * @param x X-coordinate of column
+     * @param y Y-coordinate of top of column to copy
+     * @param len Number of pixels to copy
+     * @param buffer R,G,B,A array
+     */
+    function copyPixelColumnToArray(x, y, len, buffer) {
+        var
+            yJump = (that.width - 1) * CPColorBmp.BYTES_PER_PIXEL,
+            dstOffset = 0,
+            srcOffset = that.offsetOfPixel(x, y);
+        
+        for (var i = 0; i < len; i++) {
+            for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                buffer[dstOffset++] = that.data[srcOffset++];
+            }
+            
+            srcOffset += yJump;
+        }
+    }
+
+    /**
+     * Copy the pixels from the given R,G,B,A buffer to a column of pixels in the bitmap.
+     * 
+     * @param x X-coordinate of column
+     * @param y Y-coordinate of top of column to copy
+     * @param len Number of pixels to copy
+     * @param buffer R,G,B,A array to copy from
+     */
+    function copyArrayToPixelColumn(x, y, len, buffer) {
+        var
+            yJump = (that.width - 1) * CPColorBmp.BYTES_PER_PIXEL,
+            srcOffset = 0,
+            dstOffset = that.offsetOfPixel(x, y);
+        
+        for (var i = 0; i < len; i++) {
+            for (var j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
+                that.data[dstOffset++] = buffer[srcOffset++];
+            }
+            
+            dstOffset += yJump;
+        }
+    }
+    
+	this.boxBlur = function(rect, radiusX, radiusY) {
+        rect = this.getBounds().clip(rect);
+
+		var
+		    rectWidth = rect.getWidth(),
+		    rectWidthBytes = rectWidth * CPColorBmp.BYTES_PER_PIXEL,
+		    rectHeight = rect.getHeight(),
+		    rectLength = Math.max(rectWidth, rectHeight),
+
+		    src = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL),
+		    dst = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL);
+
+		for (var y = rect.top; y < rect.bottom; y++) {
+		    var
+		        pixOffset = this.offsetOfPixel(rect.left, y);
+		    
+		    for (var x = 0; x < rectWidthBytes; x++) {
+		        src[x] = this.data[pixOffset++];
+		    }
+			
+			multiplyAlpha(src, rectWidth);
+			boxBlurLine(src, dst, rectWidth, radiusX);
+			
+            pixOffset = this.offsetOfPixel(rect.left, y);
+            
+            for (var x = 0; x < rectWidthBytes; x++) {
+                this.data[pixOffset++] = dst[x];
+            }
 		}
-
-		for (int i = rect.left; i < rect.right; i++) {
-			copyColumnToArray(i, rect.top, h, src);
-			boxBlurLine(src, dst, h, radiusY);
-			separateAlpha(dst, h);
-			copyArrayToColumn(i, rect.top, h, dst);
+		
+		for (var x = rect.left; x < rect.right; x++) {
+			copyPixelColumnToArray(x, rect.top, rectHeight, src);
+			
+			boxBlurLine(src, dst, rectHeight, radiusY);
+			separateAlpha(dst, rectHeight);
+			
+			copyArrayToPixelColumn(x, rect.top, rectHeight, dst);
 		}
-	}
-
-	public void multiplyAlpha(int[] buffer, int len) {
-		for (int i = 0; i < len; i++) {
-			buffer[i] = buffer[i] & 0xff000000 | ((buffer[i] >>> 24) * (buffer[i] >>> 16 & 0xff) / 255) << 16
-					| ((buffer[i] >>> 24) * (buffer[i] >>> 8 & 0xff) / 255) << 8 | (buffer[i] >>> 24)
-					* (buffer[i] & 0xff) / 255;
-		}
-	}
-
-	public void separateAlpha(int[] buffer, int len) {
-		for (int i = 0; i < len; i++) {
-			if ((buffer[i] & 0xff000000) != 0) {
-				buffer[i] = buffer[i] & 0xff000000
-						| Math.min((buffer[i] >>> 16 & 0xff) * 255 / (buffer[i] >>> 24), 255) << 16
-						| Math.min((buffer[i] >>> 8 & 0xff) * 255 / (buffer[i] >>> 24), 255) << 8
-						| Math.min((buffer[i] & 0xff) * 255 / (buffer[i] >>> 24), 255);
-			}
-		}
-	}
-
-	public void boxBlurLine(int[] src, int dst[], int len, int radius) {
-		int s, ta, tr, tg, tb;
-		s = ta = tr = tg = tb = 0;
-		int pix;
-
-		for (int i = 0; i < radius && i <= len; i++) {
-			pix = src[i];
-			ta += pix >>> 24;
-			tr += (pix >>> 16) & 0xff;
-			tg += (pix >>> 8) & 0xff;
-			tb += pix & 0xff;
-			s++;
-		}
-		for (int i = 0; i < len; i++) {
-			if (i + radius < len) {
-				pix = src[i + radius];
-				ta += pix >>> 24;
-				tr += (pix >>> 16) & 0xff;
-				tg += (pix >>> 8) & 0xff;
-				tb += pix & 0xff;
-				s++;
-			}
-
-			dst[i] = (ta / s << 24) | (tr / s << 16) | (tg / s << 8) | tb / s;
-
-			if (i - radius >= 0) {
-				pix = src[i - radius];
-				ta -= pix >>> 24;
-				tr -= (pix >>> 16) & 0xff;
-				tg -= (pix >>> 8) & 0xff;
-				tb -= pix & 0xff;
-				s--;
-			}
-		}
-	}
-
-	public void copyColumnToArray(int x, int y, int len, int[] buffer) {
-		for (int i = 0; i < len; i++) {
-			buffer[i] = data[x + (i + y) * width];
-		}
-	}
-
-	public void copyArrayToColumn(int x, int y, int len, int[] buffer) {
-		for (int i = 0; i < len; i++) {
-			data[x + (i + y) * width] = buffer[i];
-		}
-	}*/
+	};
 }
 
 CPColorBmp.BYTES_PER_PIXEL = 4;
