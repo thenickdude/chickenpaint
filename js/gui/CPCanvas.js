@@ -1093,9 +1093,11 @@ function CPCanvas(controller) {
         if (!repaintRegion.isEmpty()) {
             canvasContext.save();
             
-            canvasContext.beginPath();
-            canvasContext.rect(repaintRegion.left, repaintRegion.top, repaintRegion.getWidth(), repaintRegion.getHeight());
-            canvasContext.clip();
+            if (canvasContext.clip) {
+                canvasContext.beginPath();
+                canvasContext.rect(repaintRegion.left, repaintRegion.top, repaintRegion.getWidth(), repaintRegion.getHeight());
+                canvasContext.clip();
+            }
             
             drawingWasClipped = true;
         }
@@ -1131,9 +1133,22 @@ function CPCanvas(controller) {
         
         // The rest of the drawing happens using the original screen coordinate system
         
-        // This XOR mode guarantees contrast over all colors
         canvasContext.globalCompositeOperation = 'exclusion';
-        canvasContext.strokeStyle = 'white';
+        
+        if (canvasContext.globalCompositeOperation == "exclusion") {
+            // White + exclusion inverts the colors underneath, giving us good contrast
+            canvasContext.strokeStyle = 'white';
+        } else {
+            // IE Edge doesn't support Exclusion, so how about Difference with mid-grey instead
+            // This is visible on black and white, but disappears on a grey background
+            canvasContext.globalCompositeOperation = 'difference';
+            canvasContext.strokeStyle = '#888';
+            
+            // For super dumb browsers (only support source-over), at least don't make the cursor invisible on a white BG!
+            if (canvasContext.globalCompositeOperation != "difference") {
+                canvasContext.strokeStyle = 'black';
+            }
+        }
         canvasContext.lineWidth = 1.0;
         
         // Draw selection
