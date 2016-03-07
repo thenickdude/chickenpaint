@@ -26,7 +26,7 @@ import CPSlider from "./CPSlider";
 export default function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers");
     
-    var
+    const
         MODE_NAMES = [
               "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
               "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light"
@@ -78,20 +78,16 @@ export default function CPLayersPalette(controller) {
 
     function showRenameControl(layerIndex) {
         var
-            d = layerWidget.getSize(),
+            d = layerWidget.getCSSSize(),
             artwork = controller.getArtwork(),
-            layers = artwork.getLayers();
+            layer = artwork.getLayer(layerIndex);
 
-        renameField.setEnabled(true);
-        renameField.setVisible(true);
-        renameField.requestFocus();
-
-        renameField.setLocation(eyeW, d.height - (layerIndex + 1) * layerH);
-
-        renameField.setText(layers[layerIndex].name);
-        renameField.selectAll();
-
-        renameField.layerIndex = layerIndex;
+        renameField.show(
+            eyeW / window.devicePixelRatio, 
+            d.height - (layerIndex + 1) * layerH / window.devicePixelRatio,
+            layerIndex,
+            layer.name
+       );
     }
     
     var
@@ -116,9 +112,9 @@ export default function CPLayersPalette(controller) {
             that = this;
 
         /**
-         * Get the actual size of the component on screen in pixels.
+         * Get the size of the component on screen in CSS pixels.
          */
-        function getRealSize() {
+        this.getCSSSize = function() {
             return {width: $(canvas).width(), height: $(canvas).height()};
         }
         
@@ -142,24 +138,22 @@ export default function CPLayersPalette(controller) {
             canvasContext.fillRect(0, 0, d.width, layerH);
 
             canvasContext.beginPath();
+            
             canvasContext.moveTo(0, 0);
             canvasContext.lineTo(d.width, 0);
-            canvasContext.stroke();
             
-            canvasContext.beginPath();
             canvasContext.moveTo(eyeW, 0);
             canvasContext.lineTo(eyeW, layerH);
+
+            canvasContext.moveTo(eyeW + 6 * window.devicePixelRatio, layerH / 2);
+            canvasContext.lineTo(d.width - 6 * window.devicePixelRatio, layerH / 2);
+            
             canvasContext.stroke();
 
             canvasContext.fillStyle = 'black';
-            canvasContext.fillText(layer.name, eyeW + 6 * window.devicePixelRatio, 12 * window.devicePixelRatio);
             
-            canvasContext.beginPath();
-            canvasContext.moveTo(eyeW + 6 * window.devicePixelRatio, layerH / 2);
-            canvasContext.lineTo(d.width - 6 * window.devicePixelRatio, layerH / 2);
-            canvasContext.stroke();
-
-            canvasContext.fillText(MODE_NAMES[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6 * window.devicePixelRatio, 27 * window.devicePixelRatio);
+            canvasContext.fillText(layer.name, eyeW + 6 * window.devicePixelRatio, 12 * window.devicePixelRatio);
+            canvasContext.fillText(MODE_NAMES[layer.blendMode] + ": " + layer.alpha + "%", eyeW + 6 * window.devicePixelRatio, layerH - 5 * window.devicePixelRatio);
 
             canvasContext.beginPath();
             if (layer.visible) {
@@ -217,8 +211,6 @@ export default function CPLayersPalette(controller) {
 
             canvasContext.save();
             
-            canvasContext.font = (layerH * 0.25) + "pt sans-serif";
-
             canvasContext.fillStyle = '#606060';
             canvasContext.fillRect(0, 0, d.width, d.height - layers.length * layerH);
 
@@ -254,7 +246,7 @@ export default function CPLayersPalette(controller) {
                 parentHeight = $(canvas).parent().height(),
                 parentWidth = $(canvas).parent().width();
             
-            layerH = 32;
+            layerH = 34;
             eyeW = 24;
             
             canvas.width = parentWidth;
@@ -278,6 +270,8 @@ export default function CPLayersPalette(controller) {
                 eyeW *= window.devicePixelRatio;
             }
             
+            canvasContext.font = (layerH * 0.25) + "pt sans-serif";
+            
             this.paint();
         };
         
@@ -291,14 +285,16 @@ export default function CPLayersPalette(controller) {
             }
         });
         
-        canvas.addEventListener("ondblclick", function(e) {
+        canvas.addEventListener("dblclick", function(e) {
             var 
                 offset = $(canvas).offset(),
                 mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
                 
                 layerIndex = getLayerIndex(mouseLoc);
 
-            showRenameControl(layerIndex);
+            if (mouseLoc.x * window.devicePixelRatio > eyeW) {
+                showRenameControl(layerIndex);
+            }
         });
 
         canvas.addEventListener("mousedown", function(e) {
@@ -306,8 +302,7 @@ export default function CPLayersPalette(controller) {
                 offset = $(canvas).offset(),
                 mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top};
 
-            // click, moved from mouseClicked due
-            // to problems with focus and stuff
+            /* Click, moved from mouseClicked due to problems with focus and stuff */
             if (e.button == 0) { /* Left button */
                 var
                     d = {width: canvas.width, height: canvas.height},
@@ -349,40 +344,60 @@ export default function CPLayersPalette(controller) {
     function CPRenameField() {
         var
             layerIndex = -1,
-            textBox = document.createElement("input");
+            textBox = document.createElement("input"),
+            
+            that = this;
 
         this.renameAndHide = function() {
             var 
                 artwork = controller.getArtwork();
 
-            if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
-                artwork.setLayerName(layerIndex, textBox.value);
-            }
+            artwork.setLayerName(layerIndex, textBox.value);
 
             layerIndex = -1;
             textBox.style.display = 'none';
-        }
+        };
 
         this.isVisible = function() {
-            return textBox.style.display == 'none';
+            return textBox.style.display != 'none';
         };
         
+        this.setLocation = function(positionX, positionY) {
+            textBox.style.left = positionX + "px";
+            textBox.style.top = positionY + "px";
+        };
+        
+        this.show = function(x, y, _layerIndex, layerName) {
+            layerIndex = _layerIndex;
+            textBox.value = layerName;
+            this.setLocation(x, y);
+            
+            textBox.style.display = 'block';
+            textBox.select();
+        };
+        
+        this.getElement = function() {
+            return textBox;
+        };
+        
+        textBox.type = "text";
+        textBox.className = "chickenpaint-layer-new-name form-control input-sm";
         textBox.style.display = 'none';
-
+        
         textBox.addEventListener("keypress", function(e) {
-            if (e.characterCode == 13) {// Enter
-                renameAndHide();
+            if (e.keyCode == 13) {// Enter
+                that.renameAndHide();
             }
         });
         
         textBox.addEventListener("focus", function(e) {
             // FIXME: hack to avoid losing the focus to the main canvas
-            controller.canvas.dontStealFocus = true;
+            // controller.getCanvas().dontStealFocus = true; TODO
         });
         
         textBox.addEventListener("blur", function(e) {
-            controller.canvas.dontStealFocus = false;
-            renameAndHide();
+            // controller.getCanvas().dontStealFocus = false; TODO
+            that.renameAndHide();
         });
     }
     
@@ -410,10 +425,6 @@ export default function CPLayersPalette(controller) {
     
     body.appendChild(alphaSlider.getElement());
 
-    /*renameField = new CPRenameField();
-    layerWidget.add(renameField);*/
-    
-    
     cbSampleAllLayers.type = "checkbox";
     cbSampleAllLayers.addEventListener("click", function(e) {
         var
@@ -433,6 +444,8 @@ export default function CPLayersPalette(controller) {
     });
         
     body.appendChild(wrapCheckboxWithLabel(cbLockAlpha, "Lock alpha"));
+
+    layerWidget.getElement().appendChild(renameField.getElement());
 
     body.appendChild(layerWidget.getElement());
 
@@ -485,6 +498,7 @@ export default function CPLayersPalette(controller) {
     
     setTimeout(function() {
         alphaSlider.resize();
+        layerWidget.resize();
     }, 50);
 }
 

@@ -263,6 +263,8 @@
     flex-grow:1;
     flex-shrink:1;
     overflow-y:auto;
+    overflow-x:hidden;
+    position:relative;
 }
 .chickenpaint-layers-widget canvas {
     width:100%;
@@ -275,6 +277,13 @@
 }
 .chickenpaint-palette-layers .checkbox {
     margin:8px 0;
+}
+.chickenpaint-palette-layers .chickenpaint-layer-new-name {
+    position: absolute;
+    padding: 0px 10px;
+    width: auto;
+    height: 27px;
+    font-size: 14px !important;
 }
 
 .chickenpaint .nav a.selected::before {

@@ -338,7 +338,7 @@ export default function CPArtwork(_width, _height) {
         var
             layer = this.getLayer(layerIndex);
         
-        if (layer.name != name) {
+        if (layer && layer.name != name) {
             addUndo(new CPUndoLayerRename(layerIndex, name));
             layer.name = name;
             
@@ -1409,8 +1409,10 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        curLayer = layers[i];
-        callListenersLayerChange();
+        if (curLayer != layers[i]) {
+            curLayer = layers[i];
+            callListenersLayerChange();
+        }
     };
     
     this.getActiveLayerIndex = function() {
@@ -2047,7 +2049,7 @@ export default function CPArtwork(_width, _height) {
     function CPUndoLayerRename(layerIndex, to) {
         this.layerIndex = layerIndex;
         this.to = to;
-        this.from = getLayer(layerIndex).name;
+        this.from = that.getLayer(layerIndex).name;
     }
     
     CPUndoLayerRename.prototype = Object.create(CPUndo.prototype);
