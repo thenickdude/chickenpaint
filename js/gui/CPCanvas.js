@@ -26,13 +26,35 @@ import CPWacomTablet from "../util/CPWacomTablet";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
 
-export default function CPCanvas(controller) {
+/**
+ * Stroke the polygon represented by the array of `points` (x:?, y:?} to the given canvas context. 
+ * 
+ * @param offset Added to each point before plotting (suggest 0.5 offset for a line to center on the middle of a pixel) 
+ */
+function plotPolygon(context, points, offset) {
+    offset = offset || 0.0;
     
-    var
+    context.beginPath();
+    
+    context.moveTo(points[0].x + offset, points[0].y + offset);
+    
+    for (var i = 1; i < points.length; i++) {
+        context.lineTo(points[i].x + offset, points[i].y + offset);
+    }
+    
+    // Close the polygon
+    context.lineTo(points[0].x + offset, points[0].y + offset);
+    
+    context.stroke();
+}
+
+export default function CPCanvas(controller) {
+    const
         BUTTON_PRIMARY = 0,
         BUTTON_WHEEL = 1,
-        BUTTON_SECONDARY = 2,
-        
+        BUTTON_SECONDARY = 2;
+    
+    var
         that = this,
     
         canvas = document.createElement("canvas"),
@@ -621,40 +643,37 @@ export default function CPCanvas(controller) {
     CPMoveToolMode.prototype.constructor = CPMoveToolMode;
 
     function CPRotateCanvasMode() {
-
         var 
             firstClick,
             initAngle = 0.0,
             initTransform,
             dragged = false;
 
-        this.mousePressed = function (e) {
-            var
-                p = {x: e.pageX, y: e.pageY};
-            
-            firstClick = p.clone();
+        this.mousePressed = function(e) {
+            firstClick = {x: e.pageX - $(canvas).offset().left, y: e.pageY - $(canvas).offset().top};
 
-            initAngle = getRotation();
+            initAngle = that.getRotation();
             initTransform = transform.clone();
 
             dragged = false;
 
             repaintBrushPreview();
-        }
+        };
 
-        this.mouseDragged = function (e) {
+        this.mouseDragged = function(e) {
             dragged = true;
 
             var
-                p = {x: e.pageX, y: e.pageY},
+                p = {x: e.pageX - $(canvas).offset().left, y: e.pageY - $(canvas).offset().top},
             
-                center = {x: canvas.width / 2, y: canvas.height / 2},
+                displayCenter = {x: $(canvas).width() / 2, y: $(canvas).height() / 2},
+                canvasCenter = {x: canvas.width / 2, y: canvas.height / 2},
 
-                deltaAngle = Math.atan2(p.y - center.y, p.x - center.x) - Math.atan2(firstClick.y - center.y, firstClick.x - center.x),
+                deltaAngle = Math.atan2(p.y - displayCenter.y, p.x - displayCenter.x) - Math.atan2(firstClick.y - displayCenter.y, firstClick.x - displayCenter.x),
 
                 rotTrans = new CPTransform();
             
-            rotTrans.rotate(deltaAngle, center.x, center.y);
+            rotTrans.rotateAroundPoint(deltaAngle, canvasCenter.x, canvasCenter.y);
 
             rotTrans.multiply(initTransform);
 
@@ -667,8 +686,10 @@ export default function CPCanvas(controller) {
          * When the mouse is released after rotation, we might want to snap our angle to the nearest 90 degree mark.
          */
         function finishRotation() {
+            const
+                ROTATE_SNAP_DEGREES = 5;
+            
             var 
-                ROTATE_SNAP_DEGREES = 5
                 nearest90 = Math.round(canvasRotation / (Math.PI / 2)) * Math.PI / 2;
             
             if (Math.abs(canvasRotation - nearest90) < ROTATE_SNAP_DEGREES / 180 * Math.PI) {
@@ -679,7 +700,7 @@ export default function CPCanvas(controller) {
 
                     rotTrans = new CPTransform();
                 
-                rotTrans.rotate(deltaAngle, center.x, center.y);
+                rotTrans.rotateAroundPoint(deltaAngle, center.x, center.y);
 
                 rotTrans.multiply(initTransform);
 
@@ -701,28 +722,8 @@ export default function CPCanvas(controller) {
         };
     }
     
-    /**
-     * Stroke the polygon represented by the array of `points` (x:?, y:?} to the given canvas context. 
-     * 
-     * @param offset Added to each point before plotting (suggest 0.5 offset for a line to center on the middle of a pixel) 
-     */
-    function plotPolygon(context, points, offset) {
-        offset = offset || 0.0;
-        
-        canvasContext.beginPath();
-        
-        canvasContext.moveTo(points[0].x + offset, points[0].y + offset);
-        
-        for (var i = 1; i < points.length; i++) {
-            canvasContext.lineTo(points[i].x + offset, points[i].y + offset);
-        }
-        
-        // Close the polygon
-        context.lineTo(points[0].x + offset, points[0].y + offset);
-        
-        context.stroke();
-
-    }
+    CPRotateCanvasMode.prototype = Object.create(CPMode.prototype);
+    CPRotateCanvasMode.prototype.constructor = CPRotateCanvasMode;
     
     function requestFocusInWindow() {
         // TODO
@@ -977,7 +978,7 @@ export default function CPCanvas(controller) {
 
             rotTrans = new CPTransform();
         
-        rotTrans.rotate(-this.getRotation(), center.x, center.y);
+        rotTrans.rotateAroundPoint(-this.getRotation(), center.x, center.y);
         rotTrans.concatenate(transform);
 
         this.setOffset(~~rotTrans.getTranslateX(), ~~rotTrans.getTranslateY());

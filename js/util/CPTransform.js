@@ -99,6 +99,12 @@ CPTransform.prototype.rotate = function(rad) {
     this.m[3] = m22;
 };
 
+CPTransform.prototype.rotateAroundPoint = function(rad, x, y) {
+    this.translate(x, y);
+    this.rotate(rad);
+    this.translate(-x, -y);
+};
+
 CPTransform.prototype.translate = function(x, y) {
     this.m[4] += this.m[0] * x + this.m[2] * y;
     this.m[5] += this.m[1] * x + this.m[3] * y;
@@ -140,4 +146,6 @@ CPTransform.prototype.clone = function() {
     result.m[3] = this.m[3];
     result.m[4] = this.m[4];
     result.m[5] = this.m[5];
+    
+    return result;
 };
