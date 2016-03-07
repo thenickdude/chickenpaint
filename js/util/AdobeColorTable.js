@@ -1,5 +1,5 @@
 /* 
- * By Nicholas Sherlock
+ * By Nicholas Sherlock <n.sherlock@gmail.com>
  * 
  * Released under the WTFPLv2 https://en.wikipedia.org/wiki/WTFPL
  */

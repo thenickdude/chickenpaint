@@ -1,7 +1,7 @@
 /**
  * A tool for presenting a Uint8Array as a stream for reading and writing some simple data types.
  * 
- * By Nicholas Sherlock n.sherlock@gmail.com 2016, released under the WTFPL license.
+ * By Nicholas Sherlock <n.sherlock@gmail.com> 2016, released under the WTFPL license.
  */
 
 var EOF = -1;
