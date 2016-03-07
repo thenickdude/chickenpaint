@@ -1002,8 +1002,10 @@ function CPCanvas(controller) {
         if (tablet.isTabletPresent()) {
             return tablet.getPressure();
         } else {
-            // Pointer events has mouse click = 0.5 pressure, we want 1.0 pressure for that!
-            return e.pressure + 0.5;
+            /* Mice have a default pressure of 0.5, but we want 1.0. Since we can't distinguish between
+             * mice and pens at this point, we don't have any better options:
+             */
+            return e.pressure * 2;
         }
     }
     

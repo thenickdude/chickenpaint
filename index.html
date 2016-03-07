@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <title>ChickenPaint</title>
 
+<script type="text/javascript">
+	/* Check for native pointer event support before PEP adds its polyfill */
+	if (window.PointerEvent) {
+	    window.hasNativePointerEvents = true;
+	}
+</script>
+
 <script src="lib/polyfill.js"></script>
 <script src="lib/jquery-2.2.1.min.js"></script>
 <script src="lib/pep.min.js"></script>
@@ -48,6 +55,7 @@
 <script src="js/gui/CPBoxBlurDialog.js"></script>
 <script src="js/gui/CPGridDialog.js"></script>
 <script src="js/gui/CPSendDialog.js"></script>
+<script src="js/gui/CPTabletDialog.js"></script>
 <script src="js/chickenpaint.js"></script>
 <script src="index.js"></script>
 

@@ -93,7 +93,7 @@ function CPMiscPalette(cpController) {
 	    listElem.addEventListener("click", function(e) {
 	        if (e.target && e.target.nodeName == "LI") {
 	            var
-	                button = buttons[parseInt(e.target.dataset.getAttribute("data-buttonIndex"), 10)];
+	                button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
 	            
 	            cpController.actionPerformed({action: button.command});
 	        }

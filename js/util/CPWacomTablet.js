@@ -35,7 +35,7 @@ function CPWacomTablet() {
      * Call after the document body is ready (needs DOM to be ready for loading the Wacom plugin).
      */
     this.detectTablet = function() {
-        console.log("Loading Wacom tablet support...");
+        console.log("Attempting to load Wacom tablet support...");
         
         pluginObject = document.createElement("object");
         

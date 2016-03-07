@@ -183,7 +183,11 @@ function ChickenPaint(uiElem, arrayBuffer) {
     function showAboutDialog() {
         new CPAboutDialog(uiElem).show();
     }
-    
+
+    function showTabletDialog() {
+        new CPTabletDialog(uiElem).show();
+    }
+
     function showBoxBlurDialog() {
         if (!boxBlurDialog) {
             boxBlurDialog = new CPBoxBlurDialog(uiElem, that);
@@ -420,7 +424,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
             case "CPAbout":
                 showAboutDialog();
             break;
-            case "CPTest":
+            case "CPTabletSupport":
+                showTabletDialog();
             break;
     
             // Layers actions

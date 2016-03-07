@@ -1,6 +1,6 @@
 function CPAboutDialog(parent) {
     var
-        dialog = `
+        dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
@@ -118,14 +118,12 @@ Includes the <a target="_blank" href="https://github.com/nodeca/pako">Pako zlib 
     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
-                        </pre>
-                    </div>
+                    </pre>
                 </div>
             </div>
-        </div>`;
+        </div>
+    `);
     
-    dialog = $(dialog);
-
     parent.appendChild(dialog[0]);
     
     this.show = function() {

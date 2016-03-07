@@ -365,13 +365,22 @@ function CPMainGUI(controller, uiElem) {
                     mnemonic: "H",
                     children: [
                         {
-                            name: "About...",
+                            name: "Tablet support...",
+                            mnemonic: "T",
+                            action: "CPTabletSupport",
+                            title: "Help with getting a drawing tablet working"
+                        },
+                        {
+                            name: "-"
+                        },
+                        {
+                            name: "About",
                             mnemonic: "A",
                             action: "CPAbout",
                             title: "Displays some information about ChickenPaint"
                         }
                     ]
-                }
+                },
             ],
             
             bar = $(
