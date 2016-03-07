@@ -60,7 +60,7 @@ export default function CPArtwork(_width, _height) {
         sampleAllLayers = false,
         lockAlpha = false,
         
-        curColor = 0xFF000000, // Opaque black
+        curColor = 0x000000, // Black
         
         that = this;
     

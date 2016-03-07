@@ -21,7 +21,7 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         canvas,
         mainGUI,
         
-        curColor = new CPColor(),
+        curColor = new CPColor(0),
     
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
@@ -543,8 +543,6 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         
         // callCPEventListeners(); TODO
     };
-    
-    curColor.setRgb(0xFF000000);
     
     createTools();
     
