@@ -8929,6 +8929,7 @@
 .chickenpaint-canvas {
   width: 100%;
   height: 700px;
+  touch-action: none;
 }
 .chickenpaint-canvas[data-cursor="grabbing"] {
   cursor: -webkit-grabbing;

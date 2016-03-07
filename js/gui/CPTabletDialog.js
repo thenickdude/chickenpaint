@@ -18,7 +18,7 @@ function CPTabletDialog(parent) {
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-internet-explorer"></span>
-                                        IE 10+
+                                        IE 10, 11
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-firefox"></span>
@@ -56,7 +56,7 @@ function CPTabletDialog(parent) {
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-internet-explorer"></span>
-                                        IE 10+
+                                        IE 10, 11, Edge
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-firefox"></span>
