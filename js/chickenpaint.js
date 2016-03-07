@@ -549,6 +549,8 @@ function ChickenPaint(uiElem, arrayBuffer) {
     setTool(ChickenPaint.T_PEN);
     
     mainGUI.arrangePalettes();
+    
+    CPWacomTablet.getRef().detectTablet();
 }
 
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);

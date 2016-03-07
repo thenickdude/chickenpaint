@@ -90,7 +90,7 @@ function CPCanvas(controller) {
     CPDefaultMode.prototype = Object.create(CPMode.prototype);
     CPDefaultMode.prototype.constructor = CPDefaultMode;
     
-    CPDefaultMode.prototype.mousePressed = function(e) {
+    CPDefaultMode.prototype.mousePressed = function(e, pressure) {
         // FIXME: replace the moveToolMode hack by a new and improved system
         if (!spacePressed && e.button == BUTTON_PRIMARY
                 && (!e.altKey || curSelectedMode == moveToolMode)) {
@@ -107,27 +107,27 @@ function CPCanvas(controller) {
             
             repaintBrushPreview();
 
-            activeMode.mousePressed(e);
+            activeMode.mousePressed(e, pressure);
         } else if (!spacePressed
                 && (e.button == BUTTON_SECONDARY || e.button == BUTTON_PRIMARY && e.altKey)) {
             repaintBrushPreview();
 
             activeMode = colorPickerMode;
-            activeMode.mousePressed(e);
+            activeMode.mousePressed(e, pressure);
         } else if ((e.button == BUTTON_WHEEL || spacePressed) && !e.altKey) {
             repaintBrushPreview();
 
             activeMode = moveCanvasMode;
-            activeMode.mousePressed(e);
+            activeMode.mousePressed(e, pressure);
         } else if ((e.button == BUTTON_WHEEL || spacePressed) && e.altKey) {
             repaintBrushPreview();
 
             activeMode = rotateCanvasMode;
-            activeMode.mousePressed(e);
+            activeMode.mousePressed(e, pressure);
         }
     };
 
-    CPDefaultMode.prototype.mouseMoved = function(e) {
+    CPDefaultMode.prototype.mouseMoved = function(e, pressure) {
         if (!spacePressed && curSelectedMode == curDrawMode) {
             brushPreview = true;
 
@@ -174,19 +174,19 @@ function CPCanvas(controller) {
         this.smoothMouse = {x:0.0, y:0.0};
     }
     
-    CPFreehandMode.prototype.mousePressed = function(e) {
+    CPFreehandMode.prototype.mousePressed = function(e, pressure) {
         if (!this.dragLeft && e.button == BUTTON_PRIMARY) {
             var 
                 pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
             this.dragLeft = true;
-            artwork.beginStroke(pf.x, pf.y, CPTablet.getRef().getPressure());
+            artwork.beginStroke(pf.x, pf.y, pressure);
 
             this.smoothMouse = pf;
         }
     };
 
-    CPFreehandMode.prototype.mouseDragged = function(e) {
+    CPFreehandMode.prototype.mouseDragged = function(e, pressure) {
         var 
             pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
             smoothing = Math.min(0.999, Math.pow(controller.getBrushInfo().smoothing, 0.3));
@@ -195,7 +195,7 @@ function CPCanvas(controller) {
         this.smoothMouse.y = (1.0 - smoothing) * pf.y + smoothing * this.smoothMouse.y;
 
         if (this.dragLeft) {
-            artwork.continueStroke(this.smoothMouse.x, this.smoothMouse.y, CPTablet.getRef().getPressure());
+            artwork.continueStroke(this.smoothMouse.x, this.smoothMouse.y, pressure);
         }
     };
 
@@ -991,7 +991,23 @@ function CPCanvas(controller) {
         return canvasContext.createPattern(checkerboardCanvas, 'repeat');
     }
     
-    function handleMouseMove(e) {
+    /**
+     * Add the pointer pressure field to the given pointer event.
+     */
+    function getPointerPressure(e) {
+        var
+            tablet = CPWacomTablet.getRef();
+        
+        // Use Wacom pressure in preference to pointer event pressure (if present)
+        if (tablet.isTabletPresent()) {
+            return tablet.getPressure();
+        } else {
+            // Pointer events has mouse click = 0.5 pressure, we want 1.0 pressure for that!
+            return e.pressure + 0.5;
+        }
+    }
+    
+    function handlePointerMove(e) {
         var
             offset = $(canvas).offset();
         
@@ -1003,34 +1019,25 @@ function CPCanvas(controller) {
         }
 
         if (mouseDown) {
-            activeMode.mouseDragged(e);
+            activeMode.mouseDragged(e, getPointerPressure(e));
         } else {
-            activeMode.mouseMoved(e);
+            activeMode.mouseMoved(e, getPointerPressure(e));
         }
-        
-        CPTablet.getRef().mouseDetect();
     }
     
-    function handleMouseUp(e) {
+    function handlePointerUp(e) {
         mouseDown = false;
         activeMode.mouseReleased(e);
-        
-        window.removeEventListener("mouseup", handleMouseUp);
-        window.removeEventListener("mousemove", handleMouseMove);
-        canvas.addEventListener("mousemove", handleMouseMove);
     }
     
-    function handleMouseDown(e) {
+    function handlePointerDown(e) {
+        canvas.setPointerCapture(e.pointerId);
+        
         if (!mouseDown) {
             mouseDown = true;
             
             requestFocusInWindow();
-            activeMode.mousePressed(e);
-            
-            // Track the drag even if it leaves the canvas:
-            canvas.removeEventListener("mousemove", handleMouseMove);
-            window.addEventListener("mousemove", handleMouseMove);
-            window.addEventListener("mouseup", handleMouseUp);
+            activeMode.mousePressed(e, getPointerPressure(e));
         }
     }
     
@@ -1295,9 +1302,10 @@ function CPCanvas(controller) {
         that.repaintAll();
     });
     
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+
     window.addEventListener("resize", function() {
         that.resize();
     });
