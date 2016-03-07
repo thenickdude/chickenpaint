@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -24,15 +24,15 @@ import CPPalette from './CPPalette';
 export default function CPMiscPalette(cpController) {
     CPPalette.call(this, cpController, "misc", "Misc");
     
-	var 
-	    that = this,
+    var 
+        that = this,
 
-	    buttons = [
-	        {
-	            className: "chickenpaint-tool-zoom-in",
-	            command: "CPZoomIn",
-	            toolTip: "Zoom in"
-	        },
+        buttons = [
+            {
+                className: "chickenpaint-tool-zoom-in",
+                command: "CPZoomIn",
+                toolTip: "Zoom in"
+            },
             {
                 className: "chickenpaint-tool-zoom-out",
                 command: "CPZoomOut",
@@ -60,29 +60,29 @@ export default function CPMiscPalette(cpController) {
             },
         ];
 
-	function buildButtons() {
-	    var
-	        body = that.getBodyElement(),
-	        listElem = document.createElement("ul");
-	    
-	    listElem.className = "chickenpaint-misc-tools list-unstyled";
-	    
-	    for (var i in buttons) {
-	        var 
-	            button = buttons[i],
-	            buttonElem = document.createElement("li");
-	        
-	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
-	        buttonElem.setAttribute("data-buttonIndex", i);
-	        
-	        listElem.appendChild(buttonElem);
-	    }
-	    
-	    listElem.addEventListener("mousedown", function(e) {
+    function buildButtons() {
+        var
+            body = that.getBodyElement(),
+            listElem = document.createElement("ul");
+        
+        listElem.className = "chickenpaint-misc-tools list-unstyled";
+        
+        for (var i in buttons) {
+            var 
+                button = buttons[i],
+                buttonElem = document.createElement("li");
+            
+            buttonElem.className = "chickenpaint-toolbar-button " + button.className;
+            buttonElem.setAttribute("data-buttonIndex", i);
+            
+            listElem.appendChild(buttonElem);
+        }
+        
+        listElem.addEventListener("mousedown", function(e) {
             if (e.target && e.target.nodeName == "LI") {
                 $(e.target).addClass("selected");
             }
-	    });
+        });
 
        listElem.addEventListener("mouseup", function(e) {
             if (e.target && e.target.nodeName == "LI") {
@@ -90,19 +90,19 @@ export default function CPMiscPalette(cpController) {
             }
         });
 
-	    listElem.addEventListener("click", function(e) {
-	        if (e.target && e.target.nodeName == "LI") {
-	            var
-	                button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
-	            
-	            cpController.actionPerformed({action: button.command});
-	        }
-	    });
-	    
-	    body.appendChild(listElem);
-	}
-	
-	buildButtons();
+        listElem.addEventListener("click", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                var
+                    button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
+                
+                cpController.actionPerformed({action: button.command});
+            }
+        });
+        
+        body.appendChild(listElem);
+    }
+    
+    buildButtons();
 }
 
 CPMiscPalette.prototype = Object.create(CPPalette.prototype);

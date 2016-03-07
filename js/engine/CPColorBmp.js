@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -54,56 +54,56 @@ export default function CPColorBmp(width, height) {
         result.setFromBitmapRect(this, rect);
         
         return result;
-	};
+    };
 
-	//
-	// Pixel access with friendly clipping. Pixel will be 32-bit integer in ARGB format
-	//
-	this.getPixel = function(x, y) {
-		x = Math.max(0, Math.min(this.width - 1, x));
-		y = Math.max(0, Math.min(this.height - 1, y));
+    //
+    // Pixel access with friendly clipping. Pixel will be 32-bit integer in ARGB format
+    //
+    this.getPixel = function(x, y) {
+        x = Math.max(0, Math.min(this.width - 1, x));
+        y = Math.max(0, Math.min(this.height - 1, y));
 
-		var
-		    pixIndex = this.offsetOfPixel(x, y);
-		
-		return (this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] << 24) 
-		    | (this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]    << 16) 
-		    | (this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET]  << 8) 
-		    | this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET];
-	}
+        var
+            pixIndex = this.offsetOfPixel(x, y);
+        
+        return (this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] << 24) 
+            | (this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]    << 16) 
+            | (this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET]  << 8) 
+            | this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET];
+    }
 
-	//
-	// Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
-	//
-	this.copyRectXOR = function(bmp, rect) {
-	    rect = this.getBounds().clip(rect);
-	    
-	    var 
-	        w = rect.getWidth(),
-	        h = rect.getHeight(),
-	        
-	        buffer = new Uint8Array(w * h * CPColorBmp.BYTES_PER_PIXEL),
-	        
-	        outputIndex = 0,
-	        bmp1Index = this.offsetOfPixel(rect.left, rect.top), 
-	        bmp2Index = bmp.offsetOfPixel(rect.left, rect.top),
-	        
-	        bmp1YSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-	        bmp2YSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-	        
-	        widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
-		
-		for (var y = rect.top; y < rect.bottom; y++, bmp1Index += bmp1YSkip, bmp2Index += bmp2YSkip) {
-		    for (var x = 0; x < widthBytes; x++, outputIndex++, bmp1Index++, bmp2Index++) {
-	            buffer[outputIndex] = this.data[bmp1Index] ^ bmp.data[bmp2Index];
-			}
-		}
+    //
+    // Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
+    //
+    this.copyRectXOR = function(bmp, rect) {
+        rect = this.getBounds().clip(rect);
+        
+        var 
+            w = rect.getWidth(),
+            h = rect.getHeight(),
+            
+            buffer = new Uint8Array(w * h * CPColorBmp.BYTES_PER_PIXEL),
+            
+            outputIndex = 0,
+            bmp1Index = this.offsetOfPixel(rect.left, rect.top), 
+            bmp2Index = bmp.offsetOfPixel(rect.left, rect.top),
+            
+            bmp1YSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
+            bmp2YSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL,
+            
+            widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
+        
+        for (var y = rect.top; y < rect.bottom; y++, bmp1Index += bmp1YSkip, bmp2Index += bmp2YSkip) {
+            for (var x = 0; x < widthBytes; x++, outputIndex++, bmp1Index++, bmp2Index++) {
+                buffer[outputIndex] = this.data[bmp1Index] ^ bmp.data[bmp2Index];
+            }
+        }
 
-		return buffer;
-	}
+        return buffer;
+    }
 
-	this.setRectXOR = function(buffer, rect) {
-	    rect = this.getBounds().clip(rect);
+    this.setRectXOR = function(buffer, rect) {
+        rect = this.getBounds().clip(rect);
         
         var 
             w = rect.getWidth(),
@@ -122,17 +122,17 @@ export default function CPColorBmp(width, height) {
             }
             bmp1Index += bmp1YSkip;
         }
-	};
+    };
 
-	//
-	// Copy another bitmap into this one using alpha blending
-	//
-	this.pasteAlphaRect = function(bmp, srcRect, x, y) {
-		var
-		    srcRectCpy = srcRect.clone(),
-		    dstRect = new CPRect(x, y, 0, 0);
-		
-		this.getBounds().clipSourceDest(srcRectCpy, dstRect);
+    //
+    // Copy another bitmap into this one using alpha blending
+    //
+    this.pasteAlphaRect = function(bmp, srcRect, x, y) {
+        var
+            srcRectCpy = srcRect.clone(),
+            dstRect = new CPRect(x, y, 0, 0);
+        
+        this.getBounds().clipSourceDest(srcRectCpy, dstRect);
 
         var
             srcYStride = (bmp.width - dstRect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
@@ -179,10 +179,10 @@ export default function CPColorBmp(width, height) {
                 }
             }
         }
-	}
+    }
 
-	// Sets the content at the origin of this CPBitmap using a rect from another bitmap
-	this.setFromBitmapRect = function(bmp, rect) {
+    // Sets the content at the origin of this CPBitmap using a rect from another bitmap
+    this.setFromBitmapRect = function(bmp, rect) {
         var 
             w = rect.getWidth(),
             h = rect.getHeight(),
@@ -202,14 +202,14 @@ export default function CPColorBmp(width, height) {
             srcIndex += srcYSkip;
             dstIndex += dstYSkip;
         }
-	}
+    }
 
-	this.pasteBitmap = function(bmp, x, y) {
-		var
-		    srcRect = bmp.getBounds(),
-		    dstRect = new CPRect(x, y, 0, 0);
-		
-		getBounds().clipSourceDest(srcRect, dstRect);
+    this.pasteBitmap = function(bmp, x, y) {
+        var
+            srcRect = bmp.getBounds(),
+            dstRect = new CPRect(x, y, 0, 0);
+        
+        getBounds().clipSourceDest(srcRect, dstRect);
 
         var 
             w = srcRect.getWidth(),
@@ -230,13 +230,13 @@ export default function CPColorBmp(width, height) {
             srcIndex += srcYSkip;
             dstIndex += dstYSkip;
         }
-	};
+    };
 
-	//
-	// Copies the Alpha channel from another bitmap. Assumes both bitmaps are the same width.
-	//
-	this.copyAlphaFrom = function(bmp, rect) {
-	    rect = this.getBounds().clip(rect);
+    //
+    // Copies the Alpha channel from another bitmap. Assumes both bitmaps are the same width.
+    //
+    this.copyAlphaFrom = function(bmp, rect) {
+        rect = this.getBounds().clip(rect);
 
         var 
             w = rect.getWidth(),
@@ -252,46 +252,46 @@ export default function CPColorBmp(width, height) {
             }
             pixIndex += ySkip;
         }
-	};
+    };
 
-	this.copyDataFrom = function(bmp) {
-		if (bmp.width != this.width || bmp.height != this.height) {
-			this.width = bmp.width;
-			this.height = bmp.height;
-			
-			this.imageData = new ImageData(this.width, this.height);
-			this.data = this.imageData.data;
-		}
+    this.copyDataFrom = function(bmp) {
+        if (bmp.width != this.width || bmp.height != this.height) {
+            this.width = bmp.width;
+            this.height = bmp.height;
+            
+            this.imageData = new ImageData(this.width, this.height);
+            this.data = this.imageData.data;
+        }
 
-		if ("set" in this.data) {
-		    this.data.set(bmp.data);
-		} else {
-		    // IE doesn't use Uint8ClampedArray for ImageData, so set() isn't available
-		    for (var i = 0; i < this.data.length; i++) {
-		        this.data[i] = bmp.data[i];
-		    }
-		}
-	};
+        if ("set" in this.data) {
+            this.data.set(bmp.data);
+        } else {
+            // IE doesn't use Uint8ClampedArray for ImageData, so set() isn't available
+            for (var i = 0; i < this.data.length; i++) {
+                this.data[i] = bmp.data[i];
+            }
+        }
+    };
 
-	/**
-	 * Flood fill the given color starting from the given point
-	 * @param x int
-	 * @param y int
-	 * @param color int
-	 */
-	this.floodFill = function(x, y, color) {
-		if (!this.isInside(x, y)) {
-			return;
-		}
+    /**
+     * Flood fill the given color starting from the given point
+     * @param x int
+     * @param y int
+     * @param color int
+     */
+    this.floodFill = function(x, y, color) {
+        if (!this.isInside(x, y)) {
+            return;
+        }
 
-		var
-		    oldColor = this.getPixel(x, y),
-		    
-		    oldAlpha = (oldColor >> 24) & 0xFF,
-		    oldRed = (oldColor >> 16) & 0xFF,
-		    oldGreen = (oldColor >> 8) & 0xFF,
-		    oldBlue = oldColor & 0xFF,
-		    
+        var
+            oldColor = this.getPixel(x, y),
+            
+            oldAlpha = (oldColor >> 24) & 0xFF,
+            oldRed = (oldColor >> 16) & 0xFF,
+            oldGreen = (oldColor >> 8) & 0xFF,
+            oldBlue = oldColor & 0xFF,
+            
             colorAlpha = (color >> 24) & 0xFF,
             colorRed = (color >> 16) & 0xFF,
             colorGreen = (color >> 8) & 0xFF,
@@ -299,27 +299,27 @@ export default function CPColorBmp(width, height) {
             
             stack = [],
             clip = this.getBounds(),
-		    
-		    data = this.data;
-		
+            
+            data = this.data;
+        
         // Change the left and right bounds from pixel indexes into byte indexes for easy clipping
         clip.left *= CPColorBmp.BYTES_PER_PIXEL;
         clip.right *= CPColorBmp.BYTES_PER_PIXEL;
         
         stack.push({x1: x * CPColorBmp.BYTES_PER_PIXEL, x2: x * CPColorBmp.BYTES_PER_PIXEL, y: y, dy: -1});
         stack.push({x1: x * CPColorBmp.BYTES_PER_PIXEL, x2: x * CPColorBmp.BYTES_PER_PIXEL, y: y + 1, dy: 1});
-		
-		/* 
-		 * If we are filling 100% transparent areas then we need to ignore the residual color information
-		 * (it would also be possible to clear it when erasing, but then the performance impact would be on the eraser 
-		 * rather than on this low importance flood fill)
-		 */
-		if (oldAlpha == 0) {
-		    if (colorAlpha == 0) {
-		        return;
-		    }
-		    
-		    while (stack.length > 0) {
+        
+        /* 
+         * If we are filling 100% transparent areas then we need to ignore the residual color information
+         * (it would also be possible to clear it when erasing, but then the performance impact would be on the eraser 
+         * rather than on this low importance flood fill)
+         */
+        if (oldAlpha == 0) {
+            if (colorAlpha == 0) {
+                return;
+            }
+            
+            while (stack.length > 0) {
                 var
                     line = stack.pop();
         
@@ -395,72 +395,72 @@ export default function CPColorBmp(width, height) {
         
                     next = left + CPColorBmp.BYTES_PER_PIXEL;
                 } while (left <= line.x2);
-		    }
-		} else {
+            }
+        } else {
             if (color == oldColor) {
                 return;
             }
 
-    		while (stack.length > 0) {
-    			var
-    			    line = stack.pop();
+            while (stack.length > 0) {
+                var
+                    line = stack.pop();
     
-    			if (line.y < clip.top || line.y >= clip.bottom) {
-    				continue;
-    			}
+                if (line.y < clip.top || line.y >= clip.bottom) {
+                    continue;
+                }
     
-    			var
-    			    lineOffset = this.offsetOfPixel(0, line.y),
+                var
+                    lineOffset = this.offsetOfPixel(0, line.y),
     
-    			    left = line.x1, next;
-    			
-    			while (
-			        left >= clip.left 
-		            && data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
-		            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
-		            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
-		            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
-	            ) {
-    			    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
-                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
-                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
-                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
-                    
-    				left -= CPColorBmp.BYTES_PER_PIXEL;
-    			}
-    			
-    			if (left >= line.x1) {
-    				while (
-    				    left <= line.x2 
-    				    && !(
-        			        data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
-                            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
-                            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
-                            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
-                        )
-                    ) {
-    					left += CPColorBmp.BYTES_PER_PIXEL;
-    				}
-    				next = left + CPColorBmp.BYTES_PER_PIXEL;
-    				if (left > line.x2) {
-    					continue;
-    				}
-    			} else {
-    				left += CPColorBmp.BYTES_PER_PIXEL;
-    				if (left < line.x1) {
-    					stack.push({x1: left, x2: line.x1 - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
-    				}
-    				next = line.x1 + CPColorBmp.BYTES_PER_PIXEL;
-    			}
-    
-    			do {
+                    left = line.x1, next;
+                
+                while (
+                    left >= clip.left 
+                    && data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+                    && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+                    && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+                    && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                ) {
                     data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
                     data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
                     data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
                     data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
                     
-    				while (
-				        next < clip.right 
+                    left -= CPColorBmp.BYTES_PER_PIXEL;
+                }
+                
+                if (left >= line.x1) {
+                    while (
+                        left <= line.x2 
+                        && !(
+                            data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
+                            && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
+                            && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
+                            && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
+                        )
+                    ) {
+                        left += CPColorBmp.BYTES_PER_PIXEL;
+                    }
+                    next = left + CPColorBmp.BYTES_PER_PIXEL;
+                    if (left > line.x2) {
+                        continue;
+                    }
+                } else {
+                    left += CPColorBmp.BYTES_PER_PIXEL;
+                    if (left < line.x1) {
+                        stack.push({x1: left, x2: line.x1 - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+                    }
+                    next = line.x1 + CPColorBmp.BYTES_PER_PIXEL;
+                }
+    
+                do {
+                    data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] = colorRed;
+                    data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] = colorGreen;
+                    data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
+                    data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
+                    
+                    while (
+                        next < clip.right 
                         && data[next + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
                         && data[next + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
                         && data[next + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
@@ -471,42 +471,42 @@ export default function CPColorBmp(width, height) {
                         data[next + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] = colorBlue;
                         data[next + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = colorAlpha;
                         
-    					next += CPColorBmp.BYTES_PER_PIXEL;
-    				}
-    				stack.push({x1: left, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y + line.dy, dy: line.dy});
+                        next += CPColorBmp.BYTES_PER_PIXEL;
+                    }
+                    stack.push({x1: left, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y + line.dy, dy: line.dy});
     
-    				if (next - CPColorBmp.BYTES_PER_PIXEL > line.x2) {
-    					stack.push({x1: line.x2 + CPColorBmp.BYTES_PER_PIXEL, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
-    				}
+                    if (next - CPColorBmp.BYTES_PER_PIXEL > line.x2) {
+                        stack.push({x1: line.x2 + CPColorBmp.BYTES_PER_PIXEL, x2: next - CPColorBmp.BYTES_PER_PIXEL, y: line.y - line.dy, dy: -line.dy});
+                    }
     
-    				left = next + CPColorBmp.BYTES_PER_PIXEL;
-    				while (
-				        left <= line.x2 && !(
+                    left = next + CPColorBmp.BYTES_PER_PIXEL;
+                    while (
+                        left <= line.x2 && !(
                             data[left + lineOffset + CPColorBmp.RED_BYTE_OFFSET] == oldRed
                             && data[left + lineOffset + CPColorBmp.GREEN_BYTE_OFFSET] == oldGreen
                             && data[left + lineOffset + CPColorBmp.BLUE_BYTE_OFFSET] == oldBlue
                             && data[left + lineOffset + CPColorBmp.ALPHA_BYTE_OFFSET] == oldAlpha
                         )
                     ) {
-    					left += CPColorBmp.BYTES_PER_PIXEL;
-    				}
+                        left += CPColorBmp.BYTES_PER_PIXEL;
+                    }
     
-    				next = left + CPColorBmp.BYTES_PER_PIXEL;
-    			} while (left <= line.x2);
-    		}
-		}
-	};
-	
-	/**
-	 * Premultiply the RGB channels in the given R,G,B,A channel buffer with the alpha channel.
-	 * 
-	 * @param buffer R,G,B,A channel array
-	 * @param len Number of pixels in buffer to modify
-	 */
-	function multiplyAlpha(buffer, len) {
-	    var
-	        pixIndex = 0;
-	    
+                    next = left + CPColorBmp.BYTES_PER_PIXEL;
+                } while (left <= line.x2);
+            }
+        }
+    };
+    
+    /**
+     * Premultiply the RGB channels in the given R,G,B,A channel buffer with the alpha channel.
+     * 
+     * @param buffer R,G,B,A channel array
+     * @param len Number of pixels in buffer to modify
+     */
+    function multiplyAlpha(buffer, len) {
+        var
+            pixIndex = 0;
+        
         for (var i = 0; i < len; i++) {
             var
                 alpha = buffer[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
@@ -519,9 +519,9 @@ export default function CPColorBmp(width, height) {
         }
     }
 
-	/**
-	 * Inverse of multiplyAlpha()
-	 */
+    /**
+     * Inverse of multiplyAlpha()
+     */
     function separateAlpha(buffer, len) {
         var
             pixIndex = 0;
@@ -632,45 +632,45 @@ export default function CPColorBmp(width, height) {
         }
     }
     
-	this.boxBlur = function(rect, radiusX, radiusY) {
+    this.boxBlur = function(rect, radiusX, radiusY) {
         rect = this.getBounds().clip(rect);
 
-		var
-		    rectWidth = rect.getWidth(),
-		    rectWidthBytes = rectWidth * CPColorBmp.BYTES_PER_PIXEL,
-		    rectHeight = rect.getHeight(),
-		    rectLength = Math.max(rectWidth, rectHeight),
+        var
+            rectWidth = rect.getWidth(),
+            rectWidthBytes = rectWidth * CPColorBmp.BYTES_PER_PIXEL,
+            rectHeight = rect.getHeight(),
+            rectLength = Math.max(rectWidth, rectHeight),
 
-		    src = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL),
-		    dst = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL);
+            src = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL),
+            dst = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL);
 
-		for (var y = rect.top; y < rect.bottom; y++) {
-		    var
-		        pixOffset = this.offsetOfPixel(rect.left, y);
-		    
-		    for (var x = 0; x < rectWidthBytes; x++) {
-		        src[x] = this.data[pixOffset++];
-		    }
-			
-			multiplyAlpha(src, rectWidth);
-			boxBlurLine(src, dst, rectWidth, radiusX);
-			
+        for (var y = rect.top; y < rect.bottom; y++) {
+            var
+                pixOffset = this.offsetOfPixel(rect.left, y);
+            
+            for (var x = 0; x < rectWidthBytes; x++) {
+                src[x] = this.data[pixOffset++];
+            }
+            
+            multiplyAlpha(src, rectWidth);
+            boxBlurLine(src, dst, rectWidth, radiusX);
+            
             pixOffset = this.offsetOfPixel(rect.left, y);
             
             for (var x = 0; x < rectWidthBytes; x++) {
                 this.data[pixOffset++] = dst[x];
             }
-		}
-		
-		for (var x = rect.left; x < rect.right; x++) {
-			copyPixelColumnToArray(x, rect.top, rectHeight, src);
-			
-			boxBlurLine(src, dst, rectHeight, radiusY);
-			separateAlpha(dst, rectHeight);
-			
-			copyArrayToPixelColumn(x, rect.top, rectHeight, dst);
-		}
-	};
+        }
+        
+        for (var x = rect.left; x < rect.right; x++) {
+            copyPixelColumnToArray(x, rect.top, rectHeight, src);
+            
+            boxBlurLine(src, dst, rectHeight, radiusY);
+            separateAlpha(dst, rectHeight);
+            
+            copyArrayToPixelColumn(x, rect.top, rectHeight, dst);
+        }
+    };
 }
 
 CPColorBmp.BYTES_PER_PIXEL = 4;

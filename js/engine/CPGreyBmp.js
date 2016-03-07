@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -46,8 +46,8 @@ export default function CPGreyBmp(width, height, bitDepth) {
         result.data.set(this.data);
         
         return result;
-	};
-	
+    };
+    
     this.clearAll = function(value) {
         for (var i = 0; i < this.data.length; i++) {
             this.data[i] = value;
@@ -67,26 +67,26 @@ export default function CPGreyBmp(width, height, bitDepth) {
         }
     };
 
-	this.mirrorHorizontally = function() {
-		var
-		    newData = new Uint8Array(width * height);
+    this.mirrorHorizontally = function() {
+        var
+            newData = new Uint8Array(width * height);
 
-		for (var y = 0; y < height; y++) {
-			for (var x = 0; x < width; x++) {
-				newData[y * width + x] = this.data[y * width + width - x - 1];
-			}
-		}
+        for (var y = 0; y < height; y++) {
+            for (var x = 0; x < width; x++) {
+                newData[y * width + x] = this.data[y * width + width - x - 1];
+            }
+        }
 
-		this.data = newData;
-	};
+        this.data = newData;
+    };
 
-	this.applyLUT = function(lut) {
-		for (var i = 0; i < this.data.length; i++) {
-			this.data[i] = lut.table[this.data[i]];
-		}
-	};
-	
-	this.toCanvas = function() {
+    this.applyLUT = function(lut) {
+        for (var i = 0; i < this.data.length; i++) {
+            this.data[i] = lut.table[this.data[i]];
+        }
+    };
+    
+    this.toCanvas = function() {
         var
             imageData = this.toImageData(),
             
@@ -100,28 +100,28 @@ export default function CPGreyBmp(width, height, bitDepth) {
         
         return canvas;
     };
-	
-	this.toImageData = function() {
-	    var
-	        canvas = document.createElement("canvas"),
-	        context = canvas.getContext("2d"),
-	        imageData = context.createImageData(this.width, this.height),
-	        
-	        srcIndex = 0,
-	        dstIndex = 0;
-	    
-	    for (var y = 0; y < this.height; y++) {
-	        for (var x = 0; x < this.width; x++) {
-	            imageData.data[dstIndex++] = this.data[srcIndex];
-	            imageData.data[dstIndex++] = this.data[srcIndex];
-	            imageData.data[dstIndex++] = this.data[srcIndex];
-	            imageData.data[dstIndex++] = 0xFF;
-	            srcIndex++;
-	        }
-	    }
-	    
-	    return imageData;
-	};
+    
+    this.toImageData = function() {
+        var
+            canvas = document.createElement("canvas"),
+            context = canvas.getContext("2d"),
+            imageData = context.createImageData(this.width, this.height),
+            
+            srcIndex = 0,
+            dstIndex = 0;
+        
+        for (var y = 0; y < this.height; y++) {
+            for (var x = 0; x < this.width; x++) {
+                imageData.data[dstIndex++] = this.data[srcIndex];
+                imageData.data[dstIndex++] = this.data[srcIndex];
+                imageData.data[dstIndex++] = this.data[srcIndex];
+                imageData.data[dstIndex++] = 0xFF;
+                srcIndex++;
+            }
+        }
+        
+        return imageData;
+    };
 }
 
 CPGreyBmp.prototype.offsetOfPixel = function(x, y) {

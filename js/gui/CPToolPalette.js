@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -24,15 +24,15 @@ import CPPalette from './CPPalette';
 export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");
     
-	var 
-	    that = this,
+    var 
+        that = this,
 
-	    buttons = [
-	        {
-	            className: "chickenpaint-tool-rect-selection",
-	            command: "CPRectSelection",
-	            toolTip: "Marquee"
-	        },
+        buttons = [
+            {
+                className: "chickenpaint-tool-rect-selection",
+                command: "CPRectSelection",
+                toolTip: "Marquee"
+            },
             {
                 className: "chickenpaint-tool-move",
                 command: "CPMoveTool",
@@ -112,41 +112,41 @@ export default function CPToolPalette(cpController) {
             },
         ];
 
-	function buildButtons() {
-	    var
-	        body = that.getBodyElement(),
-	        listElem = document.createElement("ul");
-	    
-	    listElem.className = "chickenpaint-tools list-unstyled";
-	    
-	    for (var i in buttons) {
-	        var 
-	            button = buttons[i],
-	            buttonElem = document.createElement("li");
-	        
-	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
-	        buttonElem.setAttribute("data-buttonIndex", i);
-	        buttonElem.title = button.toolTip;
-	        
-	        if (button.selected) {
-	            buttonElem.className = buttonElem.className + " selected";
-	        }
-	        
-	        listElem.appendChild(buttonElem);
-	    }
-	    
-	    listElem.addEventListener("click", function(e) {
-	        if (e.target && e.target.nodeName == "LI") {
-	            var
-	                button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
-	            
-	            $("li", listElem).removeClass("selected");
-	            $(e.target).addClass("selected");
-	            
-	            cpController.actionPerformed({action: button.command});
-	        }
-	    });
-	    
+    function buildButtons() {
+        var
+            body = that.getBodyElement(),
+            listElem = document.createElement("ul");
+        
+        listElem.className = "chickenpaint-tools list-unstyled";
+        
+        for (var i in buttons) {
+            var 
+                button = buttons[i],
+                buttonElem = document.createElement("li");
+            
+            buttonElem.className = "chickenpaint-toolbar-button " + button.className;
+            buttonElem.setAttribute("data-buttonIndex", i);
+            buttonElem.title = button.toolTip;
+            
+            if (button.selected) {
+                buttonElem.className = buttonElem.className + " selected";
+            }
+            
+            listElem.appendChild(buttonElem);
+        }
+        
+        listElem.addEventListener("click", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                var
+                    button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
+                
+                $("li", listElem).removeClass("selected");
+                $(e.target).addClass("selected");
+                
+                cpController.actionPerformed({action: button.command});
+            }
+        });
+        
        listElem.addEventListener("dblclick", function(e) {
             if (e.target && e.target.nodeName == "LI") {
                 var
@@ -157,11 +157,11 @@ export default function CPToolPalette(cpController) {
                 }
             }
         });
-	    
-	    body.appendChild(listElem);
-	}
-	
-	buildButtons();
+        
+        body.appendChild(listElem);
+    }
+    
+    buildButtons();
 }
 
 CPToolPalette.prototype = Object.create(CPPalette.prototype);

@@ -1,18 +1,18 @@
 
 .chickenpaint {
-	/* 
-	 * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
-	 * html/body itself
-	 */
-	font-family: sans-serif;
-	-ms-text-size-adjust: 100%;
-	-webkit-text-size-adjust: 100%;
-	
-	@import (less) url("bootstrap/bootstrap.css");
-	
-	@import url("font-awesome/font-awesome.less");
-	
-	font-size:14px;
+    /* 
+     * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
+     * html/body itself
+     */
+    font-family: sans-serif;
+    -ms-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    
+    @import (less) url("bootstrap/bootstrap.css");
+    
+    @import url("font-awesome/font-awesome.less");
+    
+    font-size:14px;
 }
 
 /* Restore the hidden modal rule from Bootstrap */ 
@@ -27,57 +27,57 @@
 }
 
 .chickenpaint-main-section {
-	position:relative;
+    position:relative;
 }
 
 .chickenpaint canvas {
-	display:block;
+    display:block;
 }
 
 .chickenpaint-canvas {
-	width:100%;
-	height:700px;
-	touch-action:none;
+    width:100%;
+    height:700px;
+    touch-action:none;
 }
 .chickenpaint-canvas[data-cursor="grabbing"] {
-	cursor:-webkit-grabbing;
-	cursor:grabbing;
+    cursor:-webkit-grabbing;
+    cursor:grabbing;
 }
 .chickenpaint-canvas[data-cursor="crosshair"] {
-	cursor:crosshair;
+    cursor:crosshair;
 }
 
 .chickenpaint-palettes {
-	position:absolute;
-	top:0;
-	left:0;
+    position:absolute;
+    top:0;
+    left:0;
 }
 .chickenpaint-palette {
-	background-color:#fbfbfb;
+    background-color:#fbfbfb;
     border: 1px solid #ddd;
-	border-top-left-radius: 4px;
-	border-top-right-radius: 4px;
-	display:inline-flex;
-	flex-direction:column;
-	position:absolute;
-	
-	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    display:inline-flex;
+    flex-direction:column;
+    position:absolute;
+    
+    -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
     box-shadow: 0 1px 1px rgba(0,0,0,.05);
 }
 .chickenpaint-palette-head {
-	background-color:#ececec;
-	color:#333;
-	padding:6px;
-	padding-bottom:4px;
+    background-color:#ececec;
+    color:#333;
+    padding:6px;
+    padding-bottom:4px;
 
-	cursor:default; /* No text selection cursor on palette titles */
-	
+    cursor:default; /* No text selection cursor on palette titles */
+    
     border-bottom: 1px solid #ddd;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
 }
 .chickenpaint-palette-head h4 {
-	font-size:110%;
+    font-size:110%;
 }
 
 .chickenpaint {
@@ -89,132 +89,132 @@
 }
 
 .chickenpaint-tools {
-	width:80px;
-	text-align:center;
-	line-height:0;
-	margin-bottom:0 !important;
+    width:80px;
+    text-align:center;
+    line-height:0;
+    margin-bottom:0 !important;
 }
 .chickenpaint-misc-tools,
 .chickenpaint-stroke-tools {
-	display:flex;
-	line-height:0;
-	padding:0;
-	margin-bottom:0 !important;
+    display:flex;
+    line-height:0;
+    padding:0;
+    margin-bottom:0 !important;
 }
 
 .chickenpaint-toolbar-button {
-	display:inline-block;
-	width:34px; /* 32 + 2 pixels for the borders */
-	height:34px; 
-	background-color:white;
-	border:1px solid black;
-	border-radius:3px;
-	margin:2px;
-	background-image:url(../icons.png);
-	background-repeat:no-repeat;
+    display:inline-block;
+    width:34px; /* 32 + 2 pixels for the borders */
+    height:34px; 
+    background-color:white;
+    border:1px solid black;
+    border-radius:3px;
+    margin:2px;
+    background-image:url(../icons.png);
+    background-repeat:no-repeat;
 }
 .chickenpaint-small-toolbar-button {
-	display:inline-block;
-	width:18px; /* 16 + 2 pixels for the borders */
-	height:18px; 
-	background-color:white;
-	border:1px solid black;
-	border-radius:3px;
-	margin:2px;
-	background-image:url(../smallicons.png);
-	background-repeat:no-repeat;
+    display:inline-block;
+    width:18px; /* 16 + 2 pixels for the borders */
+    height:18px; 
+    background-color:white;
+    border:1px solid black;
+    border-radius:3px;
+    margin:2px;
+    background-image:url(../smallicons.png);
+    background-repeat:no-repeat;
 }
 .chickenpaint-toolbar-button:hover,
 .chickenpaint-small-toolbar-button:hover {
-	border:1px solid yellow;
+    border:1px solid yellow;
 }
 .chickenpaint-toolbar-button.selected,
 .chickenpaint-small-toolbar-button.selected {
-	border:1px solid red;
+    border:1px solid red;
 }
 
 .chickenpaint-tool-move {
-	background-position:0 -32px;
+    background-position:0 -32px;
 }
 .chickenpaint-tool-flood-fill {
-	background-position:0 -64px;
+    background-position:0 -64px;
 }
 .chickenpaint-tool-rotate-canvas {
-	background-position:0 -928px;
+    background-position:0 -928px;
 }
 .chickenpaint-tool-pencil {
-	background-position:0 -160px;
+    background-position:0 -160px;
 }
 .chickenpaint-tool-pen {
-	background-position:0 -192px;
+    background-position:0 -192px;
 }
 .chickenpaint-tool-airbrush {
-	background-position:0 -224px;
+    background-position:0 -224px;
 }
 .chickenpaint-tool-water {
-	background-position:0 -576px;
+    background-position:0 -576px;
 }
 .chickenpaint-tool-eraser {
-	background-position:0 -256px;
+    background-position:0 -256px;
 }
 .chickenpaint-tool-soft-eraser {
-	background-position:0 -288px;
+    background-position:0 -288px;
 }
 .chickenpaint-tool-smudge {
-	background-position:0 -768px;
+    background-position:0 -768px;
 }
 .chickenpaint-tool-blender {
-	background-position:0 -896px;
+    background-position:0 -896px;
 }
 .chickenpaint-tool-dodge {
-	background-position:0 -512px;
+    background-position:0 -512px;
 }
 .chickenpaint-tool-burn {
-	background-position:0 -544px;
+    background-position:0 -544px;
 }
 .chickenpaint-tool-blur {
-	background-position:0 -736px;
+    background-position:0 -736px;
 }
 .chickenpaint-tool-color-picker {
-	background-position:0 -960px;
+    background-position:0 -960px;
 }
 
 .chickenpaint-tool-zoom-in {
-	background-position:0 -416px;
+    background-position:0 -416px;
 }
 .chickenpaint-tool-zoom-out {
-	background-position:0 -448px;
+    background-position:0 -448px;
 }
 .chickenpaint-tool-zoom-100 {
-	background-position:0 -480px;
+    background-position:0 -480px;
 }
 .chickenpaint-tool-undo {
-	background-position:0 -320px;
-	margin-left:8px;
+    background-position:0 -320px;
+    margin-left:8px;
 }
 .chickenpaint-tool-redo {
-	background-position:0 -352px;
-	margin-right:8px;
+    background-position:0 -352px;
+    margin-right:8px;
 }
 .chickenpaint-tool-send {
-	background-position:0 -384px;
+    background-position:0 -384px;
 }
 
 .chickenpaint-tool-freehand {
-	background-position:0 -608px;
+    background-position:0 -608px;
 }
 .chickenpaint-tool-line {
-	background-position:0 -640px;
+    background-position:0 -640px;
 }
 .chickenpaint-tool-bezier {
-	background-position:0 -704px;
+    background-position:0 -704px;
 }
 
 .chickenpaint-add-layer {
-	background-position:0 0;
+    background-position:0 0;
 }
 .chickenpaint-remove-layer {
-	background-position:0 -16px;
+    background-position:0 -16px;
 }
 
 .chickenpaint-colorpicker-show {
@@ -222,10 +222,10 @@
     margin-top:4px;
 }
 .chickenpaint-colorpicker-select {
-	margin-right:4px;
+    margin-right:4px;
 }
 .chickenpaint-colorpicker-top {
-	display:flex;
+    display:flex;
 }
 
 .chickenpaint-colorpicker-top {
@@ -257,7 +257,7 @@
     height:100%;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > * {
-	flex-shrink:0;
+    flex-shrink:0;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > .chickenpaint-layers-widget {
     flex-grow:1;
@@ -265,10 +265,10 @@
     overflow-y:auto;
 }
 .chickenpaint-layers-widget canvas {
-	width:100%;
+    width:100%;
 }
 .chickenpaint-layer-add-remove {
-	margin-bottom: 0;
+    margin-bottom: 0;
 }
 .chickenpaint-palette-layers .chickenpaint-slider {
     margin-top:5px;
@@ -278,16 +278,16 @@
 }
 
 .chickenpaint .nav a.selected::before {
-	content: "\e013";
-	position:absolute;
-	left: 5px;
-	font-size:12px;
-	font-family: 'Glyphicons Halflings';
-	font-style: normal;
-	font-weight: 400;
-	line-height: 19px;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+    content: "\e013";
+    position:absolute;
+    left: 5px;
+    font-size:12px;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: 400;
+    line-height: 19px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .chickenpaint-palette-textures .chickenpaint-palette-body {
@@ -295,63 +295,63 @@
     flex-direction:row;
 }
 .chickenpaint-texture-swatches {
-	flex-grow: 1;
-	line-height:0;
-	overflow-y:auto;
+    flex-grow: 1;
+    line-height:0;
+    overflow-y:auto;
 }
 .chickenpaint-texture-swatches canvas {
-	display: inline-block;
-	margin: 3px;
-	cursor: pointer;
-	border:2px solid rgba(255, 255, 255, 0.5);
+    display: inline-block;
+    margin: 3px;
+    cursor: pointer;
+    border:2px solid rgba(255, 255, 255, 0.5);
     box-shadow:0 0 1px rgba(0, 0, 0, 0.3);
 }
 .chickenpaint-texture-options {
-	text-align:center;
-	padding:4px;
+    text-align:center;
+    padding:4px;
 }
 .chickenpaint-texture-options > canvas {
     margin:0 auto 3px auto;
     border: 1px solid black;
 }
 .chickenpaint-texture-options .popover {
-	background-color:#f4f4f4
+    background-color:#f4f4f4
 }
 .chickenpaint-texture-options .popover canvas {
-	margin-bottom:7px;
-	box-shadow:0 0 3px rgba(0, 0, 0, 0.4);
+    margin-bottom:7px;
+    box-shadow:0 0 3px rgba(0, 0, 0, 0.4);
 }
 
 .chickenpaint-palette-swatches .chickenpaint-palette-body {
-	display:flex;
-	flex-direction:row;
-	position:relative;
+    display:flex;
+    flex-direction:row;
+    position:relative;
 }
 .chickenpaint-color-swatches {
-	margin-bottom:0 !important;
-	display:flex;
-	flex-direction:row;
-	flex-wrap:wrap;
-	align-items:flex-start;
-	align-content:flex-start;
-	overflow-y:auto;
-	width:130px;
+    margin-bottom:0 !important;
+    display:flex;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    align-content:flex-start;
+    overflow-y:auto;
+    width:130px;
 }
 .chickenpaint-color-swatch-wrapper {
-	margin:1px;
+    margin:1px;
 }
 .chickenpaint-color-swatch {
-	width:16px;
-	height:16px;
-	border:1px solid black;
-	display:block;
+    width:16px;
+    height:16px;
+    border:1px solid black;
+    display:block;
 }
 
 .chickenpaint-color-swatch-add {
-	background-position:0 0;
+    background-position:0 0;
 }
 .chickenpaint-color-swatch-settings {
-	background-position:0 -32px;
+    background-position:0 -32px;
 }
 
 .chickenpaint-color-swatches-buttons .chickenpaint-small-toolbar-button {
@@ -359,16 +359,16 @@
 }
 
 .chickenpaint-supported-browser {
-	display: inline-block;
-	margin-right: 1em;
-	margin-bottom: 1em;
-	margin-top: 0.5em;
-	text-align: center;
+    display: inline-block;
+    margin-right: 1em;
+    margin-bottom: 1em;
+    margin-top: 0.5em;
+    text-align: center;
 }
 .chickenpaint-supported-browser span {
-	font-size: 25px !important;
-	margin-right: 5px;
-	vertical-align:middle;
+    font-size: 25px !important;
+    margin-right: 5px;
+    vertical-align:middle;
 }
 .not-supported .chickenpaint-not-installed,
 .supported .chickenpaint-not-installed,
@@ -378,9 +378,9 @@
 }
 .not-supported .chickenpaint-not-supported,
 .supported .chickenpaint-supported {
-	display:block;
+    display:block;
 }
 .chickenpaint-tablet-support {
-	margin-top:1em;
-	margin-bottom:3em;
+    margin-top:1em;
+    margin-bottom:3em;
 }

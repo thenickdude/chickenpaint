@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -36,14 +36,14 @@ export default function CPSlider(minValue, maxValue, centerMode) {
     
     centerMode = centerMode || false;
 
-	function paint() {
-	    var
-	        width = canvas.width,
-	        height = canvas.height,
+    function paint() {
+        var
+            width = canvas.width,
+            height = canvas.height,
             textX = 2 * window.devicePixelRatio,
             textY = canvas.height * 0.75;
 
-		if (centerMode) {
+        if (centerMode) {
             canvasContext.save();
             
             canvasContext.fillStyle = 'white';
@@ -55,60 +55,60 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             canvasContext.fillText(that.title, textX, textY);
             canvasContext.beginPath();
             
-		    if (that.value >= valueRange / 2) {
-				canvasContext.rect(width / 2, 0, (that.value - valueRange / 2) * width / valueRange, height);
-			} else {
-			    canvasContext.rect(that.value * width / valueRange, 0, (valueRange / 2 - that.value) * width / valueRange, height);
-			}
-		    
+            if (that.value >= valueRange / 2) {
+                canvasContext.rect(width / 2, 0, (that.value - valueRange / 2) * width / valueRange, height);
+            } else {
+                canvasContext.rect(that.value * width / valueRange, 0, (valueRange / 2 - that.value) * width / valueRange, height);
+            }
+            
             canvasContext.fill();
             canvasContext.clip();
             
             canvasContext.fillStyle = 'white';
             canvasContext.fillText(that.title, textX, textY);
-		    
-		    canvasContext.restore();
-		} else {
-	        canvasContext.save();
-	        canvasContext.save();
-		    
+            
+            canvasContext.restore();
+        } else {
+            canvasContext.save();
+            canvasContext.save();
+            
             canvasContext.fillStyle = 'black';
 
-		    canvasContext.beginPath();
-		    canvasContext.rect(0, 0, that.value * width / valueRange, height);
-		    canvasContext.fill();
-		    
-		    canvasContext.clip();
-		    
-		    canvasContext.fillStyle = 'white';
-			canvasContext.fillText(that.title, textX, textY);
-			
-			// Remove the clip region
-			canvasContext.restore();
-			
-		    canvasContext.fillStyle = 'white';
-
-			canvasContext.beginPath();
-			canvasContext.rect(that.value * width / valueRange, 0, width, height);
-			canvasContext.fill();
-			
-			canvasContext.clip();
-			
-	        canvasContext.fillStyle = 'black';
+            canvasContext.beginPath();
+            canvasContext.rect(0, 0, that.value * width / valueRange, height);
+            canvasContext.fill();
+            
+            canvasContext.clip();
+            
+            canvasContext.fillStyle = 'white';
             canvasContext.fillText(that.title, textX, textY);
-			
-	        canvasContext.restore();
-		}
-	}
+            
+            // Remove the clip region
+            canvasContext.restore();
+            
+            canvasContext.fillStyle = 'white';
 
-	function mouseSelect(e) {
-		var 
-		    width = $(canvas).width(),
-		    left = $(canvas).offset().left;
+            canvasContext.beginPath();
+            canvasContext.rect(that.value * width / valueRange, 0, width, height);
+            canvasContext.fill();
+            
+            canvasContext.clip();
+            
+            canvasContext.fillStyle = 'black';
+            canvasContext.fillText(that.title, textX, textY);
+            
+            canvasContext.restore();
+        }
+    }
 
-		that.setValue((e.pageX - left) * valueRange / width);
-	}
-		
+    function mouseSelect(e) {
+        var 
+            width = $(canvas).width(),
+            left = $(canvas).offset().left;
+
+        that.setValue((e.pageX - left) * valueRange / width);
+    }
+        
     function mouseDragged(e) {
         if (dragNormal) {
             mouseSelect(e);
@@ -172,37 +172,37 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         
         paint();
     };
-	
-	canvas.addEventListener("mousedown", function(e) {
-		var 
-		    dragging = dragNormal || dragPrecise;
-		
-		if (!dragging) {
-    		switch (e.button) {
-    		    case 0: // Left
-        			dragNormal = true;
-        			mouseSelect(e);
-        		break;
-    		    case 2: // Right
-        			dragPrecise = true;
-        			dragPreciseX = e.pageX;
-        		break;
-        		default:
-        		    return;
-    		}
-    		
-    		window.addEventListener("mouseup", mouseUp);
-    		window.addEventListener("mousemove", mouseDragged);
-		}
-	});
-	
-	canvas.addEventListener("contextmenu", function(e) {
-	    e.preventDefault()
-	});;
-	
-	canvas.className = 'chickenpaint-slider';
-	
-	this.resize();
+    
+    canvas.addEventListener("mousedown", function(e) {
+        var 
+            dragging = dragNormal || dragPrecise;
+        
+        if (!dragging) {
+            switch (e.button) {
+                case 0: // Left
+                    dragNormal = true;
+                    mouseSelect(e);
+                break;
+                case 2: // Right
+                    dragPrecise = true;
+                    dragPreciseX = e.pageX;
+                break;
+                default:
+                    return;
+            }
+            
+            window.addEventListener("mouseup", mouseUp);
+            window.addEventListener("mousemove", mouseDragged);
+        }
+    });
+    
+    canvas.addEventListener("contextmenu", function(e) {
+        e.preventDefault()
+    });;
+    
+    canvas.className = 'chickenpaint-slider';
+    
+    this.resize();
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);

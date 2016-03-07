@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -26,16 +26,16 @@ import CPBrushInfo from '../engine/CPBrushInfo';
 export default function CPStrokePalette(cpController) {
     CPPalette.call(this, cpController, "stroke", "Stroke");
     
-	var 
-	    that = this,
+    var 
+        that = this,
 
-	    buttons = [
-	        {
-	            className: "chickenpaint-tool-freehand",
-	            command: "CPFreeHand",
-	            toolTip: "Free-hand",
-	            selected: true
-	        },
+        buttons = [
+            {
+                className: "chickenpaint-tool-freehand",
+                command: "CPFreeHand",
+                toolTip: "Free-hand",
+                selected: true
+            },
             {
                 className: "chickenpaint-tool-line",
                 command: "CPLine",
@@ -48,50 +48,50 @@ export default function CPStrokePalette(cpController) {
             }
         ];
 
-	function buildButtons() {
-	    var
-	        body = that.getBodyElement(),
-	        listElem = document.createElement("ul");
-	    
-	    listElem.className = "chickenpaint-stroke-tools list-unstyled";
-	    
-	    for (var i in buttons) {
-	        var 
-	            button = buttons[i],
-	            buttonElem = document.createElement("li");
-	        
-	        buttonElem.className = "chickenpaint-toolbar-button " + button.className;
-	        buttonElem.setAttribute("data-buttonIndex", i);
-	        
+    function buildButtons() {
+        var
+            body = that.getBodyElement(),
+            listElem = document.createElement("ul");
+        
+        listElem.className = "chickenpaint-stroke-tools list-unstyled";
+        
+        for (var i in buttons) {
+            var 
+                button = buttons[i],
+                buttonElem = document.createElement("li");
+            
+            buttonElem.className = "chickenpaint-toolbar-button " + button.className;
+            buttonElem.setAttribute("data-buttonIndex", i);
+            
             if (button.selected) {
                 buttonElem.className = buttonElem.className + " selected";
             }
-	        
-	        listElem.appendChild(buttonElem);
-	    }
-	    
-	    listElem.addEventListener("click", function(e) {
-	        if (e.target && e.target.nodeName == "LI") {
-	            var
-	                button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
-	            
-	            $("li", listElem).removeClass("selected");
-	            $(e.target).addClass("selected");
-	            
-	            cpController.actionPerformed({action: button.command});
-	        }
-	    });
-	    
-	    body.appendChild(listElem);
-	}
-	
-	buildButtons();
-	
-	cpController.on("toolChange", function(tool, toolInfo) {
-	    $("chickenpaint-tool-freehand").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_FREEHAND);
-	    $("chickenpaint-tool-line").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_LINE);
-	    $("chickenpaint-tool-bezier").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_BEZIER);
-	});
+            
+            listElem.appendChild(buttonElem);
+        }
+        
+        listElem.addEventListener("click", function(e) {
+            if (e.target && e.target.nodeName == "LI") {
+                var
+                    button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
+                
+                $("li", listElem).removeClass("selected");
+                $(e.target).addClass("selected");
+                
+                cpController.actionPerformed({action: button.command});
+            }
+        });
+        
+        body.appendChild(listElem);
+    }
+    
+    buildButtons();
+    
+    cpController.on("toolChange", function(tool, toolInfo) {
+        $("chickenpaint-tool-freehand").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_FREEHAND);
+        $("chickenpaint-tool-line").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_LINE);
+        $("chickenpaint-tool-bezier").toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_BEZIER);
+    });
 }
 
 CPStrokePalette.prototype = Object.create(CPPalette.prototype);

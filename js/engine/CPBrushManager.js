@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -38,12 +38,12 @@ export default function CPBrushManager() {
         brush = new Uint8Array(201 * 201),
         brushAA = new Uint8Array(202 * 202),
 
-	    cacheBrush = null,
-	    cacheSize, cacheSqueeze, cacheAngle,
-	    cacheType,
+        cacheBrush = null,
+        cacheSize, cacheSqueeze, cacheAngle,
+        cacheType,
 
-	    texture, // A CPGreyBmp
-	    that = this; 
+        texture, // A CPGreyBmp
+        that = this; 
 
     function getBrushWithAA(brushInfo, dx, dy) {
         var
@@ -356,62 +356,62 @@ export default function CPBrushManager() {
     /**
      * brushInfo - a CPBrushInfo object
      */
-	this.getDab = function(x, y, brushInfo) {
-		var 
-		    dab = {
-		        alpha: brushInfo.curAlpha,
-		        width: Math.ceil(brushInfo.curSize),
-		        height: Math.ceil(brushInfo.curSize)
-		    };
+    this.getDab = function(x, y, brushInfo) {
+        var 
+            dab = {
+                alpha: brushInfo.curAlpha,
+                width: Math.ceil(brushInfo.curSize),
+                height: Math.ceil(brushInfo.curSize)
+            };
 
-		// FIXME: I don't like this special case for ROUND_PIXEL
-		// it would be better to have brush presets for working with pixels
-		var useAA = brushInfo.isAA && brushInfo.type != CPBrushInfo.B_ROUND_PIXEL;
+        // FIXME: I don't like this special case for ROUND_PIXEL
+        // it would be better to have brush presets for working with pixels
+        var useAA = brushInfo.isAA && brushInfo.type != CPBrushInfo.B_ROUND_PIXEL;
 
-		if (useAA) {
-			dab.width++;
-			dab.height++;
-		}
+        if (useAA) {
+            dab.width++;
+            dab.height++;
+        }
 
-		var
-		    nx = x - dab.width / 2.0 + 0.5,
-		    ny = y - dab.height / 2.0 + 0.5;
+        var
+            nx = x - dab.width / 2.0 + 0.5,
+            ny = y - dab.height / 2.0 + 0.5;
 
-		// this is necessary as Java uses convert towards zero float to int conversion
-		if (nx < 0) {
-			nx -= 1;
-		}
-		if (ny < 0) {
-			ny -= 1;
-		}
+        // this is necessary as Java uses convert towards zero float to int conversion
+        if (nx < 0) {
+            nx -= 1;
+        }
+        if (ny < 0) {
+            ny -= 1;
+        }
 
-		if (useAA) {
-			var
-			    dx = Math.abs(nx - ~~nx),
-			    dy = Math.abs(ny - ~~ny);
-			
-			dab.brush = getBrushWithAA(brushInfo, dx, dy);
-		} else {
-			dab.brush = getBrush(brushInfo);
-		}
+        if (useAA) {
+            var
+                dx = Math.abs(nx - ~~nx),
+                dy = Math.abs(ny - ~~ny);
+            
+            dab.brush = getBrushWithAA(brushInfo, dx, dy);
+        } else {
+            dab.brush = getBrush(brushInfo);
+        }
 
-		dab.x = ~~nx;
-		dab.y = ~~ny;
+        dab.x = ~~nx;
+        dab.y = ~~ny;
 
-		if (brushInfo.texture > 0.0 && this.texture != null) {
-			// we need a brush bitmap that can be modified everytime
-			// the one in "brush" can be kept in cache so if we are using it, make a copy
-			if (dab.brush == brush) {
-			    brushAA.set(brush);
-				dab.brush = brushAA;
-			}
-			applyTexture(dab, brushInfo.texture);
-		}
-		
-		return dab;
-	}
+        if (brushInfo.texture > 0.0 && this.texture != null) {
+            // we need a brush bitmap that can be modified everytime
+            // the one in "brush" can be kept in cache so if we are using it, make a copy
+            if (dab.brush == brush) {
+                brushAA.set(brush);
+                dab.brush = brushAA;
+            }
+            applyTexture(dab, brushInfo.texture);
+        }
+        
+        return dab;
+    }
 
-	this.setTexture = function(texture) {
-		this.texture = texture;
-	}
+    this.setTexture = function(texture) {
+        this.texture = texture;
+    }
 }

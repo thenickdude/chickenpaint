@@ -1,5 +1,5 @@
 /*
-	ChibiPaint
+    ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
 
     This file is part of ChibiPaint.
@@ -23,13 +23,13 @@ export default function CPColor(rgb) {
     var
         that = this;
     
-	this.rgb = 0; // in RGB byte order
-	
-	this.hue = 0;
-	this.saturation = 0;
-	this.value = 0;
-	
-	function rgbToHsv() {
+    this.rgb = 0; // in RGB byte order
+    
+    this.hue = 0;
+    this.saturation = 0;
+    this.value = 0;
+    
+    function rgbToHsv() {
         var
             r = (that.rgb >> 16) & 0xff,
             g = (that.rgb >> 8) & 0xff,
@@ -140,54 +140,54 @@ export default function CPColor(rgb) {
     this.setRgbComponents = function(r, g, b) {
         this.setRgb((r << 16) | (g << 8) | b);
     }
-	
-	this.setRgb = function(rgb) {
-		this.rgb = rgb;
-		rgbToHsv();
-	};
+    
+    this.setRgb = function(rgb) {
+        this.rgb = rgb;
+        rgbToHsv();
+    };
 
-	this.setHsv = function(hue, value, saturation) {
-		this.hue = hue;
-		this.saturation = saturation;
-		this.value = value;
+    this.setHsv = function(hue, value, saturation) {
+        this.hue = hue;
+        this.saturation = saturation;
+        this.value = value;
 
-		hsvToRgb();
-	};
+        hsvToRgb();
+    };
 
-	this.setHue = function(hue) {
-		this.hue = hue;
-		hsvToRgb();
-	};
+    this.setHue = function(hue) {
+        this.hue = hue;
+        hsvToRgb();
+    };
 
-	this.setSaturation = function(saturation) {
-		this.saturation = saturation;
-		hsvToRgb();
-	};
+    this.setSaturation = function(saturation) {
+        this.saturation = saturation;
+        hsvToRgb();
+    };
 
-	this.setValue = function(value) {
-		this.value = value;
-		hsvToRgb();
-	};
+    this.setValue = function(value) {
+        this.value = value;
+        hsvToRgb();
+    };
 
-	this.clone = function() {
-	    var 
-	        result = new CPColor();
-	    
-	    result.copyFrom(this);
-	    
-	    return result;
-	};
+    this.clone = function() {
+        var 
+            result = new CPColor();
+        
+        result.copyFrom(this);
+        
+        return result;
+    };
 
-	this.copyFrom = function(c) {
-		this.rgb = c.rgb;
-		this.hue = c.hue;
-		this.saturation = c.saturation;
-		this.value = c.value;
-	};
+    this.copyFrom = function(c) {
+        this.rgb = c.rgb;
+        this.hue = c.hue;
+        this.saturation = c.saturation;
+        this.value = c.value;
+    };
 
-	this.isEqual = function(color) {
-		return this.rgb == color.rgb && this.hue == color.hue && this.saturation == color.saturation && this.value == color.value;
-	};
-	
+    this.isEqual = function(color) {
+        return this.rgb == color.rgb && this.hue == color.hue && this.saturation == color.saturation && this.value == color.value;
+    };
+    
     this.setRgb(rgb || 0);
 }
