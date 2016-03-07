@@ -23,21 +23,24 @@
 export default function CPAboutDialog(parent) {
     var
         dialog = $(`
-            <div class="modal fade" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-lg">
+            <div class="modal fade chickenpaint-about-dialog" tabindex="-1" role="dialog">
+                <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">ChickenPaint by Nicholas Sherlock / Chicken Smoothie</h4>
+                            <h4 class="modal-title">About ChickenPaint</h4>
                         </div>
                         <div class="modal-body">
+                            <a class="chickenpaint-on-github" target="_blank" href="https://github.com/thenickdude/chickenpaint"><span class="fa fa-github"></span> ChickenPaint on GitHub</a>
+                            
                             <p>
-                                ChickenPaint is a translation of <a href="http://www.chibipaint.com/" target="_blank">ChibiPaint</a> from Java to JavaScript.<br>
+                                ChickenPaint is a translation of <a href="http://www.chibipaint.com/" target="_blank">ChibiPaint</a>
+                                from Java to JavaScript by Nicholas Sherlock / Chicken Smoothie
                             </p>
                             <p>
-                                ChibiPaint is Copyright (c) 2006-2008 Marc Schefer. All Rights Reserved.<br>
+                                ChibiPaint is Copyright (c) 2006-2008 Marc Schefer. All Rights Reserved
                             </p>
                             <p>
                                 ChickenPaint is free software: you can redistribute it and/or modify
@@ -52,12 +55,8 @@ export default function CPAboutDialog(parent) {
                                 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
                                 <a target="_blank" href="http://www.gnu.org/licenses/">GNU General Public License</a> for more details.
                             </p>
-                            
-                            <p>
-                                You can <a target="_blank" href="http://github.com/">download the sourcecode for ChickenPaint here.</a>
-                            </p>
         
-                            <pre class="pre-scrollable">Includes icons from the <a href="http://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
+                            <pre class="pre-scrollable chickenpaint-third-party-licenses">Includes icons from the <a href="http://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
                     
 Includes the <a target="_blank" href="https://github.com/eligrey/FileSaver.js">FileSaver.js library</a>
                     

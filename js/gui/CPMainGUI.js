@@ -388,7 +388,7 @@ export default function CPMainGUI(controller, uiElem) {
                     mnemonic: "H",
                     children: [
                         {
-                            name: "Tablet support...",
+                            name: "Tablet support",
                             mnemonic: "T",
                             action: "CPTabletSupport",
                             title: "Help with getting a drawing tablet working"
