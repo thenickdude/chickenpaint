@@ -1,5 +1,15 @@
-function CPArtwork(_width, _height) {
-    "use strict";
+import CPLayer from "./CPLayer";
+import CPGreyBmp from "./CPGreyBmp";
+import CPColorBmp from "./CPColorBmp";
+import CPBrushManager from "./CPBrushManager";
+import CPBrushInfo from "./CPBrushInfo";
+import CPUndo from "./CPUndo";
+
+import CPColorFloat from "../util/CPColorFloat";
+import CPRect from "../util/CPRect";
+import CPRandom from "../util/CPRandom";
+
+export default function CPArtwork(_width, _height) {
     
     _width = _width | 0;
     _height = _height | 0;
@@ -782,18 +792,18 @@ function CPArtwork(_width, _height) {
             x = x | 0;
             y = y | 0;
 
-            samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, y)));
+            samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, y)));
 
             for (var r = 0.25; r < 1.001; r += .25) {
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * dx), y)));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * dx), y)));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, ~~(y + r * dy))));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(x, ~~(y - r * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * dx), y)));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * dx), y)));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, ~~(y + r * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, ~~(y - r * dy))));
 
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(createCPColorFloatFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
             }
 
             var
@@ -902,7 +912,7 @@ function CPArtwork(_width, _height) {
             wcColor.b /= previousSamples.length;
 
             // resaturation
-            wcColor.mixWith(createCPColorFloatFromInt(curColor), curBrush.resat * curBrush.resat);
+            wcColor.mixWith(CPColorFloat.createFromInt(curColor), curBrush.resat * curBrush.resat);
 
             var
                 newColor = wcColor.toInt();

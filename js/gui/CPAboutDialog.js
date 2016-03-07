@@ -1,4 +1,4 @@
-function CPAboutDialog(parent) {
+export default function CPAboutDialog(parent) {
     var
         dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">

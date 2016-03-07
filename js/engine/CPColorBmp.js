@@ -18,14 +18,14 @@
     along with ChibiPaint. If not, see <http://www.gnu.org/licenses/>.
 
  */
+import CPBitmap from "./CPBitmap";
+import CPRect from "../util/CPRect";
 
 //
 // A 32bpp bitmap class (one byte per channel in RGBA order)
 //
 
-function CPColorBmp(width, height) {
-    "use strict";
-    
+export default function CPColorBmp(width, height) {
     CPBitmap.call(this, width, height);
     
     function createImageData(width, height) {

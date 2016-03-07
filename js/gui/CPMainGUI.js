@@ -1,6 +1,7 @@
-"use strict";
+import CPCanvas from "./CPCanvas";
+import CPPaletteManager from "./CPPaletteManager";
 
-function CPMainGUI(controller, uiElem) {
+export default function CPMainGUI(controller, uiElem) {
     var
         lowerArea = document.createElement("div"),
         canvas = new CPCanvas(controller),

@@ -19,7 +19,7 @@
 
  */
 
-function CPSlider(minValue, maxValue, centerMode) {
+export default function CPSlider(minValue, maxValue, centerMode) {
     var 
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),

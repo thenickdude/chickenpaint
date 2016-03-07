@@ -19,9 +19,9 @@
 
  */
 
-function CPMiscPalette(cpController) {
-    "use strict";
-    
+import CPPalette from './CPPalette';
+
+export default function CPMiscPalette(cpController) {
     CPPalette.call(this, cpController, "misc", "Misc");
     
 	var 

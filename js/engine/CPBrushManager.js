@@ -19,9 +19,9 @@
 
  */
 
-function CPBrushManager() {
-    "use strict";
-    
+import CPBrushInfo from "./CPBrushInfo";
+
+export default function CPBrushManager() {
     var 
         MAX_SQUEEZE = 10;
     

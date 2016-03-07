@@ -1,6 +1,4 @@
-"use strict";
-
-function CPCheckBox(state, title) {
+export default function CPCheckbox(state, title) {
     var
         canvas = document.createElement('canvas'),
         canvasContext = canvas.getContext('2d'),
@@ -56,5 +54,5 @@ function CPCheckBox(state, title) {
     paint();
 };
 
-CPCheckBox.prototype = Object.create(EventEmitter.prototype);
-CPCheckBox.prototype.constructor = CPCheckBox;
+CPCheckbox.prototype = Object.create(EventEmitter.prototype);
+CPCheckbox.prototype.constructor = CPCheckbox;

@@ -1,5 +1,3 @@
-"use strict";
-
 /*
     ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
@@ -21,7 +19,10 @@
 
  */
 
-function CPLayersPalette(controller) {
+import CPPalette from "./CPPalette";
+import CPSlider from "./CPSlider";
+
+export default function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers");
     
     var

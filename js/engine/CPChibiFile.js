@@ -1,6 +1,11 @@
 "use strict"
 
-function CPChibiFile() {
+import CPArtwork from "./CPArtwork";
+import CPLayer from "./CPLayer";
+import CPColorBmp from "./CPColorBmp";
+import ArrayDataStream from "../util/ArrayDataStream";
+
+export default function CPChibiFile() {
     
     function CPChibiHeader(stream, chunk) {
         this.version = stream.readU32BE();

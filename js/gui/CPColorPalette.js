@@ -19,9 +19,13 @@
 
  */
 
-function CPColorPalette(cpController) {
-    "use strict";
-    
+import CPPalette from './CPPalette';
+
+import CPColor from "../util/CPColor";
+
+import CPColorBmp from "../engine/CPColorBmp";
+
+export default function CPColorPalette(cpController) {
     CPPalette.call(this, cpController, "color", "Color");
     
     var 
@@ -42,8 +46,6 @@ function CPColorPalette(cpController) {
 }
 
 function CPColorSelect(cpController) {
-    "use strict";
-
     var 
         w = 128, h = 128,
         
@@ -167,8 +169,6 @@ function CPColorSelect(cpController) {
 }
 
 function CPColorSlider(cpController, selecter) {
-    "use strict";
-
     var 
         that = this,
         
@@ -284,8 +284,6 @@ function CPColorSlider(cpController, selecter) {
 }
 
 function CPColorShow(cpController) {
-    "use strict";
-    
     var
         color = 0,
         

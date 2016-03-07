@@ -23,7 +23,7 @@
 
 // Remember that this does not account for any CSS transforms applied to the canvas
 
-function CPTransform() {
+export default function CPTransform() {
     this.setToIdentity();
 }
 

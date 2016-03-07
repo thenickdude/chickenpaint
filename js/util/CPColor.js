@@ -19,9 +19,7 @@
 
  */
 
-function CPColor(rgb) {
-    "use strict";
-    
+export default function CPColor(rgb) {
     var
         that = this;
     

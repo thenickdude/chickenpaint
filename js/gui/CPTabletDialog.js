@@ -1,4 +1,6 @@
-function CPTabletDialog(parent) {
+import CPWacomTablet from "../util/CPWacomTablet";
+
+export default function CPTabletDialog(parent) {
     var
         dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">
@@ -39,7 +41,7 @@ function CPTabletDialog(parent) {
                                 <p class="chickenpaint-not-installed">
                                     Please make sure that you've installed the latest drivers for your tablet from the 
                                     <a href="http://www.wacom.com/en-us/support/product-support/drivers" target="_blank">Wacom drivers page</a>,
-                                    then restart your web browser.
+                                    then restart your browser.
                                 </p>
                                 <p class="chickenpaint-not-supported">
                                     Your browser doesn't support the Wacom tablet plugin, please 
@@ -68,11 +70,11 @@ function CPTabletDialog(parent) {
                                     </div>
                                 </div>
                                 <p class="chickenpaint-not-supported">
-                                    Your web browser doesn't have built-in support for drawing tablets, please try
+                                    Your browser doesn't have built-in support for drawing tablets, please try
                                     one of the other browsers listed above.
                                 </p>
                                 <p class="chickenpaint-supported alert alert-success">
-                                    Your web browser has built-in support for drawing tablets!
+                                    Your browser has built-in support for drawing tablets!
                                 </p>
                             </div>
                         </div>

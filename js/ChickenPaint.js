@@ -1,6 +1,17 @@
-function ChickenPaint(uiElem, arrayBuffer) {
-    "use strict";
-    
+import CPBrushInfo from "./engine/CPBrushInfo";
+import CPChibiFile from "./engine/CPChibiFile";
+import CPArtwork from "./engine/CPArtwork";
+
+import CPMainGUI from "./gui/CPMainGUI";
+import CPAboutDialog from "./gui/CPAboutDialog";
+import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
+import CPTabletDialog from "./gui/CPTabletDialog";
+import CPGridDialog from "./gui/CPTabletDialog";
+
+import CPColor from "./util/CPColor";
+import CPWacomTablet from "./util/CPWacomTablet";
+
+export default function ChickenPaint(uiElem, arrayBuffer) {
     var
         VERSION_STRING = "0.1.0";
     

@@ -1,5 +1,5 @@
 // An RGB color with floating point values for each channel (between 0.0 and 1.0)
-function CPColorFloat(r, g, b) {
+export default function CPColorFloat(r, g, b) {
     this.r = r;
     this.g = g;
     this.b = b;
@@ -21,10 +21,10 @@ CPColorFloat.prototype.clone = function() {
     return new CPColorFloat(this.r, this.g, this.b);
 };
 
-function createCPColorFloatFromInt(color) {
+CPColorFloat.createFromInt = function(color) {
     return new CPColorFloat(
         ((color >>> 16) & 0xff) / 255,
         ((color >>> 8) & 0xff) / 255,
         (color & 0xff) / 255
     );
-}
+};

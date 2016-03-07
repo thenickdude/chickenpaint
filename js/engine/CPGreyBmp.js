@@ -19,8 +19,9 @@
 
  */
 
-function CPGreyBmp(width, height, bitDepth) {
-    "use strict";
+import CPBitmap from "./CPBitmap";
+
+export default function CPGreyBmp(width, height, bitDepth) {
 
     CPBitmap.call(this, width, height);
 

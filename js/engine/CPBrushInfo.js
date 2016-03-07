@@ -19,11 +19,7 @@
 
  */
 
-"use strict";
-
-function CPBrushInfo(properties) {
-    "use strict";
-    
+export default function CPBrushInfo(properties) {
     // Set brush setting fields with default values, then apply the supplied 'properties' on top
     for (var propName in CPBrushInfo.DEFAULTS) {
         if (CPBrushInfo.DEFAULTS.hasOwnProperty(propName)) {

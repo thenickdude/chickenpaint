@@ -19,7 +19,7 @@
 
  */
 
-function CPLookUpTable() {
+export default function CPLookUpTable() {
     this.table = new Uint8Array(256);
 
     this.loadIdentity = function() {

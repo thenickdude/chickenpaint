@@ -19,9 +19,9 @@
 
  */
 
-function CPToolPalette(cpController) {
-    "use strict";
-    
+import CPPalette from './CPPalette';
+
+export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");
     
 	var 

@@ -1,5 +1,10 @@
-function CPCanvas(controller) {
-    "use strict";
+import CPRect from "../util/CPRect";
+import CPTransform from "../util/CPTransform";
+import CPWacomTablet from "../util/CPWacomTablet";
+
+import CPBrushInfo from "../engine/CPBrushInfo";
+
+export default function CPCanvas(controller) {
     
     var
         BUTTON_PRIMARY = 0,

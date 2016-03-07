@@ -1,4 +1,4 @@
-function CPGridDialog(parent, canvas) {
+export default function CPGridDialog(parent, canvas) {
     var
         dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">

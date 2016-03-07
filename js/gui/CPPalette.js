@@ -19,9 +19,7 @@
 
  */
 
-function CPPalette(cpController, className, title) {
-    "use strict";
-    
+export default function CPPalette(cpController, className, title) {
     this.cpController = cpController;
     this.title = title;
     this.name = className;

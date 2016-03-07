@@ -19,9 +19,11 @@
 
  */
 
-function CPStrokePalette(cpController) {
-    "use strict";
-    
+import CPPalette from './CPPalette';
+
+import CPBrushInfo from '../engine/CPBrushInfo';
+
+export default function CPStrokePalette(cpController) {
     CPPalette.call(this, cpController, "stroke", "Stroke");
     
 	var 

@@ -19,7 +19,16 @@
 
  */
 
-function CPPaletteManager(cpController) {
+import CPToolPalette from "./CPToolPalette";
+import CPMiscPalette from "./CPMiscPalette";
+import CPStrokePalette from "./CPStrokePalette";
+import CPColorPalette from "./CPColorPalette";
+import CPBrushPalette from "./CPBrushPalette";
+import CPLayersPalette from "./CPLayersPalette";
+import CPTexturePalette from "./CPTexturePalette";
+import CPSwatchesPalette from "./CPSwatchesPalette";
+
+export default function CPPaletteManager(cpController) {
 	var
 	    palettes = {
 	        tool: new CPToolPalette(cpController),

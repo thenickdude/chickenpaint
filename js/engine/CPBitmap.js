@@ -1,4 +1,6 @@
-function CPBitmap(width, height) {
+import CPRect from "../util/CPRect";
+
+export default function CPBitmap(width, height) {
     width = width | 0;
     height = height | 0;
 

@@ -1,6 +1,4 @@
-"use strict";
-
-function CPWacomTablet() {
+export default function CPWacomTablet() {
     var 
         tabletOK = false,
 
@@ -43,7 +41,8 @@ function CPWacomTablet() {
             pluginObject.classid = "CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308";
         } else {
             var
-            param = document.createElement("param");
+                param = document.createElement("param");
+            
             param.name = "onload";
             param.value = "onWacomPluginLoaded";
             

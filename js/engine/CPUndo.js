@@ -1,6 +1,4 @@
-"use strict";
-
-function CPUndo() {
+export default function CPUndo() {
 }
 
 CPUndo.prototype.merge = function(undo) {

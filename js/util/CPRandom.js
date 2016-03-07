@@ -1,4 +1,4 @@
-function CPRandom() {
+export default function CPRandom() {
     var 
         nextNextGaussian, 
         haveNextNextGaussian = false;

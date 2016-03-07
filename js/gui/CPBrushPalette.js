@@ -1,5 +1,3 @@
-"use strict";
-
 /*
 	ChibiPaint
     Copyright (c) 2006-2008 Marc Schefer
@@ -21,17 +19,21 @@
 
  */
 
-function CPBrushPalette(controller) {
+import CPPalette from "./CPPalette";
+import CPCheckbox from "./CPCheckbox";
+import CPSlider from "./CPSlider";
+
+export default function CPBrushPalette(controller) {
     CPPalette.call(this, controller, "brush", "Brush");
 
 	var
-	    alphaCB = new CPCheckBox(false, "Control brush opacity with pen pressure"), 
+	    alphaCB = new CPCheckbox(false, "Control brush opacity with pen pressure"), 
 	    alphaSlider = new CPSlider(1, 255),
 	    
-	    sizeCB = new CPCheckBox(true, "Control brush size with pen pressure"), 
+	    sizeCB = new CPCheckbox(true, "Control brush size with pen pressure"), 
 	    sizeSlider = new CPSlider(1, 200),
 	    
-	    scatteringCB  = new CPCheckBox(false, "Control brush scattering with pen pressure"),
+	    scatteringCB  = new CPCheckbox(false, "Control brush scattering with pen pressure"),
 	    scatteringSlider = new CPSlider(0, 100), 
 	
         resatSlider = new CPSlider(0, 100), 

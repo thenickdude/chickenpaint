@@ -1,6 +1,4 @@
-"use strict";
-
-function CPRect(left, top, right, bottom) {
+export default function CPRect(left, top, right, bottom) {
     // TODO remove me
     if ((left !== undefined || top !== undefined) && (right === undefined || bottom === undefined)) {
         throw "Bad args to CPRect";

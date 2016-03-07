@@ -1,4 +1,4 @@
-function CPBoxBlurDialog(parent, controller) {
+export default function CPBoxBlurDialog(parent, controller) {
     var
         dialog = $(`
             <div class="modal fade" tabindex="-1" role="dialog">
