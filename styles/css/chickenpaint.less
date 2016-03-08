@@ -1,21 +1,21 @@
 
 .chickenpaint {
-    /* 
+    /*
      * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
      * html/body itself
      */
     font-family: sans-serif;
     -ms-text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
-    
+
     @import (less) url("bootstrap/bootstrap.css");
-    
+
     @import url("font-awesome/font-awesome.less");
-    
+
     font-size:14px;
 }
 
-/* Restore the hidden modal rule from Bootstrap */ 
+/* Restore the hidden modal rule from Bootstrap */
 .modal-open {
     overflow: hidden;
 }
@@ -60,7 +60,7 @@
     display:inline-flex;
     flex-direction:column;
     position:absolute;
-    
+
     -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
     box-shadow: 0 1px 1px rgba(0,0,0,.05);
 }
@@ -71,7 +71,7 @@
     padding-bottom:4px;
 
     cursor:default; /* No text selection cursor on palette titles */
-    
+
     border-bottom: 1px solid #ddd;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
@@ -105,7 +105,7 @@
 .chickenpaint-toolbar-button {
     display:inline-block;
     width:34px; /* 32 + 2 pixels for the borders */
-    height:34px; 
+    height:34px;
     background-color:white;
     border:1px solid black;
     border-radius:3px;
@@ -116,7 +116,7 @@
 .chickenpaint-small-toolbar-button {
     display:inline-block;
     width:18px; /* 16 + 2 pixels for the borders */
-    height:18px; 
+    height:18px;
     background-color:white;
     border:1px solid black;
     border-radius:3px;
@@ -410,4 +410,9 @@
     font-size:175% !important;
     vertical-align: middle;
     margin-right:0.15em;
+}
+
+.chickenpaint-splash-screen {
+    width:100%;
+    height:800px;
 }

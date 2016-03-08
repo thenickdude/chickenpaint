@@ -500,6 +500,14 @@ export default function CPMainGUI(controller, uiElem) {
         paletteManager.showPaletteByName(paletteName, show);
     };
     
+    this.getSwatches = function() {
+        return paletteManager.palettes.swatches.getSwatches();
+    };
+
+    this.setSwatches = function(swatches) {
+        paletteManager.palettes.swatches.setSwatches(swatches);
+    };
+
     paletteManager.on("paletteVisChange", onPaletteVisChange);
     
     window.addEventListener("resize", function() {

@@ -1246,16 +1246,6 @@ export default function CPLayer(width, height, name) {
     this.getImageData = function() {
         return this.imageData;
     };
-    
-    // Load from an UInt8Array in ARGB byte order
-    this.loadFromARGB = function(array) {
-        for (var i = 0; i < array.length; i += 4) {
-            this.data[i + ALPHA_BYTE_OFFSET] = array[i];
-            this.data[i + RED_BYTE_OFFSET] = array[i + 1];
-            this.data[i + GREEN_BYTE_OFFSET] = array[i + 2];
-            this.data[i + BLUE_BYTE_OFFSET] = array[i + 3];
-        }
-    };
 };
 
 CPLayer.LM_NORMAL = 0;

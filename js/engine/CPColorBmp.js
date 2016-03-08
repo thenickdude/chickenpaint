@@ -23,21 +23,21 @@
 import CPBitmap from "./CPBitmap";
 import CPRect from "../util/CPRect";
 
+function createImageData(width, height) {
+    // return new ImageData(this.width, this.height); // Doesn't work on old IE
+    var
+        canvas = document.createElement("canvas"),
+        context = canvas.getContext("2d");
+    
+    return context.createImageData(width, height);
+}
+
 //
 // A 32bpp bitmap class (one byte per channel in RGBA order)
 //
 
 export default function CPColorBmp(width, height) {
     CPBitmap.call(this, width, height);
-    
-    function createImageData(width, height) {
-        // return new ImageData(this.width, this.height); // Doesn't work on old IE
-        var
-            canvas = document.createElement("canvas"),
-            context = canvas.getContext("2d");
-
-        return context.createImageData(width, height);
-    }
     
     var
         that = this;
@@ -690,4 +690,30 @@ CPColorBmp.prototype.offsetOfPixel = function(x, y) {
 
 CPColorBmp.prototype.getMemorySize = function() {
     return this.data.length;
+};
+
+// Load from an UInt8Array in ARGB byte order
+CPColorBmp.prototype.loadFromARGB = function(array) {
+    for (var i = 0; i < array.length; i += 4) {
+        this.data[i + CPColorBmp.ALPHA_BYTE_OFFSET] = array[i];
+        this.data[i + CPColorBmp.RED_BYTE_OFFSET] = array[i + 1];
+        this.data[i + CPColorBmp.GREEN_BYTE_OFFSET] = array[i + 2];
+        this.data[i + CPColorBmp.BLUE_BYTE_OFFSET] = array[i + 3];
+    }
+};
+
+// Load from a loaded HTML Image object
+CPColorBmp.prototype.loadFromImage = function(image) {
+    var
+        imageCanvas = document.createElement("canvas"),
+        imageContext = imageCanvas.getContext("2d");
+
+    imageCanvas.width = image.width;
+    imageCanvas.height = image.height;
+    
+    imageContext.globalCompositeOperation = "copy";
+    imageContext.drawImage(image, 0, 0);
+    
+    this.imageData = imageContext.getImageData(0, 0, this.width, this.height);
+    this.data = this.imageData.data;
 };

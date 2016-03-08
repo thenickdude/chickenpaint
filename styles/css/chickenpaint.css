@@ -1,5 +1,5 @@
 .chickenpaint {
-  /* 
+  /*
      * Importing these rules from bootstrap since our namespaced version of bootstrap won't be able to access
      * html/body itself
      */
@@ -9283,4 +9283,8 @@
   font-size: 175% !important;
   vertical-align: middle;
   margin-right: 0.15em;
+}
+.chickenpaint-splash-screen {
+  width: 100%;
+  height: 800px;
 }

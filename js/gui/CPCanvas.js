@@ -1224,10 +1224,6 @@ export default function CPCanvas(controller) {
         
         canvasContext.globalCompositeOperation = 'source-over';
         
-        if (repaintRegion.isEmpty() && drawingWasClipped) {
-            console.log("!");
-        }
-        
         if (drawingWasClipped) {
             repaintRegion.makeEmpty();
             

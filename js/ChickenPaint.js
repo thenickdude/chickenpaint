@@ -1,9 +1,9 @@
 /*
     ChickenPaint
-    
+
     ChickenPaint is a translation of ChibiPaint from Java to JavaScript
     by Nicholas Sherlock / Chicken Smoothie.
-    
+
     ChibiPaint is Copyright (c) 2006-2008 Marc Schefer
 
     ChickenPaint is free software: you can redistribute it and/or modify
@@ -23,196 +23,232 @@
 import CPBrushInfo from "./engine/CPBrushInfo";
 import CPChibiFile from "./engine/CPChibiFile";
 import CPArtwork from "./engine/CPArtwork";
+import CPResourceLoader from "./engine/CPResourceLoader";
 
 import CPMainGUI from "./gui/CPMainGUI";
 import CPAboutDialog from "./gui/CPAboutDialog";
 import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPTabletDialog";
+import CPSpashScreen from "./gui/CPSplashScreen.js";
 
 import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 
-export default function ChickenPaint(uiElem, arrayBuffer) {
+/**
+ * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
+ * This function converts such a string to a Uint8Array instead.
+ */
+function binaryStringToByteArray(s) {
     var
-        VERSION_STRING = "0.1.0";
-    
+        result = new Uint8Array(s.length);
+
+    for (var i = 0; i < s.length; i++) {
+        result[i] = s.charCodeAt(i);
+    }
+
+    return result;
+}
+
+function createDrawingTools() {
+    var
+        tools = new Array(ChickenPaint.T_MAX);
+
+    tools[ChickenPaint.T_PENCIL] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_PENCIL,
+        size: 16,
+        alpha: 255,
+        isAA: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AA,
+        paintMode: CPBrushInfo.M_PAINT
+    });
+
+    tools[ChickenPaint.T_ERASER] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_ERASER,
+        size: 16,
+        alpha: 255,
+        isAA: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: false,
+        type: CPBrushInfo.B_ROUND_AA,
+        paintMode: CPBrushInfo.M_ERASE
+    });
+
+    tools[ChickenPaint.T_PEN] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_PEN,
+        size: 2,
+        alpha: 128,
+        isAA: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: true,
+        pressureAlpha: false,
+        type: CPBrushInfo.B_ROUND_AA,
+        paintMode: CPBrushInfo.M_PAINT
+    });
+
+    tools[ChickenPaint.T_SOFTERASER] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_SOFTERASER,
+        size: 16,
+        alpha: 64,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_ERASE
+    });
+
+    tools[ChickenPaint.T_AIRBRUSH] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_AIRBRUSH,
+        size: 50,
+        alpha: 32,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_PAINT
+    });
+
+    tools[ChickenPaint.T_DODGE] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_DODGE,
+        size: 30,
+        alpha: 32,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_DODGE
+    });
+
+    tools[ChickenPaint.T_BURN] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_BURN,
+        size: 30,
+        alpha: 32,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_BURN
+    });
+
+    tools[ChickenPaint.T_WATER] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_WATER,
+        size: 30,
+        alpha: 70,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.02,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AA,
+        paintMode: CPBrushInfo.M_WATER,
+        resat: 0.3,
+        bleed: 0.6
+    });
+
+    tools[ChickenPaint.T_BLUR] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_BLUR,
+        size: 20,
+        alpha: 255,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.05,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_PIXEL,
+        paintMode: CPBrushInfo.M_BLUR
+    });
+
+    tools[ChickenPaint.T_SMUDGE] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_SMUDGE,
+        size: 20,
+        alpha: 128,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.01,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_SMUDGE,
+        resat: 0.0,
+        bleed: 1.0
+    });
+
+    tools[ChickenPaint.T_BLENDER] = new CPBrushInfo({
+        toolNb: ChickenPaint.T_BLENDER,
+        size: 20,
+        alpha: 60,
+        isAA: false,
+        isAirbrush: true,
+        minSpacing: 0.5,
+        spacing: 0.1,
+        pressureSize: false,
+        pressureAlpha: true,
+        type: CPBrushInfo.B_ROUND_AIRBRUSH,
+        paintMode: CPBrushInfo.M_OIL,
+        resat: 0.0,
+        bleed: 0.07
+    });
+
+    return tools;
+}
+
+/**
+ * Creates an instance of the ChickenPaint drawing app. Options is an object with these keys:
+ *
+ * uiElem       - DOM element to insert ChickenPaint into (required)
+ * canvasWidth  - Width in pixels to use when creating blank canvases (defaults to 800)
+ * canvasHeight - Height in pixels to use when creating blank canvases (defaults to 600)
+ * rotation     - Integer from [0..3], number of 90 degree right rotations that should be applied to the canvas after
+ *                loading
+ *
+ * postUrl   - URL to post the saved drawing to
+ * postedUrl - URL to navigate to after saving is successful and the user chooses to see/publish their finished product
+ * exitUrl   - URL to navigate to after saving is successful and the user chooses to exit (optional)
+ * testUrl   - URL that ChickenPaint can simulate a drawing upload to to test the user's permissions/connection (optional)
+ *
+ * loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
+ * loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
+ * loadSwatchesUrl  - URL of an .aco palette to load (optional)
+ */
+export default function ChickenPaint(options) {
     var
         that = this,
-        
+
+        uiElem = options.uiElem,
+
         canvas,
         mainGUI,
-        
+
         curColor = new CPColor(0),
-    
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
-        
-        tools = [],
-        
+
+        tools = createDrawingTools(),
+
         boxBlurDialog, gridDialog;
-    
-    function createTools() {
-        tools = new Array(ChickenPaint.T_MAX);
-        
-        tools[ChickenPaint.T_PENCIL] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_PENCIL,
-            size: 16,
-            alpha: 255,
-            isAA: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AA,
-            paintMode: CPBrushInfo.M_PAINT
-        });
-        
-        tools[ChickenPaint.T_ERASER] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_ERASER,
-            size: 16,
-            alpha: 255,
-            isAA: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: false,
-            type: CPBrushInfo.B_ROUND_AA,
-            paintMode: CPBrushInfo.M_ERASE
-        });
-        
-        tools[ChickenPaint.T_PEN] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_PEN,
-            size: 2,
-            alpha: 128,
-            isAA: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: true,
-            pressureAlpha: false,
-            type: CPBrushInfo.B_ROUND_AA,
-            paintMode: CPBrushInfo.M_PAINT
-        });
-        
-        tools[ChickenPaint.T_SOFTERASER] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_SOFTERASER,
-            size: 16,
-            alpha: 64,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_ERASE
-        });
-        
-        tools[ChickenPaint.T_AIRBRUSH] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_AIRBRUSH,
-            size: 50,
-            alpha: 32,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_PAINT
-        });
-        
-        tools[ChickenPaint.T_DODGE] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_DODGE,
-            size: 30,
-            alpha: 32,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_DODGE
-        });
-        
-        tools[ChickenPaint.T_BURN] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_BURN,
-            size: 30,
-            alpha: 32,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_BURN
-        });
-        
-        tools[ChickenPaint.T_WATER] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_WATER,
-            size: 30,
-            alpha: 70,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.02,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AA,
-            paintMode: CPBrushInfo.M_WATER,
-            resat: 0.3,
-            bleed: 0.6
-        });
-        
-        tools[ChickenPaint.T_BLUR] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_BLUR,
-            size: 20,
-            alpha: 255,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.05,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_PIXEL,
-            paintMode: CPBrushInfo.M_BLUR
-        });
-        
-        tools[ChickenPaint.T_SMUDGE] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_SMUDGE,
-            size: 20,
-            alpha: 128,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.01,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_SMUDGE,
-            resat: 0.0,
-            bleed: 1.0
-        });
-        
-        tools[ChickenPaint.T_BLENDER] = new CPBrushInfo({
-            toolNb: ChickenPaint.T_BLENDER,
-            size: 20,
-            alpha: 60,
-            isAA: false,
-            isAirbrush: true,
-            minSpacing: 0.5,
-            spacing: 0.1,
-            pressureSize: false,
-            pressureAlpha: true,
-            type: CPBrushInfo.B_ROUND_AIRBRUSH,
-            paintMode: CPBrushInfo.M_OIL,
-            resat: 0.0,
-            bleed: 0.07
-        });
-    }
-    
+
     function showAboutDialog() {
         new CPAboutDialog(uiElem).show();
     }
@@ -225,7 +261,7 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         if (!boxBlurDialog) {
             boxBlurDialog = new CPBoxBlurDialog(uiElem, that);
         }
-        
+
         boxBlurDialog.show();
     }
 
@@ -233,18 +269,19 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         if (!gridDialog) {
             gridDialog = new CPGridDialog(uiElem, canvas);
         }
+
         gridDialog.show();
     }
-    
+
     function callToolListeners() {
         that.emitEvent('toolChange', [curBrush, tools[curBrush]]);
     }
-    
+
     // TODO make me private
     this.callToolListeners = function() {
         callToolListeners();
     }
-    
+
     function callModeListeners() {
         that.emitEvent('modeChange', [curMode]);
     }
@@ -256,17 +293,17 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
     this.getArtwork = function() {
         return this.artwork;
     };
-    
+
     this.setCanvas = function(_canvas) {
         canvas = _canvas;
     };
-    
+
     this.setCurColor = function(color) {
         if (!curColor.isEqual(color)) {
             this.artwork.setForegroundColor(color.getRgb());
 
             curColor.copyFrom(color);
-            
+
             this.emitEvent('colorChange', [color]);
         }
     };
@@ -274,7 +311,7 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
     this.getCurColor = function() {
         return curColor.clone();
     };
-    
+
     this.getCurColorRgb = function() {
         return curColor.getRgb();
     };
@@ -305,33 +342,18 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         curMode = mode;
         callModeListeners();
     }
-    
+
     function setTool(tool) {
         setMode(ChickenPaint.M_DRAW);
         curBrush = tool;
         that.artwork.setBrush(tools[tool]);
         callToolListeners();
     }
-    
+
     this.getBrushInfo = function() {
         return tools[curBrush];
     }
-    
-    /**
-     * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
-     * This function converts such a string to a Uint8Array instead.
-     */
-    function binaryStringToByteArray(s) {
-        var
-            result = new Uint8Array(s.length);
-        
-        for (var i = 0; i < s.length; i++) {
-            result[i] = s.charCodeAt(i);
-        }
-        
-        return result;
-    }
-    
+
     function saveDrawing() {
         var
             rotation = Math.round(canvas.getRotation() / Math.PI * 2);
@@ -343,24 +365,24 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
         if (rotation < 0) {
             rotation += 4;
         }
-        
+
         var
             png = binaryStringToByteArray(that.artwork.getFlatPNG(rotation)),
 
             blob = new Blob([png], {type: "image/png"});
-        
+
         window.saveAs(blob, "oekaki.png");
-        
+
         if (!that.artwork.isSimpleDrawing()) {
             var
                 chibiFile = new CPChibiFile();
-            
+
             blob = chibiFile.serialize(that.artwork);
-            
+
             window.saveAs(blob, "oekaki.chi");
         }
     }
-    
+
     this.actionPerformed = function(e) {
         if (this.artwork == null || canvas == null) {
             return; // this shouldn't happen but just in case
@@ -420,9 +442,9 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
             case "CPBlender":
                 setTool(ChickenPaint.T_BLENDER);
             break;
-    
+
             // Modes
-    
+
             case "CPFloodFill":
                 setMode(ChickenPaint.M_FLOODFILL);
             break;
@@ -438,9 +460,9 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
             case "CPColorPicker":
                 setMode(ChickenPaint.M_COLOR_PICKER);
             break;
-    
+
             // Stroke modes
-    
+
             case "CPFreeHand":
                 tools[curBrush].strokeMode = CPBrushInfo.SM_FREEHAND;
                 callToolListeners();
@@ -453,16 +475,16 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
                 tools[curBrush].strokeMode = CPBrushInfo.SM_BEZIER;
                 callToolListeners();
             break;
-    
+
             case "CPAbout":
                 showAboutDialog();
             break;
             case "CPTabletSupport":
                 showTabletDialog();
             break;
-    
+
             // Layers actions
-    
+
             case "CPLayerDuplicate":
                 this.artwork.duplicateLayer();
             break;
@@ -545,7 +567,7 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
             break;
             case "CPPalTool":
                 mainGUI.showPalette("tool", e.selected);
-            break;    
+            break;
             case "CPPalMisc":
                 mainGUI.showPalette("misc", e.selected);
             break;
@@ -562,31 +584,42 @@ export default function ChickenPaint(uiElem, arrayBuffer) {
                 saveDrawing();
             break;
         }
-        
+
         // callCPEventListeners(); TODO
     };
-    
-    createTools();
-    
-    if (arrayBuffer) {
-        var 
-            chibiReader = new CPChibiFile();
+
+    function startMainGUI(swatches) {
+        mainGUI = new CPMainGUI(that, uiElem);
+
+        setTool(ChickenPaint.T_PEN);
+        mainGUI.arrangePalettes();
         
-        this.artwork = chibiReader.read(arrayBuffer);
+        if (swatches) {
+            mainGUI.setSwatches(swatches);
+        }
+        
+        CPWacomTablet.getRef().detectTablet();
     }
-    
-    if (!this.artwork) {
-        this.artwork = new CPArtwork(800, 600);
+
+    if (options.loadImageUrl || options.loadChibiFileUrl) {
+        var
+            loader = new CPResourceLoader(options),
+            splash = new CPSpashScreen(uiElem, loader);
+
+        loader.on("loadingComplete", function(resources) {
+            that.artwork = resources.layers || resources.flat;
+            
+            //TODO don't forget rotation
+            startMainGUI(resources.swatches);
+        });
+
+        loader.load();
+    } else {
+        this.artwork = new CPArtwork(options.canvasWidth || 800, options.canvasWidth || 600);
         this.artwork.addBackgroundLayer();
+        
+        startMainGUI();
     }
-    
-    mainGUI = new CPMainGUI(this, uiElem);
-    
-    setTool(ChickenPaint.T_PEN);
-    
-    mainGUI.arrangePalettes();
-    
-    CPWacomTablet.getRef().detectTablet();
 }
 
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);

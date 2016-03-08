@@ -48,6 +48,8 @@ export default function CPPaletteManager(cpController) {
         parentElem = document.createElement("div"),
         
         that = this;
+    
+    this.palettes = palettes;
 
     function showPalette(palette, show) {
         var

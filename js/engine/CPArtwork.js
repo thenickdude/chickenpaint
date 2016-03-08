@@ -1425,6 +1425,19 @@ export default function CPArtwork(_width, _height) {
         return -1;
     };
     
+    /*
+     * Get the index of the topmost visible layer, or 0.
+     */
+    this.getTopmostVisibleLayer = function() {
+        for (var i = layers.length - 1; i >= 0; i--) {
+            if (layers[i].visible) {
+                return i;
+            }
+        }
+        
+        return 0;
+    };
+    
     this.getLayer = function(i) {
         return layers[i];
     };
