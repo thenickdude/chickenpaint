@@ -32,9 +32,12 @@ export default function CPTabletDialog(parent) {
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Drawing tablet pressure support</h4>
+                            <h4 class="modal-title">Drawing tablet support</h4>
                         </div>
                         <div class="modal-body">
+                            <p class="chickenpaint-tablet-there-are-two-options">
+                                There are two ways you could use your tablet's pen pressure support with ChickenPaint.
+                            </p>
                             <div class="chickenpaint-tablet-support chickenpaint-wacom-support">
                                 <h4>
                                     Plugin for Wacom tablets
@@ -46,7 +49,7 @@ export default function CPTabletDialog(parent) {
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-firefox"></span>
-                                        Firefox (32-bit version only)
+                                        Firefox (32-bit only)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-safari"></span>
@@ -75,12 +78,16 @@ export default function CPTabletDialog(parent) {
                             </div>
                             <div class="chickenpaint-tablet-support chickenpaint-pointerevents-support">
                                 <h4>
-                                    Built-in tablet support
+                                    Built-in support for most tablets <small>including Wacom tablets</small>
                                 </h4>
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-internet-explorer"></span>
-                                        IE 10, 11, Edge
+                                        IE (Windows 8)
+                                    </div>
+                                        <div class="chickenpaint-supported-browser">
+                                        <span class="fa fa-edge"></span>
+                                        Edge (Windows 10)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-firefox"></span>
@@ -108,6 +115,7 @@ export default function CPTabletDialog(parent) {
     var
         wacomSupportElem = $(".chickenpaint-wacom-support", dialog),
         peSupportElem = $(".chickenpaint-pointerevents-support", dialog),
+        bothOptionsElem = $(".chickenpaint-tablet-there-are-two-options", dialog),
         
         wacomPresent = CPWacomTablet.getRef().isTabletPresent(),
         peSupported = !!window.hasNativePointerEvents;
@@ -117,7 +125,9 @@ export default function CPTabletDialog(parent) {
     if (wacomPresent) {
         // Don't bother displaying info about Pointer Events if we have the Wacom plugin installed
         peSupportElem.hide();
+        bothOptionsElem.hide();
     } else {
+        // Chrome has dropped NPAPI support, so the Wacom plugin cannot be installed
         if (/Chrome/i.test(navigator.userAgent) && !/OPR/.test(navigator.userAgent)) {
             wacomSupportElem.addClass("not-supported");
         }
@@ -125,6 +135,7 @@ export default function CPTabletDialog(parent) {
         // Don't bother showing the Wacom plugin details if this browser supports pointer events
         if (peSupported) {
             wacomSupportElem.hide();
+            bothOptionsElem.hide();
         }
     }
     
