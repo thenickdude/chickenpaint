@@ -67,8 +67,6 @@ export default function CPCanvas(controller) {
         
         artwork = controller.getArtwork(),
 
-        spacePressed = false,
-        
         // Canvas transformations
         zoom = 1, minZoom = 0.05, maxZoom = 16.0,
         offsetX = 0, offsetY = 0,
@@ -85,7 +83,7 @@ export default function CPCanvas(controller) {
         brushPreview = false,
         oldPreviewRect = null,
         
-        defaultCursor = "auto", moveCursor = "grabbing", crossCursor = "crosshair",
+        defaultCursor = "auto", moveCursor = "grab", movingCursor = "grabbing", crossCursor = "crosshair",
         mouseIn = false, mouseDown = false,
         
         dontStealFocus = false,
@@ -126,8 +124,16 @@ export default function CPCanvas(controller) {
     function CPMode() {
     };
     
+    CPMode.prototype.keyDown = function(e) {
+        if (e.keyCode == 32 /* Space */) {
+            // Stop the page from scrolling in modes that don't care about space
+            e.preventDefault();
+        }
+    }
+    
     CPMode.prototype.mouseMoved = CPMode.prototype.paint = CPMode.prototype.mousePressed 
-        = CPMode.prototype.mouseDragged = CPMode.prototype.mouseReleased = function() {};
+        = CPMode.prototype.mouseDragged = CPMode.prototype.mouseReleased 
+        = CPMode.prototype.keyUp = function() {};
     
     //
     // Default UI Mode when not doing anything: used to start the other modes
@@ -140,6 +146,9 @@ export default function CPCanvas(controller) {
     CPDefaultMode.prototype.constructor = CPDefaultMode;
     
     CPDefaultMode.prototype.mousePressed = function(e, pressure) {
+        var
+            spacePressed = key.isPressed("space");
+        
         // FIXME: replace the moveToolMode hack by a new and improved system
         if (!spacePressed && e.button == BUTTON_PRIMARY
                 && (!e.altKey || curSelectedMode == moveToolMode)) {
@@ -177,6 +186,9 @@ export default function CPCanvas(controller) {
     };
 
     CPDefaultMode.prototype.mouseMoved = function(e, pressure) {
+        var
+            spacePressed = key.isPressed("space");
+        
         if (!spacePressed && curSelectedMode == curDrawMode) {
             brushPreview = true;
 
@@ -192,13 +204,24 @@ export default function CPCanvas(controller) {
                 oldPreviewRect = null;
             }
             
-            if (artwork.isPointWithin(pf.x, pf.y)) {
+/*            if (artwork.isPointWithin(pf.x, pf.y)) {
                 setCursor(defaultCursor); // FIXME find a cursor that everyone likes
-            } else {
+            } else { */
                 setCursor(defaultCursor);
-            }
+            //}
 
             repaintRect(r);
+        }
+    };
+    
+    CPDefaultMode.prototype.keyDown = function(e) {
+        if (e.keyCode == 32 /* Space */) {
+            if (e.altKey) {
+                activeMode = rotateCanvasMode;
+            } else {
+                activeMode = moveCanvasMode;
+            }
+            activeMode.keyDown(e);
         }
     };
     
@@ -263,7 +286,6 @@ export default function CPCanvas(controller) {
     // TODO
     
     function CPBezierMode() {}
-    function CPRotateCanvasMode() {}
     
     function CPLineMode() {
         var
@@ -349,9 +371,12 @@ export default function CPCanvas(controller) {
             dragBezier = false,
             dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
+            
 
         this.mousePressed = function(e) {
-            Point2D.Float p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+            var 
+                spacePressed = key.isPressed("space"),
+                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
             if (!dragBezier && !spacePressed && e.button == BUTTON_PRIMARY) {
                 dragBezier = true;
@@ -491,9 +516,26 @@ export default function CPCanvas(controller) {
             dragMoveOffset,
             dragMoveButton;
 
-        this.mousePressed = function (e) {
+        this.keyDown = function(e) {
+            if (e.keyCode == 32 /* Space */) {
+                if (!dragMiddle) {
+                    setCursor(moveCursor);
+                }
+                e.preventDefault();
+            }
+        };
+
+        this.keyUp = function(e) {
+            if (!dragMiddle && e.keyCode == 32 /* Space */) {
+                setCursor(defaultCursor);
+                activeMode = defaultMode; // yield control to the default mode
+            }
+        };
+
+        this.mousePressed = function(e) {
             var
-                p = {x: e.pageX, y: e.pageY};
+                p = {x: e.pageX, y: e.pageY},
+                spacePressed = key.isPressed("space");
 
             if (!dragMiddle && (e.button == BUTTON_WHEEL || spacePressed)) {
                 repaintBrushPreview();
@@ -503,11 +545,11 @@ export default function CPCanvas(controller) {
                 dragMoveX = p.x;
                 dragMoveY = p.y;
                 dragMoveOffset = that.getOffset();
-                setCursor(moveCursor);
+                setCursor(movingCursor);
             }
-        }
+        };
 
-        this.mouseDragged = function (e) {
+        this.mouseDragged = function(e) {
             if (dragMiddle) {
                 var
                     p = {x: e.pageX, y: e.pageY};
@@ -515,16 +557,16 @@ export default function CPCanvas(controller) {
                 that.setOffset(dragMoveOffset.x + p.x - dragMoveX, dragMoveOffset.y + p.y - dragMoveY);
                 that.repaintAll();
             }
-        }
+        };
 
-        this.mouseReleased = function (e) {
+        this.mouseReleased = function(e) {
             if (dragMiddle && e.button == dragMoveButton) {
                 dragMiddle = false;
                 setCursor(defaultCursor);
 
                 activeMode = defaultMode; // yield control to the default mode
             }
-        }
+        };
     }
     
     CPMoveCanvasMode.prototype = Object.create(CPMode.prototype);
@@ -730,7 +772,9 @@ export default function CPCanvas(controller) {
     }
     
     function setCursor(cursor) {
-        canvas.setAttribute("data-cursor", cursor);
+        if (canvas.getAttribute("data-cursor") != cursor) {
+            canvas.setAttribute("data-cursor", cursor);
+        }
     }
     
     function updateScrollBars() {
@@ -1071,6 +1115,14 @@ export default function CPCanvas(controller) {
         }
     }
     
+    function handleKeyDown(e) {
+        activeMode.keyDown(e);
+    }
+    
+    function handleKeyUp(e) {
+        activeMode.keyUp(e);
+    }
+    
     // Get the DOM element for the drawing area
     this.getElement = function() {
         return canvas;
@@ -1249,6 +1301,9 @@ export default function CPCanvas(controller) {
     };
     
     controller.on("toolChange", function(tool, toolInfo) {
+        var
+            spacePressed = key.isPressed("space");
+
         if (curSelectedMode == curDrawMode) {
             curSelectedMode = drawingModes[toolInfo.strokeMode];
         }
@@ -1346,7 +1401,18 @@ export default function CPCanvas(controller) {
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointermove", handlePointerMove);
     canvas.addEventListener("pointerup", handlePointerUp);
+    
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
 
+
+    // Workaround Chrome Mac bug that causes canvas to be disposed and never recreated when switched into the background
+    document.addEventListener("visibilitychange", function() {
+        canvas.width = 1;
+        canvas.height = 1;
+        that.resize();
+    }, false);
+    
     window.addEventListener("resize", function() {
         that.resize();
     });

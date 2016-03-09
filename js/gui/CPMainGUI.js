@@ -32,41 +32,103 @@ export default function CPMainGUI(controller, uiElem) {
         
         keyboardShortcutActions,
         
+        macPlatform = /^Mac/i.test(navigator.platform),
+        
         that = this;
+    
+    function menuItemClicked(target) {
+        var
+            action = target.data('action'),
+            checkbox = target.data('checkbox'),
+            selected;
+        
+        if (checkbox) {
+            target.toggleClass("selected");
+            selected = target.hasClass("selected");
+        } else {
+            selected = false;
+        }
+        
+        controller.actionPerformed({
+            action: action,
+            checkbox: checkbox,
+            selected: selected
+        });
+    }
+    
+    function presentShortcutText(shortcut) {
+        shortcut = shortcut.toUpperCase();
+        
+        // Only show the first potential shortcut out of the comma-separated list
+        shortcut = shortcut.replace(/(,.+)$/, "");
+        
+        if (macPlatform) {
+            shortcut = shortcut.replace(/([^+])\+/g, "$1");
+        } else {
+            shortcut = shortcut.replace(/([^+])\+/g, "$1 ");
+        }
+        
+        return shortcut;
+    }
     
     function recurseFillMenu(menuElem, entries) {
         for (var i = 0; i < entries.length; i++) {
-            var 
-                entry = entries[i],
-                entryElem;
-
-            if (entry.children) {
-                entryElem = $(
-                    '<li class="dropdown">'
-                        + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
-                        + '<ul class="dropdown-menu">'
-                        + '</ul>'
-                    + '</li>'
-                );
-                
-                recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
-            } else if (entry.name == '-') {
-                entryElem = $('<li role="separator" class="divider"></li>');
-            } else {
-                entryElem = $('<li><a href="#" data-action="' + entry.action + '">' + entry.name + '</a></li>');
-                
-                if (entry.checkbox) {
-                    $("a", entryElem)
-                        .data("checkbox", true)
-                        .toggleClass("selected", !!entry.checked);
+            (function(entry) {
+                var 
+                    entryElem;
+    
+                if (entry.children) {
+                    entryElem = $(
+                        '<li class="dropdown">'
+                            + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
+                            + '<ul class="dropdown-menu">'
+                            + '</ul>'
+                        + '</li>'
+                    );
+                    
+                    recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
+                } else if (entry.name == '-') {
+                    entryElem = $('<li role="separator" class="divider"></li>');
+                } else {
+                    entryElem = $('<li><a href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a></li>');
+                    
+                    if (entry.checkbox) {
+                        $("a", entryElem)
+                            .data("checkbox", true)
+                            .toggleClass("selected", !!entry.checked);
+                    }
                 }
-            }
-            
-            if (entry.title) {
-                entryElem.attr('title', entry.title);
-            }
-            
-            menuElem.append(entryElem);
+                
+                if (entry.title) {
+                    entryElem.attr('title', entry.title);
+                }
+                
+                if (entry.shortcut) {
+                    var
+                        menuLink = $("> a", entryElem),
+                        shortcutDesc = document.createElement("small");
+                    
+                    // Rewrite the shortcuts to Mac-style
+                    if (macPlatform) {
+                        entry.shortcut = entry.shortcut.replace(/SHIFT/im, "⇧");
+                        entry.shortcut = entry.shortcut.replace(/ALT/im, "⌥");
+                        entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
+                    }
+                    
+                    shortcutDesc.className = "chickenpaint-shortcut pull-right";
+                    shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
+                    
+                    menuLink.append(shortcutDesc);
+                    
+                    key(entry.shortcut, function() {
+                        menuItemClicked(menuLink);
+                        
+                        return false;
+                    });
+                }
+                
+                menuElem.append(entryElem);
+            })(entries[i]);
         }
     }
     
@@ -81,13 +143,13 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Save as...",
                             action: "CPSave",
                             mnemonic: "S",
-                            shortcut: "CTRL S"
+                            shortcut: "ctrl+s"
                         },
                         {
                             name: "Save Oekaki", /* to the server */
                             action: "CPSend",
                             mnemonic: "S",
-                            shortcut: "CTRL S"
+                            shortcut: "ctrl+s"
                         },
                     ],
                 },
@@ -99,14 +161,14 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Undo",
                             action: "CPUndo",
                             mnemonic: "U",
-                            shortcut: "CTRL Z",
+                            shortcut: "ctrl+z",
                             title: "Undoes the most recent action"
                         },
                         {
                             name: "Redo",
                             action: "CPRedo",
                             mnemonic: "R",
-                            shortcut: "CTRL SHIFT Z",
+                            shortcut: "shift+ctrl+z",
                             title: "Redoes a previously undone action"
                         },
                         {
@@ -122,25 +184,25 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Cut",
                             action: "CPCut",
                             mnemonic: "T",
-                            shortcut: "CTRL X"
+                            shortcut: "ctrl+x"
                         },
                         {
                             name: "Copy",
                             action: "CPCopy",
                             mnemonic: "C",
-                            shortcut: "CTRL C"
+                            shortcut: "ctrl+c"
                         },
                         {
                             name: "Copy merged",
                             action: "CPCopyMerged",
                             mnemonic: "Y",
-                            shortcut: "CTRL SHIFT C"
+                            shortcut: "shift+ctrl+c"
                         },
                         {
                             name: "Paste",
                             action: "CPPaste",
                             mnemonic: "P",
-                            shortcut: "CTRL V"
+                            shortcut: "ctrl+v"
                         },
                         {
                             name: "-"
@@ -149,13 +211,13 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Select all",
                             action: "CPSelectAll",
                             mnemonic: "A",
-                            shortcut: "CTRL A"
+                            shortcut: "ctrl+a"
                         },
                         {
                             name: "Deselect",
                             action: "CPDeselectAll",
                             mnemonic: "D",
-                            shortcut: "CTRL D"
+                            shortcut: "ctrl+d"
                         }
                     ]
                 },
@@ -167,7 +229,7 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Duplicate",
                             action: "CPLayerDuplicate",
                             mnemonic: "D",
-                            shortcut: "CTRL SHIFT D",
+                            shortcut: "shift+ctrl+d",
                             title: "Creates a copy of the currently selected layer"
                         },
                         {
@@ -177,14 +239,14 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Merge down",
                             action: "CPLayerMergeDown",
                             mnemonic: "E",
-                            shortcut: "CTRL E",
+                            shortcut: "ctrl+e",
                             title: "Merges the currently selected layer with the one directly below it"
                         },
                         {
                             name: "Merge all layers",
                             action: "CPLayerMergeAll",
                             mnemonic: "A",
-                            shortcut: "CTRL S",
+                            shortcut: "ctrl+s",
                             title: "Merges all the layers"
                         },
                     ],
@@ -197,14 +259,14 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Clear",
                             action: "CPClear",
                             mnemonic: "D",
-                            shortcut: "DEL",
+                            shortcut: "del,backspace",
                             title: "Clears the selected area"
                         },
                         {
                             name: "Fill",
                             action: "CPFill",
                             mnemonic: "F",
-                            shortcut: "CTRL F",
+                            shortcut: "ctrl+f",
                             title: "Fills the selected area with the current color"
                         },
                         {
@@ -259,21 +321,21 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Zoom in",
                             action: "CPZoomIn",
                             mnemonic: "I",
-                            shortcut: "CTRL +",
+                            shortcut: "ctrl++",
                             title: "Zooms in"
                         },
                         {
                             name: "Zoom out",
                             action: "CPZoomOut",
                             mnemonic: "O",
-                            shortcut: "CTRL -",
+                            shortcut: "ctrl+-",
                             title: "Zooms out"
                         },
                         {
                             name: "Zoom 100%",
                             action: "CPZoom100",
                             mnemonic: "1",
-                            shortcut: "CTRL 0",
+                            shortcut: "ctrl+0",
                             title: "Resets the zoom factor to 100%"
                         },
                         {
@@ -293,7 +355,7 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Show grid",
                             action: "CPToggleGrid",
                             mnemonic: "G",
-                            shortcut: "CTRL G",
+                            shortcut: "ctrl+g",
                             title: "Displays a grid over the image",
                             checkbox: true,
                             checked: false
@@ -319,7 +381,7 @@ export default function CPMainGUI(controller, uiElem) {
                             name: "Toggle palettes",
                             action: "CPTogglePalettes",
                             mnemonic: "P",
-                            shortcut: "TAB",
+                            shortcut: "tab",
                             title: "Hides or shows all palettes"
                         },
                         {
@@ -421,25 +483,8 @@ export default function CPMainGUI(controller, uiElem) {
         recurseFillMenu($(".navbar-nav", bar), menuEntries);
 
         $(bar).on('click', 'a:not(.dropdown-toggle)', function(e) {
-            var
-                target = $(e.target),
-                action = target.data('action'),
-                checkbox = target.data('checkbox'),
-                selected;
-            
-            if (checkbox) {
-                target.toggleClass("selected");
-                selected = target.hasClass("selected");
-            } else {
-                selected = false;
-            }
-            
-            controller.actionPerformed({
-                action: action,
-                checkbox: checkbox,
-                selected: selected
-            });
-            
+            menuItemClicked($(this));
+
             e.preventDefault();
         });
         
@@ -447,38 +492,11 @@ export default function CPMainGUI(controller, uiElem) {
     }
     
     function onPaletteVisChange(paletteName, show) {
+        // Toggle the tickbox of the corresponding menu entry to match the new palette visibility
         var
             palMenuEntry = $('[data-action=\"CPPal' + paletteName.substring(0, 1).toUpperCase() + paletteName.substring(1) + '\"]', menuBar);
         
         palMenuEntry.toggleClass("selected", show);
-    }
-    
-    function onKeyDown(e) {
-        var 
-            keyCode = e.keyCode || e.which,
-            keyName;
-        
-        if (e.keyCode == 9) {
-            keyName = "TAB";
-        } else if (e.keyCode >= 32 && e.keyCode < 128) {
-            keyName = String.fromCharCode(e.keyCode);
-        } else {
-            return;
-        }
-        
-        if (e.shiftKey) {
-            keyName = "SHIFT " + keyName;
-        }
-        if (e.ctrlKey) {
-            keyName = "CTRL " + keyName;
-        }
-
-        if (e.keyCode == 9) {
-            controller.actionPerformed({
-                action: "CPTogglePalettes"
-            });
-            e.preventDefault();
-        }
     }
     
     this.togglePalettes = function() {
@@ -513,7 +531,6 @@ export default function CPMainGUI(controller, uiElem) {
     window.addEventListener("resize", function() {
         that.constrainPalettes();
     });
-    window.addEventListener("keydown", onKeyDown);
 
     menuBar = createMainMenu();
     
@@ -525,7 +542,7 @@ export default function CPMainGUI(controller, uiElem) {
     lowerArea.appendChild(paletteManager.getElement());
     
     uiElem.appendChild(lowerArea);
-    
+   
     setTimeout(function() {
         canvas.resize();
     }, 0);

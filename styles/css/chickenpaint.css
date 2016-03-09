@@ -8931,6 +8931,10 @@
   height: 700px;
   touch-action: none;
 }
+.chickenpaint-canvas[data-cursor="grab"] {
+  cursor: -webkit-grab;
+  cursor: grab;
+}
 .chickenpaint-canvas[data-cursor="grabbing"] {
   cursor: -webkit-grabbing;
   cursor: grabbing;
@@ -9286,5 +9290,5 @@
 }
 .chickenpaint-splash-screen {
   width: 100%;
-  height: 800px;
+  height: 600px;
 }

@@ -34,6 +34,7 @@ import CPSpashScreen from "./gui/CPSplashScreen.js";
 
 import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
+import CPRect from "./util/CPRect";
 
 /**
  * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
