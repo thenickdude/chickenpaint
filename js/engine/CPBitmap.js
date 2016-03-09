@@ -23,11 +23,9 @@
 import CPRect from "../util/CPRect";
 
 export default function CPBitmap(width, height) {
-    width = width | 0;
-    height = height | 0;
-
-    this.width = width;
-    this.height = height;
+    // Width and height forced to integers
+    this.width = width | 0;
+    this.height = height | 0;
 }
 
 CPBitmap.prototype.getBounds = function() {

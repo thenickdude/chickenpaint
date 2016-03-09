@@ -593,7 +593,7 @@ export default function CPCanvas(controller) {
     function CPRectSelectionMode() {
         var
             firstClick,
-            curRect = new CPRect();
+            curRect = new CPRect(0, 0, 0, 0);
 
         this.mousePressed = function (e) {
             var
@@ -859,7 +859,7 @@ export default function CPCanvas(controller) {
             p3 = coordToDisplayInt({x: r.right, y: r.top - 1}),
             p4 = coordToDisplayInt({x: r.right, y: r.bottom}),
 
-            r2 = new CPRect();
+            r2 = new CPRect(0, 0, 0, 0);
 
         r2.left = Math.min(Math.min(p1.x, p2.x), Math.min(p3.x, p4.x));
         r2.top = Math.min(Math.min(p1.y, p2.y), Math.min(p3.y, p4.y));
@@ -883,13 +883,14 @@ export default function CPCanvas(controller) {
      * Get a rectangle that encloses the preview brush, in screen coordinates.
      */
     function getBrushPreviewOval() {
-        var brushSize = ~~(controller.getBrushSize() * zoom);
+        var 
+            brushSize = controller.getBrushSize() * zoom;
         
         return new CPRect(
-            mouseX - brushSize / 2, 
-            mouseY - brushSize / 2, 
-            mouseX + brushSize / 2, 
-            mouseY + brushSize / 2
+            Math.round(mouseX - brushSize / 2),
+            Math.round(mouseY - brushSize / 2),
+            Math.round(mouseX + brushSize / 2),
+            Math.round(mouseY + brushSize / 2)
         );
     }
 

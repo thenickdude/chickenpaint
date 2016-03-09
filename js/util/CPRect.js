@@ -21,15 +21,20 @@
 */
 
 export default function CPRect(left, top, right, bottom) {
-    // TODO remove me
-    if ((left !== undefined || top !== undefined) && (right === undefined || bottom === undefined)) {
-        throw "Bad args to CPRect";
+    /*
+    if (left === undefined || top === undefined || right === undefined || bottom === undefined) {
+        throw "Bad rect";
     }
     
-    this.left = ~~left;
-    this.top = ~~top;
-    this.right = ~~right;
-    this.bottom = ~~bottom;
+    if (~~left !== left || ~~top !== top || ~~right !== right || ~~bottom !== bottom) {
+        throw "Bad rect";
+    }
+    */
+    
+    this.left = left;
+    this.top = top;
+    this.right = right;
+    this.bottom = bottom;
 }
 
 CPRect.prototype.makeEmpty = function() {
@@ -161,3 +166,12 @@ CPRect.prototype.grow = function(h, v) {
     this.top -= v;
     this.bottom += v;
 };
+
+/* 
+ * Chrome is initially eager to optimize CPRect and users assuming that all the fields are SMIs, then later on decides
+ * that they should be tagged numbers after all. This causes all the blending operation functions to be reoptimized
+ * a couple of times. 
+ * 
+ * Avoid that mess by starting things off with floats in the members.  
+ */
+window.cpRectGarbage = new CPRect(1.5, 2.5, 3.5, 4.5);

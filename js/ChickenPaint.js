@@ -506,7 +506,7 @@ export default function ChickenPaint(options) {
                 canvas.repaintAll();
             break;
             case "CPDeselectAll":
-                this.artwork.rectangleSelection(new CPRect());
+                this.artwork.rectangleSelection(new CPRect(0, 0, 0, 0));
                 canvas.repaintAll();
             break;
             case "CPHFlip":

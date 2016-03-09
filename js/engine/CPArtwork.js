@@ -51,7 +51,7 @@ export default function CPArtwork(_width, _height) {
         
         hasUnsavedChanges,
         
-        curSelection = new CPRect(),
+        curSelection = new CPRect(0, 0, 0, 0),
         
         fusion = new CPLayer(_width, _height), 
         undoBuffer = new CPLayer(_width, _height),
@@ -65,7 +65,7 @@ export default function CPArtwork(_width, _height) {
         opacityBuffer = new CPGreyBmp(_width, _height, 32),
         
         fusionArea = new CPRect(0, 0, _width, _height), 
-        undoArea = new CPRect(), opacityArea = new CPRect(),
+        undoArea = new CPRect(0, 0, 0, 0), opacityArea = new CPRect(0, 0, 0, 0),
         
         rnd = new CPRandom(),
         
@@ -1763,7 +1763,7 @@ export default function CPArtwork(_width, _height) {
 
         curLayer.pasteAlphaRect(undoBuffer, srcRect, srcRect.left + offsetX, srcRect.top + offsetY);
 
-        undoArea = new CPRect();
+        undoArea = new CPRect(0, 0, 0, 0);
         if (!moveModeCopy) {
             undoArea.union(srcRect);
         }
