@@ -29,14 +29,15 @@ export default function CPLayer(width, height, name) {
     // Super-constructor
     CPColorBmp.call(this, width, height);
     
-    var
+    const
         BYTES_PER_PIXEL = 4,
         
         RED_BYTE_OFFSET = 0,
         GREEN_BYTE_OFFSET = 1,
         BLUE_BYTE_OFFSET = 2,
-        ALPHA_BYTE_OFFSET = 3,
-        
+        ALPHA_BYTE_OFFSET = 3;
+    
+    var
         that = this;
         
     this.name = name || "";

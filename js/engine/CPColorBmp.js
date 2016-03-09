@@ -693,13 +693,21 @@ CPColorBmp.prototype.getMemorySize = function() {
 };
 
 // Load from an UInt8Array in ARGB byte order
-CPColorBmp.prototype.loadFromARGB = function(array) {
-    for (var i = 0; i < array.length; i += 4) {
-        this.data[i + CPColorBmp.ALPHA_BYTE_OFFSET] = array[i];
-        this.data[i + CPColorBmp.RED_BYTE_OFFSET] = array[i + 1];
-        this.data[i + CPColorBmp.GREEN_BYTE_OFFSET] = array[i + 2];
-        this.data[i + CPColorBmp.BLUE_BYTE_OFFSET] = array[i + 3];
+function loadFromARGBInternal(dest, source) {
+    for (var i = 0; i < source.length; i += 4) {
+        dest[i + CPColorBmp.ALPHA_BYTE_OFFSET] = source[i];
+        dest[i + CPColorBmp.RED_BYTE_OFFSET] = source[i + 1];
+        dest[i + CPColorBmp.GREEN_BYTE_OFFSET] = source[i + 2];
+        dest[i + CPColorBmp.BLUE_BYTE_OFFSET] = source[i + 3];
     }
+};
+
+CPColorBmp.prototype.loadFromARGB = function(array) {
+    /* 
+     * Insulate the V8 optimizer from changes in the class of 'this' by extracting out just the pixels field. 
+     * This prevents repeated deoptimizations that cause the compiled function to be thrown out and run 10x slower.
+     */
+    loadFromARGBInternal(this.data, array);
 };
 
 // Load from a loaded HTML Image object
