@@ -39,7 +39,8 @@ export default function CPResourceLoader(options) {
             url: options.loadSwatchesUrl,
             friendly: "color swatches",
             name: "swatches",
-            required: false
+            required: false,
+            noProgress: true // So short that we may as well keep the smoothie drained
         });
     }
 
@@ -95,6 +96,14 @@ export default function CPResourceLoader(options) {
         });
     }
 
+    function reportProgress(resource, progress) {
+        if (progress === null) {
+            that.emitEvent("loadingProgress", [1.0, "Loading your " + resource.friendly + "..."]);
+        } else {
+            that.emitEvent("loadingProgress", [progress, "Loading your " + resource.friendly + " (" + Math.round(progress * 100) + "%)..."]);
+        }
+    }
+    
     this.load = function() {
         if (resources.length == 0) {
             that.emitEvent("loadingComplete", [completed]);
@@ -108,12 +117,16 @@ export default function CPResourceLoader(options) {
         xhr.responseType = 'arraybuffer';
 
         xhr.addEventListener("progress", function(evt) {
-            if (evt.lengthComputable) {
-                var
-                    progress = evt.loaded / evt.total;
-
-                that.emitEvent("loadingProgress", [progress, "Loading your " + resource.friendly + " (" + Math.round(progress * 100) + "%)..."]);
+            var
+                progress;
+            
+            if (evt.lengthComputable && !resource.noProgress) {
+                progress = evt.loaded / evt.total;
+            } else {
+                progress = null;
             }
+            
+            reportProgress(resource, progress);
         }, false);
 
         function handleFatal() {
@@ -127,18 +140,27 @@ export default function CPResourceLoader(options) {
         
         xhr.addEventListener("load", function(evt) {
             if (this.status == 200) {
-                that.emitEvent("loadingProgress", [1.0, "Loading your " + resource.friendly + " (100%)..."]);
+                var
+                    response = this.response;
+                
+                reportProgress(resource, 1.0);
     
-                decodeResource(resource, this.response).then(function(decoded) {
-                    if (decoded) {
-                        completed[resource.name] = decoded;
-                        
-                        // Move on to the next file
-                        that.load();
-                    } else {
-                        that.emitEvent("loadingFailure", ["Failed to read your " + resource.friendly]);
-                    }
-                });
+                // Yield to the DOM to give it a chance to paint the loaded message before we begin decoding
+                setTimeout(
+                    function() {
+                        decodeResource(resource, response).then(function(decoded) {
+                            if (decoded) {
+                                completed[resource.name] = decoded;
+                                
+                                // Move on to the next file
+                                that.load();
+                            } else {
+                                that.emitEvent("loadingFailure", ["Failed to read your " + resource.friendly]);
+                            }
+                        });
+                    },
+                    0
+                );
             } else {
                 handleFatal();
             }
@@ -146,7 +168,7 @@ export default function CPResourceLoader(options) {
 
         xhr.addEventListener("error", handleFatal);
 
-        that.emitEvent("loadingProgress", [0.0, "Loading your " + resource.friendly + " (0%)..."]);
+        reportProgress(resource, resource.noProgress ? null : 0.0);
 
         xhr.open("GET", resource.url, true);
         xhr.send();
