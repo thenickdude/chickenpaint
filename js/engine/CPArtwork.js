@@ -277,6 +277,46 @@ export default function CPArtwork(_width, _height) {
         callListenersLayerChange();
     };
     
+    this.mergeDown = function(createUndo) {
+        var
+            activeLayerIndex = this.getActiveLayerIndex();
+        
+        if (layers.length > 1 && activeLayerIndex > 0) {
+            if (createUndo) {
+                addUndo(new CPUndoMergeDownLayer(activeLayerIndex));
+            }
+
+            layers[activeLayerIndex].fusionWithFullAlpha(layers[activeLayerIndex - 1], this.getBounds());
+            layers.splice(activeLayerIndex, 1);
+            this.setActiveLayerIndex(activeLayerIndex - 1);
+
+            invalidateFusion();
+            callListenersLayerChange();
+        }
+    };
+
+    this.mergeAllLayers = function(createUndo) {
+        if (layers.length > 1) {
+            if (createUndo) {
+                addUndo(new CPUndoMergeAllLayers());
+            }
+
+            that.fusionLayers();
+            layers = [];
+
+            var
+                layer = new CPLayer(that.width, that.height, this.getDefaultLayerName());
+            
+            layer.copyDataFrom(fusion);
+            
+            layers.push(layer);
+            this.setActiveLayerIndex(0);
+
+            invalidateFusion();
+            callListenersLayerChange();
+        }
+    };
+    
     function moveLayerReal(from, to) {
         var
             layer = layers.splice(from, 1)[0];
@@ -1326,7 +1366,7 @@ export default function CPArtwork(_width, _height) {
             }
         }
         return prefix + (highestLayerNb + 1);
-    }
+    };
     
     function restoreAlpha(rect) {
         that.getActiveLayer().copyAlphaFrom(undoBuffer, rect);
@@ -1971,6 +2011,67 @@ export default function CPArtwork(_width, _height) {
     
     CPUndoRemoveLayer.prototype = Object.create(CPUndo.prototype);
     CPUndoRemoveLayer.prototype.constructor = CPUndoRemoveLayer;
+    
+    function CPUndoMergeDownLayer(layerIndex) {
+        var
+            layerBottom = layerBottom = new CPLayer(that.width, that.height), 
+            layerTop;
+
+        layerBottom.copyFrom(layers[layerIndex - 1]);
+        layerTop = layers[layerIndex];
+
+        this.undo = function() {
+            layers[layerIndex - 1].copyFrom(layerBottom);
+            layers.splice(layerIndex, 0, layerTop);
+            that.setActiveLayerIndex(layerIndex);
+
+            layerBottom = layerTop = null;
+
+            invalidateFusion();
+            callListenersLayerChange();
+        };
+
+        this.redo = function() {
+            layerBottom = new CPLayer(that.width, that.height);
+            layerBottom.copyFrom(layers[layerIndex - 1]);
+            layerTop = layers[layerIndex];
+
+            that.setActiveLayerIndex(layerIndex);
+            that.mergeDown(false);
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return undone ? 0 : that.width * that.height * CPColorBmp.BYTES_PER_PIXEL * 2;
+        };
+    }
+    
+    CPUndoMergeDownLayer.prototype = Object.create(CPUndo.prototype);
+    CPUndoMergeDownLayer.prototype.constructor = CPUndoMergeDownLayer;
+
+    function CPUndoMergeAllLayers() {
+        var 
+            oldActiveLayerIndex = that.getActiveLayerIndex(),
+            oldLayers = layers.slice(0); // Clone old layers array
+
+        this.undo = function() {
+            layers = oldLayers.slice(0);
+            that.setActiveLayerIndex(oldActiveLayerIndex);
+
+            invalidateFusion();
+            callListenersLayerChange();
+        };
+
+        this.redo = function() {
+            that.mergeAllLayers(false);
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return undone ? 0 : oldLayers.length * width * height * CPColorBmp.BYTES_PER_PIXEL;
+        };
+    }
+    
+    CPUndoMergeAllLayers.prototype = Object.create(CPUndo.prototype);
+    CPUndoMergeAllLayers.prototype.constructor = CPUndoMergeAllLayers;
     
     function CPUndoMoveLayer(from, to) {
         this.undo = function() {
