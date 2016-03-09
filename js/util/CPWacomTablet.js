@@ -78,6 +78,12 @@ export default function CPWacomTablet() {
         pluginObject.onload = "onWacomPluginLoaded";
         
         document.body.appendChild(pluginObject);
+        
+        setTimeout(function() {
+            if (!tabletOK) {
+                console.log("Looks like the Wacom plugin isn't installed, or failed to load.");
+            }
+        }, 5000);
     };
 }
 
