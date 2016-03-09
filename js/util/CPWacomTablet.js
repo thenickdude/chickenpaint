@@ -55,6 +55,13 @@ export default function CPWacomTablet() {
      * Call after the document body is ready (needs DOM to be ready for loading the Wacom plugin).
      */
     this.detectTablet = function() {
+        // Chrome has dropped NPAPI support, so the Wacom plugin cannot be installed
+        if (/Chrome/i.test(navigator.userAgent) && !/OPR/.test(navigator.userAgent)) {
+            // Prevent an ugly "this page has tried to load a plugin which is not supported" error message
+            console.log("Not attempting to load Wacom tablet plugin, since this is Chrome");
+            return;
+        }
+        
         console.log("Attempting to load Wacom tablet support...");
         
         pluginObject = document.createElement("object");
