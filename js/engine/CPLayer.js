@@ -52,8 +52,6 @@ export default function CPLayer(width, height, name) {
     // others need the bottom layer to be 100% opaque but are faster
     
     function fusionWithMultiply(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -76,8 +74,6 @@ export default function CPLayer(width, height, name) {
     }
     
     function fusionWithNormal(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -108,8 +104,6 @@ export default function CPLayer(width, height, name) {
 
     // Fusing onto an opaque layer when this layer has alpha set to 100
     function fusionWithNormalNoAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -139,8 +133,6 @@ export default function CPLayer(width, height, name) {
     }
     
     function fusionWithAdd(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var 
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -165,8 +157,6 @@ export default function CPLayer(width, height, name) {
     // Normal Alpha Mode
     // C = A*d + B*(1-d) and d = aa / (aa + ab - aa*ab)
     function fusionWithNormalFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -201,8 +191,6 @@ export default function CPLayer(width, height, name) {
     // C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
 
     function fusionWithMultiplyFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -238,8 +226,6 @@ export default function CPLayer(width, height, name) {
     // C = (aa * A + ab * B) / (aa + ab - aa*ab)
 
     function fusionWithAddFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -279,8 +265,6 @@ export default function CPLayer(width, height, name) {
     // C = (aa * A + ab * B - aa*ab ) / (aa + ab - aa*ab)
 
     function fusionWithSubtractFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -318,8 +302,6 @@ export default function CPLayer(width, height, name) {
     // C = 1 - (((1-A)*aa*(1-ab) + (1-B)*ab*(1-aa) + (1-A)*(1-B)*aa*ab) / (aa + ab - aa*ab))
 
     function fusionWithScreenFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -363,8 +345,6 @@ export default function CPLayer(width, height, name) {
     // if A > B: C = B*d + A*(1-d) and d = ab * (1-aa) / (aa + ab - aa*ab)
 
     function fusionWithLightenFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -408,8 +388,6 @@ export default function CPLayer(width, height, name) {
     // if A > B: C = A*d + B*(1-d) and d = aa * (1-ab) / (aa + ab - aa*ab)
 
     function fusionWithDarkenFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -453,8 +431,6 @@ export default function CPLayer(width, height, name) {
     // C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*B/(1-A)) / (aa + ab - aa*ab)
 
     function fusionWithDodgeFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -506,8 +482,6 @@ export default function CPLayer(width, height, name) {
     // C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*(1-(1-B)/A)) / (aa + ab - aa*ab)
 
     function fusionWithBurnFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -560,11 +534,11 @@ export default function CPLayer(width, height, name) {
     // If B > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
 
     function fusionWithOverlayFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
+
+        fusion.alpha = 100;
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -608,7 +582,6 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
-        fusion.alpha = 100;
     }
 
     // Hard Light Mode (same as Overlay with A and B swapped)
@@ -616,11 +589,11 @@ export default function CPLayer(width, height, name) {
     // If A > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
 
     function fusionWithHardLightFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
+
+        fusion.alpha = 100;
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -664,7 +637,6 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
-        fusion.alpha = 100;
     }
 
     // Soft Light Mode
@@ -672,8 +644,6 @@ export default function CPLayer(width, height, name) {
     // A > 0.5 => C = (2*A - 1) * (sqrt(B) - B) + B
 
     function fusionWithSoftLightFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -729,8 +699,6 @@ export default function CPLayer(width, height, name) {
     // A > 0.5 => C = B / (2*(1-A))
 
     function fusionWithVividLightFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -784,8 +752,6 @@ export default function CPLayer(width, height, name) {
     // C = B + 2*A -1
 
     function fusionWithLinearLightFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -837,8 +803,6 @@ export default function CPLayer(width, height, name) {
     // else => C = B
 
     function fusionWithPinLightFullAlpha(fusion, rect) {
-        rect = that.getBounds().clip(rect);
-        
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -888,6 +852,8 @@ export default function CPLayer(width, height, name) {
         if (this.alpha <= 0) {
             return;
         }
+        
+        rect = that.getBounds().clip(rect);
         
         switch (this.blendMode) {
             case CPLayer.LM_NORMAL:
@@ -960,6 +926,8 @@ export default function CPLayer(width, height, name) {
         if (this.alpha <= 0) {
             return;
         }
+        
+        rect = that.getBounds().clip(rect);
 
         switch (this.blendMode) {
             case CPLayer.LM_NORMAL:
