@@ -290,6 +290,10 @@ export default function ChickenPaint(options) {
     function callViewListeners(viewInfo) {
         that.emitEvent('viewChange', [viewInfo]);
     }
+    
+    this.getMainGUI = function() {
+        return mainGUI;
+    };
 
     this.getArtwork = function() {
         return this.artwork;
