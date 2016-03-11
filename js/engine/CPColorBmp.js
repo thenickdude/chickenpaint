@@ -170,14 +170,14 @@ export default function CPColorBmp(width, height) {
                         realAlpha = (alpha1 * 255 / newAlpha) | 0,
                         invAlpha = 255 - realAlpha;
     
-                    for (var i = 0; i < 3; i++, dstIndex++, srcIndex++) {
-                        this.data[dstIndex] = (bmp.data[srcIndex] + (this.data[dstIndex] * invAlpha - bmp.data[srcIndex] * invAlpha) / 255) | 0;
+                    for (var i = 0; i < 3; i++, dstOffset++, srcOffset++) {
+                        this.data[dstOffset] = (bmp.data[srcOffset] + (this.data[dstOffset] * invAlpha - bmp.data[srcOffset] * invAlpha) / 255) | 0;
                     }
-                    this.data[dstIndex++] = newAlpha;
-                    srcIndex++;
+                    this.data[dstOffset++] = newAlpha;
+                    srcOffset++;
                 } else {
-                    dstIndex += CPColorBmp.BYTES_PER_PIXEL;
-                    srcIndex += CPColorBmp.BYTES_PER_PIXEL;
+                    dstOffset += CPColorBmp.BYTES_PER_PIXEL;
+                    srcOffset += CPColorBmp.BYTES_PER_PIXEL;
                 }
             }
         }
