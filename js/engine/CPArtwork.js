@@ -2206,10 +2206,12 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             that.setSelection(from);
+            callListenersUpdateRegion(that.getBounds());
         };
 
         this.redo = function() {
             that.setSelection(to);
+            callListenersUpdateRegion(that.getBounds());
         };
 
         this.noChange = function() {
