@@ -168,7 +168,6 @@ export default function CPLayersPalette(controller) {
         function mouseUp(e) {
             if (e.button == 0) {
                 var
-                    d = {width: canvas.width, height: canvas.height},
                     offset = $(canvas).offset(),
                     
                     artwork = controller.getArtwork(),
@@ -305,8 +304,6 @@ export default function CPLayersPalette(controller) {
             /* Click, moved from mouseClicked due to problems with focus and stuff */
             if (e.button == 0) { /* Left button */
                 var
-                    d = {width: canvas.width, height: canvas.height},
-                    
                     artwork = controller.getArtwork(),
                     layers = artwork.getLayers(),
                     

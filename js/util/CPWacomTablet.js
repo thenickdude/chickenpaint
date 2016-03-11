@@ -24,9 +24,6 @@ export default function CPWacomTablet() {
     var 
         tabletOK = false,
 
-        pressure = 0, 
-        pressureExtent = 1,
-        
         pluginObject;
 
     this.getPressure = function() {

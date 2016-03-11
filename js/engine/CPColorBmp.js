@@ -118,7 +118,7 @@ export default function CPColorBmp(width, height) {
             
             widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
         
-        for (var y = rect.top; y < rect.bottom; y++) {
+        for (var y = 0; y < h; y++) {
             for (var x = 0; x < widthBytes; x++) {
                 this.data[bmp1Index++] ^= buffer[bufferIndex++];
             }

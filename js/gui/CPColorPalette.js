@@ -226,7 +226,6 @@ function CPColorSlider(cpController, selecter) {
     
     function mousePickColor(e) {
         var
-            x = e.pageX - $(canvas).offset().left,
             y = e.pageY - $(canvas).offset().top,
             
             _hue = ~~(y * 360 / h);
@@ -288,9 +287,7 @@ function CPColorShow(cpController) {
     var
         color = 0,
         
-        element = document.createElement("div"),
-        
-        that = this;
+        element = document.createElement("div");
 
     function padLeft(string, padding, len) {
         while (string.length < len) {

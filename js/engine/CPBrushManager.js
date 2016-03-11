@@ -43,7 +43,6 @@ export default function CPBrushManager() {
         cacheSize, cacheSqueeze, cacheAngle,
         cacheType,
 
-        texture, // A CPGreyBmp
         that = this; 
 
     function getBrushWithAA(brushInfo, dx, dy) {
