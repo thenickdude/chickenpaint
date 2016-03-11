@@ -27,13 +27,13 @@ var
             mnemonic: "F",
             children: [
                 {
-                    name: "Save as...",
+                    name: "Save to my computer",
                     action: "CPSave",
                     mnemonic: "S",
                     shortcut: "ctrl+s"
                 },
                 {
-                    name: "Save Oekaki", /* to the server */
+                    name: "Save Oekaki",
                     action: "CPSend",
                     mnemonic: "S",
                     shortcut: "ctrl+s"
@@ -410,6 +410,10 @@ export default function CPMainMenu(controller, mainGUI) {
             (function(entry) {
                 var 
                     entryElem;
+                
+                if (entry.action && !controller.isActionSupported(entry.action)) {
+                    return;
+                }
     
                 if (entry.children) {
                     entryElem = $(

@@ -971,6 +971,24 @@ export default function CPCanvas(controller) {
         return canvasRotation;
     };
     
+    /**
+     * Get the rotation as the nearest number of whole 90 degree clockwise rotations ([0..3])
+     */
+    this.getRotation90 = function() {
+        var
+            rotation = Math.round(this.getRotation() / Math.PI * 2);
+        
+        // Just in case:
+        rotation %= 4;
+        
+        // We want [0..3] as output
+        if (rotation < 0) {
+            rotation += 4;
+        }
+        
+        return rotation;
+    };
+    
     function zoomOnPoint(zoom, centerX, centerY) {
         zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
         

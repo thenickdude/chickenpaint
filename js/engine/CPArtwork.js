@@ -193,6 +193,14 @@ export default function CPArtwork(_width, _height) {
         invalidateFusionRect(new CPRect(0, 0, that.width, that.height));
     };
     
+    this.setHasUnsavedChanges = function(value) {
+        hasUnsavedChanges = value;
+    };
+    
+    this.getHasUnsavedChanges = function() {
+        return hasUnsavedChanges;
+    };
+    
     this.setLayerVisibility = function(layerIndex, visible) {
         var
             layer = this.getLayer(layerIndex);
@@ -730,7 +738,6 @@ export default function CPArtwork(_width, _height) {
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
             
-            srcYStride = opacityBuffer.width,
             dstYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL,
             
             r, g, b, a;
@@ -1287,8 +1294,6 @@ export default function CPArtwork(_width, _height) {
          */
         function smudgePasteBuffer(srcRect, dstRect, buffer, brush, w, alpha) {
             var
-                undoData = undoBuffer.data,
-
                 by = srcRect.top;
             
             for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {

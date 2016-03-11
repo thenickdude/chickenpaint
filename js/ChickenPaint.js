@@ -21,35 +21,23 @@
 */
 
 import CPBrushInfo from "./engine/CPBrushInfo";
-import CPChibiFile from "./engine/CPChibiFile";
 import CPArtwork from "./engine/CPArtwork";
 import CPResourceLoader from "./engine/CPResourceLoader";
+import CPResourceSaver from "./engine/CPResourceSaver";
+
+import CPSpashScreen from "./gui/CPSplashScreen.js";
 
 import CPMainGUI from "./gui/CPMainGUI";
+
 import CPAboutDialog from "./gui/CPAboutDialog";
 import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPTabletDialog";
-import CPSpashScreen from "./gui/CPSplashScreen.js";
+import CPSendDialog from "./gui/CPSendDialog";
 
 import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
-
-/**
- * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
- * This function converts such a string to a Uint8Array instead.
- */
-function binaryStringToByteArray(s) {
-    var
-        result = new Uint8Array(s.length);
-
-    for (var i = 0; i < s.length; i++) {
-        result[i] = s.charCodeAt(i);
-    }
-
-    return result;
-}
 
 function createDrawingTools() {
     var
@@ -224,14 +212,16 @@ function createDrawingTools() {
  * rotation     - Integer from [0..3], number of 90 degree right rotations that should be applied to the canvas after
  *                loading
  *
- * postUrl   - URL to post the saved drawing to
- * postedUrl - URL to navigate to after saving is successful and the user chooses to see/publish their finished product
+ * saveUrl   - URL to POST the drawing to to save it
+ * postUrl   - URL to navigate to after saving is successful and the user chooses to see/publish their finished product
  * exitUrl   - URL to navigate to after saving is successful and the user chooses to exit (optional)
  * testUrl   - URL that ChickenPaint can simulate a drawing upload to to test the user's permissions/connection (optional)
  *
  * loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
  * loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
  * loadSwatchesUrl  - URL of an .aco palette to load (optional)
+ * 
+ * allowDownload - Allow the drawing to be saved to the user's computer
  */
 export default function ChickenPaint(options) {
     var
@@ -358,36 +348,68 @@ export default function ChickenPaint(options) {
     this.getBrushInfo = function() {
         return tools[curBrush];
     }
-
+    
     function saveDrawing() {
         var
-            rotation = Math.round(canvas.getRotation() / Math.PI * 2);
-
-        // Just in case:
-        rotation %= 4;
-
-        // We want [0..3] as output
-        if (rotation < 0) {
-            rotation += 4;
-        }
-
+            saver = new CPResourceSaver({
+                artwork: that.getArtwork(),
+                rotation: canvas.getRotation90(),
+                swatches: mainGUI.getSwatches()
+            });
+        
+        saver.on("savingComplete", function() {
+            that.artwork.setHasUnsavedChanges(false);
+        });
+        
+        saver.on("savingFailure", function() {
+            alert("An error occured while trying to save your drawing! Please try again!");
+        });
+        
+        saver.save();
+    }
+    
+    function sendDrawing() {
         var
-            png = binaryStringToByteArray(that.artwork.getFlatPNG(rotation)),
-
-            blob = new Blob([png], {type: "image/png"});
-
-        window.saveAs(blob, "oekaki.png");
-
-        if (!that.artwork.isSimpleDrawing()) {
-            var
-                chibiFile = new CPChibiFile();
-
-            blob = chibiFile.serialize(that.artwork);
-
-            window.saveAs(blob, "oekaki.chi");
-        }
+            saver = new CPResourceSaver({
+                artwork: that.getArtwork(),
+                rotation: canvas.getRotation90(),
+                swatches: mainGUI.getSwatches(),
+                url: options.saveUrl
+            }),
+            sendDialog = new CPSendDialog(that, uiElem, saver);
+        
+        saver.on("savingComplete", function() {
+            that.artwork.setHasUnsavedChanges(false);
+        });
+        
+        sendDialog.show();
+        
+        saver.save();
     }
 
+    /**
+     * Not all saving actions will be supported (depending on what options we're configured with). Use this function
+     * to check for support for a given action.
+     */
+    this.isActionSupported = function(actionName) {
+        switch (actionName) {
+            case "CPSend":
+                return !!options.saveUrl;
+
+            case "CPSave":
+                return options.allowDownload === undefined ? true : options.allowDownload;
+
+            case "CPExit":
+                return !!options.exitUrl;
+
+            case "CPPost":
+                return !!options.postUrl;
+
+            default:
+                return true;
+        }
+    };
+    
     this.actionPerformed = function(e) {
         if (this.artwork == null || canvas == null) {
             return; // this shouldn't happen but just in case
@@ -585,8 +607,21 @@ export default function ChickenPaint(options) {
             case "CPArrangePalettes":
                 mainGUI.arrangePalettes();
             break;
+            
+            // Saving
+            
             case "CPSave":
                 saveDrawing();
+            break;
+            case "CPSend":
+                sendDrawing();
+            break;
+            case "CPPost":
+                window.location = options.postUrl;
+            break;
+            case "CPExit":
+                // Exit the drawing session without posting the drawing to the forum
+                window.location = options.exitUrl;
             break;
         }
 
@@ -608,8 +643,9 @@ export default function ChickenPaint(options) {
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
         var
-            loader = new CPResourceLoader(options),
-            splash = new CPSpashScreen(uiElem, loader);
+            loader = new CPResourceLoader(options);
+        
+        new CPSpashScreen(uiElem, loader);
 
         loader.on("loadingComplete", function(resources) {
             that.artwork = resources.layers || resources.flat;
@@ -620,7 +656,7 @@ export default function ChickenPaint(options) {
 
         loader.load();
     } else {
-        this.artwork = new CPArtwork(options.canvasWidth || 800, options.canvasWidth || 600);
+        this.artwork = new CPArtwork(options.canvasWidth || 800, options.canvasHeight || 600);
         this.artwork.addBackgroundLayer();
         
         startMainGUI();

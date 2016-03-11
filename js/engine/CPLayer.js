@@ -1301,16 +1301,16 @@ function getRotatedCanvas(canvas, rotation) {
         case 1:
             // 90 degree clockwise:
             rotatedCanvasContext.rotate(Math.PI / 2);
-            rotatedCanvasContext.drawImage(canvas, 0, -height);
+            rotatedCanvasContext.drawImage(canvas, 0, -canvas.height);
             break;
         case 2:
             rotatedCanvasContext.rotate(Math.PI);
-            rotatedCanvasContext.drawImage(canvas, -width, -height);
+            rotatedCanvasContext.drawImage(canvas, -canvas.width, -canvas.height);
             break;
         case 3:
             // 90 degree counter-clockwise:
             rotatedCanvasContext.rotate(-Math.PI / 2);
-            rotatedCanvasContext.drawImage(canvas, -width, 0);
+            rotatedCanvasContext.drawImage(canvas, -canvas.width, 0);
             break;
         case 0:
         default:
