@@ -628,7 +628,7 @@ export default function ChickenPaint(options) {
         // callCPEventListeners(); TODO
     };
 
-    function startMainGUI(swatches) {
+    function startMainGUI(swatches, initialRotation90) {
         mainGUI = new CPMainGUI(that, uiElem);
 
         setTool(ChickenPaint.T_PEN);
@@ -636,6 +636,10 @@ export default function ChickenPaint(options) {
         
         if (swatches) {
             mainGUI.setSwatches(swatches);
+        }
+        
+        if (initialRotation90) {
+            mainGUI.setRotation(initialRotation90 * Math.PI / 2);
         }
         
         CPWacomTablet.getRef().detectTablet();
@@ -650,8 +654,7 @@ export default function ChickenPaint(options) {
         loader.on("loadingComplete", function(resources) {
             that.artwork = resources.layers || resources.flat;
             
-            //TODO don't forget rotation
-            startMainGUI(resources.swatches);
+            startMainGUI(resources.swatches, options.rotation);
         });
 
         loader.load();

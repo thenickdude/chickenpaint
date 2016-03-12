@@ -63,6 +63,10 @@ export default function CPMainGUI(controller, uiElem) {
     this.getPaletteManager = function() {
         return paletteManager;
     };
+    
+    this.setRotation = function(rotation) {
+        canvas.setRotation(rotation);
+    };
 
     menuBar = new CPMainMenu(controller, this)
     
