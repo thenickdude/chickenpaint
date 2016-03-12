@@ -26,6 +26,7 @@ import CPColorBmp from "./CPColorBmp";
 import CPBrushManager from "./CPBrushManager";
 import CPBrushInfo from "./CPBrushInfo";
 import CPUndo from "./CPUndo";
+import CPClip from "./CPClip";
 
 import CPColorFloat from "../util/CPColorFloat";
 import CPRect from "../util/CPRect";
@@ -69,7 +70,7 @@ export default function CPArtwork(_width, _height) {
         
         rnd = new CPRandom(),
         
-        clipBoard = null,
+        clipboard = null, // A CPClip
         undoList = [], redoList = [],
         
         curBrush = null,
@@ -164,25 +165,11 @@ export default function CPArtwork(_width, _height) {
 
         return r;
     };
-
-    /**
-     * Gets the current selection rect
-     * 
-     * @returns CPRect
-     */ 
+    
     this.getSelection = function() {
         return curSelection.clone();
     };
 
-    function setSelection(r) {
-        curSelection.set(r);
-        curSelection.clip(getBounds());
-    }
-
-    function setSelection() {
-        curSelection.makeEmpty();
-    }
-    
     function invalidateFusionRect(rect) {
         fusionArea.union(rect);
         
@@ -1564,11 +1551,6 @@ export default function CPArtwork(_width, _height) {
         return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
     }
 
-    // Gets the current selection rect
-    this.getSelection = function() {
-        return curSelection.clone();
-    };
-
     this.setSelection = function(rect) {
         curSelection.set(rect);
         curSelection.clip(this.getBounds());
@@ -1787,6 +1769,92 @@ export default function CPArtwork(_width, _height) {
         // this is a really bad idea :D
         movePrevX2 = offsetX;
         movePrevY2 = offsetY;
+    };
+    
+    // Copy/Paste functions
+    
+    this.cutSelection = function(createUndo) {
+        var
+            selection = this.getSelection();
+        
+        if (selection.isEmpty()) {
+            return;
+        }
+
+        clipboard = new CPClip(curLayer.cloneRect(selection), selection.left, selection.top);
+
+        if (createUndo) {
+            addUndo(new CPUndoCut(clipboard.bmp, selection.left, selection.top, this.getActiveLayerIndex(), selection));
+        }
+
+        curLayer.clearRect(selection, 0x00000000);
+        invalidateFusion();
+    };
+
+    this.copySelection = function() {
+        var
+            selection = that.getSelection();
+        
+        if (selection.isEmpty()) {
+            return;
+        }
+
+        clipboard = new CPClip(curLayer.cloneRect(selection), selection.left, selection.top);
+    };
+
+    this.copySelectionMerged = function() {
+        var 
+            selection = that.getSelection();
+        
+        if (selection.isEmpty()) {
+            return;
+        }
+
+        // make sure the fusioned picture is up to date
+        this.fusionLayers();
+        clipboard = new CPClip(fusion.cloneRect(selection), selection.left, selection.top);
+    };
+
+    /**
+     *
+     * @param createUndo boolean
+     * @param clip CPClip
+     */
+    function pasteClip(createUndo, clip) {
+        var
+            activeLayerIndex = that.getActiveLayerIndex();
+        
+        if (createUndo) {
+            addUndo(new CPUndoPaste(clip, activeLayerIndex, that.getSelection()));
+        }
+
+        var
+            newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName()),
+            r = clip.bmp.getBounds(),
+            x, y;
+        
+        layers.splice(activeLayerIndex + 1, 0, newLayer);
+        that.setActiveLayerIndex(activeLayerIndex + 1);
+
+        if (r.isInside(that.getBounds())) {
+            x = clip.x;
+            y = clip.y;
+        } else {
+            x = ((that.width - clip.bmp.width) / 2) | 0;
+            y = ((that.height - clip.bmp.height) / 2) | 0;
+        }
+
+        curLayer.pasteBitmap(clip.bmp, x, y);
+        that.emptySelection();
+
+        invalidateFusion();
+        callListenersLayerChange();
+    }
+    
+    this.pasteClipboard = function(createUndo) {
+        if (clipboard != null) {
+            pasteClip(createUndo, clipboard);
+        }
     };
     
     this.setSampleAllLayers = function(b) {
@@ -2266,6 +2334,77 @@ export default function CPArtwork(_width, _height) {
         
         return total;
     };
+    
+    /**
+     * Store data to undo a cut operation
+     * 
+     * @param bmp CPColorBmp
+     * @param x int
+     * @param y int
+     * @param layerIndex int
+     * @param selection CPRect
+     */
+    function CPUndoCut(bmp, x, y, layerIndex, selection) {
+        selection = selection.clone();
+
+        this.undo = function() {
+            that.setActiveLayerIndex(layerIndex);
+            curLayer.pasteBitmap(clipboard.bmp, x, y);
+            that.setSelection(selection);
+            invalidateFusion();
+        }
+
+        this.redo = function() {
+            that.setActiveLayerIndex(layerIndex);
+            
+            var 
+                r = bmp.getBounds();
+            r.translate(x, y);
+            curLayer.clear(r, 0x00000000);
+            that.emptySelection();
+            invalidateFusion();
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return bmp == param ? 0 : bmp.width * bmp.height * CPColorBmp.BYTES_PER_PIXEL;
+        }
+    }
+    
+    CPUndoCut.prototype = Object.create(CPUndo.prototype);
+    CPUndoCut.prototype.constructor = CPUndoCut;
+
+    /**
+     * Store data to undo a paste operation
+     * 
+     * @param clip CPClip
+     * @param layerIndex int
+     * @param selection CPRect
+     */
+    function CPUndoPaste(clip, layerIndex, selection) {
+        selection = selection.clone();
+
+        this.undo = function() {
+            layers.splice(layerIndex + 1, 1);
+            
+            that.setActiveLayerIndex(layerIndex);
+            that.setSelection(selection);
+
+            invalidateFusion();
+            callListenersLayerChange();
+        };
+
+        this.redo = function() {
+            that.setActiveLayerIndex(layerIndex);
+            pasteClip(false, clip);
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return clip.bmp == param ? 0 : clip.bmp.width * clip.bmp.height * 4;
+        };
+    }
+    
+    CPUndoPaste.prototype = Object.create(CPUndo.prototype);
+    CPUndoPaste.prototype.constructor = CPUndoPaste;
 };
 
 CPArtwork.prototype = Object.create(EventEmitter.prototype);

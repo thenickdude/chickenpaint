@@ -51,7 +51,7 @@ export default function CPColorBmp(width, height) {
     // Creates a CPBitmap from a portion of this bitmap
     this.cloneRect = function(rect) {
         var
-            result = new CPColorBbmp(this.width, this.height);
+            result = new CPColorBmp(this.width, this.height);
         
         result.setFromBitmapRect(this, rect);
         
@@ -211,7 +211,7 @@ export default function CPColorBmp(width, height) {
             srcRect = bmp.getBounds(),
             dstRect = new CPRect(x, y, 0, 0);
         
-        getBounds().clipSourceDest(srcRect, dstRect);
+        this.getBounds().clipSourceDest(srcRect, dstRect);
 
         var 
             w = srcRect.getWidth(),
