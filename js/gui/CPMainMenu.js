@@ -208,7 +208,7 @@ var
                     name: "Zoom in",
                     action: "CPZoomIn",
                     mnemonic: "I",
-                    shortcut: "ctrl++",
+                    shortcut: "ctrl+=",
                     title: "Zooms in"
                 },
                 {
@@ -396,6 +396,10 @@ export default function CPMainMenu(controller, mainGUI) {
         // Only show the first potential shortcut out of the comma-separated list
         shortcut = shortcut.replace(/(,.+)$/, "");
         
+        // Although the keycode for zoom in is "=", we'll present it to the user as "+"
+        shortcut = shortcut.replace("ctrl+=", "ctrl++");
+        shortcut = shortcut.replace("⌘+=", "⌘++");
+        
         if (macPlatform) {
             shortcut = shortcut.replace(/([^+])\+/g, "$1");
         } else {
@@ -453,7 +457,7 @@ export default function CPMainMenu(controller, mainGUI) {
                         entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
                     }
                     
-                    shortcutDesc.className = "chickenpaint-shortcut pull-right";
+                    shortcutDesc.className = "chickenpaint-shortcut";
                     shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
                     
                     menuLink.append(shortcutDesc);
