@@ -23,6 +23,7 @@
 import CPRect from "../util/CPRect";
 import CPTransform from "../util/CPTransform";
 import CPWacomTablet from "../util/CPWacomTablet";
+import CPBezier from "../util/CPBezier";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
 
@@ -283,10 +284,6 @@ export default function CPCanvas(controller) {
     CPFreehandMode.prototype.mouseMoved = CPFreehandMode.prototype.paint = function(e) {
     };
 
-    // TODO
-    
-    function CPBezierMode() {}
-    
     function CPLineMode() {
         var
             dragLine = false,
@@ -362,12 +359,12 @@ export default function CPCanvas(controller) {
         };
     }
 
-    /*
     function CPBezierMode() {
-        var 
+        const
             BEZIER_POINTS = 500,
-            BEZIER_POINTS_PREVIEW = 100,
+            BEZIER_POINTS_PREVIEW = 100;
 
+        var
             dragBezier = false,
             dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
@@ -381,18 +378,19 @@ export default function CPCanvas(controller) {
             if (!dragBezier && !spacePressed && e.button == BUTTON_PRIMARY) {
                 dragBezier = true;
                 dragBezierMode = 0;
-                dragBezierP0 = dragBezierP1 = dragBezierP2 = dragBezierP3 = (Point2D.Float) p.clone();
+                dragBezierP0 = dragBezierP1 = dragBezierP2 = dragBezierP3 = p;
             }
-        }
+        };
 
         this.mouseDragged = function(e) {
-            Point2D.Float p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+            var
+                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
             if (dragBezier && dragBezierMode == 0) {
-                dragBezierP2 = dragBezierP3 = (Point2D.Float) p.clone();
+                dragBezierP2 = dragBezierP3 = p;
                 that.repaintAll();
             }
-        }
+        };
 
         this.mouseReleased = function(e) {
             if (dragBezier && e.button == BUTTON_PRIMARY) {
@@ -403,12 +401,14 @@ export default function CPCanvas(controller) {
                 } else if (dragBezierMode == 2) {
                     dragBezier = false;
 
-                    Point2D.Float p0 = dragBezierP0;
-                    Point2D.Float p1 = dragBezierP1;
-                    Point2D.Float p2 = dragBezierP2;
-                    Point2D.Float p3 = dragBezierP3;
+                    var 
+                        p0 = dragBezierP0,
+                        p1 = dragBezierP1,
+                        p2 = dragBezierP2,
+                        p3 = dragBezierP3,
 
-                    CPBezier bezier = new CPBezier();
+                        bezier = new CPBezier();
+                    
                     bezier.x0 = p0.x;
                     bezier.y0 = p0.y;
                     bezier.x1 = p1.x;
@@ -418,13 +418,14 @@ export default function CPCanvas(controller) {
                     bezier.x3 = p3.x;
                     bezier.y3 = p3.y;
 
-                    float x[] = new float[BEZIER_POINTS];
-                    float y[] = new float[BEZIER_POINTS];
+                    var 
+                        x = new Array(BEZIER_POINTS),
+                        y = new Array(BEZIER_POINTS);
 
                     bezier.compute(x, y, BEZIER_POINTS);
 
                     artwork.beginStroke(x[0], y[0], 1);
-                    for (int i = 1; i < BEZIER_POINTS; i++) {
+                    for (var i = 1; i < BEZIER_POINTS; i++) {
                         artwork.continueStroke(x[i], y[i], 1);
                     }
                     artwork.endStroke();
@@ -433,30 +434,31 @@ export default function CPCanvas(controller) {
                     activeMode = defaultMode; // yield control to the default mode
                 }
             }
-        }
+        };
 
         this.mouseMoved = function(e) {
-            Point2D.Float p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+            var
+                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
-            if (dragBezier && dragBezierMode == 1) {
-                dragBezierP1 = (Point2D.Float) p.clone();
+            if (dragBezier) {
+                if (dragBezierMode == 1) {
+                    dragBezierP1 = p;
+                } else if (dragBezierMode == 2) {
+                    dragBezierP2 = p;
+                }
                 that.repaintAll(); // FIXME: repaint only the bezier region
             }
-
-            if (dragBezier && dragBezierMode == 2) {
-                dragBezierP2 = (Point2D.Float) p.clone();
-                that.repaintAll(); // FIXME: repaint only the bezier region
-            }
-        }
+        };
 
         this.paint = function() {
             if (dragBezier) {
-                CPBezier bezier = new CPBezier();
+                var
+                    bezier = new CPBezier(),
 
-                Point2D.Float p0 = coordToDisplay(dragBezierP0);
-                Point2D.Float p1 = coordToDisplay(dragBezierP1);
-                Point2D.Float p2 = coordToDisplay(dragBezierP2);
-                Point2D.Float p3 = coordToDisplay(dragBezierP3);
+                    p0 = coordToDisplay(dragBezierP0),
+                    p1 = coordToDisplay(dragBezierP1),
+                    p2 = coordToDisplay(dragBezierP2),
+                    p3 = coordToDisplay(dragBezierP3);
 
                 bezier.x0 = p0.x;
                 bezier.y0 = p0.y;
@@ -467,16 +469,29 @@ export default function CPCanvas(controller) {
                 bezier.x3 = p3.x;
                 bezier.y3 = p3.y;
 
-                int x[] = new int[BEZIER_POINTS_PREVIEW];
-                int y[] = new int[BEZIER_POINTS_PREVIEW];
+                var
+                    x = new Array(BEZIER_POINTS_PREVIEW),
+                    y = new Array(BEZIER_POINTS_PREVIEW);
+                    
                 bezier.compute(x, y, BEZIER_POINTS_PREVIEW);
 
-                g2d.drawPolyline(x, y, BEZIER_POINTS_PREVIEW);
-                g2d.drawLine((int) p0.x, (int) p0.y, (int) p1.x, (int) p1.y);
-                g2d.drawLine((int) p2.x, (int) p2.y, (int) p3.x, (int) p3.y);
+                canvasContext.beginPath();
+                
+                canvasContext.moveTo(x[0], y[0]);
+                for (var i = 1; i < BEZIER_POINTS_PREVIEW; i++) {
+                    canvasContext.lineTo(x[i], y[i]);
+                }
+                
+                canvasContext.moveTo(~~p0.x, ~~p0.y);
+                canvasContext.lineTo(~~p1.x, ~~p1.y);
+                
+                canvasContext.moveTo(~~p2.x, ~~p2.y);
+                canvasContext.lineTo(~~p3.x, ~~p3.y);
+                
+                canvasContext.stroke();
             }
         }
-    }*/
+    }
 
     function CPColorPickerMode() {
         var 
