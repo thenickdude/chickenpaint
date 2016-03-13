@@ -32,7 +32,7 @@ import CPMainGUI from "./gui/CPMainGUI";
 import CPAboutDialog from "./gui/CPAboutDialog";
 import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
-import CPGridDialog from "./gui/CPTabletDialog";
+import CPGridDialog from "./gui/CPGridDialog";
 import CPSendDialog from "./gui/CPSendDialog";
 
 import CPColor from "./util/CPColor";
