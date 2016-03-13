@@ -27,6 +27,8 @@ import CPBezier from "../util/CPBezier";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
 
+import CPScrollbar from "./CPScrollbar";
+
 /**
  * Stroke the polygon represented by the array of `points` (x:?, y:?} to the given canvas context. 
  * 
@@ -58,9 +60,15 @@ export default function CPCanvas(controller) {
     var
         that = this,
     
+        canvasContainer = document.createElement("div"),
+        canvasContainerTop = document.createElement("div"),
+        canvasContainerBottom = document.createElement("div"),
+        
+        // Our canvas that fills the entire screen
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
+        // Our cache of the artwork's fusion to be drawn onto our main canvas using our current transform
         artworkCanvas = document.createElement("canvas"),
         artworkCanvasContext = artworkCanvas.getContext("2d"),
         
@@ -119,7 +127,10 @@ export default function CPCanvas(controller) {
         // this must correspond to the stroke modes defined in CPToolInfo
         drawingModes = [],
 
-        curDrawMode, curSelectedMode, activeMode;
+        curDrawMode, curSelectedMode, activeMode,
+        
+        horzScroll = new CPScrollbar(false), 
+        vertScroll = new CPScrollbar(true);
 
     // Parent class with empty event handlers for those drawing modes that don't need every event
     function CPMode() {
@@ -792,9 +803,35 @@ export default function CPCanvas(controller) {
         }
     }
     
-    function updateScrollBars() {
-        //TODO
+    /**
+     * @param visMin The smallest coordinate in this axis in which the drawing appears
+     * @param visWidth The extent of the drawing in this axis
+     * @param viewSize The extent of the screen canvas in this axis
+     * @param offset The present pixel offset of the drawing in this axis
+     */
+    function updateScrollBar(scrollbar, visMin, visWidth, viewSize, offset) {
+        var
+            xMin = visMin - viewSize - offset + visWidth / 4,
+            xMax = visMin + visWidth - offset - visWidth / 4;
+        
+        scrollbar.setValues(-offset, viewSize, xMin, xMax);
+        
+        scrollbar.setBlockIncrement(Math.max(1, ~~(viewSize * .66)));
+        scrollbar.setUnitIncrement(Math.max(1, ~~(viewSize * .05)));
     }
+    
+    function updateScrollBars() {
+        if (horzScroll == null || vertScroll == null
+                || horzScroll.getValueIsAdjusting() || vertScroll.getValueIsAdjusting() ) {
+               return;
+           }
+
+           var
+               visibleRect = getRefreshArea(new CPRect(0, 0, artworkCanvas.width, artworkCanvas.height));
+           
+           updateScrollBar(horzScroll, visibleRect.left, visibleRect.getWidth(), $(canvas).width(), that.getOffset().x);
+           updateScrollBar(vertScroll, visibleRect.top, visibleRect.getHeight(), $(canvas).height(), that.getOffset().y);
+       }
 
     function updateTransform() {
         transform.setToIdentity();
@@ -874,12 +911,12 @@ export default function CPCanvas(controller) {
             p3 = coordToDisplayInt({x: r.right, y: r.top - 1}),
             p4 = coordToDisplayInt({x: r.right, y: r.bottom}),
 
-            r2 = new CPRect(0, 0, 0, 0);
-
-        r2.left = Math.min(Math.min(p1.x, p2.x), Math.min(p3.x, p4.x));
-        r2.top = Math.min(Math.min(p1.y, p2.y), Math.min(p3.y, p4.y));
-        r2.right = Math.max(Math.max(p1.x, p2.x), Math.max(p3.x, p4.x)) + 1;
-        r2.bottom = Math.max(Math.max(p1.y, p2.y), Math.max(p3.y, p4.y)) + 1;
+            r2 = new CPRect(
+                Math.min(Math.min(p1.x, p2.x), Math.min(p3.x, p4.x)),
+                Math.min(Math.min(p1.y, p2.y), Math.min(p3.y, p4.y)),
+                Math.max(Math.max(p1.x, p2.x), Math.max(p3.x, p4.x)) + 1,
+                Math.max(Math.max(p1.y, p2.y), Math.max(p3.y, p4.y)) + 1
+            );
 
         r2.grow(2, 2); // to be sure to include everything
 
@@ -944,9 +981,13 @@ export default function CPCanvas(controller) {
     };
 
     this.setOffset = function(x, y) {
-        offsetX = x;
-        offsetY = y;
-        updateTransform();
+        if (isNaN(x) || isNaN(y)) {
+            console.log("Bad offset");
+        } else {
+            offsetX = x;
+            offsetY = y;
+            updateTransform();
+        }
     };
 
     this.getOffset = function() {
@@ -1157,9 +1198,9 @@ export default function CPCanvas(controller) {
         activeMode.keyUp(e);
     }
     
-    // Get the DOM element for the drawing area
+    // Get the DOM element for the canvas area
     this.getElement = function() {
-        return canvas;
+        return canvasContainer;
     };
     
     /**
@@ -1439,8 +1480,9 @@ export default function CPCanvas(controller) {
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
 
-
-    // Workaround Chrome Mac bug that causes canvas to be disposed and never recreated when switched into the background
+    /* Workaround for Chrome Mac bug that causes canvas to be disposed and never recreated when tab is switched into the 
+     * background https://bugs.chromium.org/p/chromium/issues/detail?id=588434
+     */
     document.addEventListener("visibilitychange", function() {
         canvas.width = 1;
         canvas.height = 1;
@@ -1457,7 +1499,31 @@ export default function CPCanvas(controller) {
         repaintRect(getRefreshArea(artworkUpdateRegion));
     });
     
+    horzScroll.on("valueChanged", function(value) {
+        var 
+            p = that.getOffset();
+        
+        that.setOffset(-value, p.y);
+    });
+    
+    vertScroll.on("valueChanged", function(value) {
+        var 
+            p = that.getOffset();
+        
+        that.setOffset(p.x, -value);
+    });
+    
     this.setInterpolation(false);
 
+    canvasContainerTop.className = 'chickenpaint-canvas-container-top';
+    canvasContainerTop.appendChild(canvas);
+    canvasContainerTop.appendChild(vertScroll.getElement());
+    
+    canvasContainerBottom.className = 'chickenpaint-canvas-container-bottom';
+    canvasContainerBottom.appendChild(horzScroll.getElement());
+    
+    canvasContainer.appendChild(canvasContainerTop);
+    canvasContainer.appendChild(canvasContainerBottom);
+    
     controller.setCanvas(this);
 }

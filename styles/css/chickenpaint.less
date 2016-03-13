@@ -33,8 +33,61 @@
     display:block;
 }
 
-.chickenpaint-canvas {
+.chickenpaint-canvas-container-top {
+    position:relative;
+}
+.chickenpaint-canvas-container-top canvas {
     width:100%;
+    padding-right:15px; /* Leave room for right scrollbar */
+}
+.chickenpaint-scrollbar {
+    background-color:#fafafa;
+    position:relative;
+    overflow:hidden;
+}
+.chickenpaint-scrollbar-handle {
+    position:relative;
+}
+.chickenpaint-scrollbar-handle-inner {
+    background-color:#c1c1c1;
+    transition:background-color 0.10s linear;
+    border-radius:7px;
+}
+.chickenpaint-scrollbar-handle:hover .chickenpaint-scrollbar-handle-inner,
+.chickenpaint-scrollbar-handle.dragging .chickenpaint-scrollbar-handle-inner {
+    background-color: #7d7d7d;
+}
+.chickenpaint-scrollbar-vertical {
+    border-left:1px solid #e7e7e7;
+    border-right:1px solid #e7e7e7;
+    position:absolute;
+    top:0;
+    right:0;
+    bottom:0;
+}
+.chickenpaint-scrollbar-horizontal {
+    border-top:1px solid #e7e7e7;
+    border-bottom:1px solid #e7e7e7;
+    margin-right:15px;
+}
+.chickenpaint-scrollbar-vertical .chickenpaint-scrollbar-handle {
+    width:15px;
+}
+.chickenpaint-scrollbar-horizontal .chickenpaint-scrollbar-handle {
+    height:15px;
+}
+.chickenpaint-scrollbar-vertical .chickenpaint-scrollbar-handle-inner {
+    height:100px;
+    width:9px;
+    margin-left:3px;
+}
+.chickenpaint-scrollbar-horizontal .chickenpaint-scrollbar-handle-inner {
+    width:100px;
+    height:9px;
+    margin-top:3px;
+}
+
+.chickenpaint-canvas {
     height:700px;
     touch-action:none;
 }
