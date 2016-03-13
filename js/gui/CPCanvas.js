@@ -1319,31 +1319,38 @@ export default function CPCanvas(controller) {
         // Draw grid
         if (showGrid) {
             var
-                bounds = artwork.getBounds();
-            
-            canvasContext.beginPath();
-            
-            // Vertical lines
-            for (var i = gridSize - 1; i < bounds.right; i += gridSize) {
-                var
-                    p1 = coordToDisplay({x: i, y: bounds.top}),
-                    p2 = coordToDisplay({x: i, y: bounds.bottom});
+                bounds = artwork.getBounds(),
                 
-                canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
-                canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
-            }
-
-            // Horizontal lines
-            for (var i = gridSize - 1; i < bounds.bottom; i += gridSize) {
-                var
-                    p1 = coordToDisplay({x: 0, y: i}),
-                    p2 = coordToDisplay({x: bounds.right - 1, y: i});
+                gridVisualPitch = zoom * gridSize;
+            
+            /* If the grid is going to be miniscule on the screen (basically just covering/inverting the entire artwork,
+             * do not paint it.
+             */
+            if (gridVisualPitch > 2) {
+                canvasContext.beginPath();
+                
+                // Vertical lines
+                for (var i = gridSize - 1; i < bounds.right; i += gridSize) {
+                    var
+                        p1 = coordToDisplay({x: i, y: bounds.top}),
+                        p2 = coordToDisplay({x: i, y: bounds.bottom});
                     
-                canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
-                canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
+                    canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
+                    canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
+                }
+    
+                // Horizontal lines
+                for (var i = gridSize - 1; i < bounds.bottom; i += gridSize) {
+                    var
+                        p1 = coordToDisplay({x: 0, y: i}),
+                        p2 = coordToDisplay({x: bounds.right, y: i});
+                        
+                    canvasContext.moveTo(p1.x + 0.5, p1.y + 0.5);
+                    canvasContext.lineTo(p2.x + 0.5, p2.y + 0.5);
+                }
+    
+                canvasContext.stroke();
             }
-
-            canvasContext.stroke();
         }
         
         // Additional drawing by the current mode
