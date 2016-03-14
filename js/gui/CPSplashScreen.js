@@ -22,7 +22,7 @@ export default function CPSplashScreen(uiParent, loader) {
         cupCompositeContext, smoothieCompositeContext,
 
         progress = 0.0,
-        message = "Testing this out\n22% loaded",
+        message = "",
 
         fontHeight = 14;
 

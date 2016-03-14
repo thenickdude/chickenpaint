@@ -114,8 +114,6 @@ export default function CPResourceLoader(options) {
             resource = resources.shift(),
             xhr = new XMLHttpRequest();
 
-        xhr.responseType = 'arraybuffer';
-
         xhr.addEventListener("progress", function(evt) {
             var
                 progress;
@@ -171,6 +169,9 @@ export default function CPResourceLoader(options) {
         reportProgress(resource, resource.noProgress ? null : 0.0);
 
         xhr.open("GET", resource.url, true);
+        
+        xhr.responseType = 'arraybuffer';
+
         xhr.send();
     }
 }

@@ -77,8 +77,10 @@ export default function CPResourceSaver(options) {
     
         reportProgress(0);
     
-        xhr.responseType = "text";
         xhr.open("POST", options.url, true);
+        
+        xhr.responseType = "text";
+        
         xhr.send(formData);
     }
     
