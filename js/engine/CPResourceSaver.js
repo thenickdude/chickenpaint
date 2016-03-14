@@ -28,7 +28,9 @@ function binaryStringToByteArray(s) {
  */
 export default function CPResourceSaver(options) {
     var
-        that = this;
+        that = this,
+        
+        cancelled = false;
     
     options.rotation = options.rotation || 0;
     
@@ -113,6 +115,11 @@ export default function CPResourceSaver(options) {
         }
         
         serializeLayers.then(function(chibiBlob) {
+            if (cancelled) {
+                that.emitEvent("savingFailure");
+                return;
+            }
+            
             if (options.swatches) {
                 var
                     aco = new AdobeColorTable();
@@ -155,6 +162,10 @@ export default function CPResourceSaver(options) {
                 }
             }
         });
+    };
+    
+    this.cancel = function() {
+        cancelled = true;
     };
 }
 

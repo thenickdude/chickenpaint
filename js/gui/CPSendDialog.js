@@ -41,7 +41,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-default chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-not-previously-posted" style="display:none">
@@ -129,6 +129,10 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
 
     $(".chickenpaint-exit", dialog).click(function() {
         controller.actionPerformed({action: "CPExit"});
+    });
+    
+    $(".chickenpaint-send-cancel", dialog).click(function() {
+        resourceSaver.cancel();
     });
     
     // Destroy the modal upon close
