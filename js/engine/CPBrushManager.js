@@ -346,31 +346,45 @@ export default function CPBrushManager() {
     function applyTexture(dab, textureAmount) {
         var 
             amount = Math.floor(textureAmount * 255),
-            offset = 0,
-            texture = that.texture;
+            texture = that.texture,
+            
+            textureX = dab.x % texture.width,
+            textureY = dab.y % texture.height,
+            
+            brushPos = 0,
+            texturePos, textureEOL;
+
+        if (textureX < 0) {
+            textureX += texture.width;
+        }
+
+        if (textureY < 0) {
+            textureY += texture.height;
+        }
         
         for (var y = 0; y < dab.height; y++) {
+            texturePos = textureY * texture.width + textureX;
+            textureEOL = textureY * texture.width + texture.width;
+            
             for (var x = 0; x < dab.width; x++) {
                 var 
-                    brushValue = dab.brush[offset],
-                    textureX = (x + dab.x) % texture.width;
+                    brushValue = dab.brush[brushPos],
+                    textureValue = texture.data[texturePos];
                 
-                if (textureX < 0) {
-                    textureX += texture.width;
+                dab.brush[brushPos] = ~~(brushValue * ((textureValue * amount / 255) ^ 0xff) / 255);
+                
+                brushPos++;
+                
+                texturePos++;
+                if (texturePos == textureEOL) {
+                    // Wrap to left side of texture
+                    texturePos -= texture.width;
                 }
-
-                var 
-                    textureY = (y + dab.y) % texture.height;
-                
-                if (textureY < 0) {
-                    textureY += texture.height;
-                }
-
-                var 
-                    textureValue = texture.data[textureX + textureY * texture.width];
-                
-                dab.brush[offset] = ~~(brushValue * ((textureValue * amount / 255) ^ 0xff) / 255);
-                offset++;
+            }
+            
+            textureY++;
+            if (textureY == texture.height) {
+                textureY = 0;
             }
         }
     }
