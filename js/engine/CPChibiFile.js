@@ -128,38 +128,49 @@ export default function CPChibiFile() {
     }
 
     /**
-     * Serialize the given artwork to Chibifile format and return the result as a Blob.
+     * Serialize the given artwork to Chibifile format. Returns a promise which resolves to the serialized Blob.
      */
     this.serialize = function(artwork) {
-        var
-            deflator = new pako.Deflate({
-                level: 7
-            }),
-            blobParts = [],
-            magic = new Uint8Array(CHI_MAGIC.length);
-
-        // The magic file signature is not ZLIB compressed:
-        for (var i = 0; i < CHI_MAGIC.length; i++) {
-            magic[i] = CHI_MAGIC.charCodeAt(i);
-        }
-        blobParts.push(magic);
-
-        // The rest gets compressed
-        deflator.push(serializeHeaderChunk(artwork), false);
-
-        var
-            layers = artwork.getLayers();
-
-        for (var i = 0; i < layers.length; i++) {
-            deflator.push(serializeLayerChunk(layers[i]), false);
-        }
-
-        deflator.push(serializeEndChunk(artwork), true);
-
-        blobParts.push(deflator.result);
-
-        return new Blob(blobParts, {type: "application/octect-stream"});
-    }
+        return new Promise(function(resolve, reject) {
+            var
+                deflator = new pako.Deflate({
+                    level: 7
+                }),
+                blobParts = [],
+                magic = new Uint8Array(CHI_MAGIC.length);
+    
+            // The magic file signature is not ZLIB compressed:
+            for (var i = 0; i < CHI_MAGIC.length; i++) {
+                magic[i] = CHI_MAGIC.charCodeAt(i);
+            }
+            blobParts.push(magic);
+    
+            // The rest gets compressed
+            deflator.push(serializeHeaderChunk(artwork), false);
+    
+            var
+                layers = artwork.getLayers(),
+                i = 0;
+            
+            // Insert a settimeout between each serialized layer, so we can maintain browser responsiveness
+            
+            function serializeLayer() {
+                if (i == layers.length) {
+                    deflator.push(serializeEndChunk(artwork), true);
+                    
+                    blobParts.push(deflator.result);
+                    
+                    resolve(new Blob(blobParts, {type: "application/octect-stream"}));
+                } else {
+                    deflator.push(serializeLayerChunk(layers[i++]), false);
+                    
+                    setTimeout(serializeLayer, 10);
+                }
+            }
+            
+            setTimeout(serializeLayer, 10);
+        });
+    };
 
     function readLayer(stream, chunk, artwork) {
         var

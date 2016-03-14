@@ -97,64 +97,64 @@ export default function CPResourceSaver(options) {
         var
             flat,
             flatBlob,
-            chibi,
-            chibiBlob,
             swatchesBlob;
         
         flat = binaryStringToByteArray(options.artwork.getFlatPNG(options.rotation));
         flatBlob = new Blob([flat], {type: "image/png"});
         flat = null; // Don't need this any more
         
+        var
+            serializeLayers;
+
         if (options.artwork.isSimpleDrawing()) {
-            chibiBlob = null;
-            // Don't need to save layers for simple drawings
+            serializeLayers = Promise.resolve(null);
         } else {
-            chibi = new CPChibiFile();
-            chibiBlob = chibi.serialize(options.artwork);
-            chibi = null;
+            serializeLayers = (new CPChibiFile()).serialize(options.artwork);
         }
         
-        if (options.swatches) {
-            var
-                aco = new AdobeColorTable();
-            
-            swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octect-stream"});
-        } else {
-            swatchesBlob = null;
-        }
-         
-        if (options.url) {
-            var 
-                formData = new FormData();
-            
-            formData.append("picture", flatBlob);
-            flatBlob = null;
-            
-            if (options.rotation) {
-                formData.append("rotation", "" + options.rotation);
-            }
-            
-            if (chibiBlob) {
-                formData.append("chibifile", chibiBlob);
-                chibiBlob = null;
-            }
-            
-            if (swatchesBlob) {
-                formData.append("swatches", swatchesBlob);
+        serializeLayers.then(function(chibiBlob) {
+            if (options.swatches) {
+                var
+                    aco = new AdobeColorTable();
+                
+                swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octect-stream"});
+            } else {
                 swatchesBlob = null;
             }
-            
-            postDrawing(formData);
-        } else {
-            window.saveAs(flatBlob, "oekaki.png");
-            
-            if (chibiBlob) {
-                window.saveAs(chibiBlob, "oekaki.chi");
+             
+            if (options.url) {
+                var 
+                    formData = new FormData();
+                
+                formData.append("picture", flatBlob);
+                flatBlob = null;
+                
+                if (options.rotation) {
+                    formData.append("rotation", "" + options.rotation);
+                }
+                
+                if (chibiBlob) {
+                    formData.append("chibifile", chibiBlob);
+                    chibiBlob = null;
+                }
+                
+                if (swatchesBlob) {
+                    formData.append("swatches", swatchesBlob);
+                    swatchesBlob = null;
+                }
+                
+                postDrawing(formData);
+            } else {
+                window.saveAs(flatBlob, "oekaki.png");
+                
+                if (chibiBlob) {
+                    window.saveAs(chibiBlob, "oekaki.chi");
+                }
+                if (swatchesBlob) {
+                    window.saveAs(swatchesBlob, "oekaki.aco");
+                }
             }
-            if (swatchesBlob) {
-                window.saveAs(swatchesBlob, "oekaki.aco");
-            }
-        }
+        });
     };
 }
 
