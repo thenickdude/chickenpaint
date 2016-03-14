@@ -1371,6 +1371,11 @@ export default function CPCanvas(controller) {
     };
     
     this.resize = function() {
+        var
+            newHeight = Math.min(Math.max(($(window).height() - 150), 500), 750);
+        
+        $(canvas).css('height', newHeight + "px");
+        
         canvas.width = $(canvas).width();
         canvas.height = $(canvas).height();
         
