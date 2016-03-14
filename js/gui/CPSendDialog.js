@@ -131,14 +131,22 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
     $(".chickenpaint-exit", dialog).click(function() {
         controller.actionPerformed({action: "CPExit"});
     });
-
-    parent.appendChild(dialog[0]);
     
+    // Destroy the modal upon close
+    dialog.on("hidden.bs.modal", function(e) {
+        dialog.remove();
+    });
+    
+    dialog.modal({
+        show: false
+    });
+    
+    // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
+    dialog.data("bs.modal").$body = $(parent);
+    
+    parent.appendChild(dialog[0]);
+
     this.show = function() {
         dialog.modal("show");
     };
-    
-    dialog.on("hidden.bs.modal", function() {
-        dialog.remove();
-    });
 }

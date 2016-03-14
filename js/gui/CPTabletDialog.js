@@ -141,9 +141,16 @@ export default function CPTabletDialog(parent) {
     
     peSupportElem.toggleClass("supported", peSupported);
     peSupportElem.toggleClass("not-supported", !peSupported);
+
+    dialog.modal({
+        show: false
+    });
+    
+    // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
+    dialog.data("bs.modal").$body = $(parent);
     
     parent.appendChild(dialog[0]);
-    
+
     this.show = function() {
         dialog.modal("show");
     };

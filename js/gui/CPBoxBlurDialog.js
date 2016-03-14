@@ -57,6 +57,10 @@ export default function CPBoxBlurDialog(parent, controller) {
         blurIterationsElem = $(".chickenpaint-blur-iterations", dialog),
         applyButton = $(".chickenpaint-apply-box-blur", dialog);
 
+    this.show = function() {
+        dialog.modal("show");
+    };
+    
     applyButton.click(function(e) {
         var
             blur = Math.max(parseInt(blurAmountElem.val(), 10), 1),
@@ -66,6 +70,9 @@ export default function CPBoxBlurDialog(parent, controller) {
     });
     
     dialog
+        .modal({
+            show: false
+        })
         .on('shown.bs.modal', function() {
             blurAmountElem.focus();
         })
@@ -75,11 +82,10 @@ export default function CPBoxBlurDialog(parent, controller) {
             }
         });
     
-    parent.appendChild(dialog[0]);
+    // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
+    dialog.data("bs.modal").$body = $(parent);
     
-    this.show = function() {
-        dialog.modal("show");
-    };
+    parent.appendChild(dialog[0]);
     
     /* TODO
     panel.add(new JLabel("Blur amount:"));

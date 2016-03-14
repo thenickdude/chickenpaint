@@ -61,11 +61,10 @@ export default function CPGridDialog(parent, canvas) {
         canvas.setGridSize(gridSize);
     });
  
-    gridSizeElem.on("keypress", function(e) {
-        
-    });
-    
     dialog
+        .modal({
+            show: false
+        })
         .on('shown.bs.modal', function() {
             gridSizeElem.focus();
         }).on('keypress', function(e) {
@@ -74,8 +73,11 @@ export default function CPGridDialog(parent, canvas) {
             }
         });
     
+    // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
+    dialog.data("bs.modal").$body = $(parent);
+    
     parent.appendChild(dialog[0]);
- 
+    
     this.show = function() {
         dialog.modal("show");
     };

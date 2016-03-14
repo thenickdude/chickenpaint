@@ -20,6 +20,18 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+(function($){
+    $.fn.modalNamespaced = function(o) {
+        var
+            modalArgs = arguments;
+        
+        return this.each(function() {
+            $.fn.modal.apply(this, modalArgs);
+            console.log("here");
+        });
+    };
+})(jQuery);
+
 export default function CPAboutDialog(parent) {
     var
         dialog = $(`
@@ -164,14 +176,51 @@ Includes the <a target="_blank" href="https://github.com/madrobby/keymaster">key
     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
+    
+Includes the <a target="_blank" href="https://github.com/stefanpenner/es6-promise">es6-promise</a> library
+    
+    Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors
+
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without
+    restriction, including without limitation the rights to use,
+    copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
                     </pre>
                 </div>
             </div>
         </div>
     `);
     
-    parent.appendChild(dialog[0]);
+    // Destroy the modal upon close
+    dialog.on("hidden.bs.modal", function(e) {
+        dialog.remove();
+    });
     
+    dialog.modal({
+        show: false
+    });
+    
+    // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
+    dialog.data("bs.modal").$body = $(parent);
+    
+    parent.appendChild(dialog[0]);
+
     this.show = function() {
         dialog.modal("show");
     };
