@@ -1556,8 +1556,14 @@ export default function CPCanvas(controller) {
     
     this.setInterpolation(false);
 
+    var
+        canvasSpacingWrapper = document.createElement("div");
+    
+    canvasSpacingWrapper.className = 'chickenpaint-canvas-container-wrapper';
+    canvasSpacingWrapper.appendChild(canvas);
+    
     canvasContainerTop.className = 'chickenpaint-canvas-container-top';
-    canvasContainerTop.appendChild(canvas);
+    canvasContainerTop.appendChild(canvasSpacingWrapper);
     canvasContainerTop.appendChild(vertScroll.getElement());
     
     canvasContainerBottom.className = 'chickenpaint-canvas-container-bottom';

@@ -36,9 +36,11 @@
 .chickenpaint-canvas-container-top {
     position:relative;
 }
-.chickenpaint-canvas-container-top canvas {
+.chickenpaint-canvas-container-wrapper {
+    padding-right:15px; /* Leave room for absolutely-positioned right scrollbar */
+}
+.chickenpaint-canvas-container-wrapper canvas {
     width:100%;
-    padding-right:15px; /* Leave room for right scrollbar */
 }
 .chickenpaint-scrollbar {
     background-color:#fafafa;
@@ -113,7 +115,10 @@
     border: 1px solid #ddd;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    display:inline-flex;
+    
+    display:-ms-flexbox;
+    display:flex;
+    -ms-flex-direction:column;
     flex-direction:column;
     position:absolute;
 
@@ -152,6 +157,7 @@
 }
 .chickenpaint-misc-tools,
 .chickenpaint-stroke-tools {
+    display:-ms-flexbox;
     display:flex;
     line-height:0;
     padding:0;
@@ -281,15 +287,15 @@
     margin-right:4px;
 }
 .chickenpaint-colorpicker-top {
+    display:-ms-flexbox;
     display:flex;
 }
 
-.chickenpaint-colorpicker-top {
-    display: flex;
-}
 .chickenpaint-checkbox-slider-group {
+    display:-ms-flexbox;
     display: flex;
-    flex-direction: horiztonal;
+    -ms-flex-direction: row;
+    flex-direction: row;
     align-content: flex-start;
     align-items: center;
 }
@@ -308,7 +314,9 @@
 }
 
 .chickenpaint-palette-layers .chickenpaint-palette-body {
+    display:-ms-flexbox;
     display:flex;
+    -ms-flex-direction:column;
     flex-direction:column;
     height:100%;
 }
@@ -316,6 +324,7 @@
     flex-shrink:0;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > .chickenpaint-layers-widget {
+    -ms-flex:1 1 auto;
     flex-grow:1;
     flex-shrink:1;
     overflow-y:auto;
@@ -356,10 +365,13 @@
 }
 
 .chickenpaint-palette-textures .chickenpaint-palette-body {
+    display:-ms-flexbox;
     display:flex;
+    -ms-flex-direction:row;
     flex-direction:row;
 }
 .chickenpaint-texture-swatches {
+    -ms-flex:1 1 auto;
     flex-grow: 1;
     line-height:0;
     overflow-y:auto;
@@ -370,6 +382,11 @@
     cursor: pointer;
     border:2px solid rgba(255, 255, 255, 0.5);
     box-shadow:0 0 1px rgba(0, 0, 0, 0.3);
+    
+    /* Don't allow the border to shrink the canvas in IE 10 */
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
 }
 .chickenpaint-texture-options {
     text-align:center;
@@ -378,6 +395,11 @@
 .chickenpaint-texture-options > canvas {
     margin:0 auto 3px auto;
     border: 1px solid black;
+    
+    /* Don't allow the border to shrink the canvas in IE 10 */
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
 }
 .chickenpaint-texture-options .popover {
     background-color:#f4f4f4
@@ -388,17 +410,24 @@
 }
 
 .chickenpaint-palette-swatches .chickenpaint-palette-body {
+    display:-ms-flexbox;
     display:flex;
+    -ms-flex-direction:row;
     flex-direction:row;
     position:relative;
 }
 .chickenpaint-color-swatches {
     margin-bottom:0 !important;
+    
+    display:-ms-flexbox;
     display:flex;
+    -ms-flex-direction:row;
     flex-direction:row;
+    -ms-flex-wrap:wrap;
     flex-wrap:wrap;
     align-items:flex-start;
     align-content:flex-start;
+    
     overflow-y:auto;
     width:130px;
 }
@@ -482,14 +511,18 @@ chickenpaint-aftersave-actions {
 }
 
 .chickenpaint .navbar-nav a:not(.dropdown-toggle) {
+    display:-ms-flexbox;
     display:flex;
+    -ms-flex-direction:row;
     flex-direction:row;
     align-items:baseline;
 }
 .chickenpaint .navbar-nav a:not(.dropdown-toggle) span {
+    -ms-flex:1 1 auto;
     flex-grow: 1;
 }
 .chickenpaint .navbar-nav a:not(.dropdown-toggle) small {
+    -ms-flex:0 1 auto;
     flex-grow: 0;
     margin-left:1em;
     text-align:right;
