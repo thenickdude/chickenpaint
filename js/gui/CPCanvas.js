@@ -267,11 +267,14 @@ export default function CPCanvas(controller) {
             }
         }
     };
-
+    
     function CPFreehandMode() {
         this.dragLeft = false,
         this.smoothMouse = {x:0.0, y:0.0};
     }
+    
+    CPFreehandMode.prototype = Object.create(CPMode.prototype);
+    CPFreehandMode.prototype.constructor = CPFreehandMode;
     
     CPFreehandMode.prototype.mousePressed = function(e, pressure) {
         if (!this.dragLeft && e.button == BUTTON_PRIMARY) {
@@ -309,7 +312,7 @@ export default function CPCanvas(controller) {
         
     CPFreehandMode.prototype.mouseMoved = CPFreehandMode.prototype.paint = function(e) {
     };
-
+    
     function CPLineMode() {
         var
             dragLine = false,
@@ -384,6 +387,9 @@ export default function CPCanvas(controller) {
             }
         };
     }
+    
+    CPLineMode.prototype = Object.create(CPMode.prototype);
+    CPLineMode.prototype.constructor = CPLineMode;
 
     function CPBezierMode() {
         const
@@ -518,6 +524,9 @@ export default function CPCanvas(controller) {
             }
         };
     }
+    
+    CPBezierMode.prototype = Object.create(CPMode.prototype);
+    CPBezierMode.prototype.constructor = CPBezierMode;
 
     function CPColorPickerMode() {
         var 
@@ -687,6 +696,9 @@ export default function CPCanvas(controller) {
             }
         };
     };
+
+    CPRectSelectionMode.prototype = Object.create(CPMode.prototype);
+    CPRectSelectionMode.prototype.constructor = CPRectSelectionMode;
 
     function CPMoveToolMode() {
         var 
