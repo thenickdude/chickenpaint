@@ -411,13 +411,15 @@ export default function CPLayersPalette(controller) {
 
     body.appendChild(blendCombo);
     
+    alphaSlider.title = function(value) {
+        return "Opacity: " + value + "%";
+    };
+    
     alphaSlider.on("valueChange", function(value) {
         var
             artwork = controller.getArtwork();
         
         artwork.setLayerAlpha(artwork.getActiveLayerIndex(), value);
-        
-        this.title = "Opacity: " + value + "%";
     });
     
     body.appendChild(alphaSlider.getElement());

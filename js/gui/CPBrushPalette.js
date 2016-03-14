@@ -73,57 +73,78 @@ export default function CPBrushPalette(controller) {
         }
     }
     
-    alphaSlider.on('valueChange', function(value) {
+    alphaSlider.title = function(value) {
+        return "Opacity: " + value;
+    };
+
+    alphaSlider.on('valueChange', function (value) {
         controller.setAlpha(this.value);
-        this.title = "Opacity: " + this.value;
     });
 
-    sizeSlider.on('valueChange', function(value) {
-        controller.setBrushSize(value);
-        this.title = "Brush size: " + value;
-    });
+    sizeSlider.title = function(value) {
+        return "Brush size: " + value;
+    }
     
-    resatSlider.on('valueChange', function(value) {
+    sizeSlider.on('valueChange', function (value) {
+        controller.setBrushSize(value);
+    });
+
+    resatSlider.title = function(value) {
+        return "Color: " + value + "%";
+    };
+    
+    resatSlider.on('valueChange', function (value) {
         controller.getBrushInfo().resat = value / 100.0;
         controller.callToolListeners();
-        this.title = "Color: " + value + "%";
     });
 
-    bleedSlider.on('valueChange', function(value) {
+    bleedSlider.title = function(value) {
+        return "Blend: " + value + "%";
+    };
+    
+    bleedSlider.on('valueChange', function (value) {
         controller.getBrushInfo().bleed = value / 100.0;
         controller.callToolListeners();
-        this.title = "Blend: " + value + "%";
     });
 
-    spacingSlider.on('valueChange', function(value) {
+    spacingSlider.title = function(value) {
+        return "Spacing: " + value + "%";
+    };
+
+    spacingSlider.on('valueChange', function (value) {
         controller.getBrushInfo().spacing = value / 100.0;
         controller.callToolListeners();
-        this.title = "Spacing: " + value + "%";
     });
 
-    scatteringCB.on('valueChange', function(state) {
+    scatteringSlider.title = function(value) {
+        return "Scattering: " + value + "%";
+    };
+
+    scatteringSlider.on('valueChange', function (value) {
+        controller.getBrushInfo().scattering = value / 100.0;
+        controller.callToolListeners();
+    });
+
+    smoothingSlider.title = function(value) {
+        return "Smoothing: " + value + "%";
+    };
+
+    smoothingSlider.on('valueChange', function (value) {
+        controller.getBrushInfo().smoothing = value / 100.0;
+        controller.callToolListeners();
+    });
+    
+    scatteringCB.on('valueChange', function (state) {
         controller.getBrushInfo().pressureScattering = state;
         controller.callToolListeners();
     });
 
-    scatteringSlider.on('valueChange', function(value) {
-        controller.getBrushInfo().scattering = value / 100.0;
-        controller.callToolListeners();
-        this.title = "Scattering: " + value + "%";
-    });
-
-    smoothingSlider.on('valueChange', function(value) {
-        controller.getBrushInfo().smoothing = value / 100.0;
-        controller.callToolListeners();
-        this.title = "Smoothing: " + value + "%";
-    });
-    
-    alphaCB.on('valueChange', function(state) {
+    alphaCB.on('valueChange', function (state) {
         controller.getBrushInfo().pressureAlpha = state;
         controller.callToolListeners();
     });
-    
-    sizeCB.on('valueChange', function(state) {
+
+    sizeCB.on('valueChange', function (state) {
         controller.getBrushInfo().pressureSize = state;
         controller.callToolListeners();
     });

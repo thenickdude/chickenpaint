@@ -20,6 +20,12 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+ * A simple slider control.
+ * 
+ * The title property can be set to either a string to draw on the slider, or can be set to a function(value) which
+ * receives the current value of the slider and should return the string to be painted to the slider. 
+ */
 export default function CPSlider(minValue, maxValue, centerMode) {
     var 
         canvas = document.createElement("canvas"),
@@ -29,6 +35,8 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         
         dragNormal = false, dragPrecise = false,
         dragPreciseX,
+        
+        doneInitialPaint = false,
         
         that = this;
     
@@ -41,6 +49,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         var
             width = canvas.width,
             height = canvas.height,
+            title = typeof that.title === "string" ? that.title : that.title(that.value),
             textX = 2 * window.devicePixelRatio,
             textY = canvas.height * 0.75;
 
@@ -53,7 +62,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             
             canvasContext.fillStyle = 'black';
 
-            canvasContext.fillText(that.title, textX, textY);
+            canvasContext.fillText(title, textX, textY);
             canvasContext.beginPath();
             
             if (that.value >= valueRange / 2) {
@@ -66,7 +75,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             canvasContext.clip();
             
             canvasContext.fillStyle = 'white';
-            canvasContext.fillText(that.title, textX, textY);
+            canvasContext.fillText(title, textX, textY);
             
             canvasContext.restore();
         } else {
@@ -82,7 +91,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             canvasContext.clip();
             
             canvasContext.fillStyle = 'white';
-            canvasContext.fillText(that.title, textX, textY);
+            canvasContext.fillText(title, textX, textY);
             
             // Remove the clip region
             canvasContext.restore();
@@ -96,7 +105,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             canvasContext.clip();
             
             canvasContext.fillStyle = 'black';
-            canvasContext.fillText(that.title, textX, textY);
+            canvasContext.fillText(title, textX, textY);
             
             canvasContext.restore();
         }
@@ -143,10 +152,16 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         if (this.value != _value) {
             this.value = _value;
             
-            // The event listeners would like to update our title property at this point to reflect the new value
+            // The event listeners might like to update our title property at this point to reflect the new value
             this.emitEvent('valueChange', [this.value]);
         
-            paint();
+            if (doneInitialPaint) {
+                paint();
+            } else {
+                // We don't bother to do our canvas dimensioning until we're supplied with an initial value
+                doneInitialPaint = true;
+                this.resize();
+            }
         }
     };
     
@@ -202,8 +217,6 @@ export default function CPSlider(minValue, maxValue, centerMode) {
     });;
     
     canvas.className = 'chickenpaint-slider';
-    
-    this.resize();
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);

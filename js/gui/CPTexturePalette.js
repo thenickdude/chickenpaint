@@ -305,17 +305,25 @@ export default function CPTexturePalette(controller) {
             
             panel.appendChild(wrapCheckboxWithLabel(cbMirror, "Mirror"));
 
+            slBrightness.title = function(value) {
+                return "Brightness: " + (value - 100) + "%";
+            };
+            
             slBrightness.on("valueChange", function(value) {
                 brightness = (value - 100) / 100.0;
-                this.title = "Brightness: " + (value - 100) + "%";
+                
                 updateSelectedTexture();
             });
 
             panel.appendChild(slBrightness.getElement());
 
+            slContrast.title = function(value) {
+                return "Contrast: " + (value - 100) + "%";
+            };
+            
             slContrast.on("valueChange", function(value) {
                 contrast = (value - 100) / 100;
-                this.title = "Contrast: " + (value - 100) + "%";
+                
                 updateSelectedTexture();
             });
 
