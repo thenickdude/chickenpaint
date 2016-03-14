@@ -217,6 +217,11 @@ export default function CPSlider(minValue, maxValue, centerMode) {
     });;
     
     canvas.className = 'chickenpaint-slider';
+    
+    if (!window.devicePixelRatio) {
+        // Old browsers
+        window.devicePixelRatio = 1.0;
+    }
 }
 
 CPSlider.prototype = Object.create(EventEmitter.prototype);
