@@ -23,8 +23,10 @@
 import CPBrushInfo from "./CPBrushInfo";
 
 export default function CPBrushManager() {
-    var 
-        MAX_SQUEEZE = 10;
+    const
+        MAX_SQUEEZE = 10,
+        BRUSH_MAX_DIM = 201,
+        BRUSH_AA_MAX_DIM = 202;
     
     /*CPBrushDab {
         // the brush
@@ -36,8 +38,8 @@ export default function CPBrushManager() {
     }*/
     
     var
-        brush = new Uint8Array(201 * 201),
-        brushAA = new Uint8Array(202 * 202),
+        brush = new Uint8Array(BRUSH_MAX_DIM * BRUSH_MAX_DIM),
+        brushAA = new Uint8Array(BRUSH_AA_MAX_DIM * BRUSH_AA_MAX_DIM),
 
         cacheBrush = null,
         cacheSize, cacheSqueeze, cacheAngle,
@@ -45,29 +47,49 @@ export default function CPBrushManager() {
 
         that = this; 
 
+    /**
+     * Shift a brush by a positive sub-pixel amount (dx, dy) [0..1), and return the new brush. 
+     * 
+     * The resulting brush array is 1 pixel larger than the original one in both dimensions.
+     */
     function getBrushWithAA(brushInfo, dx, dy) {
         var
             nonAABrush = getBrush(brushInfo),
 
             intSize = Math.ceil(brushInfo.curSize),
             intSizeAA = Math.ceil(brushInfo.curSize) + 1;
-
-        for (var y = 0; y < intSizeAA; y++) {
-            for (var x = 0; x < intSizeAA; x++) {
-                brushAA[y * intSizeAA + x] = 0;
-            }
+        
+        for (var x = 0; x < intSizeAA * intSizeAA; x++) {
+            brushAA[x] = 0;
         }
-
+        
+        var
+            invdx_invdy = (1 - dx) * (1 - dy),
+            dx_invdy = dx * (1 - dy),
+            dx_dy = dx * dy,
+            invdx_dy = (1 - dx) * dy,
+            
+            srcIndex = 0,
+            dstIndex = 0;
+        
         for (var y = 0; y < intSize; y++) {
             for (var x = 0; x < intSize; x++) {
                 var 
-                    brushAlpha = nonAABrush[y * intSize + x];
+                    brushAlpha = nonAABrush[srcIndex];
 
-                brushAA[y * intSizeAA + x] += ~~(brushAlpha * (1 - dx) * (1 - dy));
-                brushAA[y * intSizeAA + (x + 1)] += ~~(brushAlpha * dx * (1 - dy));
-                brushAA[(y + 1) * intSizeAA + x + 1] += ~~(brushAlpha * dx * dy);
-                brushAA[(y + 1) * intSizeAA + x] += ~~(brushAlpha * (1 - dx) * dy);
+                /* 
+                 * Use a weighted sum to shift the source pixels's position by a sub-pixel amount dx, dy and accumulate
+                 * it into the final brushAA array.
+                 */
+                brushAA[dstIndex] += ~~(brushAlpha * invdx_invdy);
+                brushAA[dstIndex + 1] += ~~(brushAlpha * dx_invdy);
+                brushAA[dstIndex + 1 + intSizeAA] += ~~(brushAlpha * dx_dy);
+                brushAA[dstIndex + intSizeAA] += ~~(brushAlpha * invdx_dy);
+                
+                srcIndex++;
+                dstIndex++;
             }
+            dstIndex += intSizeAA - intSize;
         }
 
         return brushAA;
@@ -293,7 +315,7 @@ export default function CPBrushManager() {
                 && brushInfo.curAngle == cacheAngle && brushInfo.type == cacheType) {
             return cacheBrush;
         }
-
+        
         switch (brushInfo.type) {
             case CPBrushInfo.B_ROUND_AIRBRUSH:
                 brush = buildBrushSoft(brush, brushInfo);
