@@ -1525,7 +1525,10 @@ export default function CPCanvas(controller) {
     
     canvas.addEventListener("mouseleave", function() {
         mouseIn = false;
-        that.repaintAll();
+        
+        if (!mouseDown) {
+            that.repaintAll();
+        }
     });
     
     canvas.addEventListener("pointerdown", handlePointerDown);
