@@ -540,17 +540,7 @@ export default function CPArtwork(_width, _height) {
         
         for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
             for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
-                var 
-                    brushAlpha = brush[srcOffset] * alpha;
-                
-                if (brushAlpha != 0) {
-                    var 
-                        opacityAlpha = opacityData[dstOffset];
-                    
-                    if (brushAlpha > opacityAlpha) {
-                        opacityData[dstOffset] = brushAlpha;
-                    }
-                }
+                opacityData[dstOffset] = Math.max(brush[srcOffset] * alpha, opacityData[dstOffset]);
             }
         }
     };
@@ -1406,9 +1396,10 @@ export default function CPArtwork(_width, _height) {
     this.fusionLayers = function() {
         // Is there anything to update from last call?
         if (!fusionArea.isEmpty()) {
+            // The current brush renders out its buffers to the layer stack for us
             mergeOpacityBuffer(curColor, false);
             
-            fusion.clearRect(fusionArea, 0x00FFFFFF);
+            fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
             
             var 
                 fusionIsSemiTransparent = true, 
@@ -1426,6 +1417,7 @@ export default function CPArtwork(_width, _height) {
                     if (fusionIsSemiTransparent) {
                         layer.fusionWithFullAlpha(fusion, fusionArea);
                     } else {
+                        // Most drawings will end up having 100% coverage and we can speed things up with this version instead
                         layer.fusionWith(fusion, fusionArea);
                     }
                 }
