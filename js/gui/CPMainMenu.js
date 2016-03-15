@@ -133,7 +133,6 @@ var
                     name: "Merge all layers",
                     action: "CPLayerMergeAll",
                     mnemonic: "A",
-                    shortcut: "ctrl+s",
                     title: "Merges all the layers"
                 },
             ],
