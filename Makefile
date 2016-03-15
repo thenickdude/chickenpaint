@@ -1,21 +1,25 @@
 OSASCRIPT := $(shell command -v osascript 2> /dev/null)
 
-all : styles/css/chickenpaint.css dist/chickenpaint.js
+all : resources/css/chickenpaint.css resources/js/chickenpaint.js
 ifdef OSASCRIPT
 	osascript -e 'display notification "Build successful" with title "ChickenPaint build complete"'
 endif
 
-min : dist/chickenpaint.min.js
+dist : all
+	cp -a resources/ dist/chickenpaint
+	cp -a lib/ dist/lib/
 
-dist/chickenpaint.min.js : dist/chickenpaint.js
-	node_modules/.bin/uglifyjs --compress --mangle < dist/chickenpaint.js > dist/chickenpaint.min.js
+min : dist/chickenpaint/chickenpaint.min.js
 
-dist/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
-	node_modules/.bin/browserify --standalone ChickenPaint --outfile dist/chickenpaint.js -d -e js/ChickenPaint.js -t babelify
+resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
+	node_modules/.bin/uglifyjs --compress --mangle < $< > $@
+
+resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
+	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
 
 clean :
-	rm -f styles/css/chickenpaint.css
-	rm -f dist/chickenpaint.js
+	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js
+	rm -rf dist/*
 
-styles/css/chickenpaint.css : styles/css/chickenpaint.less
+resources/css/chickenpaint.css : resources/css/chickenpaint.less
 	lessc $< > $@

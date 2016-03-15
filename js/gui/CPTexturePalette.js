@@ -447,7 +447,7 @@ export default function CPTexturePalette(controller) {
     
     addTextures(makeProceduralTextures());
     
-    loadTextures("styles/textures32.png", 32, 32, 2, function(loadedTextures) {
+    loadTextures(controller.getResourcesRoot() + "gfx/textures32.png", 32, 32, 2, function(loadedTextures) {
         addTextures(loadedTextures);
     });
 }

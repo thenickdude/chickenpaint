@@ -222,6 +222,9 @@ function createDrawingTools() {
  * loadSwatchesUrl  - URL of an .aco palette to load (optional)
  * 
  * allowDownload - Allow the drawing to be saved to the user's computer
+ * 
+ * resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the page that 
+ *                 ChickenPaint is loaded on)
  */
 export default function ChickenPaint(options) {
     var
@@ -644,12 +647,18 @@ export default function ChickenPaint(options) {
         
         CPWacomTablet.getRef().detectTablet();
     }
+    
+    this.getResourcesRoot = function() {
+        return options.resourcesRoot;
+    };
+    
+    options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
         var
             loader = new CPResourceLoader(options);
         
-        new CPSpashScreen(uiElem, loader);
+        new CPSpashScreen(uiElem, loader, options.resourcesRoot);
 
         loader.on("loadingComplete", function(resources) {
             that.artwork = resources.layers || resources.flat;

@@ -1,4 +1,4 @@
-export default function CPSplashScreen(uiParent, loader) {
+export default function CPSplashScreen(uiParent, loader, resourcesRoot) {
     const
         MAX_SMOOTHIE_OFFSET = 170;
 
@@ -26,7 +26,7 @@ export default function CPSplashScreen(uiParent, loader) {
 
         fontHeight = 14;
 
-    var imageRoot = "styles/splash/";
+    var imageRoot = resourcesRoot + "splash/";
 
     for (var i = 0; i < images.length; i++) {
         images[i].onload = function() {

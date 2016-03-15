@@ -4,7 +4,8 @@ $(document).ready(function() {
         loadChibiFileUrl: "./uploaded.chi",
         saveUrl: "post.php?session_id=1",
         postUrl: "posting.php",
-        //exitUrl: "forum.php",
-        allowSave: false
+        exitUrl: "forum.php",
+        allowSave: false,
+        resourcesRoot: "../resources/"
     });
 });
