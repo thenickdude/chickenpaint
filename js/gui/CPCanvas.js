@@ -95,7 +95,7 @@ export default function CPCanvas(controller) {
         oldPreviewRect = null,
         
         defaultCursor = "auto", moveCursor = "grab", movingCursor = "grabbing", crossCursor = "crosshair",
-        mouseIn = false, mouseDown = false,
+        mouseIn = false, mouseDown = false, wacomPenDown = false,
         
         dontStealFocus = false,
         
@@ -132,7 +132,9 @@ export default function CPCanvas(controller) {
         curDrawMode, curSelectedMode, activeMode,
         
         horzScroll = new CPScrollbar(false), 
-        vertScroll = new CPScrollbar(true);
+        vertScroll = new CPScrollbar(true),
+        
+        tablet = CPWacomTablet.getRef();
 
     // Parent class with empty event handlers for those drawing modes that don't need every event
     function CPMode() {
@@ -1173,15 +1175,12 @@ export default function CPCanvas(controller) {
      * Add the pointer pressure field to the given pointer event.
      */
     function getPointerPressure(e) {
-        var
-            tablet = CPWacomTablet.getRef();
-        
         // Use Wacom pressure in preference to pointer event pressure (if present)
-        if (tablet.isTabletPresent()) {
+        if (wacomPenDown) {
             return tablet.getPressure();
         } else {
-            /* Mice have a default pressure of 0.5, but we want 1.0. Since we can't distinguish between
-             * mice and pens at this point, we don't have any better options:
+            /* In the Pointer Events API, mice have a default pressure of 0.5, but we want 1.0. Since we can't 
+             * distinguish between mice and pens at this point, we don't have any better options:
              */
             return e.pressure * 2;
         }
@@ -1208,6 +1207,7 @@ export default function CPCanvas(controller) {
     
     function handlePointerUp(e) {
         mouseDown = false;
+        wacomPenDown = false;
         activeMode.mouseReleased(e);
     }
     
@@ -1216,6 +1216,7 @@ export default function CPCanvas(controller) {
         
         if (!mouseDown) {
             mouseDown = true;
+            wacomPenDown = tablet.isPen();
             
             requestFocusInWindow();
             activeMode.mousePressed(e, getPointerPressure(e));

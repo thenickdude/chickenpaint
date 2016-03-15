@@ -22,18 +22,21 @@
 
 export default function CPWacomTablet() {
     var 
-        tabletOK = false,
+        penAPI = null,
+        pluginObject,
+        
+        that = this;
 
-        pluginObject;
-
+    /**
+     * Is the pen currently interacting with the tablet surface?
+     */
+    this.isPen = function() {
+        return penAPI && penAPI.pointerType == 1 /* Pen */;
+    };
+    
     this.getPressure = function() {
-        if (tabletOK) {
-            var
-                penAPI = pluginObject.penAPI;
-            
-            if (penAPI && penAPI.pointerType == 1 /* Pen */) {
-                return penAPI.pressure;
-            }
+        if (penAPI) {
+            return penAPI.pressure;
         }
         
         return 1.0;
@@ -41,11 +44,12 @@ export default function CPWacomTablet() {
     
     this.pluginLoaded = function() {
         console.log("Wacom tablet support loaded!");
-        tabletOK = true;
+
+        penAPI = pluginObject.penAPI;
     };
     
     this.isTabletPresent = function() {
-        return tabletOK;
+        return !!penAPI;
     };
 
     /**
@@ -84,7 +88,7 @@ export default function CPWacomTablet() {
         document.body.appendChild(pluginObject);
         
         setTimeout(function() {
-            if (!tabletOK) {
+            if (!that.isTabletPresent()) {
                 console.log("Looks like the Wacom plugin isn't installed, or failed to load.");
             }
         }, 5000);
