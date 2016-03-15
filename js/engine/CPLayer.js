@@ -116,8 +116,9 @@ export default function CPLayer(width, height, name) {
                 if (alpha == 0) {
                     pixIndex += BYTES_PER_PIXEL;
                 } else if (alpha == 255) {
-                    for (var i = 0; i < BYTES_PER_PIXEL; i++, pixIndex++) {
+                    for (var i = 0; i < BYTES_PER_PIXEL; i++) {
                         fusion.data[pixIndex] = that.data[pixIndex];
+                        pixIndex++;
                     }
                 } else {
                     var 
@@ -219,6 +220,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -294,6 +296,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -380,6 +383,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -423,6 +427,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
     
@@ -474,6 +479,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -526,6 +532,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -537,8 +544,6 @@ export default function CPLayer(width, height, name) {
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-        fusion.alpha = 100;
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -582,6 +587,8 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
+        fusion.alpha = 100;
     }
 
     // Hard Light Mode (same as Overlay with A and B swapped)
@@ -592,8 +599,6 @@ export default function CPLayer(width, height, name) {
         var
             yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
             pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-        fusion.alpha = 100;
 
         for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
             for (var x = rect.left; x < rect.right; x++) {
@@ -637,6 +642,8 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
+        fusion.alpha = 100;
     }
 
     // Soft Light Mode
@@ -691,6 +698,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -745,6 +753,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -794,6 +803,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
 
@@ -845,6 +855,7 @@ export default function CPLayer(width, height, name) {
                 }
             }
         }
+        
         fusion.alpha = 100;
     }
     
