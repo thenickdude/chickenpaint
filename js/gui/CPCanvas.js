@@ -290,7 +290,7 @@ export default function CPCanvas(controller) {
 
     CPFreehandMode.prototype.mouseDragged = function(e, pressure) {
         var 
-            pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
+            pf = coordToDocument({x: mouseX, y: mouseY}),
             smoothing = Math.min(0.999, Math.pow(controller.getBrushInfo().smoothing, 0.3));
 
         this.smoothMouse.x = (1.0 - smoothing) * pf.x + smoothing * this.smoothMouse.x;
@@ -1189,10 +1189,11 @@ export default function CPCanvas(controller) {
     
     function handlePointerMove(e) {
         var
-            offset = $(canvas).offset();
+            mousePos = mouseCoordToCanvas({x: e.pageX, y: e.pageY});
         
-        mouseX = e.pageX - offset.left;
-        mouseY = e.pageY - offset.top;
+        // Store these globally for the event handlers to refer to
+        mouseX = mousePos.x;
+        mouseY = mousePos.y;
         
         if (!dontStealFocus) {
             requestFocusInWindow();
