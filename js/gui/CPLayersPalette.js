@@ -182,9 +182,13 @@ export default function CPLayersPalette(controller) {
                     artwork.moveLayer(layerDragIndex, layerOver);
                 }
 
+                // Do we need to repaint to erase draglines?
+                if (layerDragReally) {
+                    layerDragReally = false;
+                    that.paint();
+                }
+                
                 layerDrag = false;
-                layerDragReally = false;
-                that.paint();
                 
                 window.removeEventListener("mousemove", mouseDragged);
                 window.removeEventListener("mouseup", mouseUp);
@@ -199,6 +203,30 @@ export default function CPLayersPalette(controller) {
             }
         }
 
+        /**
+         * Repaint just the layer with the specified index
+         */
+        this.paintLayer = function(layerIndex) {
+            var
+                layer = artwork.getLayer(layerIndex),
+                layerTop = canvas.height - layerH * (layerIndex + 1);
+            
+            canvasContext.save();
+            
+            canvasContext.fillStyle = '#606060';
+            canvasContext.fillRect(0, layerTop, canvas.width, layerH);
+
+            canvasContext.strokeStyle = 'black';
+            
+            canvasContext.translate(0, layerTop);
+            drawLayer(layer, layerIndex == artwork.getActiveLayerIndex());
+            
+            canvasContext.restore();
+        };
+        
+        /**
+         * Repaint the entire control
+         */
         this.paint = function() {
             var
                 artwork = controller.getArtwork(),
@@ -324,7 +352,6 @@ export default function CPLayersPalette(controller) {
                     layerDrag = true;
                     layerDragY = mouseLoc.y;
                     layerDragIndex = layerIndex;
-                    that.paint();
                     
                     window.addEventListener("mousemove", mouseDragged);
                     window.addEventListener("mouseup", mouseUp);
@@ -480,7 +507,7 @@ export default function CPLayersPalette(controller) {
     alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
 
     // add listeners
-    controller.getArtwork().on("changeLayer", function() {
+    controller.getArtwork().on("changeLayer", function(layerIndex) {
         var
             artwork = this;
         
@@ -492,7 +519,12 @@ export default function CPLayersPalette(controller) {
             blendCombo.value = artwork.getActiveLayer().getBlendMode();
         }
 
-        layerWidget.resize();
+        if (layerIndex !== undefined) {
+            layerWidget.paintLayer(layerIndex);
+        } else {
+            // We may have added or removed layers, resize as appropriate
+            layerWidget.resize();
+        }
     });
     
     setTimeout(function() {

@@ -132,8 +132,9 @@ export default function CPArtwork(_width, _height) {
         that.emitEvent("updateRegion", [region]);
     }
 
-    function callListenersLayerChange() {
-        that.emit("changeLayer");
+    // layerIndex is optional, provide when only one layer has been updated
+    function callListenersLayerChange(layerIndex) {
+        that.emitEvent("changeLayer", [layerIndex]);
     }
     
     this.getLayers = function() {
@@ -196,7 +197,7 @@ export default function CPArtwork(_width, _height) {
         layer.visible = visible;
         
         invalidateFusion();
-        callListenersLayerChange();
+        callListenersLayerChange(layerIndex);
     }
 
     this.addLayer = function() {
@@ -352,7 +353,7 @@ export default function CPArtwork(_width, _height) {
             layer.setAlpha(alpha);
             
             invalidateFusion();
-            callListenersLayerChange();
+            callListenersLayerChange(layerIndex);
         }
     };
 
@@ -365,7 +366,7 @@ export default function CPArtwork(_width, _height) {
             layer.setBlendMode(blendMode);
             
             invalidateFusion();
-            callListenersLayerChange();
+            callListenersLayerChange(layerIndex);
         }
     };
 
@@ -377,7 +378,7 @@ export default function CPArtwork(_width, _height) {
             addUndo(new CPUndoLayerRename(layerIndex, name));
             layer.name = name;
             
-            callListenersLayerChange();
+            callListenersLayerChange(layerIndex);
         }
     };
     
@@ -1436,14 +1437,19 @@ export default function CPArtwork(_width, _height) {
         return fusion.getImageData();
     }
     
-    this.setActiveLayerIndex = function(i) {
-        if (i < 0 || i >= layers.length) {
+    this.setActiveLayerIndex = function(newIndex) {
+        if (newIndex < 0 || newIndex >= layers.length) {
             return;
         }
 
-        if (curLayer != layers[i]) {
-            curLayer = layers[i];
-            callListenersLayerChange();
+        if (curLayer != layers[newIndex]) {
+            var
+                oldIndex = this.getActiveLayerIndex();
+            
+            curLayer = layers[newIndex];
+            
+            callListenersLayerChange(oldIndex); // Old layer has now been deselected
+            callListenersLayerChange(newIndex); // New layer has now been selected
         }
     };
     
@@ -1974,14 +1980,14 @@ export default function CPArtwork(_width, _height) {
         that.getLayer(this.layerIndex).visible = this.newVis;
         
         invalidateFusion();
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     };
 
     CPUndoLayerVisible.prototype.undo = function() {
         that.getLayer(this.layerIndex).visible = this.oldVis;
         
         invalidateFusion();
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     };
 
     CPUndoLayerVisible.prototype.merge = function(u) {
@@ -2176,14 +2182,14 @@ export default function CPArtwork(_width, _height) {
         that.getLayer(this.layerIndex).setAlpha(this.from);
         
         invalidateFusion();
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     };
 
     CPUndoLayerAlpha.prototype.redo = function() {
         that.getLayer(this.layerIndex).setAlpha(this.to);
         
         invalidateFusion();
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     }
 
     CPUndoLayerAlpha.prototype.merge = function(u) {
@@ -2244,12 +2250,12 @@ export default function CPArtwork(_width, _height) {
     
     CPUndoLayerRename.prototype.undo = function() {
         that.getLayer(this.layerIndex).name = this.from;
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     };
 
     CPUndoLayerRename.prototype.redo = function() {
         that.getLayer(this.layerIndex).name = this.to;
-        callListenersLayerChange();
+        callListenersLayerChange(this.layerIndex);
     };
 
     CPUndoLayerRename.prototype.merge = function(u) {
