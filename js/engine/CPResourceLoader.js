@@ -141,7 +141,7 @@ export default function CPResourceLoader(options) {
                 var
                     response = this.response;
                 
-                reportProgress(resource, 1.0);
+                that.emitEvent("loadingProgress", [1.0, "Starting ChickenPaint..."]);
     
                 // Yield to the DOM to give it a chance to paint the loaded message before we begin decoding
                 setTimeout(
