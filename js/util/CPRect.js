@@ -167,6 +167,10 @@ CPRect.prototype.grow = function(h, v) {
     this.bottom += v;
 };
 
+CPRect.prototype.toString = function() {
+    return "(" + this.left + "," + this.top + "," + this.right + "," + this.bottom + ")";
+};
+
 /* 
  * Chrome is initially eager to optimize CPRect and users assuming that all the fields are SMIs, then later on decides
  * that they should be tagged numbers after all. This causes all the blending operation functions to be reoptimized
