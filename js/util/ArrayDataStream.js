@@ -124,7 +124,7 @@ ArrayDataStream.prototype.readU32BE = function() {
         b2 = this.readByte(),
         b3 = this.readByte(),
         b4 = this.readByte();
-    return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4; 
+    return ((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) >>> 0; 
 };
 
 ArrayDataStream.prototype.readU32LE = function() {
@@ -133,7 +133,7 @@ ArrayDataStream.prototype.readU32LE = function() {
         b2 = this.readByte(),
         b3 = this.readByte(),
         b4 = this.readByte();
-    return (b4 << 24) | (b3 << 16) | (b2 << 8) | b1; 
+    return ((b4 << 24) | (b3 << 16) | (b2 << 8) | b1) >>> 0; 
 };
 
 ArrayDataStream.prototype.readBytes = function(count) {

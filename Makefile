@@ -5,11 +5,11 @@ ifdef OSASCRIPT
 	osascript -e 'display notification "Build successful" with title "ChickenPaint build complete"'
 endif
 
-dist : all
+dist : all min
 	cp -a resources/ dist/chickenpaint
 	cp -a lib/ dist/lib/
 
-min : dist/chickenpaint/chickenpaint.min.js
+min : resources/js/chickenpaint.min.js
 
 resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
 	node_modules/.bin/uglifyjs --compress --mangle < $< > $@
