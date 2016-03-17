@@ -328,10 +328,10 @@ CPBlend.prototype.fusionWithLightenFullAlpha = function(that, fusion, rect) {
             if (newAlpha > 0) {
                 var 
                 // This alpha is used when color1 > color2
-                alpha12 = (alpha2 * (alpha1 ^ 0xff) / newAlpha) | 0,
-                invAlpha12 = alpha12 ^ 0xFF,
+                    alpha12 = (alpha2 * (alpha1 ^ 0xff) / newAlpha) | 0,
+                    invAlpha12 = alpha12 ^ 0xFF,
 
-            // This alpha is used when color2 > color1
+                // This alpha is used when color2 > color1
                     alpha21 = (alpha1 * (alpha2 ^ 0xff) / newAlpha) | 0,
                     invAlpha21 = alpha21 ^ 0xFF;
 
@@ -350,6 +350,30 @@ CPBlend.prototype.fusionWithLightenFullAlpha = function(that, fusion, rect) {
     }
     
     fusion.alpha = 100;
+}
+
+// When fusion is opaque with alpha = 100
+CPBlend.prototype.fusionWithLighten = function(that, fusion, rect) {
+    var
+        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100, 
+                invAlpha1 = alpha1 ^ 0xff;
+
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    c1 = that.data[pixIndex],
+                    c2 = fusion.data[pixIndex];
+                
+                fusion.data[pixIndex] = c2 >= c1 ? c2 : (c2 * invAlpha1 + c1 * alpha1) / 255;
+            }
+            pixIndex++; // Opacity unchanged (still 255)
+        }
+    }
 }
 
 // Darken Mode
@@ -446,6 +470,42 @@ CPBlend.prototype.fusionWithDodgeFullAlpha = function(that, fusion, rect) {
     }
     
     fusion.alpha = 100;
+};
+
+// When fusion is opaque
+CPBlend.prototype.fusionWithDodge = function(that, fusion, rect) {
+    var
+        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
+            
+            if (alpha1 == 0) {
+                pixIndex += BYTES_PER_PIXEL;
+                continue;
+            }
+            
+            var
+                invAlpha1 = alpha1 ^ 0xff;
+            
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    color1 = that.data[pixIndex],
+                    color2 = fusion.data[pixIndex],
+                    invColor1 = color1 ^ 0xFF;
+                
+                fusion.data[pixIndex] = 
+                    ((
+                        color2 * invAlpha1 
+                        + alpha1 * (invColor1 == 0 ? 255 : Math.min(255, (255 * color2 / invColor1) | 0))
+                    ) / 255) | 0;
+            }
+            pixIndex++; // Alpha stays the same
+        }
+    }
 };
 
 // Burn Mode
@@ -554,6 +614,45 @@ CPBlend.prototype.fusionWithOverlayFullAlpha = function(that, fusion, rect) {
     }
     
     fusion.alpha = 100;
+};
+
+// When fusion is opaque and has alpha == 100
+CPBlend.prototype.fusionWithOverlay = function(that, fusion, rect) {
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
+            
+            if (alpha1 == 0) {
+                pixIndex += BYTES_PER_PIXEL;
+                continue;
+            }
+            
+            var
+                alphan12 = alpha1 ^ 0xff;
+
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    c1 = that.data[pixIndex],
+                    c2 = fusion.data[pixIndex];
+                
+                fusion.data[pixIndex] = 
+                    ((
+                        alphan12 * c2 
+                        + (
+                            c2 <= 127
+                                ? (alpha1 * 2 * c1 * c2 / 255)
+                                : (alpha1 * ((2 * (c1 ^ 0xff) * (c2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255) | 0;
+            }
+            pixIndex++; // Alpha stays 255
+        }
+    }
 };
 
 // Hard Light Mode (same as Overlay with A and B swapped)
