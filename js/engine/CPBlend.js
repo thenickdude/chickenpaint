@@ -37,33 +37,29 @@ CPBlend.prototype.fusionWithMultiply = function(that, fusion, rect) {
 
 CPBlend.prototype.fusionWithNormal = function(that, fusion, rect) {
     var 
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
-        h = (rect.bottom - rect.top) | 0,
-        w = (rect.right - rect.left) | 0;
-    
-    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
-        for (var x = 0; x < w; x++) {
+        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
             var 
                 alpha = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha / 100) | 0;
             
-            if (alpha > 0) {
-                if (alpha == 255) {
+            if (alpha == 0) {
+                pixIndex += BYTES_PER_PIXEL;
+            } else if (alpha == 255) {
+                for (var i = 0; i < BYTES_PER_PIXEL; i++, pixIndex++) {
                     fusion.data[pixIndex] = that.data[pixIndex];
-                    fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
-                    fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
-                    fusion.data[pixIndex + 3] = that.data[pixIndex + 3];
-                } else {
-                    var 
-                        invAlpha = 255 - alpha;
-    
-                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 1] = ((that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 2] = ((that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255) | 0;
                 }
+            } else {
+                var 
+                    invAlpha = 255 - alpha;
+
+                for (var i = 0; i < 3; i++, pixIndex++) {
+                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
+                }
+                pixIndex++; // Don't need to update the alpha because it started out as 100%
             }
-            
-            pixIndex += BYTES_PER_PIXEL;
         }
     }
 };
@@ -271,6 +267,32 @@ CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
     fusion.alpha = 100;
 };
 
+// For opaque fusion
+CPBlend.prototype.fusionWithSubtract = function(that, fusion, rect) {
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
+                alpha12 = alpha1 * 255;
+
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    channel = (255 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / 255;
+                
+                // binary magic to clamp negative values to zero without using a condition
+                fusion.data[pixIndex] = channel & (~channel >>> 24); 
+            }
+            pixIndex++; // Alpha stays the same
+        }
+    }
+    
+    fusion.alpha = 100;
+};
+
 // Screen Mode
 // same as Multiply except all color channels are inverted and the result too
 // C = 1 - (((1-A)*aa*(1-ab) + (1-B)*ab*(1-aa) + (1-A)*(1-B)*aa*ab) / (aa + ab - aa*ab))
@@ -308,6 +330,34 @@ CPBlend.prototype.fusionWithScreenFullAlpha = function(that, fusion, rect) {
             } else {
                 pixIndex += BYTES_PER_PIXEL;
             }
+        }
+    }
+    
+    fusion.alpha = 100;
+};
+
+// For opaque fusion
+CPBlend.prototype.fusionWithScreen = function(that, fusion, rect) {
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
+                invAlpha1 = alpha1 ^ 0xff;
+            
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                fusion.data[pixIndex] = 0xFF ^ (
+                    (
+                        (fusion.data[pixIndex] ^ 0xFF) * invAlpha1
+                        + (that.data[pixIndex] ^ 0xFF) * (fusion.data[pixIndex] ^ 0xFF) * alpha1 / 255
+                    )
+                    / 255
+                );
+            }
+            pixIndex++; // Alpha stays the same
         }
     }
     
@@ -420,6 +470,33 @@ CPBlend.prototype.fusionWithDarkenFullAlpha = function(that, fusion, rect) {
             } else {
                 pixIndex += BYTES_PER_PIXEL;
             }
+        }
+    }
+    
+    fusion.alpha = 100;
+};
+
+// When fusion is opaque
+CPBlend.prototype.fusionWithDarken = function(that, fusion, rect) {
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
+                invAlpha1 = alpha1 ^ 0xff;
+
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    c1 = that.data[pixIndex],
+                    c2 = fusion.data[pixIndex];
+                
+                fusion.data[pixIndex] = c2 >= c1 ? (c2 * invAlpha1 + c1 * alpha1) / 255 : c2;
+            }
+            
+            pixIndex++; // Alpha stays the same
         }
     }
     
@@ -561,6 +638,45 @@ CPBlend.prototype.fusionWithBurnFullAlpha = function(that, fusion, rect) {
             } else {
                 pixIndex += BYTES_PER_PIXEL;
             }
+        }
+    }
+    
+    fusion.alpha = 100;
+};
+
+// When fusion is opaque
+CPBlend.prototype.fusionWithBurn = function(that, fusion, rect) {
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++) {
+            var 
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
+            
+            if (alpha1 == 0) {
+                pixIndex += BYTES_PER_PIXEL;
+                continue;
+            }
+            
+            var
+                invAlpha1 = alpha1 ^ 0xff;
+
+            for (var i = 0; i < 3; i++, pixIndex++) {
+                var 
+                    color1 = that.data[pixIndex],
+                    color2 = fusion.data[pixIndex],
+                    invColor2 = color2 ^ 0xFF;
+                
+                fusion.data[pixIndex] = 
+                    ((
+                        color2 * invAlpha1 
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * invColor2 / color1) ^ 0xff)
+                    )
+                    / 255) | 0;
+            }
+            pixIndex++; // Alpha stays the same
         }
     }
     

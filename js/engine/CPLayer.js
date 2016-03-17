@@ -75,7 +75,7 @@ CPLayer.prototype.fusionWith = function(fusion, rect) {
             break;
 
         case CPLayer.LM_SCREEN:
-            blend.fusionWithScreenFullAlpha(this, fusion, rect);
+            blend.fusionWithScreen(this, fusion, rect);
             break;
 
         case CPLayer.LM_LIGHTEN:
@@ -83,11 +83,11 @@ CPLayer.prototype.fusionWith = function(fusion, rect) {
             break;
 
         case CPLayer.LM_DARKEN:
-            blend.fusionWithDarkenFullAlpha(this, fusion, rect);
+            blend.fusionWithDarken(this, fusion, rect);
             break;
 
         case CPLayer.LM_SUBTRACT:
-            blend.fusionWithSubtractFullAlpha(this, fusion, rect);
+            blend.fusionWithSubtract(this, fusion, rect);
             break;
 
         case CPLayer.LM_DODGE:
@@ -95,7 +95,7 @@ CPLayer.prototype.fusionWith = function(fusion, rect) {
             break;
 
         case CPLayer.LM_BURN:
-            blend.fusionWithBurnFullAlpha(this, fusion, rect);
+            blend.fusionWithBurn(this, fusion, rect);
             break;
 
         case CPLayer.LM_OVERLAY:
