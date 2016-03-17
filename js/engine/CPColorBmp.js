@@ -58,9 +58,9 @@ CPColorBmp.ALPHA_BYTE_OFFSET = 3;
 // Creates a CPBitmap from a portion of this bitmap
 CPColorBmp.prototype.cloneRect = function(rect) {
     var
-        result = new CPColorBmp(this.width, this.height);
+        result = new CPColorBmp(rect.getWidth(), rect.getHeight());
     
-    result.setFromBitmapRect(this, rect);
+    result.copyBitmapRect(this, 0, 0, rect);
     
     return result;
 };
@@ -188,16 +188,18 @@ CPColorBmp.prototype.pasteAlphaRect = function(bmp, srcRect, x, y) {
             }
         }
     }
-}
+};
 
-// Sets the content at the origin of this CPBitmap using a rect from another bitmap
-CPColorBmp.prototype.setFromBitmapRect = function(bmp, rect) {
+/** 
+ * Copy the rectangle at srcRect from bmp onto this image at (dstX, dstY). No clipping is performed.
+ */ 
+CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
     var 
-        w = rect.getWidth(),
-        h = rect.getHeight(),
+        w = srcRect.getWidth(),
+        h = srcRect.getHeight(),
         
-        dstIndex = 0, // Set at the top left position in the destination
-        srcIndex = bmp.offsetOfPixel(rect.left, rect.top),
+        dstIndex = this.offsetOfPixel(dstX, dstY),
+        srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
         
         dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
         srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL,
@@ -211,7 +213,7 @@ CPColorBmp.prototype.setFromBitmapRect = function(bmp, rect) {
         srcIndex += srcYSkip;
         dstIndex += dstYSkip;
     }
-}
+};
 
 CPColorBmp.prototype.pasteBitmap = function(bmp, x, y) {
     var
@@ -224,7 +226,7 @@ CPColorBmp.prototype.pasteBitmap = function(bmp, x, y) {
         w = srcRect.getWidth(),
         h = srcRect.getHeight(),
         
-        dstIndex = bmp.offsetOfPixel(dstRect.left, dstRect.top),
+        dstIndex = this.offsetOfPixel(dstRect.left, dstRect.top),
         srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
         
         dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
@@ -268,7 +270,7 @@ CPColorBmp.prototype.copyDataFrom = function(bmp) {
         this.width = bmp.width;
         this.height = bmp.height;
         
-        this.imageData = new ImageData(this.width, this.height);
+        this.imageData = createImageData(this.width, this.height);
         this.data = this.imageData.data;
     }
 

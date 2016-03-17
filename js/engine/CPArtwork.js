@@ -1399,8 +1399,6 @@ export default function CPArtwork(_width, _height) {
             // The current brush renders out its buffers to the layer stack for us
             mergeOpacityBuffer(curColor, false);
             
-            fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
-            
             var 
                 fusionIsSemiTransparent = true, 
                 first = true;
@@ -1411,7 +1409,21 @@ export default function CPArtwork(_width, _height) {
                 }
     
                 if (layer.visible) {
-                    first = false;
+                    if (first) {
+                        first = false;
+                        
+                        if (layer.alpha == 100) {
+                            /* Instead of blending the layer onto the fully transparent fusion, we can just copy the
+                             * layer data right into the fusion. This works for all of our blending modes.
+                             */ 
+                            
+                            // In future, for single layer images, we might just return the layer as the fusion
+                            fusion.copyBitmapRect(layer, fusionArea.left, fusionArea.top, fusionArea);
+                            return;
+                        }
+                        
+                        fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
+                    }
                     
                     // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
                     if (fusionIsSemiTransparent) {
@@ -1422,6 +1434,11 @@ export default function CPArtwork(_width, _height) {
                     }
                 }
             });
+            
+            if (first) {
+                // Didn't draw any layers? We have to clear the area, then
+                fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
+            }
     
             fusionArea.makeEmpty();
         }
@@ -1440,8 +1457,13 @@ export default function CPArtwork(_width, _height) {
             
             curLayer = layers[newIndex];
             
-            callListenersLayerChange(oldIndex); // Old layer has now been deselected
-            callListenersLayerChange(newIndex); // New layer has now been selected
+            // Was the old layer deleted?
+            if (oldIndex == -1) {
+                callListenersLayerChange();
+            } else {
+                callListenersLayerChange(oldIndex); // Old layer has now been deselected
+                callListenersLayerChange(newIndex); // New layer has now been selected
+            }
         }
     };
     
@@ -1782,11 +1804,11 @@ export default function CPArtwork(_width, _height) {
         clipboard = new CPClip(curLayer.cloneRect(selection), selection.left, selection.top);
 
         if (createUndo) {
-            addUndo(new CPUndoCut(clipboard.bmp, selection.left, selection.top, this.getActiveLayerIndex(), selection));
+            addUndo(new CPUndoCut(clipboard.bmp, this.getActiveLayerIndex(), selection));
         }
 
-        curLayer.clearRect(selection, 0x00000000);
-        invalidateFusion();
+        curLayer.clearRect(selection, EMPTY_LAYER_COLOR);
+        invalidateFusionRect(selection);
     };
 
     this.copySelection = function() {
@@ -2336,36 +2358,31 @@ export default function CPArtwork(_width, _height) {
     /**
      * Store data to undo a cut operation
      * 
-     * @param bmp CPColorBmp
-     * @param x int
-     * @param y int
-     * @param layerIndex int
-     * @param selection CPRect
+     * @param bmp CPColorBmp The rectangle of image data that was cut
+     * @param layerIndex int Index of the layer the cut came from
+     * @param selection CPRect The cut rectangle co-ordinates
      */
-    function CPUndoCut(bmp, x, y, layerIndex, selection) {
+    function CPUndoCut(bmp, layerIndex, selection) {
         selection = selection.clone();
 
         this.undo = function() {
             that.setActiveLayerIndex(layerIndex);
-            curLayer.pasteBitmap(clipboard.bmp, x, y);
+            curLayer.pasteBitmap(bmp, selection.left, selection.top);
             that.setSelection(selection);
-            invalidateFusion();
-        }
+            invalidateFusionRect(selection);
+        };
 
         this.redo = function() {
             that.setActiveLayerIndex(layerIndex);
             
-            var 
-                r = bmp.getBounds();
-            r.translate(x, y);
-            curLayer.clear(r, 0x00000000);
+            curLayer.clearRect(selection, EMPTY_LAYER_COLOR);
             that.emptySelection();
             invalidateFusion();
         };
 
         this.getMemoryUsed = function(undone, param) {
             return bmp == param ? 0 : bmp.width * bmp.height * CPColorBmp.BYTES_PER_PIXEL;
-        }
+        };
     }
     
     CPUndoCut.prototype = Object.create(CPUndo.prototype);
@@ -2387,7 +2404,7 @@ export default function CPArtwork(_width, _height) {
             that.setActiveLayerIndex(layerIndex);
             that.setSelection(selection);
 
-            invalidateFusion();
+            invalidateFusionRect(selection);
             callListenersLayerChange();
         };
 
