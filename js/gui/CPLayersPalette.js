@@ -503,6 +503,7 @@ export default function CPLayersPalette(controller) {
         artwork = controller.getArtwork();
     
     alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
+    blendCombo.value = artwork.getActiveLayer().getBlendMode();
 
     // add listeners
     controller.getArtwork().on("changeLayer", function(layerIndex) {
