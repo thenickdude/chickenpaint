@@ -274,33 +274,23 @@ export default function CPLayersPalette(controller) {
                 parentHeight = $(canvas).parent().height(),
                 parentWidth = $(canvas).parent().width(),
                 
-                newWidth = parentWidth,
-                newHeight = Math.max(layerH * artwork.getLayerCount(), parentHeight);
+                newWidth, newHeight;
             
-            layerH = 34;
-            eyeW = 24;
+            layerH = 34 * window.devicePixelRatio;
+            eyeW = 24 * window.devicePixelRatio;
             
+            newWidth = parentWidth * window.devicePixelRatio;
+            newHeight = Math.max(layerH * artwork.getLayerCount(), parentHeight * window.devicePixelRatio);
+            
+            // Will we trigger a scrollbar to appear?
+            if (newHeight > parentHeight * window.devicePixelRatio) {
+                // Take the scrollbar width into account in our width
+                newWidth -= 15 * window.devicePixelRatio;
+            }
+
             canvas.width = newWidth;
             canvas.height = newHeight;
-            
-            if (!window.devicePixelRatio) {
-                window.devicePixelRatio = 1.0;
-            }
-            
-            // Did we trigger a scrollbar to appear?
-            if (canvas.height > parentHeight) {
-                // Take the scrollbar width into account in our width
-                canvas.width = canvas.width - 15;
-            }
-            
-            if (window.devicePixelRatio > 1) {
-                canvas.width = canvas.width * window.devicePixelRatio;
-                canvas.height = canvas.height * window.devicePixelRatio;
-                
-                layerH *= window.devicePixelRatio;
-                eyeW *= window.devicePixelRatio;
-            }
-            
+
             canvasContext.font = (layerH * 0.25) + "pt sans-serif";
             
             this.paint();
@@ -362,6 +352,10 @@ export default function CPLayersPalette(controller) {
                 }
             }
         });
+        
+        if (!window.devicePixelRatio) {
+            window.devicePixelRatio = 1.0;
+        }
         
         canvasContext.strokeStyle = 'black';
         

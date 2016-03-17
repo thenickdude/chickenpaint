@@ -9216,14 +9216,15 @@
 .chickenpaint-layers-widget canvas {
   width: 100%;
 }
-.chickenpaint-layer-add-remove {
+.chickenpaint .chickenpaint-layer-add-remove {
   margin-bottom: 0;
+  margin-top: 2px;
 }
 .chickenpaint-palette-layers .chickenpaint-slider {
   margin-top: 5px;
 }
 .chickenpaint-palette-layers .checkbox {
-  margin: 8px 0;
+  margin: 6px 0;
 }
 .chickenpaint-palette-layers .chickenpaint-layer-new-name {
   position: absolute;
