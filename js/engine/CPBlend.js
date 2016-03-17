@@ -241,8 +241,8 @@ CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
+                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
 
                 newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 
@@ -276,7 +276,7 @@ CPBlend.prototype.fusionWithSubtract = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
                 alpha12 = alpha1 * 255;
 
             for (var i = 0; i < 3; i++, pixIndex++) {
@@ -376,8 +376,8 @@ CPBlend.prototype.fusionWithLightenFullAlpha = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
+                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
 
                 newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 
@@ -417,7 +417,7 @@ CPBlend.prototype.fusionWithLighten = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100, 
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
                 invAlpha1 = alpha1 ^ 0xff;
 
             for (var i = 0; i < 3; i++, pixIndex++) {
@@ -444,8 +444,8 @@ CPBlend.prototype.fusionWithDarkenFullAlpha = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
+                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
 
                 newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 
@@ -485,7 +485,7 @@ CPBlend.prototype.fusionWithDarken = function(that, fusion, rect) {
     for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
         for (var x = rect.left; x < rect.right; x++) {
             var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
+                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
                 invAlpha1 = alpha1 ^ 0xff;
 
             for (var i = 0; i < 3; i++, pixIndex++) {
