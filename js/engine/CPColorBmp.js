@@ -195,8 +195,8 @@ CPColorBmp.prototype.pasteAlphaRect = function(bmp, srcRect, x, y) {
  */ 
 CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
     var 
-        w = srcRect.getWidth(),
-        h = srcRect.getHeight(),
+        w = srcRect.getWidth() | 0,
+        h = srcRect.getHeight() | 0,
         
         dstIndex = this.offsetOfPixel(dstX, dstY),
         srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
@@ -207,8 +207,13 @@ CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
         widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
     
     for (var y = 0; y < h; y++) {
-        for (var x = 0; x < widthBytes; x++) {
-            this.data[dstIndex++] = bmp.data[srcIndex++];
+        for (var x = 0; x < w; x++) {
+            this.data[dstIndex] = bmp.data[srcIndex];
+            this.data[dstIndex + 1] = bmp.data[srcIndex + 1];
+            this.data[dstIndex + 2] = bmp.data[srcIndex + 2];
+            this.data[dstIndex + 3] = bmp.data[srcIndex + 3];
+            dstIndex += 4;
+            srcIndex += 4;
         }
         srcIndex += srcYSkip;
         dstIndex += dstYSkip;
