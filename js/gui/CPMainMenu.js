@@ -409,68 +409,66 @@ export default function CPMainMenu(controller, mainGUI) {
     }
     
     function recurseFillMenu(menuElem, entries) {
-        for (var i = 0; i < entries.length; i++) {
-            (function(entry) {
-                var 
-                    entryElem;
+        menuElem.append(entries.map(function(entry) {
+            var 
+                entryElem;
+            
+            if (entry.action && !controller.isActionSupported(entry.action)) {
+                return;
+            }
+
+            if (entry.children) {
+                entryElem = $(
+                    '<li class="dropdown">'
+                        + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
+                        + '<ul class="dropdown-menu">'
+                        + '</ul>'
+                    + '</li>'
+                );
                 
-                if (entry.action && !controller.isActionSupported(entry.action)) {
-                    return;
-                }
-    
-                if (entry.children) {
-                    entryElem = $(
-                        '<li class="dropdown">'
-                            + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
-                            + '<ul class="dropdown-menu">'
-                            + '</ul>'
-                        + '</li>'
-                    );
-                    
-                    recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
-                } else if (entry.name == '-') {
-                    entryElem = $('<li role="separator" class="divider"></li>');
-                } else {
-                    entryElem = $('<li><a href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a></li>');
-                    
-                    if (entry.checkbox) {
-                        $("a", entryElem)
-                            .data("checkbox", true)
-                            .toggleClass("selected", !!entry.checked);
-                    }
-                }
+                recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
+            } else if (entry.name == '-') {
+                entryElem = $('<li role="separator" class="divider"></li>');
+            } else {
+                entryElem = $('<li><a href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a></li>');
                 
-                if (entry.title) {
-                    entryElem.attr('title', entry.title);
+                if (entry.checkbox) {
+                    $("a", entryElem)
+                        .data("checkbox", true)
+                        .toggleClass("selected", !!entry.checked);
                 }
+            }
+            
+            if (entry.title) {
+                entryElem.attr('title', entry.title);
+            }
+            
+            if (entry.shortcut) {
+                var
+                    menuLink = $("> a", entryElem),
+                    shortcutDesc = document.createElement("small");
                 
-                if (entry.shortcut) {
-                    var
-                        menuLink = $("> a", entryElem),
-                        shortcutDesc = document.createElement("small");
-                    
-                    // Rewrite the shortcuts to Mac-style
-                    if (macPlatform) {
-                        entry.shortcut = entry.shortcut.replace(/SHIFT/im, "⇧");
-                        entry.shortcut = entry.shortcut.replace(/ALT/im, "⌥");
-                        entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
-                    }
-                    
-                    shortcutDesc.className = "chickenpaint-shortcut";
-                    shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
-                    
-                    menuLink.append(shortcutDesc);
-                    
-                    key(entry.shortcut, function() {
-                        menuItemClicked(menuLink);
-                        
-                        return false;
-                    });
+                // Rewrite the shortcuts to Mac-style
+                if (macPlatform) {
+                    entry.shortcut = entry.shortcut.replace(/SHIFT/im, "⇧");
+                    entry.shortcut = entry.shortcut.replace(/ALT/im, "⌥");
+                    entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
                 }
                 
-                menuElem.append(entryElem);
-            })(entries[i]);
-        }
+                shortcutDesc.className = "chickenpaint-shortcut";
+                shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
+                
+                menuLink.append(shortcutDesc);
+                
+                key(entry.shortcut, function() {
+                    menuItemClicked(menuLink);
+                    
+                    return false;
+                });
+            }
+            
+            return entryElem;
+        }));
     }
     
     this.getElement = function() {

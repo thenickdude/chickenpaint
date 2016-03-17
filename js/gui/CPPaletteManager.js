@@ -175,15 +175,20 @@ export default function CPPaletteManager(cpController) {
     for (var paletteName in palettes) {
         var 
             palette = palettes[paletteName],
-            palElement = palettes[paletteName].getElement();
+            palElement = palette.getElement();
         
         palette.on("paletteVisChange", function() {
             showPalette(this, false);
         });
         
         palElement.setAttribute("data-paletteName", paletteName);
-        
         paletteFrames.push(palElement);
+    }
+    
+    for (var paletteName in palettes) {
+        var 
+            palElement = palettes[paletteName].getElement();
+
         parentElem.appendChild(palElement);
     }
 }

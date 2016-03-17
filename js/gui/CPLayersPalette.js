@@ -97,6 +97,7 @@ export default function CPLayersPalette(controller) {
         parentSetSize.call(this, w, h);
         
         layerWidget.resize();
+        alphaSlider.resize();
     };
 
     function CPLayerWidget() {
@@ -271,13 +272,16 @@ export default function CPLayersPalette(controller) {
                 artwork = controller.getArtwork(),
                 
                 parentHeight = $(canvas).parent().height(),
-                parentWidth = $(canvas).parent().width();
+                parentWidth = $(canvas).parent().width(),
+                
+                newWidth = parentWidth,
+                newHeight = Math.max(layerH * artwork.getLayerCount(), parentHeight);
             
             layerH = 34;
             eyeW = 24;
             
-            canvas.width = parentWidth;
-            canvas.height = Math.max(layerH * artwork.getLayerCount(), parentHeight);
+            canvas.width = newWidth;
+            canvas.height = newHeight;
             
             if (!window.devicePixelRatio) {
                 window.devicePixelRatio = 1.0;
@@ -526,11 +530,6 @@ export default function CPLayersPalette(controller) {
             layerWidget.resize();
         }
     });
-    
-    setTimeout(function() {
-        alphaSlider.resize();
-        layerWidget.resize();
-    }, 50);
 }
 
 CPLayersPalette.prototype = Object.create(CPPalette.prototype);
