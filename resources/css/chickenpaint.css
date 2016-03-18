@@ -9276,6 +9276,7 @@
 .chickenpaint-texture-options {
   text-align: center;
   padding: 4px;
+  flex-shrink: 0;
 }
 .chickenpaint-texture-options > canvas {
   margin: 0 auto 3px auto;
