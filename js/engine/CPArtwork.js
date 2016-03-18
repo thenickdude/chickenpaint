@@ -50,7 +50,7 @@ export default function CPArtwork(_width, _height) {
         layers = [],
         curLayer,
         
-        hasUnsavedChanges,
+        hasUnsavedChanges = false,
         
         curSelection = new CPRect(0, 0, 0, 0),
         
