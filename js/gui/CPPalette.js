@@ -20,10 +20,11 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-export default function CPPalette(cpController, className, title) {
+export default function CPPalette(cpController, className, title, resizeVert) {
     this.cpController = cpController;
     this.title = title;
     this.name = className;
+    this.resizeVert = resizeVert || false;
     
     var
         containerElement = document.createElement("div"),
@@ -31,7 +32,8 @@ export default function CPPalette(cpController, className, title) {
         closeButton = document.createElement("button"),
         bodyElement = document.createElement("div"),
         
-        dragging,
+        vertHandle = null,
+        
         dragOffset,
         
         that = this;
@@ -83,10 +85,32 @@ export default function CPPalette(cpController, className, title) {
     }
 
     function mouseDragRelease(e) {
-        dragging = false;
-        
         window.removeEventListener("mousemove", mouseDrag);
         window.removeEventListener("mouseup", mouseDragRelease);
+    }
+    
+    function vertHandleDrag(e) {
+        that.setHeight(e.pageY - $(containerElement).offset().top);
+    }
+
+    function vertHandleRelease(e) {
+        window.removeEventListener("mousemove", vertHandleDrag);
+        window.removeEventListener("mouseup", vertHandleRelease);
+    }
+    
+    function vertHandleMouseDown(e) {
+        window.addEventListener("mousemove", vertHandleDrag);
+        window.addEventListener("mouseup", vertHandleRelease);
+    }
+    
+    function addVertResizeHandle() {
+        vertHandle = document.createElement("div");
+        
+        vertHandle.className = "chickenpaint-resize-handle-vert";
+        
+        vertHandle.addEventListener("mousedown", vertHandleMouseDown);
+        
+        containerElement.appendChild(vertHandle);
     }
 
     closeButton.type = "button";
@@ -110,14 +134,16 @@ export default function CPPalette(cpController, className, title) {
     
     containerElement.appendChild(headElement);
     containerElement.appendChild(bodyElement);
-    
+
+    if (this.resizeVert) {
+        addVertResizeHandle();
+    }
+
     headElement.addEventListener("mousedown", function(e) {
         if (e.button == 0) {/* Left */
             if (e.target.nodeName == "BUTTON") {
                 that.emitEvent("paletteVisChange", [that, false]);
             } else {
-                dragging = true;
-                
                 window.addEventListener("mousemove", mouseDrag);
                 window.addEventListener("mouseup", mouseDragRelease);
                 

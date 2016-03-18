@@ -9036,6 +9036,14 @@
 .chickenpaint-palette-head h4 {
   font-size: 100%;
 }
+.chickenpaint-resize-handle-vert {
+  position: absolute;
+  bottom: -5px;
+  height: 10px;
+  left: 0;
+  right: 0;
+  cursor: row-resize;
+}
 .chickenpaint {
   /* Prevent drag operations from beginning text selection */
   -webkit-user-select: none;
@@ -9199,6 +9207,9 @@
 }
 .chickenpaint-slider {
   margin: 1px;
+}
+.chickenpaint-palette-layers {
+  min-height: 250px;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body {
   display: -ms-flexbox;

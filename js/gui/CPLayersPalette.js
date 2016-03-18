@@ -24,7 +24,7 @@ import CPPalette from "./CPPalette";
 import CPSlider from "./CPSlider";
 
 export default function CPLayersPalette(controller) {
-    CPPalette.call(this, controller, "layers", "Layers");
+    CPPalette.call(this, controller, "layers", "Layers", true);
     
     const
         MODE_NAMES = [
@@ -91,13 +91,20 @@ export default function CPLayersPalette(controller) {
     }
     
     var
-        parentSetSize = this.setSize;
+        parentSetSize = this.setSize,
+        parentSetHeight = this.setHeight;
     
     this.setSize = function(w, h) {
         parentSetSize.call(this, w, h);
         
         layerWidget.resize();
         alphaSlider.resize();
+    };
+
+    this.setHeight = function(h) {
+        parentSetHeight.call(this, h);
+        
+        layerWidget.resize();
     };
 
     function CPLayerWidget() {
