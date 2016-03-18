@@ -57,6 +57,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                         <div class="modal-footer">
                             <button class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
                             <button class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
+                            <button class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, I'll finish it later</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-already-posted" style="display:none">
@@ -128,6 +129,8 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
     });
 
     $(".chickenpaint-exit", dialog).click(function() {
+        alert("When you want to come back and finish your drawing, just click the 'new drawing' button again and " 
+            + "you can choose to continue this drawing.");
         controller.actionPerformed({action: "CPExit"});
     });
     
