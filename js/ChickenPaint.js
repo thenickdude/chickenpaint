@@ -690,6 +690,8 @@ export default function ChickenPaint(options) {
         return options.resourcesRoot;
     };
     
+    uiElem.className += " chickenpaint";
+    
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
