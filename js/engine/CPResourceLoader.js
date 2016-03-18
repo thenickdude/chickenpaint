@@ -16,22 +16,22 @@ export default function CPResourceLoader(options) {
         completed = {},
         that = this;
 
-    if (options.loadChibiFileUrl) {
+    if (options.loadChibiFileUrl && ("" + options.loadChibiFileUrl).length > 0) {
         resources.push({
             url: options.loadChibiFileUrl,
             friendly: "drawing layers",
             name: "layers",
             required: true
         });
-    }
-    
-    if (options.loadImageUrl) {
-        resources.push({
-            url: options.loadImageUrl,
-            friendly: "drawing",
-            name: "flat",
-            required: true
-        });
+    } else {
+        if (options.loadImageUrl && ("" + options.loadImageUrl).length > 0) {
+            resources.push({
+                url: options.loadImageUrl,
+                friendly: "drawing",
+                name: "flat",
+                required: true
+            });
+        }
     }
     
     if (options.loadSwatchesUrl) {
