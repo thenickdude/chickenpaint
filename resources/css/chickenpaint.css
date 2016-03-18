@@ -8989,10 +8989,12 @@
 .chickenpaint-canvas[data-cursor="grab"] {
   cursor: -webkit-grab;
   cursor: grab;
+  cursor: move;
 }
 .chickenpaint-canvas[data-cursor="grabbing"] {
   cursor: -webkit-grabbing;
   cursor: grabbing;
+  cursor: move;
 }
 .chickenpaint-canvas[data-cursor="crosshair"] {
   cursor: crosshair;
