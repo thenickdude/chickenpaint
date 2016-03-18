@@ -39,6 +39,21 @@ import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
 
+function isEventSupported(eventName) {
+    var 
+        isSupported = eventName in window;
+    
+    if (!isSupported) {
+      var 
+          el = document.createElement('div');
+      el.setAttribute(eventName, 'return;');
+      
+      isSupported = typeof el[eventName] == 'function';
+    }
+    
+    return isSupported;
+}
+
 function createDrawingTools() {
     var
         tools = new Array(ChickenPaint.T_MAX);
@@ -525,7 +540,7 @@ export default function ChickenPaint(options) {
                 this.artwork.mergeAllLayers(true);
             break;
             case "CPFill":
-                this.artwork.fill(getCurColorRgb() | 0xff000000);
+                this.artwork.fill(this.getCurColorRgb() | 0xff000000);
             break;
             case "CPClear":
                 this.artwork.clear();
@@ -631,6 +646,27 @@ export default function ChickenPaint(options) {
         // callCPEventListeners(); TODO
     };
 
+    function installUnsavedWarning() {
+        var
+            confirmMessage = "Your drawing has unsaved changes!";
+        
+        if (isEventSupported("onbeforeunload")) {
+            window.addEventListener("beforeunload", function(e) {
+                if (that.artwork.getHasUnsavedChanges()) {
+                    e.returnValue = confirmMessage;
+                    return confirmMessage;
+                }
+            });
+        } else {
+            $("a").click(function(e) {
+                // Fall back to just catching links
+                if (that.artwork.getHasUnsavedChanges()) { 
+                    return confirm(confirmMessage);
+                }
+            });
+        }
+    }
+    
     function startMainGUI(swatches, initialRotation90) {
         mainGUI = new CPMainGUI(that, uiElem);
 
@@ -646,6 +682,8 @@ export default function ChickenPaint(options) {
         }
         
         CPWacomTablet.getRef().detectTablet();
+        
+        installUnsavedWarning();
     }
     
     this.getResourcesRoot = function() {
