@@ -34,8 +34,8 @@
 
 export default function CPAboutDialog(parent) {
     var
-        dialog = $(`
-            <div class="modal fade chickenpaint-about-dialog" tabindex="-1" role="dialog">
+        dialog = 
+            $(`<div class="modal fade chickenpaint-about-dialog" tabindex="-1" role="dialog">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
