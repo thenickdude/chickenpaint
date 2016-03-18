@@ -8911,6 +8911,9 @@
 .chickenpaint .fa-percent:before {
   content: "\f295";
 }
+.chickenpaint p {
+  font-size: 14px;
+}
 /* Restore the hidden modal rule from Bootstrap */
 .modal-open {
   overflow: hidden;
@@ -8987,14 +8990,14 @@
   touch-action: none;
 }
 .chickenpaint-canvas[data-cursor="grab"] {
+  cursor: move;
   cursor: -webkit-grab;
   cursor: grab;
-  cursor: move;
 }
 .chickenpaint-canvas[data-cursor="grabbing"] {
+  cursor: move;
   cursor: -webkit-grabbing;
   cursor: grabbing;
-  cursor: move;
 }
 .chickenpaint-canvas[data-cursor="crosshair"] {
   cursor: crosshair;
