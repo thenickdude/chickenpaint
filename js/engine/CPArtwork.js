@@ -489,20 +489,23 @@ export default function CPArtwork(_width, _height) {
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
             
-            colorComponents = [
-                (color >> 16) & 0xFF, 
-                (color >> 8) & 0xFF,
-                color & 0xFF,
-            ];
-
-        for (var y = dstRect.top; y < dstRect.bottom; y++) {
-            var
-                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
-                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            red = (color >> 16) & 0xFF,
+            green = (color >> 8) & 0xFF,
+            blue = color & 0xFF,
             
-            for (var x = dstRect.left; x < dstRect.right; x++) {
+            width = dstRect.getWidth() | 0,
+            height = dstRect.getHeight() | 0,
+            
+            dstOffset = curLayer.offsetOfPixel(dstRect.left, dstRect.top),
+            srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
+        
+            srcYStride = (opacityBuffer.width - width) | 0,
+            dstYStride = ((curLayer.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
+
+        for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
+            for (var x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                 var
-                    opacityAlpha = (opacityData[srcOffset++] / 255) | 0;
+                    opacityAlpha = (opacityData[srcOffset] / 255) | 0;
                 
                 if (opacityAlpha > 0) {
                     var
@@ -512,15 +515,10 @@ export default function CPArtwork(_width, _height) {
                         realAlpha = (255 * opacityAlpha / newLayerAlpha) | 0,
                         invAlpha = 255 - realAlpha;
                     
-                    for (var i = 0; i < 3; i++) {
-                        var
-                            destChannel = undoData[dstOffset]; 
-                        
-                        curLayer.data[dstOffset++] = ((colorComponents[i] * realAlpha + destChannel * invAlpha) / 255) & 0xff;
-                    }
-                    curLayer.data[dstOffset++] = newLayerAlpha;
-                } else {
-                    dstOffset += CPColorBmp.BYTES_PER_PIXEL;
+                    curLayer.data[dstOffset] = ((red * realAlpha + undoData[dstOffset] * invAlpha) / 255) & 0xff;
+                    curLayer.data[dstOffset + 1] = ((green * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) & 0xff;
+                    curLayer.data[dstOffset + 2] = ((blue * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) & 0xff;
+                    curLayer.data[dstOffset + 3] = newLayerAlpha;
                 }
             }
         }
@@ -531,7 +529,7 @@ export default function CPArtwork(_width, _height) {
             opacityData = opacityBuffer.data,
             
             srcOffset = srcRect.left + srcRect.top * brushWidth,
-            dstOffset = dstRect.left + dstRect.top * that.width,
+            dstOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
             
             dstWidth = dstRect.getWidth(),
             
@@ -549,14 +547,16 @@ export default function CPArtwork(_width, _height) {
         var 
             opacityData = opacityBuffer.data,
 
-            by = srcRect.top;
-        
-        for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
-            var 
-                srcOffset = srcRect.left + by * brushWidth,
-                dstOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            srcOffset = srcRect.left + srcRect.top * brushWidth,
+            dstOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
             
-            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
+            dstWidth = dstRect.getWidth(),
+
+            srcYStride = brushWidth - dstWidth,
+            dstYStride = that.width - dstWidth;
+        
+        for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
+            for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
                 var
                     brushAlpha = brush[srcOffset] * alpha;
                 
@@ -570,7 +570,7 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
-    CPBrushToolSimpleBrush.prototype.paintOpacityFlow = function(srcRect, dstRect, brush, brushWidth, opacity, flow) {
+    /*CPBrushToolSimpleBrush.prototype.paintOpacityFlow = function(srcRect, dstRect, brush, brushWidth, opacity, flow) {
         var 
             opacityData = opacityBuffer.data,
 
@@ -598,7 +598,7 @@ export default function CPArtwork(_width, _height) {
                 }
             }
         }
-    };
+    };*/
 
     function CPBrushToolEraser() {
     }
@@ -776,19 +776,24 @@ export default function CPArtwork(_width, _height) {
     CPBrushToolDirectBrush.prototype.mergeOpacityBuf = function(dstRect, color) {
         var 
             opacityData = opacityBuffer.data,
-            undoData = undoBuffer.data;
-    
-        for (var y = dstRect.top; y < dstRect.bottom; y++) {
-            var
-                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
-                srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
+            undoData = undoBuffer.data,
             
-            for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+            srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
+            dstOffset = curLayer.offsetOfPixel(dstRect.left, dstRect.top),
+            
+            width = dstRect.getWidth() | 0,
+            height = dstRect.getHeight() | 0,
+            
+            srcYStride = (opacityBuffer.width - width) | 0,
+            dstYStride = ((curLayer.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
+
+        for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
+            for (var x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                 var
                     color1 = opacityData[srcOffset],
-                    alpha1 = (color1 >>> 24);
+                    alpha1 = color1 >>> 24;
                 
-                if (alpha1 <= 0) {
+                if (alpha1 == 0) {
                     continue;
                 }
                 
@@ -801,15 +806,11 @@ export default function CPArtwork(_width, _height) {
                     var
                         realAlpha = (alpha1 * 255 / newAlpha) | 0,
                         invAlpha = 255 - realAlpha;
-
-                    for (var i = 0; i < 3; i++) {
-                        var 
-                            channel1 = (opacityData[srcOffset] >> (16 - 8 * i)) & 0xFF,
-                            channel2 = undoData[dstOffset + i];
-                        
-                        curLayer.data[dstOffset + i] = ((channel1 * realAlpha + channel2 * invAlpha) / 255) | 0;
-                    }
-                    curLayer.data[dstOffset + i] = newAlpha;
+                    
+                    curLayer.data[dstOffset] = ((((color1 >> 16) & 0xFF) * realAlpha + undoData[dstOffset] * invAlpha) / 255) | 0;
+                    curLayer.data[dstOffset + 1] = ((((color1 >> 8) & 0xFF) * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) | 0;
+                    curLayer.data[dstOffset + 2] = (((color1 & 0xFF) * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) | 0;
+                    curLayer.data[dstOffset + 3] = newAlpha;
                 }
             }
         }
@@ -1356,7 +1357,7 @@ export default function CPArtwork(_width, _height) {
     }
     
     /**
-     * Merge the opacity buffer from the current drawing operation to the 
+     * Merge the opacity buffer from the current drawing operation to the active layer.
      */
     function mergeOpacityBuffer(color, clear) {
         if (!opacityArea.isEmpty()) {
@@ -1364,7 +1365,7 @@ export default function CPArtwork(_width, _height) {
                 paintingModes[curBrush.paintMode].mergeOpacityBuf(opacityArea, color);
             } else {
                 // FIXME: it would be nice to be able to set the paper color
-                paintingModes[CPBrushInfo.M_PAINT].mergeOpacityBuf(opacityArea, 0x00ffffff);
+                paintingModes[CPBrushInfo.M_PAINT].mergeOpacityBuf(opacityArea, EMPTY_LAYER_COLOR);
             }
 
             if (lockAlpha) {
@@ -1408,7 +1409,7 @@ export default function CPArtwork(_width, _height) {
                     fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
                 }
     
-                if (layer.visible) {
+                if (layer.visible && layer.alpha > 0) {
                     if (first) {
                         first = false;
                         
