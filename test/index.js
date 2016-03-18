@@ -1,11 +1,12 @@
 $(document).ready(function() {
     new ChickenPaint({
         uiElem: document.getElementById("chickenpaint-parent"),
-        loadChibiFileUrl: "./uploaded.chi",
-        saveUrl: "post.php?session_id=1",
+        //loadImageUrl: "./uploaded.png",
+        //loadChibiFileUrl: "./uploaded.chi",
+        saveUrl: "save.php",
         postUrl: "posting.php",
         exitUrl: "forum.php",
-        allowSave: false,
+        allowSave: true,
         resourcesRoot: "../resources/"
     });
 });
