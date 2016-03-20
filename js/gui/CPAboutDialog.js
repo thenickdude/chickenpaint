@@ -20,18 +20,6 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-(function($){
-    $.fn.modalNamespaced = function(o) {
-        var
-            modalArgs = arguments;
-        
-        return this.each(function() {
-            $.fn.modal.apply(this, modalArgs);
-            console.log("here");
-        });
-    };
-})(jQuery);
-
 export default function CPAboutDialog(parent) {
     var
         dialog = 
