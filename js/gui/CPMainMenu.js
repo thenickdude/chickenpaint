@@ -342,6 +342,12 @@ var
                     title: "Help with getting a drawing tablet working"
                 },
                 {
+                    name: "Shortcuts",
+                    mnemonic: "S",
+                    action: "CPShortcuts",
+                    title: "List of keyboard and mouse shortcuts"
+                },
+                {
                     name: "-"
                 },
                 {

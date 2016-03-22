@@ -123,6 +123,7 @@ export default function CPCanvas(controller) {
         moveCanvasMode,
         rotateCanvasMode,
         floodFillMode,
+        gradientFillMode,
         rectSelectionMode,
         moveToolMode,
 
@@ -138,7 +139,7 @@ export default function CPCanvas(controller) {
 
     // Parent class with empty event handlers for those drawing modes that don't need every event
     function CPMode() {
-    };
+    }
     
     CPMode.prototype.keyDown = function(e) {
         if (e.keyCode == 32 /* Space */) {
@@ -324,56 +325,80 @@ export default function CPCanvas(controller) {
         this.mousePressed = function(e) {
             if (!dragLine && e.button == BUTTON_PRIMARY) {
                 dragLine = true;
-                dragLineFrom = dragLineTo = mouseCoordToCanvas({x: e.pageX, y: e.pageY});
+                dragLineFrom = dragLineTo = {x: mouseX + 0.5, y: mouseY + 0.5};
             }
         };
 
         this.mouseDragged = function(e) {
             var
-                p = mouseCoordToCanvas({x: e.pageX, y: e.pageY}),
-
                 // The old line position that we'll invalidate for redraw
-                r = new CPRect(
-                    Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH, 
-                    Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH,
-                    Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1, 
-                    Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1
+                invalidateRect = new CPRect(
+                    Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH - 1,
+                    Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH - 1,
+                    Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1 + 1,
+                    Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1 + 1
                 );
-                
+
+            dragLineTo = {x: mouseX + 0.5, y: mouseY + 0.5}; // Target centre of pixel
+
+            if (e.shiftKey) {
+                // Snap to nearest 45 degrees
+                var
+                    snap = Math.PI / 4,
+                    angle = Math.round(Math.atan2(dragLineTo.y - dragLineFrom.y, dragLineTo.x - dragLineFrom.x) / snap);
+
+                switch (angle) {
+                    case 0:
+                    case 4:
+                        dragLineTo.y = dragLineFrom.y;
+                    break;
+
+                    case 2:
+                    case 6:
+                        dragLineTo.x = dragLineFrom.x;
+                    break;
+
+                    default:
+                        angle *= snap;
+
+                        var
+                            length = Math.sqrt((dragLineTo.y - dragLineFrom.y) * (dragLineTo.y - dragLineFrom.y) + (dragLineTo.x - dragLineFrom.x) * (dragLineTo.x - dragLineFrom.x));
+
+                        dragLineTo.x = dragLineFrom.x + length * Math.cos(angle);
+                        dragLineTo.y = dragLineFrom.y + length * Math.sin(angle);
+                }
+            }
+
             // The new line position
-            r.union(new CPRect(
-                Math.min(dragLineFrom.x, p.x) - LINE_PREVIEW_WIDTH, 
-                Math.min(dragLineFrom.y, p.y) - LINE_PREVIEW_WIDTH, 
-                Math.max(dragLineFrom.x, p.x) + LINE_PREVIEW_WIDTH + 1, 
-                Math.max(dragLineFrom.y, p.y) + LINE_PREVIEW_WIDTH + 1
+            invalidateRect.union(new CPRect(
+                Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH - 1,
+                Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH - 1,
+                Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1 + 1,
+                Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1 + 1
             ));
-            
-            dragLineTo = p;
-            
-            repaintRect(r);
+
+            repaintRect(invalidateRect);
         };
 
         this.mouseReleased = function(e) {
             if (dragLine && e.button == BUTTON_PRIMARY) {
-                var 
-                    pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
-                    from = coordToDocument(dragLineFrom);
+                var
+                    from = coordToDocument(dragLineFrom),
+                    to = coordToDocument(dragLineTo);
 
                 dragLine = false;
 
-                artwork.beginStroke(from.x, from.y, 1);
-                artwork.continueStroke(pf.x, pf.y, 1);
-                artwork.endStroke();
+                this.drawLine(from, to);
 
                 var
-                    r = new CPRect(
-                        Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH, 
-                        Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH, 
-                        Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1, 
-                        Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1
+                    invalidateRect = new CPRect(
+                        Math.min(dragLineFrom.x, dragLineTo.x) - LINE_PREVIEW_WIDTH - 1,
+                        Math.min(dragLineFrom.y, dragLineTo.y) - LINE_PREVIEW_WIDTH - 1,
+                        Math.max(dragLineFrom.x, dragLineTo.x) + LINE_PREVIEW_WIDTH + 1 + 1,
+                        Math.max(dragLineFrom.y, dragLineTo.y) + LINE_PREVIEW_WIDTH + 1 + 1
                     );
                 
-                repaintRect(r);
+                repaintRect(invalidateRect);
 
                 activeMode = defaultMode; // yield control to the default mode
             }
@@ -381,7 +406,7 @@ export default function CPCanvas(controller) {
 
         this.paint = function() {
             if (dragLine) {
-                canvasContext.strokeWidth = LINE_PREVIEW_WIDTH;
+                canvasContext.lineWidth = LINE_PREVIEW_WIDTH;
                 canvasContext.beginPath();
                 canvasContext.moveTo(dragLineFrom.x, dragLineFrom.y);
                 canvasContext.lineTo(dragLineTo.x, dragLineTo.y);
@@ -392,6 +417,12 @@ export default function CPCanvas(controller) {
     
     CPLineMode.prototype = Object.create(CPMode.prototype);
     CPLineMode.prototype.constructor = CPLineMode;
+
+    CPLineMode.prototype.drawLine = function(from, to) {
+        artwork.beginStroke(from.x, from.y, 1);
+        artwork.continueStroke(to.x, to.y, 1);
+        artwork.endStroke();
+    };
 
     function CPBezierMode() {
         const
@@ -822,6 +853,18 @@ export default function CPCanvas(controller) {
     CPRotateCanvasMode.prototype = Object.create(CPMode.prototype);
     CPRotateCanvasMode.prototype.constructor = CPRotateCanvasMode;
     
+    function CPGradientFillMode() {
+        // Super constructor
+        CPLineMode.call(this);
+    }
+    
+    CPGradientFillMode.prototype = Object.create(CPLineMode.prototype);
+    CPGradientFillMode.prototype.constructor = CPGradientFillMode;
+
+    CPGradientFillMode.prototype.drawLine = function(from, to) {
+        artwork.gradientFill(Math.round(from.x), Math.round(from.y), Math.round(to.x), Math.round(to.y), [{r: 0, g: 0, b: 0, a: 0}, {r: 255, g: 128, b: 128, a: 255}]);
+    };
+
     function requestFocusInWindow() {
         // TODO
     }
@@ -1213,7 +1256,14 @@ export default function CPCanvas(controller) {
     
     function handlePointerDown(e) {
         canvas.setPointerCapture(e.pointerId);
-        
+
+        var
+            mousePos = mouseCoordToCanvas({x: e.pageX, y: e.pageY});
+
+        // Store these globally for the event handlers to refer to
+        mouseX = mousePos.x;
+        mouseY = mousePos.y;
+
         if (!mouseDown) {
             mouseDown = true;
             wacomPenDown = tablet.isPen();
@@ -1283,7 +1333,7 @@ export default function CPCanvas(controller) {
             
             if (canvasContext.clip) {
                 canvasContext.beginPath();
-                
+
                 repaintRegion.left = repaintRegion.left | 0; 
                 repaintRegion.top = repaintRegion.top | 0;
                 
@@ -1293,7 +1343,7 @@ export default function CPCanvas(controller) {
                     Math.ceil(repaintRegion.getWidth()),
                     Math.ceil(repaintRegion.getHeight())
                 );
-                
+
                 canvasContext.clip();
             }
             
@@ -1465,7 +1515,11 @@ export default function CPCanvas(controller) {
             case ChickenPaint.M_FLOODFILL:
                 curSelectedMode = floodFillMode;
                 break;
-    
+
+            case ChickenPaint.M_GRADIENTFILL:
+                curSelectedMode = gradientFillMode;
+                break;
+
             case ChickenPaint.M_RECT_SELECTION:
                 curSelectedMode = rectSelectionMode;
                 break;
@@ -1494,6 +1548,7 @@ export default function CPCanvas(controller) {
     moveCanvasMode = new CPMoveCanvasMode();
     rotateCanvasMode = new CPRotateCanvasMode();
     floodFillMode = new CPFloodFillMode();
+    gradientFillMode = new CPGradientFillMode();
     rectSelectionMode = new CPRectSelectionMode();
     moveToolMode = new CPMoveToolMode();
 

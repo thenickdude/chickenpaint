@@ -30,6 +30,7 @@ import CPSpashScreen from "./gui/CPSplashScreen.js";
 import CPMainGUI from "./gui/CPMainGUI";
 
 import CPAboutDialog from "./gui/CPAboutDialog";
+import CPShortcutsDialog from "./gui/CPShortcutsDialog";
 import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPGridDialog";
@@ -258,14 +259,6 @@ export default function ChickenPaint(options) {
 
         boxBlurDialog, gridDialog;
 
-    function showAboutDialog() {
-        new CPAboutDialog(uiElem).show();
-    }
-
-    function showTabletDialog() {
-        new CPTabletDialog(uiElem).show();
-    }
-
     function showBoxBlurDialog() {
         if (!boxBlurDialog) {
             boxBlurDialog = new CPBoxBlurDialog(uiElem, that);
@@ -493,6 +486,9 @@ export default function ChickenPaint(options) {
             case "CPFloodFill":
                 setMode(ChickenPaint.M_FLOODFILL);
             break;
+            case "CPGradientFill":
+                setMode(ChickenPaint.M_GRADIENTFILL);
+            break;
             case "CPRectSelection":
                 setMode(ChickenPaint.M_RECT_SELECTION);
             break;
@@ -522,10 +518,13 @@ export default function ChickenPaint(options) {
             break;
 
             case "CPAbout":
-                showAboutDialog();
+                new CPAboutDialog(uiElem).show();
+            break;
+            case "CPShortcuts":
+                new CPShortcutsDialog(uiElem).show();
             break;
             case "CPTabletSupport":
-                showTabletDialog();
+                new CPTabletDialog(uiElem).show();
             break;
 
             // Layers actions
@@ -728,6 +727,7 @@ ChickenPaint.M_RECT_SELECTION = 2;
 ChickenPaint.M_MOVE_TOOL = 3;
 ChickenPaint.M_ROTATE_CANVAS = 4;
 ChickenPaint.M_COLOR_PICKER = 5;
+ChickenPaint.M_GRADIENTFILL = 6;
 
 //
 // Definition of all the standard tools available

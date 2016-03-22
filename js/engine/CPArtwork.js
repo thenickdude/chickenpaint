@@ -524,6 +524,14 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
+    /**
+     *
+     * @param srcRect CPRect
+     * @param dstRect CPRect
+     * @param brush int[]
+     * @param brushWidth int
+     * @param alpha float
+     */
     CPBrushToolSimpleBrush.prototype.paintOpacity = function(srcRect, dstRect, brush, brushWidth, alpha) {
         var 
             opacityData = opacityBuffer.data,
@@ -1586,6 +1594,23 @@ export default function CPArtwork(_width, _height) {
         undoArea = this.getBounds();
 
         curLayer.floodFill(~~x, ~~y, curColor | 0xff000000);
+
+        addUndo(new CPUndoPaint());
+        invalidateFusion();
+    };
+
+    this.gradientFill = function(fromX, fromY, toX, toY, gradientPoints) {
+        var
+            r = this.getSelectionAutoSelect();
+
+        undoBuffer.copyFrom(curLayer);
+        undoArea = r;
+
+        curLayer.gradient(r, fromX, fromY, toX, toY, gradientPoints);
+
+        if (lockAlpha) {
+            restoreAlpha(r);
+        }
 
         addUndo(new CPUndoPaint());
         invalidateFusion();

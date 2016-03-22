@@ -218,6 +218,9 @@
 .chickenpaint-tool-flood-fill {
     background-position:0 -64px;
 }
+.chickenpaint-tool-gradient-fill {
+    background-position:0 -96px;
+}
 .chickenpaint-tool-rotate-canvas {
     background-position:0 -928px;
 }
@@ -548,4 +551,35 @@ chickenpaint-aftersave-actions {
     flex-grow: 0;
     margin-left:1em;
     text-align:right;
+}
+
+.chickenpaint-shortcuts-sections {
+    columns:2;
+    margin-top:2em;
+}
+.chickenpaint-shortcuts-section {
+     break-inside: avoid-column;
+    -webkit-column-break-inside: avoid;
+    margin-bottom:1em;
+}
+.chickenpaint-shortcuts-section h5 {
+    font-size:120%;
+    margin-top:0;
+}
+.chickenpaint-shortcuts-section dd {
+    margin-bottom:1em;
+}
+.chickenpaint-shortcut-key {
+    -moz-background-clip:border;
+    -moz-background-inline-policy:continuous;
+    -moz-background-origin:padding;
+    font-size:95%;
+    background:#EEEEEE none repeat scroll 0 0;
+    border-color:#CCCCCC;
+    border-style:solid;
+    border-width:1px 1px 2px 2px;
+    color:#000000;
+    padding:4px 3px;
+    white-space:nowrap;
+    border-radius:3px;
 }

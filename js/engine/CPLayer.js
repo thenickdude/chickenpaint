@@ -297,6 +297,262 @@ CPLayer.prototype.fillWithNoise = function(rect) {
     }
 };
 
+CPLayer.prototype.gradientHorz = function(rect, fromX, toX, gradientPoints) {
+    var
+        fromColor = gradientPoints[0],
+        toColor = gradientPoints[1],
+
+        yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+        pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
+        h = (rect.bottom - rect.top) | 0;
+
+    if (toX < fromX) {
+        var
+            temp = toX;
+        toX = fromX;
+        fromX = temp;
+
+        temp = fromColor;
+        fromColor = toColor;
+        toColor = temp;
+    }
+    
+    var
+        gradientRange = (toX - fromX) | 0,
+        rStep = (toColor.r - fromColor.r) / gradientRange,
+        gStep = (toColor.g - fromColor.g) / gradientRange,
+        bStep = (toColor.b - fromColor.b) / gradientRange,
+        aStep = (toColor.a - fromColor.a) / gradientRange,
+    
+        jump = Math.max(rect.left - fromX, 0);
+
+    for (var y = 0; y < h; y++, pixIndex += yStride) {
+        // The solid color section before the gradient
+        var
+            x = rect.left;
+
+        for (var xEnd = Math.min(fromX, rect.right) | 0; x < xEnd; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = fromColor.r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = fromColor.g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = fromColor.b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = fromColor.a;
+        }
+
+        // In the gradient
+        var
+            r = fromColor.r + rStep * jump,
+            g = fromColor.g + gStep * jump,
+            b = fromColor.b + bStep * jump,
+            a = fromColor.a + aStep * jump;
+
+        for (xEnd = Math.min(toX, rect.right) | 0; x < xEnd; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = a;
+
+            r += rStep;
+            g += gStep;
+            b += bStep;
+            a += aStep;
+        }
+
+        // The section after the end of the gradient
+        for (; x < rect.right; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = toColor.r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = toColor.g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = toColor.b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = toColor.a;
+        }
+    }
+};
+
+CPLayer.prototype.gradientVert = function(rect, fromY, toY, gradientPoints) {
+    var
+        fromColor = gradientPoints[0],
+        toColor = gradientPoints[1],
+
+        yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+        pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
+        w = (rect.right - rect.left) | 0;
+
+    if (toY < fromY) {
+        var
+            temp = toY;
+        toY = fromY;
+        fromY = temp;
+
+        temp = fromColor;
+        fromColor = toColor;
+        toColor = temp;
+    }
+
+    var
+        y = rect.top;
+
+    // The solid color section before the start of the gradient
+    for (var yEnd = Math.min(rect.bottom, fromY) | 0; y < yEnd; y++, pixIndex += yStride) {
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = fromColor.r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = fromColor.g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = fromColor.b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = fromColor.a;
+
+            pixIndex += BYTES_PER_PIXEL;
+        }
+    }
+
+    // Inside the gradient
+    var
+        gradientRange = (toY - fromY) | 0,
+        rStep = (toColor.r - fromColor.r) / gradientRange,
+        gStep = (toColor.g - fromColor.g) / gradientRange,
+        bStep = (toColor.b - fromColor.b) / gradientRange,
+        aStep = (toColor.a - fromColor.a) / gradientRange,
+        
+        jump = Math.max(y - fromY, 0),
+        r = fromColor.r + rStep * jump,
+        g = fromColor.g + gStep * jump,
+        b = fromColor.b + bStep * jump,
+        a = fromColor.a + aStep * jump;
+
+    for (var yEnd = Math.min(rect.bottom, toY) | 0; y < yEnd; y++, pixIndex += yStride) {
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = a;
+        }
+
+        r += rStep;
+        g += gStep;
+        b += bStep;
+        a += aStep;
+    }
+
+    // The section after the end of the gradient
+    for (; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = toColor.r;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = toColor.g;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = toColor.b;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = toColor.a;
+        }
+    }
+};
+
+CPLayer.prototype.gradientOpaque = function(rect, fromX, fromY, toX, toY, gradientPoints) {
+    var
+        yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+        pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
+        w = (rect.right - rect.left) | 0,
+
+        fromColor = gradientPoints[0],
+        toColor = gradientPoints[1],
+
+    // How many pixels vertically does the gradient sequence complete over (+infinity for horizontal gradients!)
+        vertRange = (toY - fromY) + ((toX - fromX) * (toX - fromX)) / (toY - fromY),
+    // Same for horizontal
+        horzRange = (toX - fromX) + ((toY - fromY) * (toY - fromY)) / (toX - fromX),
+        horzStep = 1 / horzRange;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        var
+        // The position the row starts at in the gradient [0.0 ... 1.0)
+            prop = (rect.left - fromX) / horzRange + (y - fromY) / vertRange;
+
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            var
+                propClamped = Math.min(Math.max(prop, 0.0), 1.0),
+                invPropClamped = 1 - propClamped;
+
+            this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = fromColor.r * invPropClamped + toColor.r * propClamped;
+            this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = fromColor.g * invPropClamped + toColor.g * propClamped;
+            this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = fromColor.b * invPropClamped + toColor.b * propClamped;
+            this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = fromColor.a * invPropClamped + toColor.a * propClamped;
+
+            prop += horzStep;
+        }
+    }
+};
+
+CPLayer.prototype.gradientAlpha = function(rect, fromX, fromY, toX, toY, gradientPoints) {
+    var
+        yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
+        pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
+        w = (rect.right - rect.left) | 0,
+
+        fromColor = gradientPoints[0],
+        toColor = gradientPoints[1],
+
+    // How many pixels vertically does the gradient sequence complete over (+infinity for horizontal gradients!)
+        vertRange = (toY - fromY) + ((toX - fromX) * (toX - fromX)) / (toY - fromY),
+    // Same for horizontal
+        horzRange = (toX - fromX) + ((toY - fromY) * (toY - fromY)) / (toX - fromX),
+        horzStep = 1 / horzRange;
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        var
+        // The position the row starts at in the gradient [0.0 ... 1.0)
+            prop = (rect.left - fromX) / horzRange + (y - fromY) / vertRange;
+
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            var
+                propClamped = Math.min(Math.max(prop, 0.0), 1.0),
+                invPropClamped = 1 - propClamped,
+
+                // The gradient color to draw
+                r = fromColor.r * invPropClamped + toColor.r * propClamped,
+                g = fromColor.g * invPropClamped + toColor.g * propClamped,
+                b = fromColor.b * invPropClamped + toColor.b * propClamped,
+                a = fromColor.a * invPropClamped + toColor.a * propClamped,
+
+                alpha2 = this.data[pixIndex + ALPHA_BYTE_OFFSET],
+                newAlpha = (a + alpha2 - a * alpha2 / 255) | 0;
+
+            if (newAlpha > 0) {
+                var
+                    realAlpha = (a * 255 / newAlpha) | 0,
+                    invAlpha = 255 - realAlpha;
+
+                this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] =   ((r * realAlpha + this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] * invAlpha) / 255) | 0;
+                this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = ((g * realAlpha + this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] * invAlpha) / 255) | 0;
+                this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] =  ((b * realAlpha + this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] * invAlpha) / 255) | 0;
+                this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = newAlpha;
+            }
+
+            prop += horzStep;
+        }
+    }
+};
+
+/**
+ * Draw a gradient which begins at fromX, fromY and ends at toX, toY, clipped to the given rect.
+ *
+ * @param gradientPoints Array with gradient colors (ARGB integers)
+ * @param rect CPRect
+ */
+CPLayer.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPoints) {
+    rect = this.getBounds().clip(rect);
+
+    // Degenerate case
+    if (fromX == toX && fromY == toY) {
+        return;
+    }
+
+    if (gradientPoints[0].a == 255 && gradientPoints[1].a == 255) {
+        if (fromX == toX) {
+            this.gradientVert(rect, fromY, toY, gradientPoints);
+        } else if (fromY == toY) {
+            this.gradientHorz(rect, fromX, toX, gradientPoints);
+        } else {
+            this.gradientOpaque(rect, fromX, fromY, toX, toY, gradientPoints);
+        }
+    } else {
+        this.gradientAlpha(rect, fromX, fromY, toX, toY, gradientPoints);
+    }
+};
+
 /**
  * @param r CPRect
  */

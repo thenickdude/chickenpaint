@@ -45,7 +45,19 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-flood-fill",
                 command: "CPFloodFill",
                 toolTip: "Flood fill",
+                shortcut: "f"
+            },
+            {
+                className: "chickenpaint-tool-gradient-fill",
+                command: "CPGradientFill",
+                toolTip: "Gradient fill",
                 shortcut: "g"
+            },
+            {
+                className: "chickenpaint-tool-color-picker",
+                command: "CPColorPicker",
+                toolTip: "Color picker",
+                shortcut: "i"
             },
             {
                 className: "chickenpaint-tool-rotate-canvas",
@@ -112,13 +124,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-blur",
                 command: "CPBlur",
                 toolTip: "Blur"
-            },
-            {
-                className: "chickenpaint-tool-color-picker",
-                command: "CPColorPicker",
-                toolTip: "Color picker",
-                shortcut: "i"
-            },
+            }
         ],
         listElem = document.createElement("ul");
     
