@@ -24,6 +24,10 @@ import CPPalette from "./CPPalette";
 import CPCheckbox from "./CPCheckbox";
 import CPSlider from "./CPSlider";
 
+const
+    TIP_NAMES = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
+    BRUSH_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200];
+
 export default function CPBrushPalette(controller) {
     CPPalette.call(this, controller, "brush", "Brush");
 
@@ -45,8 +49,7 @@ export default function CPBrushPalette(controller) {
         brushPreview = new CPBrushPalette.CPBrushPreview(controller),
     
         tipCombo = document.createElement("select"),
-        TIP_NAMES = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
-        
+
         body = this.getBodyElement();
 
     function sliderCheckboxGroup(checkbox, slider) {
@@ -211,6 +214,41 @@ export default function CPBrushPalette(controller) {
     
     tipCombo.addEventListener("change", function(e) {
         controller.getBrushInfo().type = parseInt(tipCombo.value, 10);
+    });
+
+    key("1,2,3,4,5,6,7,8,9,0", function(event, handler) {
+        var
+            shortcut = parseInt(handler.shortcut, 10);
+
+        if (shortcut == 0) {
+            shortcut = 10;
+        }
+
+        controller.setAlpha(Math.round(shortcut / 10 * 255));
+    });
+
+    key("{,[", function() {
+        var
+            size = controller.getBrushSize();
+
+        for (var i = BRUSH_SIZES.length - 1; i >= 0; i--) {
+            if (size > BRUSH_SIZES[i]) {
+                controller.setBrushSize(BRUSH_SIZES[i]);
+                break;
+            }
+        }
+    });
+
+    key("},]", function() {
+        var
+            size = controller.getBrushSize();
+
+        for (var i = 0; i < BRUSH_SIZES.length; i++) {
+            if (size < BRUSH_SIZES[i]) {
+                controller.setBrushSize(BRUSH_SIZES[i]);
+                break;
+            }
+        }
     });
 }
 

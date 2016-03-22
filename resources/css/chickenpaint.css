@@ -9426,7 +9426,7 @@ chickenpaint-aftersave-actions {
   margin-bottom: 1em;
 }
 .chickenpaint-shortcuts-section h5 {
-  font-size: 120%;
+  font-size: 130%;
   margin-top: 0;
 }
 .chickenpaint-shortcuts-section dd {
@@ -9437,12 +9437,25 @@ chickenpaint-aftersave-actions {
   -moz-background-inline-policy: continuous;
   -moz-background-origin: padding;
   font-size: 95%;
-  background: #EEEEEE none repeat scroll 0 0;
   border-color: #CCCCCC;
   border-style: solid;
-  border-width: 1px 1px 2px 2px;
-  color: #000000;
+  border-width: 1px;
   padding: 4px 3px;
   white-space: nowrap;
   border-radius: 3px;
+}
+.chickenpaint-shortcuts-list dt {
+  display: flex;
+  align-items: baseline;
+}
+.chickenpaint-shortcut {
+  display: block;
+  margin-bottom: 0.25em;
+  white-space: nowrap;
+}
+.chickenpaint-shortcut-alternate {
+  font-weight: normal;
+  display: block;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
 }

@@ -24,7 +24,7 @@ export default function CPShortcutsDialog(parent) {
     var
         dialog = 
             $(`<div class="modal fade chickenpaint-shortcuts-dialog" tabindex="-1" role="dialog">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -34,7 +34,7 @@ export default function CPShortcutsDialog(parent) {
                         </div>
                         <div class="modal-body">
                             <p>
-                                Many of the menu options and painting tools have their own keyboard shortcuts, which are
+                                Many of the menu options and painting tools have keyboard shortcuts which are
                                 written next to them or appear when you hover.
                             </p>
                             <p>
@@ -47,13 +47,13 @@ export default function CPShortcutsDialog(parent) {
                                         <li>
                                             <dl>
                                                 <dt>
-                                                    <span class="shortcut"><span class="fa fa-mouse-pointer"></span> Left click</span>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Left</span>
                                                 </dt>
                                                 <dd>
                                                     Use as the drawing color
                                                 </dd>
                                                 <dt>
-                                                    <span class="shortcut"><span class="shortcut"><span class="fa fa-mouse-pointer"></span> Right click</span>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Right</span>
                                                 </dt>
                                                 <dd>
                                                     Remove or replace a color swatch
@@ -63,18 +63,60 @@ export default function CPShortcutsDialog(parent) {
                                     </ul>
                                 </div>
                                 <div class="chickenpaint-shortcuts-section">
+                                    <h5>Line drawing mode</h5>
+                                    <ul class="chickenpaint-shortcuts-list list-unstyled">
+                                        <li>
+                                            <dl>
+                                                <dt>
+                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Shift</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
+                                                </dt>
+                                                <dd>
+                                                    Snap line to nearest 45 degrees
+                                                </dd>
+                                             </dl>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="chickenpaint-shortcuts-section">
+                                    <h5>Painting tools</h5>
+                                    <ul class="chickenpaint-shortcuts-list list-unstyled">
+                                        <li>
+                                            <dl>
+                                                <dt>
+                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">1</span> - <span class="chickenpaint-shortcut-key">9</span> , <span class="chickenpaint-shortcut-key">0</span></span>
+                                                </dt>
+                                                <dd>
+                                                    Change brush opacity
+                                                </dd>
+                                                <dt>
+                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">[</span> , <span class="chickenpaint-shortcut-key">]</span></span>
+                                                </dt>
+                                                <dd>
+                                                    Change brush size
+                                                </dd>
+                                            </dl>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="chickenpaint-shortcuts-section">
                                     <h5>Drawing canvas</h5>
                                     <ul class="chickenpaint-shortcuts-list list-unstyled">
                                         <li>
                                             <dl>
                                                 <dt>
-                                                    <span class="shortcut"><span class="fa fa-mouse-pointer"></span> Middle-button drag</span> or <span class="shortcut"><span class="chickenpaint-shortcut-key">Space</span> + drag</span>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Middle</span> <span class="chickenpaint-shortcut-alternate">or</span> <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Space</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
                                                 </dt>
                                                 <dd>
                                                     Move the canvas around
                                                 </dd>
                                                 <dt>
-                                                    <span class="shortcut"><span class="fa fa-mouse-pointer"></span> Right click</span>
+                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Alt</span> + <span class="fa fa-mouse-pointer"></span> Middle</span> <span class="chickenpaint-shortcut-alternate">or</span> <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Alt</span> + <span class="chickenpaint-shortcut-key">Space</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
+                                                </dt>
+                                                <dd>
+                                                    Rotate the canvas
+                                                </dd>
+                                                <dt>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Right</span> <span class="chickenpaint-shortcut-alternate">or</span> <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Alt</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
                                                 </dt>
                                                 <dd>
                                                     Sample the color under the cursor
@@ -89,7 +131,7 @@ export default function CPShortcutsDialog(parent) {
                                         <li>
                                             <dl>
                                                 <dt>
-                                                    <span class="shortcut"><span class="shortcut"><span class="fa fa-mouse-pointer"></span> Double click</span>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Double click</span>
                                                 </dt>
                                                 <dd>
                                                     Rename layer
