@@ -35,31 +35,36 @@ CPBlend.prototype.fusionWithMultiply = function(that, fusion, rect) {
     }
 };
 
+/* Blend onto an opaque fusion. Supports .alpha < 100 on this layer */
 CPBlend.prototype.fusionWithNormal = function(that, fusion, rect) {
-    var 
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+    var
+        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
+        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
+        h = (rect.bottom - rect.top) | 0,
+        w = (rect.right - rect.left) | 0;
 
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
+    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+        for (var x = 0; x < w; x++) {
             var 
                 alpha = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha / 100) | 0;
             
-            if (alpha == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-            } else if (alpha == 255) {
-                for (var i = 0; i < BYTES_PER_PIXEL; i++, pixIndex++) {
+            if (alpha > 0) {
+                if (alpha == 255) {
                     fusion.data[pixIndex] = that.data[pixIndex];
-                }
-            } else {
-                var 
-                    invAlpha = 255 - alpha;
+                    fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
+                    fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
+                    fusion.data[pixIndex + 3] = 255;
+                } else {
+                    var
+                        invAlpha = 255 - alpha;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
                     fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
+                    fusion.data[pixIndex + 1] = ((that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255) | 0;
+                    fusion.data[pixIndex + 2] = ((that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255) | 0;
                 }
-                pixIndex++; // Don't need to update the alpha because it started out as 100%
             }
+
+            pixIndex += BYTES_PER_PIXEL;
         }
     }
 };
