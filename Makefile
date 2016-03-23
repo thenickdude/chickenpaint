@@ -12,7 +12,7 @@ dist : all min
 min : resources/js/chickenpaint.min.js
 
 resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
-	node_modules/.bin/uglifyjs --compress --mangle < $< > $@
+	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --screw-ie8 --source-map chickenpaint.min.js.map --source-map-url chickenpaint.min.js.map --output chickenpaint.min.js chickenpaint.js 
 
 resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
 	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
