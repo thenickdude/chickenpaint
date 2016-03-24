@@ -54,8 +54,10 @@ export default function CPArtwork(_width, _height) {
         
         curSelection = new CPRect(0, 0, 0, 0),
         
-        fusion = new CPLayer(_width, _height), 
+        fusionBuffer = new CPLayer(_width, _height),
         undoBuffer = new CPLayer(_width, _height),
+
+        fusion = fusionBuffer,
         
         /* 
          * We use this buffer so we can accurately accumulate small changes to layer opacity during a brush stroke.
@@ -1407,48 +1409,56 @@ export default function CPArtwork(_width, _height) {
         if (!fusionArea.isEmpty()) {
             // The current brush renders out its buffers to the layer stack for us
             mergeOpacityBuffer(curColor, false);
-            
-            var 
-                fusionIsSemiTransparent = true, 
-                first = true;
-            
-            layers.forEach(function(layer) {
-                if (!first) {
-                    fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
-                }
-    
-                if (layer.visible && layer.alpha > 0) {
-                    if (first) {
-                        first = false;
-                        
-                        if (layer.alpha == 100) {
-                            /* Instead of blending the layer onto the fully transparent fusion, we can just copy the
-                             * layer data right into the fusion. This works for all of our blending modes.
-                             */ 
-                            
-                            // In future, for single layer images, we might just return the layer as the fusion
-                            fusion.copyBitmapRect(layer, fusionArea.left, fusionArea.top, fusionArea);
-                            return;
+
+            // If the drawing is single-layered and opaque, just use the bottom-most layer as our fusion, we don't need to blend anything!
+            if (layers.length == 1 && layers[0].alpha >= 100 && layers[0].visible) {
+                fusion = layers[0];
+            } else {
+                // Fuse into the actual fusion buffer since we need to blend
+                fusion = fusionBuffer;
+
+                var
+                    fusionIsSemiTransparent = true,
+                    first = true;
+
+                layers.forEach(function (layer) {
+                    if (!first) {
+                        fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
+                    }
+
+                    if (layer.visible && layer.alpha > 0) {
+                        if (first) {
+                            first = false;
+
+                            if (layer.alpha == 100) {
+                                /*
+                                 * Instead of blending the layer onto the empty transparent fusion, we can just copy the
+                                 * layer data right into the fusion. This works for all of our blending modes.
+                                 */
+
+                                fusion.copyBitmapRect(layer, fusionArea.left, fusionArea.top, fusionArea);
+                                return;
+                            }
+
+                            fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
                         }
-                        
-                        fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
+
+                        // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
+                        if (fusionIsSemiTransparent) {
+                            layer.fusionWithFullAlpha(fusion, fusionArea);
+                        } else {
+                            // Most drawings will end up having 100% coverage and we can speed things up with this version instead
+                            layer.fusionWith(fusion, fusionArea);
+                        }
                     }
-                    
-                    // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
-                    if (fusionIsSemiTransparent) {
-                        layer.fusionWithFullAlpha(fusion, fusionArea);
-                    } else {
-                        // Most drawings will end up having 100% coverage and we can speed things up with this version instead
-                        layer.fusionWith(fusion, fusionArea);
-                    }
+                });
+
+                if (first) {
+                    // Didn't draw any layers? We have to clear the area, then
+                    fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
                 }
-            });
-            
-            if (first) {
-                // Didn't draw any layers? We have to clear the area, then
-                fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
             }
-    
+
             fusionArea.makeEmpty();
         }
         
