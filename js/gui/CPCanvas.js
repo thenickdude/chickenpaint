@@ -27,6 +27,7 @@ import CPBezier from "../util/CPBezier";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
 
+import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
 
 /**
@@ -72,7 +73,7 @@ export default function CPCanvas(controller) {
         artworkCanvas = document.createElement("canvas"),
         artworkCanvasContext = artworkCanvas.getContext("2d"),
         
-        checkerboardPattern = createCheckerboardPattern(),
+        checkerboardPattern = createCheckerboardPattern(canvasContext),
         
         artwork = controller.getArtwork(),
 
@@ -862,7 +863,7 @@ export default function CPCanvas(controller) {
     CPGradientFillMode.prototype.constructor = CPGradientFillMode;
 
     CPGradientFillMode.prototype.drawLine = function(from, to) {
-        artwork.gradientFill(Math.round(from.x), Math.round(from.y), Math.round(to.x), Math.round(to.y), [{r: 0, g: 0, b: 0, a: 0}, {r: 255, g: 128, b: 128, a: 255}]);
+        artwork.gradientFill(Math.round(from.x), Math.round(from.y), Math.round(to.x), Math.round(to.y), controller.getCurGradient());
     };
 
     function requestFocusInWindow() {
@@ -1179,40 +1180,6 @@ export default function CPCanvas(controller) {
         this.setOffset(~~rotTrans.getTranslateX(), ~~rotTrans.getTranslateY());
         this.setRotation(0);
     };
-    
-    function createCheckerboardPattern() {
-        var
-            checkerboardCanvas = document.createElement("canvas"),
-        
-            checkerboardContext = checkerboardCanvas.getContext("2d"),
-            imageData = checkerboardContext.createImageData(64, 64),
-            data = imageData.data,
-            pixelOffset = 0;
-        
-        for (var j = 0; j < 64; j++) {
-            for (var i = 0; i < 64; i++) {
-                if ((i & 0x8) != 0 ^ (j & 0x8) != 0) {
-                    // White
-                    data[pixelOffset++] = 0xff;
-                    data[pixelOffset++] = 0xff;
-                    data[pixelOffset++] = 0xff;
-                    data[pixelOffset++] = 0xff;
-                } else {
-                    // Grey
-                    data[pixelOffset++] = 0xcc;
-                    data[pixelOffset++] = 0xcc;
-                    data[pixelOffset++] = 0xcc;
-                    data[pixelOffset++] = 0xff;
-                }
-            }
-        }
-        
-        checkerboardCanvas.width = 64;
-        checkerboardCanvas.height = 64;
-        checkerboardContext.putImageData(imageData, 0, 0);
-        
-        return canvasContext.createPattern(checkerboardCanvas, 'repeat');
-    }
     
     /**
      * Add the pointer pressure field to the given pointer event.

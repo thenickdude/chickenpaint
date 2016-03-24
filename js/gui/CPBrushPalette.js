@@ -20,18 +20,75 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import ChickenPaint from "../ChickenPaint";
+
 import CPPalette from "./CPPalette";
 import CPCheckbox from "./CPCheckbox";
+import CPColorSwatch from "./CPColorSwatch";
 import CPSlider from "./CPSlider";
+import {createCheckerboardPattern} from "./CPGUIUtils";
+
+import CPLayer from "../engine/CPLayer";
+
+import CPColor from "../util/CPColor";
 
 const
     TIP_NAMES = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
     BRUSH_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200];
 
+function CPGradientPreview(controller) {
+    var
+        that = this,
+
+        w = 150, h = 32,
+
+        canvas = document.createElement("canvas"),
+        canvasContext = canvas.getContext("2d"),
+
+        checkerboard = createCheckerboardPattern(canvasContext),
+
+        image = new CPLayer(w, h, ""),
+        imageCanvas = document.createElement("canvas"),
+        imageCanvasContext = imageCanvas.getContext("2d"),
+
+        gradient = controller.getCurGradient();
+
+    function paint() {
+        image.gradient(image.getBounds(), 0, 0, image.width, 0, gradient, true);
+        imageCanvasContext.putImageData(image.imageData, 0, 0, 0, 0, w, h);
+
+        canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+        canvasContext.drawImage(imageCanvas, 0, 0);
+    }
+
+    this.getElement = function() {
+        return canvas;
+    };
+
+    controller.on("gradientChange", function(_gradient) {
+        gradient = _gradient;
+
+        paint();
+    });
+
+    canvas.width = imageCanvas.width = w;
+    canvas.height = imageCanvas.height = h;
+
+    canvas.className = 'chickenpaint-gradient-preview';
+
+    canvasContext.fillStyle = checkerboard;
+
+    paint();
+}
+
 export default function CPBrushPalette(controller) {
-    CPPalette.call(this, controller, "brush", "Brush");
+    CPPalette.call(this, controller, "brush", "Tool options");
 
     var
+        brushPanel = document.createElement("div"),
+
+        tipCombo = document.createElement("select"),
+
         alphaCB = new CPCheckbox(false, "Control brush opacity with pen pressure"), 
         alphaSlider = new CPSlider(1, 255),
         
@@ -47,8 +104,12 @@ export default function CPBrushPalette(controller) {
         smoothingSlider = new CPSlider(0, 100),
 
         brushPreview = new CPBrushPalette.CPBrushPreview(controller),
-    
-        tipCombo = document.createElement("select"),
+
+        gradientPanel = document.createElement("div"),
+        gradientPreview = new CPGradientPreview(controller),
+        
+        gradientStartSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[0] & 0xFFFFFF)),
+        gradientEndSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[1] & 0xFFFFFF)),
 
         body = this.getBodyElement();
 
@@ -75,114 +136,174 @@ export default function CPBrushPalette(controller) {
             combo.appendChild(option);
         }
     }
-    
-    alphaSlider.title = function(value) {
-        return "Opacity: " + value;
-    };
 
-    alphaSlider.on('valueChange', function (value) {
-        controller.setAlpha(this.value);
-    });
+    function buildBrushPanel() {
+        alphaSlider.title = function (value) {
+            return "Opacity: " + value;
+        };
 
-    sizeSlider.title = function(value) {
-        return "Brush size: " + value;
+        alphaSlider.on('valueChange', function (value) {
+            controller.setAlpha(this.value);
+        });
+
+        sizeSlider.title = function (value) {
+            return "Brush size: " + value;
+        }
+
+        sizeSlider.on('valueChange', function (value) {
+            controller.setBrushSize(value);
+        });
+
+        resatSlider.title = function (value) {
+            return "Color: " + value + "%";
+        };
+
+        resatSlider.on('valueChange', function (value) {
+            controller.getBrushInfo().resat = value / 100.0;
+            controller.callToolListeners();
+        });
+
+        bleedSlider.title = function (value) {
+            return "Blend: " + value + "%";
+        };
+
+        bleedSlider.on('valueChange', function (value) {
+            controller.getBrushInfo().bleed = value / 100.0;
+            controller.callToolListeners();
+        });
+
+        spacingSlider.title = function (value) {
+            return "Spacing: " + value + "%";
+        };
+
+        spacingSlider.on('valueChange', function (value) {
+            controller.getBrushInfo().spacing = value / 100.0;
+            controller.callToolListeners();
+        });
+
+        scatteringSlider.title = function (value) {
+            return "Scattering: " + value + "%";
+        };
+
+        scatteringSlider.on('valueChange', function (value) {
+            controller.getBrushInfo().scattering = value / 100.0;
+            controller.callToolListeners();
+        });
+
+        smoothingSlider.title = function (value) {
+            return "Smoothing: " + value + "%";
+        };
+
+        smoothingSlider.on('valueChange', function (value) {
+            controller.getBrushInfo().smoothing = value / 100.0;
+            controller.callToolListeners();
+        });
+
+        scatteringCB.on('valueChange', function (state) {
+            controller.getBrushInfo().pressureScattering = state;
+            controller.callToolListeners();
+        });
+
+        alphaCB.on('valueChange', function (state) {
+            controller.getBrushInfo().pressureAlpha = state;
+            controller.callToolListeners();
+        });
+
+        sizeCB.on('valueChange', function (state) {
+            controller.getBrushInfo().pressureSize = state;
+            controller.callToolListeners();
+        });
+
+        tipCombo.addEventListener("change", function(e) {
+            controller.getBrushInfo().type = parseInt(tipCombo.value, 10);
+        });
+
+        tipCombo.className = 'form-control';
+        fillCombobox(tipCombo, TIP_NAMES);
+
+        brushPanel.appendChild(tipCombo);
+
+        brushPanel.appendChild(brushPreview.getElement());
+
+        brushPanel.appendChild(sliderCheckboxGroup(sizeCB, sizeSlider));
+        brushPanel.appendChild(sliderCheckboxGroup(alphaCB, alphaSlider));
+        brushPanel.appendChild(resatSlider.getElement());
+        brushPanel.appendChild(bleedSlider.getElement());
+        brushPanel.appendChild(spacingSlider.getElement());
+        brushPanel.appendChild(sliderCheckboxGroup(scatteringCB, scatteringSlider));
+        brushPanel.appendChild(smoothingSlider.getElement());
+
+        alphaCB.setValue(controller.getBrushInfo().pressureAlpha);
+        alphaSlider.setValue(controller.getAlpha());
+
+        sizeCB.setValue(controller.getBrushInfo().pressureSize);
+        sizeSlider.setValue(controller.getBrushSize());
+
+        scatteringCB.setValue(controller.getBrushInfo().pressureScattering);
+        scatteringSlider.setValue(~~(controller.getBrushInfo().scattering * 100));
+
+        tipCombo.value = controller.getBrushInfo().type;
+
+        resatSlider.setValue(~~(controller.getBrushInfo().resat * 100));
+        bleedSlider.setValue(~~(controller.getBrushInfo().bleed * 100));
+        spacingSlider.setValue(~~(controller.getBrushInfo().spacing * 100));
+        smoothingSlider.setValue(~~(controller.getBrushInfo().smoothing * 100));
     }
-    
-    sizeSlider.on('valueChange', function (value) {
-        controller.setBrushSize(value);
-    });
 
-    resatSlider.title = function(value) {
-        return "Color: " + value + "%";
-    };
-    
-    resatSlider.on('valueChange', function (value) {
-        controller.getBrushInfo().resat = value / 100.0;
-        controller.callToolListeners();
-    });
+    function updateGradient() {
+        var
+            gradient = new Array(2);
 
-    bleedSlider.title = function(value) {
-        return "Blend: " + value + "%";
-    };
-    
-    bleedSlider.on('valueChange', function (value) {
-        controller.getBrushInfo().bleed = value / 100.0;
-        controller.callToolListeners();
-    });
+        gradient[0] = (gradientStartSwatch.getAlpha() << 24) | gradientStartSwatch.getColorRgb();
+        gradient[1] = (gradientEndSwatch.getAlpha() << 24) |  gradientEndSwatch.getColorRgb();
 
-    spacingSlider.title = function(value) {
-        return "Spacing: " + value + "%";
-    };
+        controller.setCurGradient(gradient);
+    }
 
-    spacingSlider.on('valueChange', function (value) {
-        controller.getBrushInfo().spacing = value / 100.0;
-        controller.callToolListeners();
-    });
+    function buildGradientPanel() {
+        gradientPanel.className = "chickenpaint-gradient-panel";
+        gradientPanel.style.display = "none";
 
-    scatteringSlider.title = function(value) {
-        return "Scattering: " + value + "%";
-    };
+        gradientStartSwatch.on("colorChange", updateGradient);
+        gradientStartSwatch.on("alphaChange", updateGradient);
+        gradientEndSwatch.on("colorChange", updateGradient);
+        gradientEndSwatch.on("alphaChange", updateGradient);
 
-    scatteringSlider.on('valueChange', function (value) {
-        controller.getBrushInfo().scattering = value / 100.0;
-        controller.callToolListeners();
-    });
+        var
+            title, colorsGroup, colorGroup;
 
-    smoothingSlider.title = function(value) {
-        return "Smoothing: " + value + "%";
-    };
+        title = document.createElement("p");
+        title.innerHTML = "Gradient";
 
-    smoothingSlider.on('valueChange', function (value) {
-        controller.getBrushInfo().smoothing = value / 100.0;
-        controller.callToolListeners();
-    });
-    
-    scatteringCB.on('valueChange', function (state) {
-        controller.getBrushInfo().pressureScattering = state;
-        controller.callToolListeners();
-    });
+        gradientPanel.appendChild(title);
+        gradientPanel.appendChild(gradientPreview.getElement());
 
-    alphaCB.on('valueChange', function (state) {
-        controller.getBrushInfo().pressureAlpha = state;
-        controller.callToolListeners();
-    });
+        colorsGroup = document.createElement("div");
+        colorsGroup.className = "chickenpaint-gradient-colors";
 
-    sizeCB.on('valueChange', function (state) {
-        controller.getBrushInfo().pressureSize = state;
-        controller.callToolListeners();
-    });
-    
-    tipCombo.className = 'form-control';
-    fillCombobox(tipCombo, TIP_NAMES);
-    
-    body.appendChild(tipCombo);
-    
-    body.appendChild(brushPreview.getElement());
-    
-    body.appendChild(sliderCheckboxGroup(sizeCB, sizeSlider));
-    body.appendChild(sliderCheckboxGroup(alphaCB, alphaSlider));
-    body.appendChild(resatSlider.getElement());
-    body.appendChild(bleedSlider.getElement());
-    body.appendChild(spacingSlider.getElement());
-    body.appendChild(sliderCheckboxGroup(scatteringCB, scatteringSlider));
-    body.appendChild(smoothingSlider.getElement());
+        colorGroup = document.createElement("div");
+        colorGroup.className = "chickenpaint-gradient-start-color";
+        
+        colorGroup.appendChild(gradientStartSwatch.getElement());
 
-    alphaCB.setValue(controller.getBrushInfo().pressureAlpha);
-    alphaSlider.setValue(controller.getAlpha());
-    
-    sizeCB.setValue(controller.getBrushInfo().pressureSize);
-    sizeSlider.setValue(controller.getBrushSize());
-    
-    scatteringCB.setValue(controller.getBrushInfo().pressureScattering);
-    scatteringSlider.setValue(~~(controller.getBrushInfo().scattering * 100));
-    
-    tipCombo.value = controller.getBrushInfo().type;
+        colorsGroup.appendChild(colorGroup);
 
-    resatSlider.setValue(~~(controller.getBrushInfo().resat * 100));
-    bleedSlider.setValue(~~(controller.getBrushInfo().bleed * 100));
-    spacingSlider.setValue(~~(controller.getBrushInfo().spacing * 100));
-    smoothingSlider.setValue(~~(controller.getBrushInfo().smoothing * 100));
-    
+        colorGroup = document.createElement("div");
+        colorGroup.className = "chickenpaint-gradient-end-color";
+
+        colorGroup.appendChild(gradientEndSwatch.getElement());
+
+        colorsGroup.appendChild(colorGroup);
+
+        gradientPanel.appendChild(colorsGroup);
+    }
+
+    buildBrushPanel();
+    body.appendChild(brushPanel);
+
+    buildGradientPanel();
+    body.appendChild(gradientPanel);
+
     controller.on('toolChange', function(tool, toolInfo) {
         alphaSlider.setValue(toolInfo.alpha);
         sizeSlider.setValue(toolInfo.size);
@@ -211,9 +332,18 @@ export default function CPBrushPalette(controller) {
             smoothingSlider.setValue(~~(toolInfo.smoothing * 100.0));
         }
     });
-    
-    tipCombo.addEventListener("change", function(e) {
-        controller.getBrushInfo().type = parseInt(tipCombo.value, 10);
+
+    controller.on('modeChange', function(mode) {
+       switch (mode) {
+           case ChickenPaint.M_GRADIENTFILL:
+               brushPanel.style.display = "none";
+               gradientPanel.style.display = "block";
+           break;
+           default:
+               brushPanel.style.display = "block";
+               gradientPanel.style.display = "none";
+           break;
+       }
     });
 
     key("1,2,3,4,5,6,7,8,9,0", function(event, handler) {

@@ -254,6 +254,7 @@ export default function ChickenPaint(options) {
         curColor = new CPColor(0),
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
+        curGradient = [0xFF000000, 0xFFFFFFFF],
 
         tools = createDrawingTools(),
 
@@ -324,6 +325,16 @@ export default function ChickenPaint(options) {
 
     this.setCurColorRgb = function(color) {
         this.setCurColor(new CPColor(color));
+    };
+
+    this.setCurGradient = function(gradient) {
+        curGradient = gradient.slice(0); // Clone
+
+        this.emitEvent('gradientChange', [curGradient]);
+    };
+
+    this.getCurGradient = function() {
+        return curGradient.slice(0); // Clone
     };
 
     this.setBrushSize = function(size) {

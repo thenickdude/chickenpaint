@@ -274,7 +274,7 @@ var
                     name: "-"
                 },
                 {
-                    name: "Show brush",
+                    name: "Show tool options",
                     action: "CPPalBrush",
                     mnemonic: "B",
                     checkbox: true,

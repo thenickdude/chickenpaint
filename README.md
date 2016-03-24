@@ -12,6 +12,7 @@ under GPLv3.
 - Rotating canvas, work at any angle!
 - Tablet pen pressure support (see notes below)
 - Keyboard shortcuts
+- New gradient fill tool
 
 ## Supported browsers
 ChickenPaint is supported in IE10 and 11, Edge, Chrome, Safari, Firefox and Opera, though it runs fastest in Chrome.

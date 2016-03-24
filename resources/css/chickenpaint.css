@@ -9182,7 +9182,6 @@
 }
 .chickenpaint-colorpicker-show {
   height: 20px;
-  margin-top: 4px;
 }
 .chickenpaint-colorpicker-select {
   margin-right: 4px;
@@ -9190,6 +9189,7 @@
 .chickenpaint-colorpicker-top {
   display: -ms-flexbox;
   display: flex;
+  margin-bottom: 4px;
 }
 .chickenpaint-checkbox-slider-group {
   display: -ms-flexbox;
@@ -9199,11 +9199,54 @@
   align-content: flex-start;
   align-items: center;
 }
+.chickenpaint-palette-brush {
+  min-height: 250px;
+}
 .chickenpaint-palette-brush .chickenpaint-slider {
   margin-left: 23px;
 }
 .chickenpaint-palette-brush .chickenpaint-checkbox-slider-group .chickenpaint-slider {
   margin-left: 3px;
+}
+.chickenpaint-gradient-panel {
+  padding: 3px;
+}
+.chickenpaint-gradient-preview {
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+  /* Don't allow the border to shrink the canvas in IE 10 */
+  -webkit-box-sizing: content-box;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  margin-bottom: 5px;
+}
+.chickenpaint-gradient-colors {
+  display: -ms-flexbox;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.chickenpaint-color-pick-panel .chickenpaint-slider {
+  margin-left: 0;
+  width: 156px;
+  height: 20px;
+}
+.chickenpaint-color-pick-swatch {
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+  /* Don't allow the border to shrink the canvas in IE 10 */
+  -webkit-box-sizing: content-box;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+.chickenpaint-color-pick-top {
+  display: -ms-flexbox;
+  display: flex;
 }
 .chickenpaint-palette-body {
   padding: 4px;
@@ -9445,6 +9488,7 @@ chickenpaint-aftersave-actions {
   border-radius: 3px;
 }
 .chickenpaint-shortcuts-list dt {
+  display: -ms-flexbox;
   display: flex;
   align-items: baseline;
 }

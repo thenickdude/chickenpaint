@@ -297,10 +297,28 @@ CPLayer.prototype.fillWithNoise = function(rect) {
     }
 };
 
-CPLayer.prototype.gradientHorz = function(rect, fromX, toX, gradientPoints) {
+/**
+ * Replace the pixels in the given rect with the given horizontal gradient.
+ *
+ * @param rect CPRect
+ * @param fromX int
+ * @param toX int
+ * @param gradientPoints int[]
+ */
+CPLayer.prototype.gradientHorzReplace = function(rect, fromX, toX, gradientPoints) {
     var
-        fromColor = gradientPoints[0],
-        toColor = gradientPoints[1],
+        fromColor = {
+            r: (gradientPoints[0] >> 16) & 0xFF,
+            g: (gradientPoints[0] >> 8) & 0xFF,
+            b: gradientPoints[0] & 0xFF,
+            a: (gradientPoints[0] >> 24) & 0xFF
+        },
+        toColor = {
+            r: (gradientPoints[1] >> 16) & 0xFF,
+            g: (gradientPoints[1] >> 8) & 0xFF,
+            b: gradientPoints[1] & 0xFF,
+            a: (gradientPoints[1] >> 24) & 0xFF
+        },
 
         yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
         pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
@@ -367,10 +385,28 @@ CPLayer.prototype.gradientHorz = function(rect, fromX, toX, gradientPoints) {
     }
 };
 
-CPLayer.prototype.gradientVert = function(rect, fromY, toY, gradientPoints) {
+/**
+ * Replace the pixels in the given rect with the given vertical gradient.
+ *
+ * @param rect CPRect
+ * @param fromY int
+ * @param toY int
+ * @param gradientPoints int[]
+ */
+CPLayer.prototype.gradientVertReplace = function(rect, fromY, toY, gradientPoints) {
     var
-        fromColor = gradientPoints[0],
-        toColor = gradientPoints[1],
+        fromColor = {
+            r: (gradientPoints[0] >> 16) & 0xFF,
+            g: (gradientPoints[0] >> 8) & 0xFF,
+            b: gradientPoints[0] & 0xFF,
+            a: (gradientPoints[0] >> 24) & 0xFF
+        },
+        toColor = {
+            r: (gradientPoints[1] >> 16) & 0xFF,
+            g: (gradientPoints[1] >> 8) & 0xFF,
+            b: gradientPoints[1] & 0xFF,
+            a: (gradientPoints[1] >> 24) & 0xFF
+        },
 
         yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
         pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
@@ -397,8 +433,6 @@ CPLayer.prototype.gradientVert = function(rect, fromY, toY, gradientPoints) {
             this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = fromColor.g;
             this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = fromColor.b;
             this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = fromColor.a;
-
-            pixIndex += BYTES_PER_PIXEL;
         }
     }
 
@@ -441,14 +475,34 @@ CPLayer.prototype.gradientVert = function(rect, fromY, toY, gradientPoints) {
     }
 };
 
-CPLayer.prototype.gradientOpaque = function(rect, fromX, fromY, toX, toY, gradientPoints) {
+/**
+ * Replace the pixels in the given rect with the given gradient.
+ *
+ * @param rect CPRect
+ * @param fromX int
+ * @param fromY int
+ * @param toX int
+ * @param toY int
+ * @param gradientPoints int[]
+ */
+CPLayer.prototype.gradientReplace = function(rect, fromX, fromY, toX, toY, gradientPoints) {
     var
         yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
         pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
         w = (rect.right - rect.left) | 0,
 
-        fromColor = gradientPoints[0],
-        toColor = gradientPoints[1],
+        fromColor = {
+            r: (gradientPoints[0] >> 16) & 0xFF,
+            g: (gradientPoints[0] >> 8) & 0xFF,
+            b: gradientPoints[0] & 0xFF,
+            a: (gradientPoints[0] >> 24) & 0xFF
+        },
+        toColor = {
+            r: (gradientPoints[1] >> 16) & 0xFF,
+            g: (gradientPoints[1] >> 8) & 0xFF,
+            b: gradientPoints[1] & 0xFF,
+            a: (gradientPoints[1] >> 24) & 0xFF
+        },
 
     // How many pixels vertically does the gradient sequence complete over (+infinity for horizontal gradients!)
         vertRange = (toY - fromY) + ((toX - fromX) * (toX - fromX)) / (toY - fromY),
@@ -476,14 +530,34 @@ CPLayer.prototype.gradientOpaque = function(rect, fromX, fromY, toX, toY, gradie
     }
 };
 
+/**
+ * Alpha blend the given gradient onto the pixels in the given rect.
+ *
+ * @param rect CPRect
+ * @param fromX int
+ * @param fromY int
+ * @param toX int
+ * @param toY int
+ * @param gradientPoints int[]
+ */
 CPLayer.prototype.gradientAlpha = function(rect, fromX, fromY, toX, toY, gradientPoints) {
     var
         yStride = (this.width - rect.getWidth()) * CPColorBmp.BYTES_PER_PIXEL,
         pixIndex = this.offsetOfPixel(rect.left, rect.top) | 0,
         w = (rect.right - rect.left) | 0,
 
-        fromColor = gradientPoints[0],
-        toColor = gradientPoints[1],
+        fromColor = {
+            r: (gradientPoints[0] >> 16) & 0xFF,
+            g: (gradientPoints[0] >> 8) & 0xFF,
+            b: gradientPoints[0] & 0xFF,
+            a: (gradientPoints[0] >> 24) & 0xFF
+        },
+        toColor = {
+            r: (gradientPoints[1] >> 16) & 0xFF,
+            g: (gradientPoints[1] >> 8) & 0xFF,
+            b: gradientPoints[1] & 0xFF,
+            a: (gradientPoints[1] >> 24) & 0xFF
+        },
 
     // How many pixels vertically does the gradient sequence complete over (+infinity for horizontal gradients!)
         vertRange = (toY - fromY) + ((toX - fromX) * (toX - fromX)) / (toY - fromY),
@@ -527,12 +601,14 @@ CPLayer.prototype.gradientAlpha = function(rect, fromX, fromY, toX, toY, gradien
 };
 
 /**
- * Draw a gradient which begins at fromX, fromY and ends at toX, toY, clipped to the given rect.
+ * Draw a gradient which begins at fromX, fromY and ends at toX, toY, clipped to the given rect, on top of the
+ * pixels in the layer.
  *
  * @param gradientPoints Array with gradient colors (ARGB integers)
  * @param rect CPRect
+ * @param replace Set to true to replace the pixels in the layer rather than blending the gradient on top of them.
  */
-CPLayer.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPoints) {
+CPLayer.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPoints, replace) {
     rect = this.getBounds().clip(rect);
 
     // Degenerate case
@@ -540,13 +616,14 @@ CPLayer.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPoin
         return;
     }
 
-    if (gradientPoints[0].a == 255 && gradientPoints[1].a == 255) {
+    // Opaque blend if possible
+    if (replace || gradientPoints[0] >>> 24 == 255 && gradientPoints[1] >>> 24 == 255) {
         if (fromX == toX) {
-            this.gradientVert(rect, fromY, toY, gradientPoints);
+            this.gradientVertReplace(rect, fromY, toY, gradientPoints);
         } else if (fromY == toY) {
-            this.gradientHorz(rect, fromX, toX, gradientPoints);
+            this.gradientHorzReplace(rect, fromX, toX, gradientPoints);
         } else {
-            this.gradientOpaque(rect, fromX, fromY, toX, toY, gradientPoints);
+            this.gradientReplace(rect, fromX, fromY, toX, toY, gradientPoints);
         }
     } else {
         this.gradientAlpha(rect, fromX, fromY, toX, toY, gradientPoints);
