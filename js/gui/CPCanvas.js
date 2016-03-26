@@ -955,9 +955,9 @@ export default function CPCanvas(controller) {
      */
     function mouseCoordToCanvas(coord) {
         var
-            canvasOffset =  $(canvas).offset();
+            rect = canvas.getBoundingClientRect();
 
-        return {x: coord.x - canvasOffset.left, y: coord.y - canvasOffset.top};
+        return {x: coord.x - rect.left - window.scrollX, y: coord.y - rect.top - window.scrollY};
     }
     
     function coordToDisplay(p) {
@@ -1195,15 +1195,23 @@ export default function CPCanvas(controller) {
             return e.pressure * 2;
         }
     }
-    
+
+    var
+        canvasClientRect;
+
     function handlePointerMove(e) {
+        // Use the cached position of the canvas on the page if possible
+        if (!canvasClientRect) {
+            canvasClientRect = canvas.getBoundingClientRect();
+        }
+
         var
-            mousePos = mouseCoordToCanvas({x: e.pageX, y: e.pageY});
+            mousePos = {x: e.clientX - canvasClientRect.left, y: e.clientY - canvasClientRect.top};
         
         // Store these globally for the event handlers to refer to
         mouseX = mousePos.x;
         mouseY = mousePos.y;
-        
+
         if (!dontStealFocus) {
             requestFocusInWindow();
         }
@@ -1224,8 +1232,10 @@ export default function CPCanvas(controller) {
     function handlePointerDown(e) {
         canvas.setPointerCapture(e.pointerId);
 
+        canvasClientRect = canvas.getBoundingClientRect();
+
         var
-            mousePos = mouseCoordToCanvas({x: e.pageX, y: e.pageY});
+            mousePos = {x: e.clientX - canvasClientRect.left, y: e.clientY - canvasClientRect.top};
 
         // Store these globally for the event handlers to refer to
         mouseX = mousePos.x;
