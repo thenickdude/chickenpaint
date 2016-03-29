@@ -1448,6 +1448,8 @@ export default function CPCanvas(controller) {
         
         canvas.width = $(canvas).width();
         canvas.height = $(canvas).height();
+
+        canvasClientRect = null;
         
         centerCanvas();
         
@@ -1581,6 +1583,10 @@ export default function CPCanvas(controller) {
     
     window.addEventListener("resize", function() {
         that.resize();
+    });
+
+    window.addEventListener("scroll", function() {
+        canvasClientRect = null;
     });
     
     artwork.on("updateRegion", function(region) {
