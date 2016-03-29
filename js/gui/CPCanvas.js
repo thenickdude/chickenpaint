@@ -1589,6 +1589,13 @@ export default function CPCanvas(controller) {
         canvasClientRect = null;
     });
     
+    canvas.addEventListener("mousedown", function(e) {
+        if (e.button == BUTTON_WHEEL) {
+            // Prevent middle-mouse scrolling in Firefox
+            e.preventDefault();
+        }
+    });
+    
     artwork.on("updateRegion", function(region) {
         artworkUpdateRegion.union(region);
         
