@@ -99,6 +99,21 @@ export default function CPShortcutsDialog(parent) {
                                     </ul>
                                 </div>
                                 <div class="chickenpaint-shortcuts-section">
+                                    <h5>Brush palette</h5>
+                                    <ul class="chickenpaint-shortcuts-list list-unstyled">
+                                        <li>
+                                            <dl>
+                                                <dt>
+                                                    <span class="chickenpaint-shortcut"><span class="fa fa-mouse-pointer"></span> Right drag</span>
+                                                </dt>
+                                                <dd>
+                                                    Adjust brush sliders more precisely
+                                                </dd>
+                                            </dl>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="chickenpaint-shortcuts-section">
                                     <h5>Drawing canvas</h5>
                                     <ul class="chickenpaint-shortcuts-list list-unstyled">
                                         <li>
