@@ -57,7 +57,7 @@ export default function CPGreyBmp(width, height, bitDepth) {
     
     this.clearRect = function(rect, value) {
         var
-            rect = this.getBounds().clip(rect);
+            rect = this.getBounds().clip(rect),
             yStride = this.width - rect.getWidth(),
             pixIndex = this.offsetOfPixel(rect.left, rect.top);
         
