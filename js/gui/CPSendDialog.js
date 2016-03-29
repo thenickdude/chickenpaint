@@ -57,7 +57,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                         <div class="modal-footer">
                             <button class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
                             <button class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
-                            <button class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, I'll finish it later</button>
+                            <button class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-already-posted" style="display:none">
