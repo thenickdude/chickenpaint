@@ -9019,6 +9019,7 @@
   position: absolute;
   -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  z-index: 0;
 }
 .chickenpaint-palette-head {
   background-color: #ececec;
@@ -9043,6 +9044,7 @@
   left: 0;
   right: 0;
   cursor: row-resize;
+  z-index: 0;
 }
 .chickenpaint {
   /* Prevent drag operations from beginning text selection */
@@ -9250,6 +9252,7 @@
 }
 .chickenpaint-palette-body {
   padding: 4px;
+  z-index: 1;
 }
 .chickenpaint-slider {
   margin: 1px;
