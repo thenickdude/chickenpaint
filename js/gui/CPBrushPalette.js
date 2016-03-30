@@ -96,7 +96,7 @@ export default function CPBrushPalette(controller) {
         sizeSlider = new CPSlider(1, 200),
         
         scatteringCB  = new CPCheckbox(false, "Control brush scattering with pen pressure"),
-        scatteringSlider = new CPSlider(0, 100), 
+        scatteringSlider = new CPSlider(0, 1000), 
     
         resatSlider = new CPSlider(0, 100), 
         bleedSlider = new CPSlider(0, 100), 
