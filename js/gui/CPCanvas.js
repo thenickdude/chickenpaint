@@ -283,7 +283,7 @@ export default function CPCanvas(controller) {
     CPFreehandMode.prototype.mousePressed = function(e, pressure) {
         if (!this.dragLeft && e.button == BUTTON_PRIMARY) {
             var 
-                pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                pf = coordToDocument({x: mouseX, y:mouseY});
 
             this.dragLeft = true;
             artwork.beginStroke(pf.x, pf.y, pressure);
@@ -957,7 +957,7 @@ export default function CPCanvas(controller) {
         var
             rect = canvas.getBoundingClientRect();
 
-        return {x: coord.x - rect.left - window.scrollX, y: coord.y - rect.top - window.scrollY};
+        return {x: coord.x - rect.left - window.pageXOffset, y: coord.y - rect.top - window.pageYOffset};
     }
     
     function coordToDisplay(p) {
