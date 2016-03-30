@@ -31,7 +31,16 @@ export default function CPWacomTablet() {
      * Is the pen currently interacting with the tablet surface?
      */
     this.isPen = function() {
-        return penAPI && penAPI.pointerType == 1 /* Pen */;
+        var
+            pointerType;
+
+        if (penAPI) {
+            pointerType = penAPI.pointerType;
+
+            return pointerType == 1 /* Pen */ || pointerType == 3 /* Eraser */;
+        }
+        
+        return false;
     };
     
     this.getPressure = function() {
