@@ -204,6 +204,16 @@ var
             mnemonic: "V",
             children: [
                 {
+                    name: "Full-screen mode",
+                    action: "CPFullScreen",
+                    mnemonic: "F",
+                    checkbox: true,
+                    checked: false
+                },
+                {
+                    name: "-"
+                },
+                {
                     name: "Zoom in",
                     action: "CPZoomIn",
                     mnemonic: "I",

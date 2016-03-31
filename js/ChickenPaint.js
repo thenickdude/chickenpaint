@@ -256,6 +256,8 @@ export default function ChickenPaint(options) {
         curMode = ChickenPaint.M_DRAW,
         curGradient = [0xFF000000, 0xFFFFFFFF],
 
+        fullScreenMode = false,
+
         tools = createDrawingTools(),
 
         boxBlurDialog, gridDialog;
@@ -419,13 +421,16 @@ export default function ChickenPaint(options) {
                 return !!options.saveUrl;
 
             case "CPSave":
-                return options.allowDownload === undefined ? true : options.allowDownload;
+                return options.allowDownload !== false;
 
             case "CPExit":
                 return !!options.exitUrl;
 
             case "CPPost":
                 return !!options.postUrl;
+
+            case "CPFullScreen":
+                return options.allowFullScreen !== false;
 
             default:
                 return true;
@@ -438,6 +443,17 @@ export default function ChickenPaint(options) {
         }
 
         switch (e.action) {
+            case "CPFullScreen":
+                fullScreenMode = !fullScreenMode;
+
+                $("body").toggleClass("chickenpaint-full-screen", fullScreenMode);
+                $(uiElem).toggleClass("chickenpaint-full-screen", fullScreenMode);
+
+                setTimeout(function() {
+                    mainGUI.setFullScreenMode(fullScreenMode);
+                }, 200);
+            break;
+            
             case "CPZoomIn":
                 canvas.zoomIn();
             break;

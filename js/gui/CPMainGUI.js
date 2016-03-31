@@ -30,6 +30,8 @@ export default function CPMainGUI(controller, uiElem) {
         canvas = new CPCanvas(controller),
         paletteManager = new CPPaletteManager(controller),
         menuBar,
+
+        fullScreenMode = false,
         
         that = this;
     
@@ -39,9 +41,7 @@ export default function CPMainGUI(controller, uiElem) {
     
     this.arrangePalettes = function() {
         // Give the browser a chance to do the sizing of the palettes before we try to rearrange them
-        setTimeout(function() {
-            paletteManager.arrangePalettes();
-        }, 0);
+        setTimeout(paletteManager.arrangePalettes.bind(paletteManager), 0);
     };
 
     this.constrainPalettes = function() {
@@ -68,12 +68,29 @@ export default function CPMainGUI(controller, uiElem) {
         canvas.setRotation(rotation);
     };
 
-    menuBar = new CPMainMenu(controller, this)
-    
-    window.addEventListener("resize", function() {
+    this.setFullScreenMode = function(value) {
+        fullScreenMode = value;
+
+        that.resize();
+        that.arrangePalettes();
+    };
+
+    this.resize = function() {
+        var
+            newHeight;
+
+        if (fullScreenMode) {
+            newHeight = $(window).height() - $(menuBar.getElement()).height();
+        } else {
+            newHeight = Math.min(Math.max(($(window).height() - $(menuBar.getElement()).height() - 100), 500), 750);
+        }
+
+        canvas.resize(newHeight);
         that.constrainPalettes();
-    });
-    
+    };
+
+    menuBar = new CPMainMenu(controller, this)
+
     uiElem.appendChild(menuBar.getElement());
     
     lowerArea.className = 'chickenpaint-main-section';
@@ -82,10 +99,10 @@ export default function CPMainGUI(controller, uiElem) {
     lowerArea.appendChild(paletteManager.getElement());
     
     uiElem.appendChild(lowerArea);
-   
-    setTimeout(function() {
-        canvas.resize();
-    }, 0);
+
+    window.addEventListener("resize", this.resize.bind(this));
+
+    setTimeout(this.resize.bind(this), 0);
 }
 
 CPMainGUI.prototype = Object.create(EventEmitter.prototype);

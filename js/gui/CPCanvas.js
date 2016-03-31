@@ -83,7 +83,7 @@ export default function CPCanvas(controller) {
         canvasRotation = 0.0,
         transform = new CPTransform(),
         interpolation = false,
-        
+
         // Grid options
         showGrid = false,
         gridSize = 32,
@@ -1121,7 +1121,7 @@ export default function CPCanvas(controller) {
         
         return rotation;
     };
-    
+
     function zoomOnPoint(zoom, centerX, centerY) {
         zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
         
@@ -1439,26 +1439,28 @@ export default function CPCanvas(controller) {
         showGrid = show;
         this.repaintAll();
     };
-    
-    this.resize = function() {
-        var
-            newHeight = Math.min(Math.max(($(window).height() - 150), 500), 750);
-        
-        $(canvas).css('height', newHeight + "px");
-        
+
+    /**
+     * Resize the canvas to the given height (in pixels)
+     *
+     * @param height New canvas height in pixels
+     */
+    this.resize = function(height) {
+        $(canvas).css('height', height + "px");
+
         canvas.width = $(canvas).width();
-        canvas.height = $(canvas).height();
+        canvas.height = height;
 
         canvasClientRect = null;
-        
+
         centerCanvas();
-        
+
         // Interpolation property gets reset when canvas resizes
         this.setInterpolation(interpolation);
-        
+
         this.repaintAll();
     };
-    
+
     controller.on("toolChange", function(tool, toolInfo) {
         var
             spacePressed = key.isPressed("space");
@@ -1576,15 +1578,15 @@ export default function CPCanvas(controller) {
      * background https://bugs.chromium.org/p/chromium/issues/detail?id=588434
      */
     document.addEventListener("visibilitychange", function() {
+        var
+            oldHeight = canvas.height;
+
         canvas.width = 1;
         canvas.height = 1;
-        that.resize();
+
+        that.resize(oldHeight);
     }, false);
     
-    window.addEventListener("resize", function() {
-        that.resize();
-    });
-
     window.addEventListener("scroll", function() {
         canvasClientRect = null;
     });
