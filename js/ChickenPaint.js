@@ -238,6 +238,9 @@ function createDrawingTools() {
  * loadSwatchesUrl  - URL of an .aco palette to load (optional)
  * 
  * allowDownload - Allow the drawing to be saved to the user's computer
+ * allowFullScreen - Allow the drawing tool to enter "full screen" mode, where the rest of the page contents will be hidden
+ *
+ * disableBootstrapAPI - Disable Bootstrap's data API on the root of the document. This speeds up things considerably.
  * 
  * resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the page that 
  *                 ChickenPaint is loaded on)
@@ -719,6 +722,10 @@ export default function ChickenPaint(options) {
     uiElem.className += " chickenpaint";
     
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
+
+    if (options.disableBootstrapAPI) {
+        $(document).off('.data-api');
+    }
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
         var

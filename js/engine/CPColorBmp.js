@@ -79,7 +79,7 @@ CPColorBmp.prototype.getPixel = function(x, y) {
         | (this.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]    << 16) 
         | (this.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET]  << 8) 
         | this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET];
-}
+};
 
 //
 // Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
@@ -109,7 +109,7 @@ CPColorBmp.prototype.copyRectXOR = function(bmp, rect) {
     }
 
     return buffer;
-}
+};
 
 CPColorBmp.prototype.setRectXOR = function(buffer, rect) {
     rect = this.getBounds().clip(rect);
@@ -131,7 +131,7 @@ CPColorBmp.prototype.setRectXOR = function(buffer, rect) {
         }
         bmp1Index += bmp1YSkip;
     }
-}
+};
 
 //
 // Copy another bitmap into this one using alpha blending

@@ -1858,7 +1858,7 @@ export default function CPArtwork(_width, _height) {
 
         curLayer.pasteAlphaRect(undoBuffer, srcRect, srcRect.left + offsetX, srcRect.top + offsetY);
 
-        undoArea = new CPRect(0, 0, 0, 0);
+        undoArea.makeEmpty();
         if (!moveModeCopy) {
             undoArea.union(srcRect);
         }
@@ -2042,6 +2042,12 @@ export default function CPArtwork(_width, _height) {
     // ////////////////////////////////////////////////////
     // Undo classes
 
+    /**
+     * Save the difference between the current layer and the undoBuffer (within the undoArea) for undo, and clear
+     * the undoArea.
+     *
+     * @constructor
+     */
     function CPUndoPaint() {
         var
             rect = undoArea.clone(),

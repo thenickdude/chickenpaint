@@ -441,6 +441,19 @@ export default function CPMainMenu(controller, mainGUI) {
                         + '</ul>'
                     + '</li>'
                 );
+
+                $(".dropdown-toggle", entryElem).dropdown();
+
+                entryElem.on("show.bs.dropdown", function() {
+                    /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
+                     * document *while the menu is open!*
+                     */
+                    $(document).one("click", function() {
+                        if (entryElem.hasClass("open")) {
+                            $(".dropdown-toggle", entryElem).dropdown("toggle");
+                        }
+                    });
+                });
                 
                 recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
             } else if (entry.name == '-') {
@@ -495,7 +508,6 @@ export default function CPMainMenu(controller, mainGUI) {
 
     $(bar).on('click', 'a:not(.dropdown-toggle)', function(e) {
         menuItemClicked($(this));
-
         e.preventDefault();
     });
     

@@ -259,10 +259,8 @@ export default function CPSwatchesPalette(controller) {
         
         btnSettings.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";
         btnSettings.setAttribute("data-toggle", "dropdown");
-        btnSettings.addEventListener("click", function(e) {
-            $(btnSettings).dropdown();
-        });
-        
+        $(btnSettings).dropdown();
+
         mnuSave.href = "#";
         mnuSave.innerHTML = "Save swatches to your computer...";
         mnuSave.addEventListener("click", function(e) {
@@ -290,6 +288,17 @@ export default function CPSwatchesPalette(controller) {
         btnSettingsContainer.className = 'dropdown';
         btnSettingsContainer.appendChild(btnSettings);
         btnSettingsContainer.appendChild(settingsMenu);
+
+        $(btnSettingsContainer).on("show.bs.dropdown", function() {
+            /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
+             * document *while the menu is open!*
+             */
+            $(document).one("click", function() {
+                if ($(btnSettingsContainer).hasClass("open")) {
+                    $(btnSettings).dropdown("toggle");
+                }
+            });
+        });
 
         btnAdd.addEventListener("click", function(e) {
             addSwatch(controller.getCurColor().getRgb());
