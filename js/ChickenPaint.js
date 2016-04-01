@@ -572,7 +572,7 @@ export default function ChickenPaint(options) {
                 this.artwork.clear();
             break;
             case "CPSelectAll":
-                this.artwork.rectangleSelection(this.artwork.getSize());
+                this.artwork.rectangleSelection(this.artwork.getBounds());
                 canvas.repaintAll();
             break;
             case "CPDeselectAll":
