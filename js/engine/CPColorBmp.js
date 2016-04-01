@@ -191,60 +191,42 @@ CPColorBmp.prototype.pasteAlphaRect = function(bmp, srcRect, x, y) {
 };
 
 /** 
- * Copy the rectangle at srcRect from bmp onto this image at (dstX, dstY). No clipping is performed.
+ * Copy the rectangle at srcRect from bmp onto this image at (dstX, dstY).
  */ 
 CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
-    var 
-        w = srcRect.getWidth() | 0,
-        h = srcRect.getHeight() | 0,
-        
-        dstIndex = this.offsetOfPixel(dstX, dstY),
-        srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
-        
-        dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-        srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-        
-        widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
-    
-    for (var y = 0; y < h; y++) {
-        for (var x = 0; x < w; x++) {
-            this.data[dstIndex] = bmp.data[srcIndex];
-            this.data[dstIndex + 1] = bmp.data[srcIndex + 1];
-            this.data[dstIndex + 2] = bmp.data[srcIndex + 2];
-            this.data[dstIndex + 3] = bmp.data[srcIndex + 3];
-            dstIndex += 4;
-            srcIndex += 4;
-        }
-        srcIndex += srcYSkip;
-        dstIndex += dstYSkip;
-    }
-};
-
-CPColorBmp.prototype.pasteBitmap = function(bmp, x, y) {
     var
-        srcRect = bmp.getBounds(),
-        dstRect = new CPRect(x, y, 0, 0);
-    
+        srcRect = srcRect.clone(),
+        dstRect = new CPRect(dstX, dstY, 0, 0);
+
     this.getBounds().clipSourceDest(srcRect, dstRect);
 
     var 
-        w = srcRect.getWidth(),
-        h = srcRect.getHeight(),
-        
-        dstIndex = this.offsetOfPixel(dstRect.left, dstRect.top),
-        srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
-        
-        dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-        srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL,
-        
-        widthBytes = w * CPColorBmp.BYTES_PER_PIXEL;
-    
-    for (var y = 0; y < h; y++) {
-        for (var x = 0; x < widthBytes; x++) {
-            this.data[dstIndex++] = bmp.data[srcIndex++];
+        w = dstRect.getWidth() | 0,
+        h = dstRect.getHeight() | 0;
+
+    // Are we just trying to duplicate the bitmap?
+    if (dstRect.left == 0 && dstRect.top == 0 && w == this.width && h == this.height && w == bmp.width && h == bmp.height) {
+        this.copyDataFrom(bmp);
+    } else {
+        var
+            dstIndex = this.offsetOfPixel(dstRect.left, dstRect.top),
+            srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
+
+            dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
+            srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL;
+
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                this.data[dstIndex] = bmp.data[srcIndex];
+                this.data[dstIndex + 1] = bmp.data[srcIndex + 1];
+                this.data[dstIndex + 2] = bmp.data[srcIndex + 2];
+                this.data[dstIndex + 3] = bmp.data[srcIndex + 3];
+                dstIndex += 4;
+                srcIndex += 4;
+            }
+            srcIndex += srcYSkip;
+            dstIndex += dstYSkip;
         }
-        srcIndex += srcYSkip;
-        dstIndex += dstYSkip;
     }
 };
 

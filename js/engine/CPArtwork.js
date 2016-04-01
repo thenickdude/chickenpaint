@@ -55,7 +55,9 @@ export default function CPArtwork(_width, _height) {
         curSelection = new CPRect(0, 0, 0, 0),
         
         fusionBuffer = new CPLayer(_width, _height),
+
         undoBuffer = new CPLayer(_width, _height),
+        undoBufferInvalidRegion = new CPRect(0, 0, _width, _height),
 
         fusion = fusionBuffer,
         
@@ -173,12 +175,24 @@ export default function CPArtwork(_width, _height) {
         return curSelection.clone();
     };
 
+    /**
+     * Mark the given rectangle on the canvas as needing to be re-fused (i.e. we've drawn in this region).
+     * Listeners are notified about our updated canvas region.
+     *
+     * @param rect CPRect Rect to invalidate
+     */
     function invalidateFusionRect(rect) {
         fusionArea.union(rect);
-        
+
+        // This updated area will need to be updated in our undo buffer later
+        undoBufferInvalidRegion.union(rect);
+
         callListenersUpdateRegion(rect);
     };
 
+    /**
+     * Mark the entire canvas as needing to be re-fused (we've drawn to the whole canvas)
+     */
     function invalidateFusion() {
         invalidateFusionRect(new CPRect(0, 0, that.width, that.height));
     };
@@ -200,7 +214,7 @@ export default function CPArtwork(_width, _height) {
         
         invalidateFusion();
         callListenersLayerChange(layerIndex);
-    }
+    };
 
     this.addLayer = function() {
         var
@@ -388,7 +402,7 @@ export default function CPArtwork(_width, _height) {
     }
     
     CPBrushToolBase.prototype.beginStroke = function(x, y, pressure) {
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea.makeEmpty();
 
         opacityBuffer.clearAll(0);
@@ -425,9 +439,16 @@ export default function CPArtwork(_width, _height) {
 
     CPBrushToolBase.prototype.endStroke = function() {
         undoArea.clip(that.getBounds());
+
+        // Did we end up painting anything?
         if (!undoArea.isEmpty()) {
             mergeOpacityBuffer(curColor, false);
             addUndo(new CPUndoPaint());
+
+            /* Eagerly update the undo buffer for next time so we can avoid this lengthy
+             * prepare at the beginning of a paint stroke
+             */
+            prepareForLayerUndo(); 
         }
         brushBuffer = null;
     };
@@ -827,7 +848,7 @@ export default function CPArtwork(_width, _height) {
     };
     
     function CPBrushToolWatercolor() {
-        var 
+        const
             WCMEMORY = 50,
             WXMAXSAMPLERADIUS = 64;
 
@@ -1483,6 +1504,8 @@ export default function CPArtwork(_width, _height) {
                 callListenersLayerChange(oldIndex); // Old layer has now been deselected
                 callListenersLayerChange(newIndex); // New layer has now been selected
             }
+
+            invalidateLayerUndo();
         }
     };
     
@@ -1557,6 +1580,35 @@ export default function CPArtwork(_width, _height) {
         undoList.push(redo);
     }
 
+    /**
+     * Ensures that the state of the current layer has been stored in undoBuffer so it can be undone later.
+     */
+    function prepareForLayerUndo() {
+        if (!undoBufferInvalidRegion.isEmpty()) {
+            //console.log("Copying " + undoBufferInvalidRegion + " to the undo buffer");
+            undoBuffer.copyBitmapRect(curLayer, undoBufferInvalidRegion.left, undoBufferInvalidRegion.top, undoBufferInvalidRegion);
+            undoBufferInvalidRegion.makeEmpty();
+        }
+    }
+
+    /**
+     * Call when the undo buffer has become completely worthless (e.g. after the active layer index changes, the undo
+     * buffer won't contain any data from the new layer to begin with).
+     */
+    function invalidateLayerUndo() {
+        undoBufferInvalidRegion = that.getBounds();
+    }
+
+    /**
+     * The result of some of our operations aren't needed until later, so we can defer them until the user is idle.
+     *
+     * You may call this routine at any time (or never, if you like) as a hint that the user is idle and we should
+     * try to perform pending operations before we will need to block on their results.
+     */
+    this.performIdleTasks = function() {
+        prepareForLayerUndo();
+    };
+
     function addUndo(undo) {
         hasUnsavedChanges = true;
         
@@ -1600,7 +1652,7 @@ export default function CPArtwork(_width, _height) {
     }
 
     this.floodFill = function(x, y) {
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = this.getBounds();
 
         curLayer.floodFill(~~x, ~~y, curColor | 0xff000000);
@@ -1613,7 +1665,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.gradient(r, fromX, fromY, toX, toY, gradientPoints);
@@ -1630,7 +1682,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.clearRect(r, color);
@@ -1647,7 +1699,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.copyRegionHFlip(r, undoBuffer);
@@ -1660,7 +1712,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.copyRegionVFlip(r, undoBuffer);
@@ -1673,7 +1725,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.fillWithNoise(r);
@@ -1686,7 +1738,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.fillWithColorNoise(r);
@@ -1699,7 +1751,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         curLayer.invert(r);
@@ -1712,7 +1764,7 @@ export default function CPArtwork(_width, _height) {
         var
             r = this.getSelectionAutoSelect();
 
-        undoBuffer.copyFrom(curLayer);
+        prepareForLayerUndo();
         undoArea = r;
 
         for (var i = 0; i < iterations; i++) {
@@ -1752,7 +1804,7 @@ export default function CPArtwork(_width, _height) {
             movePrevX = 0;
             movePrevY = 0;
 
-            undoBuffer.copyFrom(curLayer);
+            prepareForLayerUndo();
             undoArea.makeEmpty();
 
             opacityBuffer.clearAll();
@@ -1813,7 +1865,7 @@ export default function CPArtwork(_width, _height) {
         srcRect.translate(offsetX, offsetY);
         undoArea.union(srcRect);
 
-        invalidateFusion();
+        invalidateFusionRect(undoArea);
 
         if (moveInitSelect != null) {
             var
@@ -1886,13 +1938,13 @@ export default function CPArtwork(_width, _height) {
 
         var
             newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName()),
-            r = clip.bmp.getBounds(),
+            sourceRect = clip.bmp.getBounds(),
             x, y;
         
         layers.splice(activeLayerIndex + 1, 0, newLayer);
         that.setActiveLayerIndex(activeLayerIndex + 1);
 
-        if (r.isInside(that.getBounds())) {
+        if (sourceRect.isInside(that.getBounds())) {
             x = clip.x;
             y = clip.y;
         } else {
@@ -1900,7 +1952,7 @@ export default function CPArtwork(_width, _height) {
             y = ((that.height - clip.bmp.height) / 2) | 0;
         }
 
-        curLayer.pasteBitmap(clip.bmp, x, y);
+        curLayer.copyBitmapRect(clip.bmp, x, y, sourceRect);
         that.emptySelection();
 
         invalidateFusion();
@@ -2403,17 +2455,16 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             that.setActiveLayerIndex(layerIndex);
-            curLayer.pasteBitmap(bmp, selection.left, selection.top);
+            curLayer.copyBitmapRect(bmp, selection.left, selection.top, bmp.getBounds());
             that.setSelection(selection);
             invalidateFusionRect(selection);
         };
 
         this.redo = function() {
             that.setActiveLayerIndex(layerIndex);
-            
             curLayer.clearRect(selection, EMPTY_LAYER_COLOR);
             that.emptySelection();
-            invalidateFusion();
+            invalidateFusionRect(selection);
         };
 
         this.getMemoryUsed = function(undone, param) {

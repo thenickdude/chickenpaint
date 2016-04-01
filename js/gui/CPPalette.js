@@ -21,7 +21,6 @@
 */
 
 export default function CPPalette(cpController, className, title, resizeVert) {
-    this.cpController = cpController;
     this.title = title;
     this.name = className;
     this.resizeVert = resizeVert || false;

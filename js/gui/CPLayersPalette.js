@@ -354,6 +354,8 @@ export default function CPLayersPalette(controller) {
                         artwork.setLayerVisibility(layerIndex, !layer.visible);
                     } else {
                         artwork.setActiveLayerIndex(layerIndex);
+                        // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
+                        artwork.performIdleTasks();
                     }
                 }
                 

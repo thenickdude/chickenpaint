@@ -79,10 +79,13 @@ CPRect.prototype.isInside = function(that) {
     return this.left >= that.left && this.top >= that.top && this.right <= that.right && this.bottom <= that.bottom;
 };
 
-// First makes dstRect the same width and height (not modifying its top/left)
-// Clips the dstRect with this rectangle and changes the srcRect so that
-// it corresponds to the new clipped rectangle
-
+/**
+ * Use this rectangle as bounds to clip the placement of the area of srcRect at the position of dstRect inside
+ * our bounds.
+ *
+ * dstRect has its right and bottom set by this operation to match the area that would be copied from the source.
+ * srcRect has its coordinates tweaked to match the area that will be copied.
+ */
 CPRect.prototype.clipSourceDest = function(srcRect, dstRect) {
     dstRect.right = dstRect.left + srcRect.getWidth();
     dstRect.bottom = dstRect.top + srcRect.getHeight();
