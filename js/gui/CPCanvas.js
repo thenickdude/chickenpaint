@@ -1441,11 +1441,14 @@ export default function CPCanvas(controller) {
     };
 
     /**
-     * Resize the canvas to the given height (in pixels)
+     * Resize the canvas area to the given height (in pixels)
      *
-     * @param height New canvas height in pixels
+     * @param height New canvas area height in pixels
      */
     this.resize = function(height) {
+        // Leave room for the bottom scrollbar
+        height -= $(canvasContainerBottom).outerHeight();
+
         $(canvas).css('height', height + "px");
 
         canvas.width = $(canvas).width();

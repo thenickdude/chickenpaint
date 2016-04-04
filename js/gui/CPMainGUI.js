@@ -82,7 +82,7 @@ export default function CPMainGUI(controller, uiElem) {
         if (fullScreenMode) {
             newHeight = $(window).height() - $(menuBar.getElement()).height();
         } else {
-            newHeight = Math.min(Math.max(($(window).height() - $(menuBar.getElement()).height() - 100), 500), 750);
+            newHeight = Math.min(Math.max(($(window).height() - $(menuBar.getElement()).height() - 65), 500), 750);
         }
 
         canvas.resize(newHeight);

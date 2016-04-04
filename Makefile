@@ -18,7 +18,7 @@ resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
 	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
 
 clean :
-	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js
+	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map
 	rm -rf dist/*
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.less

@@ -126,8 +126,9 @@ export default function CPPaletteManager(cpController) {
         }
         
         //Special handling for layers palette being too damn tall:
-        if (palettes.layers.getY() + palettes.layers.getHeight() > windowHeight)
-            palettes.layers.setSize(palettes.layers.getWidth(), Math.max(windowHeight - palettes.layers.getY(), 200));
+        if (palettes.layers.getY() + palettes.layers.getHeight() > windowHeight) {
+            palettes.layers.setHeight(Math.max(windowHeight - palettes.layers.getY(), 200));
+        }
     };
     
     /**
@@ -145,7 +146,7 @@ export default function CPPaletteManager(cpController) {
         var 
             bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight();
 
-        palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 5 : bottomOfBrush);
+        palettes.layers.setLocation(palettes.brush.getX(), windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 2 : bottomOfBrush);
         palettes.layers.setSize(palettes.brush.getWidth(), windowHeight - palettes.layers.getY());
 
         palettes.tool.setLocation(0, 0);

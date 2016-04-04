@@ -277,9 +277,11 @@ export default function CPLayersPalette(controller) {
         this.resize = function() {
             var
                 artwork = controller.getArtwork(),
-                
-                parentHeight = $(canvas).parent().height(),
-                parentWidth = $(canvas).parent().width(),
+
+                // Our parent container will act as our scrollbar clip area
+                parent = $(canvas).parent(),
+                parentHeight = parent.height(),
+                parentWidth = parent.width(),
                 
                 newWidth, newHeight;
             
@@ -289,14 +291,20 @@ export default function CPLayersPalette(controller) {
             newWidth = parentWidth * window.devicePixelRatio;
             newHeight = Math.max(layerH * artwork.getLayerCount(), parentHeight * window.devicePixelRatio);
             
-            // Will we trigger a scrollbar to appear?
+            // Should we trigger a scrollbar to appear?
             if (newHeight > parentHeight * window.devicePixelRatio) {
                 // Take the scrollbar width into account in our width
                 newWidth -= 15 * window.devicePixelRatio;
+                parent[0].style.overflowY = 'scroll';
+            } else {
+                parent[0].style.overflowY = 'hidden';
             }
 
             canvas.width = newWidth;
             canvas.height = newHeight;
+
+            canvas.style.width = (newWidth / window.devicePixelRatio) + "px";
+            canvas.style.height = (newHeight / window.devicePixelRatio) + "px";
 
             canvasContext.font = (layerH * 0.25) + "pt sans-serif";
             

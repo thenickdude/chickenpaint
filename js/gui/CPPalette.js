@@ -47,11 +47,11 @@ export default function CPPalette(cpController, className, title, resizeVert) {
     };
     
     this.getWidth = function() {
-        return $(containerElement).width();
+        return $(containerElement).outerWidth();
     };
     
     this.getHeight = function() {
-        return $(containerElement).height();
+        return $(containerElement).outerHeight();
     };
     
     this.getX = function() {
