@@ -41,7 +41,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-default chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-default chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-not-previously-posted" style="display:none">
@@ -55,9 +55,9 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             <p>Your drawing has been saved, would you like to post it to the forum now?</p>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
-                            <button class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
-                            <button class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
+                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-already-posted" style="display:none">
@@ -71,8 +71,8 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             <p>Your drawing has been saved, would you like to view it on the forum now?</p>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, view the post</button>
-                            <button class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, view the post</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
                         </div>
                     </div>
                 </div>

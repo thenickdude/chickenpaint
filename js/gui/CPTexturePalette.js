@@ -335,6 +335,7 @@ export default function CPTexturePalette(controller) {
             
             okayButton.innerHTML = "Ok";
             okayButton.className = "btn btn-primary btn-sm";
+            okayButton.type = "button";
             
             okayButton.addEventListener("click", function(e) {
                 $(btnCustomize).popover('hide');
@@ -345,7 +346,8 @@ export default function CPTexturePalette(controller) {
             
             resetButton.innerHTML = "Reset";
             resetButton.className = "btn btn-default btn-sm";
-            
+            resetButton.type = "button";
+
             resetButton.addEventListener("click", function(e) {
                 brightness = 0;
                 contrast = 0;
@@ -376,9 +378,10 @@ export default function CPTexturePalette(controller) {
         panel.className = "chickenpaint-texture-options";
         panel.appendChild(sampleSwatch.getElement());
 
+        btnCustomize.type = "button";
         btnCustomize.className = "btn btn-default btn-sm";
         btnCustomize.innerHTML = "Customize";
-        
+
         textureControlsPanel = buildTextureControlsPanel();
         
         $(btnCustomize)

@@ -45,8 +45,8 @@ export default function CPBoxBlurDialog(parent, controller) {
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary chickenpaint-apply-box-blur" data-dismiss="modal">Ok</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary chickenpaint-apply-box-blur" data-dismiss="modal">Ok</button>
                         </div>
                     </div>
                 </div>
