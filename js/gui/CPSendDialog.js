@@ -80,8 +80,10 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
         `),
         progressMessageElem = $(".chickenpaint-saving-progress-message", dialog),
         progressError = $(".chickenpaint-saving-error-message", dialog),
-        progressElem = $(".progress-bar", dialog);
-        
+        progressElem = $(".progress-bar", dialog),
+
+        that = this;
+    
     resourceSaver.on("savingProgress", function(progress, message) {
         progress *= 100;
         
@@ -146,6 +148,10 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
     dialog.modal({
         show: false
     });
+
+    dialog.on('shown.bs.modal', function() {
+        that.emitEvent("shown");
+    });
     
     // Fix the backdrop location in the DOM by reparenting it to the chickenpaint container
     dialog.data("bs.modal").$body = $(parent);
@@ -156,3 +162,6 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
         dialog.modal("show");
     };
 }
+
+CPSendDialog.prototype = Object.create(EventEmitter.prototype);
+CPSendDialog.prototype.contructor = CPSendDialog;

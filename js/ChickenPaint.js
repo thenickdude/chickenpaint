@@ -408,10 +408,13 @@ export default function ChickenPaint(options) {
         saver.on("savingComplete", function() {
             that.artwork.setHasUnsavedChanges(false);
         });
-        
+
+        // Allow the dialog to show before we begin serialization
+        sendDialog.on("shown", function() {
+            saver.save();
+        });
+
         sendDialog.show();
-        
-        saver.save();
     }
 
     /**
