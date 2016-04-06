@@ -55,6 +55,15 @@ function isEventSupported(eventName) {
     return isSupported;
 }
 
+function isCanvasSupported(){
+    var elem = document.createElement('canvas');
+    return !!(elem.getContext && elem.getContext('2d'));
+}
+
+function isBrowserSupported() {
+    return isCanvasSupported() && "Uint8Array" in window;
+}
+
 function createDrawingTools() {
     var
         tools = new Array(ChickenPaint.T_MAX);
@@ -244,6 +253,8 @@ function createDrawingTools() {
  * 
  * resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the page that 
  *                 ChickenPaint is loaded on)
+ *
+ * @throws ChickenPaint.UnsupportedBrowserException if the web browser does not support ChickenPaint
  */
 export default function ChickenPaint(options) {
     var
@@ -721,9 +732,13 @@ export default function ChickenPaint(options) {
     this.getResourcesRoot = function() {
         return options.resourcesRoot;
     };
-    
+
+    if (!isBrowserSupported()) {
+        throw new ChickenPaint.UnsupportedBrowserException();
+    }
+
     uiElem.className += " chickenpaint";
-    
+
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
 
     if (options.disableBootstrapAPI) {
@@ -753,6 +768,13 @@ export default function ChickenPaint(options) {
 
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);
 ChickenPaint.prototype.constructor = ChickenPaint;
+
+ChickenPaint.UnsupportedBrowserException = function() {
+};
+
+ChickenPaint.UnsupportedBrowserException.prototype.toString = function() {
+    return "Sorry, your web browser does not support ChickenPaint. Please try a modern browser like Chrome, Safari, Firefox, or Edge";
+};
 
 //
 // Definition of all the modes available
