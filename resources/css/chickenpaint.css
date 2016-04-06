@@ -9278,10 +9278,11 @@ body.chickenpaint-full-screen {
   height: 100%;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > * {
+  -ms-flex: 0 0 auto;
   flex-shrink: 0;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > .chickenpaint-layers-widget {
-  -ms-flex: 1 1 auto;
+  -ms-flex: 1 1 0px;
   flex-basis: 0;
   /* Required for Firefox to shrink this element properly */
   flex-grow: 1;
