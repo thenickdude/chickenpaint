@@ -36,6 +36,7 @@ Add something like this to your &lt;head> to load the required libraries in:
 	}
 </script>
 
+<script src="lib/raf.js"></script>
 <script src="lib/es6-promise.min.js"></script>
 <script src="lib/jquery-2.2.1.min.js"></script>
 <script src="lib/pep.min.js"></script>

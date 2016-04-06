@@ -499,6 +499,7 @@ body.chickenpaint-full-screen {
 }
 
 .chickenpaint-palette-swatches .chickenpaint-palette-body {
+    padding:2px;
     display:-ms-flexbox;
     display:flex;
     -ms-flex-direction:row;
@@ -712,3 +713,58 @@ chickenpaint-aftersave-actions {
     }
 }
 
+/* Support for Firefox 16 (and other non-IE browsers with no/prefixed Flexbox) */
+.chickenpaint.no-flexbox {
+    .chickenpaint-stroke-tools,
+    .chickenpaint-misc-tools,
+    .chickenpaint-colorpicker-top {
+        white-space:nowrap;
+    }
+    .chickenpaint-palette-swatches .chickenpaint-palette-body,
+    .chickenpaint-palette-textures .chickenpaint-palette-body {
+        display:table-row;
+    }
+    .chickenpaint-color-swatch-wrapper,
+    .chickenpaint-colorpicker-select,
+    .chickenpaint-colorpicker-slider {
+        display:inline-block;
+    }
+    .chickenpaint-color-swatches {
+        min-width:140px;
+    }
+    .chickenpaint-color-swatches,
+    .chickenpaint-color-swatches-buttons,
+    .chickenpaint-texture-options,
+    .chickenpaint-texture-swatches {
+        display: table-cell;
+        vertical-align:top;
+    }
+    .chickenpaint-checkbox-slider-group .chickenpaint-checkbox,
+    .chickenpaint-checkbox-slider-group .chickenpaint-slider {
+        float:left;
+    }
+    .dropdown-menu a span,
+    .dropdown-menu a small {
+        display:inline-block;
+    }
+
+    .chickenpaint-palette-layers {
+        padding-bottom: 24px;
+    }
+    .chickenpaint-palette-layers .chickenpaint-palette-body {
+        position:relative;
+        overflow:hidden;
+    }
+    .chickenpaint-layers-widget {
+        position: absolute;
+        bottom: 24px;
+        top: 118px;
+    }
+    .chickenpaint-layer-add-remove {
+        position: absolute;
+        bottom: 0;
+        left: 4px;
+        right: 4px;
+        height: 24px;
+    }
+}

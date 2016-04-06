@@ -9369,6 +9369,7 @@ body.chickenpaint-full-screen {
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
 }
 .chickenpaint-palette-swatches .chickenpaint-palette-body {
+  padding: 2px;
   display: -ms-flexbox;
   display: flex;
   -ms-flex-direction: row;
@@ -9569,4 +9570,56 @@ chickenpaint-aftersave-actions {
     padding: 0;
     padding-left: 12px;
   }
+}
+/* Support for Firefox 16 (and other non-IE browsers with no/prefixed Flexbox) */
+.chickenpaint.no-flexbox .chickenpaint-stroke-tools,
+.chickenpaint.no-flexbox .chickenpaint-misc-tools,
+.chickenpaint.no-flexbox .chickenpaint-colorpicker-top {
+  white-space: nowrap;
+}
+.chickenpaint.no-flexbox .chickenpaint-palette-swatches .chickenpaint-palette-body,
+.chickenpaint.no-flexbox .chickenpaint-palette-textures .chickenpaint-palette-body {
+  display: table-row;
+}
+.chickenpaint.no-flexbox .chickenpaint-color-swatch-wrapper,
+.chickenpaint.no-flexbox .chickenpaint-colorpicker-select,
+.chickenpaint.no-flexbox .chickenpaint-colorpicker-slider {
+  display: inline-block;
+}
+.chickenpaint.no-flexbox .chickenpaint-color-swatches {
+  min-width: 140px;
+}
+.chickenpaint.no-flexbox .chickenpaint-color-swatches,
+.chickenpaint.no-flexbox .chickenpaint-color-swatches-buttons,
+.chickenpaint.no-flexbox .chickenpaint-texture-options,
+.chickenpaint.no-flexbox .chickenpaint-texture-swatches {
+  display: table-cell;
+  vertical-align: top;
+}
+.chickenpaint.no-flexbox .chickenpaint-checkbox-slider-group .chickenpaint-checkbox,
+.chickenpaint.no-flexbox .chickenpaint-checkbox-slider-group .chickenpaint-slider {
+  float: left;
+}
+.chickenpaint.no-flexbox .dropdown-menu a span,
+.chickenpaint.no-flexbox .dropdown-menu a small {
+  display: inline-block;
+}
+.chickenpaint.no-flexbox .chickenpaint-palette-layers {
+  padding-bottom: 24px;
+}
+.chickenpaint.no-flexbox .chickenpaint-palette-layers .chickenpaint-palette-body {
+  position: relative;
+  overflow: hidden;
+}
+.chickenpaint.no-flexbox .chickenpaint-layers-widget {
+  position: absolute;
+  bottom: 24px;
+  top: 118px;
+}
+.chickenpaint.no-flexbox .chickenpaint-layer-add-remove {
+  position: absolute;
+  bottom: 0;
+  left: 4px;
+  right: 4px;
+  height: 24px;
 }

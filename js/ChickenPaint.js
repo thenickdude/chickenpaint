@@ -737,6 +737,10 @@ export default function ChickenPaint(options) {
         throw new ChickenPaint.UnsupportedBrowserException();
     }
 
+    if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string") {
+        uiElem.className += " no-flexbox";
+    }
+
     uiElem.className += " chickenpaint";
 
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
