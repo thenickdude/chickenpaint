@@ -130,8 +130,6 @@
 
     -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
     box-shadow: 0 1px 1px rgba(0,0,0,.05);
-
-    z-index:0;
 }
 .chickenpaint-palette-head {
     background-color:#ececec;
@@ -158,7 +156,6 @@
     left: 0;
     right: 0;
     cursor: row-resize;
-    z-index: 1;
 }
 
 .chickenpaint {
@@ -377,7 +374,7 @@ body.chickenpaint-full-screen {
     display: inline-block;
     cursor: pointer;
     border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.45);
     /* Don't allow the border to shrink the canvas in IE 10 */
     -webkit-box-sizing: content-box;
     -moz-box-sizing: content-box;
@@ -390,7 +387,6 @@ body.chickenpaint-full-screen {
 
 .chickenpaint-palette-body {
     padding:4px;
-    z-index: 2;
 }
 
 .chickenpaint-slider {
@@ -426,6 +422,7 @@ body.chickenpaint-full-screen {
     margin-bottom: 0;
     margin-top:2px;
     line-height:0;
+    z-index:1;
 }
 .chickenpaint-palette-layers .chickenpaint-slider {
     margin-top:5px;
