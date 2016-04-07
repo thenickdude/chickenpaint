@@ -1865,7 +1865,7 @@ export default function CPArtwork(_width, _height) {
         srcRect.translate(offsetX, offsetY);
         undoArea.union(srcRect);
 
-        invalidateFusionRect(undoArea);
+        invalidateFusion(); // TODO make more precise
 
         if (moveInitSelect != null) {
             var
