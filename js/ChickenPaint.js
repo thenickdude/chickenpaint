@@ -545,6 +545,9 @@ export default function ChickenPaint(options) {
             case "CPColorPicker":
                 setMode(ChickenPaint.M_COLOR_PICKER);
             break;
+            case "CPTransform":
+                setMode(ChickenPaint.M_TRANSFORM);
+            break;
 
             // Stroke modes
 
@@ -790,6 +793,7 @@ ChickenPaint.M_MOVE_TOOL = 3;
 ChickenPaint.M_ROTATE_CANVAS = 4;
 ChickenPaint.M_COLOR_PICKER = 5;
 ChickenPaint.M_GRADIENTFILL = 6;
+ChickenPaint.M_TRANSFORM = 7;
 
 //
 // Definition of all the standard tools available

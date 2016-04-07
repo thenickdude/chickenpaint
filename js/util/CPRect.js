@@ -58,7 +58,7 @@ CPRect.prototype.union = function(that) {
 /**
  * Clip this rectangle to fit within `that`.
  * 
- * @returns a refence to this rectangle for chaining 
+ * @returns a reference to this rectangle for chaining
  */
 CPRect.prototype.clip = function(that) {
     if (!this.isEmpty()) {
@@ -73,6 +73,10 @@ CPRect.prototype.clip = function(that) {
     }
     
     return this;
+};
+
+CPRect.prototype.containsPoint = function(p) {
+    return !(p.x < this.left || p.y < this.top || p.x >= this.right || p.y >= this.bottom);
 };
 
 CPRect.prototype.isInside = function(that) {
@@ -124,6 +128,10 @@ CPRect.prototype.getWidth = function() {
 
 CPRect.prototype.getHeight = function() {
     return this.bottom - this.top;
+};
+
+CPRect.prototype.getArea = function() {
+    return this.getWidth() * this.getHeight();
 };
 
 CPRect.prototype.isEmpty = function() {

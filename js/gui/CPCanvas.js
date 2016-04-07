@@ -24,6 +24,8 @@ import CPRect from "../util/CPRect";
 import CPTransform from "../util/CPTransform";
 import CPWacomTablet from "../util/CPWacomTablet";
 import CPBezier from "../util/CPBezier";
+import {throttle} from "../util/throttle-debounce";
+import ChickenPaint from "../ChickenPaint";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
 
@@ -38,7 +40,10 @@ export default function CPCanvas(controller) {
         BUTTON_SECONDARY = 2,
 
         MIN_ZOOM = 0.10,
-        MAX_ZOOM = 16.0;
+        MAX_ZOOM = 16.0,
+
+        CURSOR_DEFAULT = "default", CURSOR_PANNABLE = "grab", CURSOR_PANNING = "grabbing", CURSOR_CROSSHAIR = "crosshair",
+        CURSOR_MOVE = "move";
 
     var
         that = this,
@@ -76,8 +81,7 @@ export default function CPCanvas(controller) {
         
         /* The last rectangle we dirtied with a brush preview circle, or null if one hasn't been drawn yet */
         oldPreviewRect = null,
-        
-        defaultCursor = "default", moveCursor = "grab", movingCursor = "grabbing", crossCursor = "crosshair",
+
         mouseIn = false, mouseDown = false, wacomPenDown = false,
         
         dontStealFocus = false,
@@ -109,6 +113,7 @@ export default function CPCanvas(controller) {
         gradientFillMode,
         rectSelectionMode,
         moveToolMode,
+        transformMode,
 
         // this must correspond to the stroke modes defined in CPToolInfo
         drawingModes = [],
@@ -197,28 +202,8 @@ export default function CPCanvas(controller) {
         var
             spacePressed = key.isPressed("space");
         
-        if (!spacePressed && curSelectedMode == curDrawMode) {
-            brushPreview = true;
-
-            var 
-                //pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
-                r = getBrushPreviewOval();
-            
-            r.grow(2, 2);
-            
-            // If a brush preview was drawn previously, stretch the repaint region to remove that old copy
-            if (oldPreviewRect != null) {
-                r.union(oldPreviewRect);
-                oldPreviewRect = null;
-            }
-            
-/*            if (artwork.isPointWithin(pf.x, pf.y)) {
-                setCursor(defaultCursor); // FIXME find a cursor that everyone likes
-            } else { */
-                setCursor(defaultCursor);
-            //}
-
-            repaintRect(r);
+        if (!spacePressed) {
+            curSelectedMode.mouseMoved(e, pressure);
         }
     };
     
@@ -261,13 +246,43 @@ export default function CPCanvas(controller) {
             }
         }
     };
-    
+
+	/**
+     * A base for the three drawing modes, so they can all share the same brush-preview-circle drawing behaviour.
+     *
+     * @constructor
+     */
+    function CPDrawingMode() {
+    }
+
+    CPDrawingMode.prototype = Object.create(CPMode.prototype);
+    CPDrawingMode.prototype.constructor = CPDrawingMode;
+
+    CPDrawingMode.prototype.mouseMoved = function(e, pressure) {
+        brushPreview = true;
+
+        var
+            r = getBrushPreviewOval();
+
+        r.grow(2, 2);
+
+        // If a brush preview was drawn previously, stretch the repaint region to remove that old copy
+        if (oldPreviewRect != null) {
+            r.union(oldPreviewRect);
+            oldPreviewRect = null;
+        }
+
+        setCursor(CURSOR_DEFAULT);
+
+        repaintRect(r);
+    };
+
     function CPFreehandMode() {
-        this.dragLeft = false,
+        this.dragLeft = false;
         this.smoothMouse = {x:0.0, y:0.0};
     }
     
-    CPFreehandMode.prototype = Object.create(CPMode.prototype);
+    CPFreehandMode.prototype = Object.create(CPDrawingMode.prototype);
     CPFreehandMode.prototype.constructor = CPFreehandMode;
     
     CPFreehandMode.prototype.mousePressed = function(e, pressure) {
@@ -304,9 +319,6 @@ export default function CPCanvas(controller) {
         }
     };
         
-    CPFreehandMode.prototype.mouseMoved = CPFreehandMode.prototype.paint = function(e) {
-    };
-    
     function CPLineMode() {
         var
             dragLine = false,
@@ -406,7 +418,7 @@ export default function CPCanvas(controller) {
         };
     }
     
-    CPLineMode.prototype = Object.create(CPMode.prototype);
+    CPLineMode.prototype = Object.create(CPDrawingMode.prototype);
     CPLineMode.prototype.constructor = CPLineMode;
 
     CPLineMode.prototype.drawLine = function(from, to) {
@@ -424,7 +436,6 @@ export default function CPCanvas(controller) {
             dragBezier = false,
             dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
-            
 
         this.mousePressed = function(e) {
             var 
@@ -492,7 +503,7 @@ export default function CPCanvas(controller) {
             }
         };
 
-        this.mouseMoved = function(e) {
+        this.mouseMoved = function(e, pressure) {
             var
                 p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
@@ -503,6 +514,9 @@ export default function CPCanvas(controller) {
                     dragBezierP2 = p;
                 }
                 that.repaintAll(); // FIXME: repaint only the bezier region
+            } else {
+                // Draw the normal brush preview while not in the middle of a bezier operation
+                CPDrawingMode.prototype.mouseMoved.call(this, e, pressure);
             }
         };
 
@@ -549,7 +563,7 @@ export default function CPCanvas(controller) {
         };
     }
     
-    CPBezierMode.prototype = Object.create(CPMode.prototype);
+    CPBezierMode.prototype = Object.create(CPDrawingMode.prototype);
     CPBezierMode.prototype.constructor = CPBezierMode;
 
     function CPColorPickerMode() {
@@ -559,7 +573,7 @@ export default function CPCanvas(controller) {
         this.mousePressed = function(e) {
             mouseButton = e.button;
 
-            setCursor(crossCursor);
+            setCursor(CURSOR_CROSSHAIR);
             
             this.mouseDragged(e);
         };
@@ -574,7 +588,7 @@ export default function CPCanvas(controller) {
 
         this.mouseReleased = function(e) {
             if (e.button == mouseButton) {
-                setCursor(defaultCursor);
+                setCursor(CURSOR_DEFAULT);
                 activeMode = defaultMode; // yield control to the default mode
             }
         };
@@ -593,7 +607,7 @@ export default function CPCanvas(controller) {
         this.keyDown = function(e) {
             if (e.keyCode == 32 /* Space */) {
                 if (!dragMiddle) {
-                    setCursor(moveCursor);
+                    setCursor(CURSOR_PANNABLE);
                 }
                 e.preventDefault();
             }
@@ -601,7 +615,7 @@ export default function CPCanvas(controller) {
 
         this.keyUp = function(e) {
             if (!dragMiddle && e.keyCode == 32 /* Space */) {
-                setCursor(defaultCursor);
+                setCursor(CURSOR_DEFAULT);
                 activeMode = defaultMode; // yield control to the default mode
             }
         };
@@ -619,7 +633,7 @@ export default function CPCanvas(controller) {
                 dragMoveX = p.x;
                 dragMoveY = p.y;
                 dragMoveOffset = that.getOffset();
-                setCursor(movingCursor);
+                setCursor(CURSOR_PANNING);
             }
         };
 
@@ -636,7 +650,7 @@ export default function CPCanvas(controller) {
         this.mouseReleased = function(e) {
             if (dragMiddle && e.button == dragMoveButton) {
                 dragMiddle = false;
-                setCursor(defaultCursor);
+                setCursor(CURSOR_DEFAULT);
 
                 activeMode = defaultMode; // yield control to the default mode
             }
@@ -726,40 +740,89 @@ export default function CPCanvas(controller) {
 
     function CPMoveToolMode() {
         var 
-            firstClick;
+            lastPoint,
+            copyMode,
+            firstMove = false;
 
         this.mousePressed = function(e) {
-            var
-                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
-            
-            firstClick = p;
+            lastPoint = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
-            artwork.beginPreviewMode(e.altKey);
-
-            // FIXME: The following hack avoids a slight display glitch
-            // if the whole move tool mess is fixed it probably won't be necessary anymore
-            artwork.move(0, 0);
+            copyMode = e.altKey;
+            firstMove = true;
         };
 
-        this.mouseDragged = function(e) {
+        this.mouseDragged = throttle(25, function(e) {
             var
-                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
+
+                moveFloat = {x: p.x - lastPoint.x, y: p.y - lastPoint.y},
+                moveInt = {x: ~~moveFloat.x, y: ~~moveFloat.y}; // Round towards zero
+
+            artwork.move(moveInt.x, moveInt.y, copyMode && firstMove);
             
-            artwork.move(Math.round(p.x - firstClick.x), Math.round(p.y - firstClick.y));
-            
-            that.repaintAll();
-        };
+            firstMove = false;
+
+            /*
+             * Nudge the last point by the remainder we weren't able to move this iteration (due to move() only
+             * accepting integer offsets). This'll carry that fractional part of the move over for next iteration.
+             */
+            lastPoint.x = p.x - (moveFloat.x - moveInt.x);
+            lastPoint.y = p.y - (moveFloat.y - moveInt.y);
+        });
 
         this.mouseReleased = function(e) {
-            artwork.endPreviewMode();
-            
             activeMode = defaultMode; // yield control to the default mode
             that.repaintAll();
         };
     }
-    
+
     CPMoveToolMode.prototype = Object.create(CPMode.prototype);
     CPMoveToolMode.prototype.constructor = CPMoveToolMode;
+
+    CPMoveToolMode.prototype.mouseMoved = function(e) {
+        setCursor(CURSOR_MOVE);
+    };
+
+    function CPTransformMode() {
+        var
+            lastPoint,
+            copyMode,
+            firstMove = false;
+
+        this.mousePressed = function(e) {
+            lastPoint = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+
+            copyMode = e.altKey;
+            firstMove = true;
+        };
+
+        this.mouseDragged = throttle(25, function(e) {
+            var
+                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
+
+                moveFloat = {x: p.x - lastPoint.x, y: p.y - lastPoint.y},
+                moveInt = {x: ~~moveFloat.x, y: ~~moveFloat.y}; // Round towards zero
+
+            artwork.move(moveInt.x, moveInt.y, copyMode && firstMove);
+
+            firstMove = false;
+
+            /*
+             * Nudge the last point by the remainder we weren't able to move this iteration (due to move() only
+             * accepting integer offsets). This'll carry that fractional part of the move over for next iteration.
+             */
+            lastPoint.x = p.x - (moveFloat.x - moveInt.x);
+            lastPoint.y = p.y - (moveFloat.y - moveInt.y);
+        });
+
+        this.mouseReleased = function(e) {
+            activeMode = defaultMode; // yield control to the default mode
+            that.repaintAll();
+        };
+    }
+
+    CPTransformMode.prototype = Object.create(CPMode.prototype);
+    CPTransformMode.prototype.constructor = CPTransformMode;
 
     function CPRotateCanvasMode() {
         var 
@@ -867,6 +930,9 @@ export default function CPCanvas(controller) {
     }
     
     /**
+     * Update the scrollbar's range/position to match the current view settings for the document.
+     *
+     * @param scrollbar {CPScrollbar}
      * @param visMin The smallest coordinate in this axis in which the drawing appears
      * @param visWidth The extent of the drawing in this axis
      * @param viewSize The extent of the screen canvas in this axis
@@ -886,15 +952,15 @@ export default function CPCanvas(controller) {
     function updateScrollBars() {
         if (horzScroll == null || vertScroll == null
                 || horzScroll.getValueIsAdjusting() || vertScroll.getValueIsAdjusting() ) {
-               return;
-           }
-
-           var
-               visibleRect = getRefreshArea(new CPRect(0, 0, artworkCanvas.width, artworkCanvas.height));
-           
-           updateScrollBar(horzScroll, visibleRect.left, visibleRect.getWidth(), $(canvas).width(), that.getOffset().x);
-           updateScrollBar(vertScroll, visibleRect.top, visibleRect.getHeight(), $(canvas).height(), that.getOffset().y);
+           return;
        }
+
+       var
+           visibleRect = getRefreshArea(new CPRect(0, 0, artworkCanvas.width, artworkCanvas.height));
+
+       updateScrollBar(horzScroll, visibleRect.left, visibleRect.getWidth(), $(canvas).width(), that.getOffset().x);
+       updateScrollBar(vertScroll, visibleRect.top, visibleRect.getHeight(), $(canvas).height(), that.getOffset().y);
+    }
 
     function updateTransform() {
         transform.setToIdentity();
@@ -964,7 +1030,7 @@ export default function CPCanvas(controller) {
                 {x: rect.left, y: rect.top},
                 {x: rect.right, y: rect.top},
                 {x: rect.right, y: rect.bottom},
-                {x: rect.left, y: rect.bottom},
+                {x: rect.left, y: rect.bottom}
             ];
 
         for (var i = 0; i < coords.length; i++) {
@@ -1355,7 +1421,7 @@ export default function CPCanvas(controller) {
         repaintRegion.union(rect);
         
         repaint();
-    };
+    }
     
     this.paint = function() {
         var
@@ -1577,7 +1643,13 @@ export default function CPCanvas(controller) {
             case ChickenPaint.M_COLOR_PICKER:
                 curSelectedMode = colorPickerMode;
                 break;
+
+            case ChickenPaint.M_TRANSFORM:
+                curSelectedMode = transformMode;
+                break;
         }
+
+        setCursor(CURSOR_DEFAULT);
     });
     
     //
@@ -1593,6 +1665,7 @@ export default function CPCanvas(controller) {
     gradientFillMode = new CPGradientFillMode();
     rectSelectionMode = new CPRectSelectionMode();
     moveToolMode = new CPMoveToolMode();
+    transformMode = new CPTransformMode();
 
     // this must correspond to the stroke modes defined in CPToolInfo
     drawingModes = [new CPFreehandMode(), new CPLineMode(), new CPBezierMode()];
@@ -1610,7 +1683,7 @@ export default function CPCanvas(controller) {
     canvas.setAttribute("touch-action", "none");
     
     if (!canvasContext.setLineDash) { 
-        canvasContext.setLineDash = function () {} // For IE 10 and older
+        canvasContext.setLineDash = function () {}; // For IE 10 and older
     }
     
     canvas.addEventListener("contextmenu", function(e) {
@@ -1632,7 +1705,7 @@ export default function CPCanvas(controller) {
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointermove", handlePointerMove);
     canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("wheel", handleMouseWheel)
+    canvas.addEventListener("wheel", handleMouseWheel);
     
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
@@ -1659,6 +1732,11 @@ export default function CPCanvas(controller) {
             // Prevent middle-mouse scrolling in Firefox
             e.preventDefault();
         }
+    });
+
+    artwork.on("changeSelection", function() {
+        // We could keep track of our last-painted selection rect and only invalidate that here
+        that.repaintAll();
     });
     
     artwork.on("updateRegion", function(region) {

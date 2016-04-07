@@ -105,7 +105,16 @@ var
                     action: "CPDeselectAll",
                     mnemonic: "D",
                     shortcut: "ctrl+d"
-                }
+                },
+                {
+                    name: "-"
+                },
+                {
+                    name: "Transform",
+                    action: "CPTransform",
+                    mnemonic: "T",
+                    shortcut: "ctrl+t"
+                },
             ]
         },
         {

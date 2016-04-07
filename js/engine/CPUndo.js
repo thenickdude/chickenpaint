@@ -23,14 +23,38 @@
 export default function CPUndo() {
 }
 
+/**
+ * Attempt to merge the given undo into this one, and return true if successful.
+ *
+ * @param undo
+ * @returns {boolean}
+ */
 CPUndo.prototype.merge = function(undo) {
     return false;
 };
 
+/**
+ * Return true if this undo didn't modify the document.
+ *
+ * @returns {boolean}
+ */
 CPUndo.prototype.noChange = function() {
     return false;
 };
 
+/**
+ * Return the number of bytes of memory used by this undo, or 0 if it cannot be estimated.
+ *
+ * @param undone
+ * @param param
+ * @returns {number}
+ */
 CPUndo.prototype.getMemoryUsed = function(undone, param) {
     return 0;
-}
+};
+
+/**
+ * Call when this undo is no longer on the top of the stack, so it can optimize its memory usage.
+ */
+CPUndo.prototype.compact = function() {
+};

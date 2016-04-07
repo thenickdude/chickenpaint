@@ -81,9 +81,11 @@ CPColorBmp.prototype.getPixel = function(x, y) {
         | this.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET];
 };
 
-//
-// Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
-//
+/**
+ * Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
+ *
+ * @returns {Uint8Array}
+ */
 CPColorBmp.prototype.copyRectXOR = function(bmp, rect) {
     rect = this.getBounds().clip(rect);
     

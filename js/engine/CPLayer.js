@@ -682,6 +682,15 @@ CPLayer.prototype.getBlendMode = function() {
     return this.blendMode;
 };
 
+CPLayer.prototype.clone = function() {
+    var
+        result = new CPLayer(this.width, this.height, "");
+
+    result.copyFrom(this);
+
+    return result;
+};
+
 CPLayer.prototype.copyFrom = function(layer) {
     this.name = layer.name;
     this.blendMode = layer.blendMode;

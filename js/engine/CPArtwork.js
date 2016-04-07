@@ -66,25 +66,61 @@ export default function CPArtwork(_width, _height) {
         hasUnsavedChanges = false,
         
         curSelection = new CPRect(0, 0, 0, 0),
-        
+
+        /**
+         * Our buffer for storing all the layers merged together according to their blending modes.
+         *
+         * @type {CPLayer}
+         */
         fusionBuffer = new CPLayer(_width, _height),
 
+        /**
+         * Points to the buffer which represents all the layers merged together (either fusionBuffer or curLayer
+         * depending on if the document is single-layered or not).
+         *
+         * @type {CPLayer}
+         */
+        fusion = fusionBuffer,
+
+        /**
+         * A copy of the current layer's data that can be used for undo operations.
+         * 
+         * @type {CPLayer}
+         */
         undoBuffer = new CPLayer(_width, _height),
+
+        /**
+         * The region of the undoBuffer which is out of date with respect to the content of the layer, and needs updated
+         * with prepareForLayerUndo().
+         *
+         * @type {CPRect}
+         */
         undoBufferInvalidRegion = new CPRect(0, 0, _width, _height),
 
-        fusion = fusionBuffer,
-        
-        /* 
+        /**
          * We use this buffer so we can accurately accumulate small changes to layer opacity during a brush stroke.
          * 
          * Normally we use it as a 16-bit opacity channel per pixel, but some brushes use the full 32-bits per pixel
          * as ARGB.
          */
         opacityBuffer = new CPGreyBmp(_width, _height, 32),
-        
-        fusionArea = new CPRect(0, 0, _width, _height), 
-        undoArea = new CPRect(0, 0, 0, 0), opacityArea = new CPRect(0, 0, 0, 0),
-        
+
+        /**
+         * The area of dirty data contained by opacityBuffer that should be merged by fusionLayers()
+         */
+        opacityArea = new CPRect(0, 0, 0, 0),
+
+        /**
+         * The area of dirty layer data that should be merged into the fusion by fusionLayers().
+         */
+        fusionArea = new CPRect(0, 0, _width, _height),
+
+        /**
+         * Used by CPUndoPaint to keep track of the area that has been dirtied by layer operations and should be
+         * saved for undo.
+         */
+        undoArea = new CPRect(0, 0, 0, 0),
+
         rnd = new CPRandom(),
         
         clipboard = null, // A CPClip
@@ -152,6 +188,11 @@ export default function CPArtwork(_width, _height) {
     // layerIndex is optional, provide when only one layer has been updated
     function callListenersLayerChange(layerIndex) {
         that.emitEvent("changeLayer", [layerIndex]);
+    }
+
+    // When the selected rectangle changes
+    function callListenersSelectionChange() {
+        that.emitEvent("changeSelection", []);
     }
     
     this.getLayers = function() {
@@ -1566,11 +1607,39 @@ export default function CPArtwork(_width, _height) {
     this.getActiveLayer = function() {
         return curLayer;
     };
-    
-    //
-    // Undo / Redo
-    //
 
+    this.getDocMemoryUsed = function() {
+        var
+            total = fusionBuffer.getMemorySize() * (3 + layers.length);
+
+        if (clipboard != null) {
+            total += clipboard.bmp.getMemorySize();
+        }
+
+        return total;
+    };
+
+    this.getUndoMemoryUsed = function() {
+        var
+            total = 0;
+
+        for (var i = 0; i < redoList.length; i++) {
+            var
+                undo = redoList[i];
+
+            total += undo.getMemoryUsed(true, null);
+        }
+
+        for (var i = 0; i < undoList.length; i++) {
+            var
+                undo = undoList[i];
+
+            total += undo.getMemoryUsed(false, null);
+        }
+
+        return total;
+    };
+    
     function canUndo() {
         return undoList.length > 0;
     }
@@ -1578,7 +1647,11 @@ export default function CPArtwork(_width, _height) {
     function canRedo() {
         return redoList.length > 0;
     }
-    
+
+    //
+    // Undo / Redo
+    //
+
     this.undo = function() {
         if (!canUndo()) {
             return;
@@ -1638,21 +1711,23 @@ export default function CPArtwork(_width, _height) {
 
     function addUndo(undo) {
         hasUnsavedChanges = true;
-        
+
+        if (redoList.length > 0) {
+            redoList = [];
+        }
+
         if (undoList.length == 0 || !undoList[undoList.length - 1].merge(undo)) {
             if (undoList.length >= MAX_UNDO) {
                 undoList.unshift();
             }
+            if (undoList.length > 0) {
+                undoList[undoList.length - 1].compact();
+            }
             undoList.push(undo);
-        } else {
+        } else if (undoList[undoList.length - 1].noChange()) {
             // Two merged changes can mean no change at all
             // don't leave a useless undo in the list
-            if (undoList[undoList.length - 1].noChange()) {
-                undoList.pop();
-            }
-        }
-        if (redoList.length > 0) {
-            redoList = [];
+            undoList.pop();
         }
     }
 
@@ -1812,105 +1887,54 @@ export default function CPArtwork(_width, _height) {
 
         this.setSelection(newSelection);
     };
-    
-    // temp awful hack
-    var
-        moveInitSelect = null, // CPRect
-        movePrevX, movePrevY, movePrevX2, movePrevY2,
-        moveModeCopy, prevModeCopy;
-    
-    this.beginPreviewMode = function(copy) {
-        // !!!! awful awful hack !!! will break as soon as CPMultiUndo is used for other things
-        // FIXME: ASAP!
-        if (!copy && undoList.length > 0 && redoList.length == 0 && undoList[undoList.length - 1] instanceof CPMultiUndo
-                && undoList[undoList.length - 1].undoes[0] instanceof CPUndoPaint
-                && undoList[undoList.length - 1].undoes[0].layer == this.getActiveLayerIndex()) {
-            this.undo();
-            copy = prevModeCopy;
-        } else {
-            movePrevX = 0;
-            movePrevY = 0;
-
-            prepareForLayerUndo();
-            undoArea.makeEmpty();
-
-            opacityBuffer.clearAll();
-            opacityArea.makeEmpty();
-        }
-
-        moveInitSelect = null;
-        moveModeCopy = copy;
-    }
-
-    this.endPreviewMode = function() {
-        var 
-            undo = new CPUndoPaint();
-        
-        if (moveInitSelect != null) {
-            undo = new CPMultiUndo([undo, new CPUndoRectangleSelection(moveInitSelect, this.getSelection())]);
-        } else {
-            // !!!!!!
-            // FIXME: this is required just to make the awful move hack work
-            undo = new CPMultiUndo([undo]);
-        }
-        
-        addUndo(undo);
-
-        moveInitSelect = null;
-        movePrevX = movePrevX2;
-        movePrevY = movePrevY2;
-        prevModeCopy = moveModeCopy;
-    };
 
     /**
-     * Move the selected layer data by the given offset.
+     * Get the most recently completed operation from the undo list, or null if the undo list is empty.
      *
-     * @param offsetX int
-     * @param offsetY int
+     * @returns {*}
      */
-    this.move = function(offsetX, offsetY) {
+    function getActiveOperation() {
+        if (undoList.length > 0) {
+            return undoList[undoList.length - 1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Move the currently selected layer data by the given offset.
+     *
+     * @param {int} offsetX
+     * @param {int} offsetY
+     * @param {boolean} copy - Make a copy of the selection instead of moving it.
+     */
+    this.move = function(offsetX, offsetY, copy) {
+        /*
+         * Add rounding to ensure we haven't been given float coordinates (that would cause horrible flow-on effects like
+         * the boundary of the undo rectangle having float coordinates)
+         */
+        offsetX |= 0;
+        offsetY |= 0;
+
+        if (offsetX == 0 && offsetY == 0) {
+            return;
+        }
+
+        opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
+
         var
-            srcRect;
+            activeOp = getActiveOperation();
 
-        // Add rounding to ensure we haven't been given float coordinates
-        offsetX = (movePrevX + offsetX) | 0;
-        offsetY = (movePrevY + offsetY) | 0;
-
-        if (moveInitSelect == null) {
-            srcRect = this.getSelectionAutoSelect();
-            if (!this.getSelection().isEmpty()) {
-                moveInitSelect = this.getSelection();
-            }
+        // If we've changed layers since our last move, we want to move the new layer, not the old one, so can't amend
+        if (!copy && activeOp instanceof CPActionMoveSelection && activeOp.layerIndex == this.getActiveLayerIndex()) {
+            activeOp.amend(offsetX, offsetY);
+            redoList = [];
+            hasUnsavedChanges = true;
         } else {
-            srcRect = moveInitSelect.clone();
+            activeOp = new CPActionMoveSelection(this.getSelectionAutoSelect(), offsetX, offsetY, copy);
+
+            addUndo(activeOp);
         }
-        curLayer.copyDataFrom(undoBuffer);
-
-        if (!moveModeCopy) {
-            curLayer.clearRect(srcRect, 0);
-        }
-
-        curLayer.pasteAlphaRect(undoBuffer, srcRect, srcRect.left + offsetX, srcRect.top + offsetY);
-
-        undoArea.makeEmpty();
-        if (!moveModeCopy) {
-            undoArea.union(srcRect);
-        }
-        srcRect.translate(offsetX, offsetY);
-        undoArea.union(srcRect);
-
-        invalidateFusion(); // TODO make more precise
-
-        if (moveInitSelect != null) {
-            var
-                sel = moveInitSelect.clone();
-            sel.translate(offsetX, offsetY);
-            this.setSelection(sel);
-        }
-
-        // this is a really bad idea :D
-        movePrevX2 = offsetX;
-        movePrevY2 = offsetY;
     };
     
     // Copy/Paste functions
@@ -2101,8 +2125,8 @@ export default function CPArtwork(_width, _height) {
             invalidateFusionRect(rect);
         };
 
-        that.getMemoryUsed = function(undone, param) {
-            return undoBuffer.getMemorySize();
+        this.getMemoryUsed = function(undone, param) {
+            return data.length;
         };
     }
     
@@ -2437,7 +2461,178 @@ export default function CPArtwork(_width, _height) {
     
     CPUndoRectangleSelection.prototype = Object.create(CPUndo.prototype);
     CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
-    
+
+	/**
+     * Upon creation, moves the currently selected region of the current layer by the given offset (or copies it if
+     * 'copy' is true).
+     *
+     * @param srcRect
+     * @param offsetX
+     * @param offsetY
+     * @param copy
+     * @constructor
+     */
+    function CPActionMoveSelection(srcRect, offsetX, offsetY, copy) {
+        var
+            fromSelection = that.getSelection(),
+            dstRect = null,
+
+            fullUndo, // A copy of the entire layer
+            srcData = null, // A copy of the original pixels at the srcRect, or null if we use a fullUndo instead
+            dstData = null // A copy of the original pixels at the dstRect, or null
+        ;
+        
+        this.undo = function() {
+            var
+                layer = that.getLayer(this.layerIndex),
+                invalidateRegion = dstRect.clone();
+
+            if (!copy) {
+                invalidateRegion.union(srcRect);
+            }
+
+            if (fullUndo) {
+                layer.copyBitmapRect(fullUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
+            } else {
+                layer.copyBitmapRect(srcData, srcRect.left, srcRect.top, srcData.getBounds());
+
+                if (dstData) {
+                    layer.copyBitmapRect(dstData, dstRect.left, dstRect.top, dstData.getBounds());
+                }
+            }
+
+            that.setSelection(fromSelection);
+            that.setActiveLayerIndex(this.layerIndex);
+
+            invalidateFusionRect(invalidateRegion);
+
+            /*
+             * Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
+             * won't end up repainting the selection rectangle there.
+             */
+            callListenersSelectionChange();
+        };
+
+        this.redo = function() {
+            var
+                layer = that.getLayer(this.layerIndex),
+                invalidateRegion = new CPRect(0, 0, 0, 0);
+
+            if (!copy) {
+                layer.clearRect(srcRect, 0);
+                invalidateRegion.set(srcRect);
+            }
+
+            dstRect = srcRect.clone();
+            dstRect.translate(offsetX, offsetY);
+            layer.getBounds().clip(dstRect);
+
+            /* Note that while we could copy image data from the layer itself onto the layer (instead of sourcing that
+             * data from the undo buffers), this would require that pasteAlphaRect do the right thing when source and
+             * dest rects overlap, which it doesn't.
+             */
+            if (fullUndo) {
+                layer.pasteAlphaRect(fullUndo, srcRect, dstRect.left, dstRect.top);
+            } else {
+                layer.pasteAlphaRect(srcData, srcData.getBounds(), dstRect.left, dstRect.top);
+            }
+
+            invalidateRegion.union(dstRect);
+
+            invalidateFusionRect(invalidateRegion);
+
+            if (!fromSelection.isEmpty()) {
+                var
+                    toSelection = fromSelection.clone();
+                toSelection.translate(offsetX, offsetY);
+                that.setSelection(toSelection);
+                callListenersSelectionChange();
+            }
+        };
+
+        /**
+         * Move further by the given offset on top of the current offset.
+         *
+         * @param _offsetX {int}
+         * @param _offsetY {int}
+         */
+        this.amend = function(_offsetX, _offsetY) {
+            var
+                layer = that.getLayer(this.layerIndex);
+
+            if (fullUndo) {
+                if (copy) {
+                    this.undo();
+                } else {
+                    /*
+                     * We don't need to restore the image at the *source* location as a full undo would do, since
+                     * we'll only erase that area again once we redo(). So just restore the data at the dest.
+                     */
+                    layer.copyBitmapRect(fullUndo, dstRect.left, dstRect.top, dstRect);
+                    invalidateFusionRect(dstRect);
+                }
+            } else {
+                /*
+                 * We want to make a complete copy of the layer in fullUndo to support fast further amend() calls.
+                 */
+                this.undo();
+
+                fullUndo = layer.clone();
+                srcData = null;
+                dstData = null;
+            }
+
+            offsetX += _offsetX;
+            offsetY += _offsetY;
+            this.redo();
+        };
+
+        /**
+         * Called when we're no longer the top operation in the undo stack, so that we can optimize for lower memory
+         * usage instead of faster revision speed
+         */
+        this.compact = function() {
+            if (fullUndo && srcRect.getArea() * 2 < that.width * that.height) {
+                // Replace our copy of the entire layer with just a copy of the areas we damaged
+
+                srcData = fullUndo.cloneRect(srcRect);
+
+                if (!copy && dstRect.isInside(srcRect)) {
+                    dstData = null;
+                } else {
+                    dstData = fullUndo.cloneRect(dstRect);
+                }
+
+                fullUndo = null;
+            }
+        };
+
+        this.getMemoryUsed = function() {
+            var
+                size = 0;
+
+            if (fullUndo) {
+                size += fullUndo.getMemorySize();
+            }
+            if (srcData) {
+                size += srcData.getMemorySize();
+            }
+            if (dstData) {
+                size += dstData.getMemorySize();
+            }
+
+            return size;
+        };
+
+        this.layerIndex = that.getActiveLayerIndex();
+        fullUndo = that.getLayer(this.layerIndex).clone();
+
+        this.redo();
+    }
+
+    CPActionMoveSelection.prototype = Object.create(CPUndo.prototype);
+    CPActionMoveSelection.prototype.constructor = CPActionMoveSelection;
+
     /**
      * Used to encapsulate multiple undo operation as one
      * 

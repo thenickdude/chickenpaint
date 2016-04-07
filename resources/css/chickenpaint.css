@@ -9006,6 +9006,9 @@
 .chickenpaint-canvas[data-cursor="crosshair"] {
   cursor: crosshair;
 }
+.chickenpaint-canvas[data-cursor="move"] {
+  cursor: move;
+}
 .chickenpaint-palettes {
   position: absolute;
   top: 0;
