@@ -844,7 +844,7 @@ export default function CPCanvas(controller) {
             if (dragged) {
                 finishRotation();
             } else {
-                resetRotation();
+                that.resetRotation();
             }
 
             activeMode = defaultMode; // yield control to the default mode
@@ -1175,7 +1175,7 @@ export default function CPCanvas(controller) {
             rotTrans = new CPTransform();
         
         rotTrans.rotateAroundPoint(-this.getRotation(), center.x, center.y);
-        rotTrans.concatenate(transform);
+        rotTrans.multiply(transform);
 
         this.setOffset(~~rotTrans.getTranslateX(), ~~rotTrans.getTranslateY());
         this.setRotation(0);
