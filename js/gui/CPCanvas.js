@@ -1549,6 +1549,7 @@ export default function CPCanvas(controller) {
     canvas.width = 800;
     canvas.height = 900;
     canvas.className = "chickenpaint-canvas";
+    canvas.setAttribute("touch-action", "none");
     
     if (!canvasContext.setLineDash) { 
         canvasContext.setLineDash = function () {} // For IE 10 and older
