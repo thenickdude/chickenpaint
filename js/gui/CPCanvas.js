@@ -1122,6 +1122,12 @@ export default function CPCanvas(controller) {
         return rotation;
     };
 
+    /**
+     *
+     * @param zoom float
+     * @param centerX float X co-ordinate in the canvas space
+     * @param centerY float Y co-ordinate in the canvas space
+     */
     function zoomOnPoint(zoom, centerX, centerY) {
         zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
         
@@ -1193,6 +1199,48 @@ export default function CPCanvas(controller) {
              * distinguish between mice and pens at this point, we don't have any better options:
              */
             return e.pressure * 2;
+        }
+    }
+
+    var
+        mouseWheelDebounce = false;
+
+    function handleMouseWheel(e) {
+        if (e.deltaY != 0) {
+            if (!mouseWheelDebounce || Math.abs(e.deltaY) > 20) {
+                var
+                    factor;
+
+                if (e.deltaY > 0) {
+                    factor = 1 / 1.15;
+                } else {
+                    factor = 1.15;
+                }
+
+                var
+                    canvasPoint = mouseCoordToCanvas({x: e.pageX, y: e.pageY}),
+                    docPoint = coordToDocument(canvasPoint);
+
+                if (artwork.isPointWithin(docPoint.x, docPoint.y)) {
+                    zoomOnPoint(
+                        that.getZoom() * factor,
+                        canvasPoint.x,
+                        canvasPoint.y
+                    );
+                } else {
+                    zoomOnPoint(
+                        that.getZoom() * factor,
+                        offsetX + ~~(artwork.width * zoom / 2),
+                        offsetY + ~~(artwork.height * zoom / 2)
+                    );
+                }
+
+                mouseWheelDebounce = mouseWheelDebounce || setTimeout(function() {
+                    mouseWheelDebounce = false;
+                }, 50);
+            }
+
+            e.preventDefault();
         }
     }
 
@@ -1574,6 +1622,7 @@ export default function CPCanvas(controller) {
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointermove", handlePointerMove);
     canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("wheel", handleMouseWheel)
     
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
