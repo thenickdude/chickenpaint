@@ -98,15 +98,16 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
 
     function endDrag(e) {
         capturedMouse = false;
-        window.removeEventListener("mouseup", endDrag);
-        window.removeEventListener("mousemove", continueDrag);
+        window.removeEventListener("pointerup", endDrag);
+        window.removeEventListener("pointermove", continueDrag);
     }
 
     function startDrag(e) {
         if (!capturedMouse) {
             capturedMouse = true;
-            window.addEventListener("mouseup", endDrag);
-            window.addEventListener("mousemove", continueDrag);
+            canvas.setPointerCapture(e.pointerId);
+            window.addEventListener("pointerup", endDrag);
+            window.addEventListener("pointermove", continueDrag);
         }
 
         mousePickColor(e);
@@ -125,7 +126,9 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
         that.setHue(color.getHue());
     });
 
-    canvas.addEventListener("mousedown", startDrag);
+    canvas.setAttribute("touch-action", "none");
+
+    canvas.addEventListener("pointerdown", startDrag);
 
     canvas.width = w;
     canvas.height = h;

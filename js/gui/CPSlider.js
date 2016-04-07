@@ -142,8 +142,8 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             return;
         }
         
-        window.removeEventListener("mouseup", mouseUp);
-        window.removeEventListener("mousemove", mouseDragged);
+        window.removeEventListener("pointerup", mouseUp);
+        window.removeEventListener("pointermove", mouseDragged);
     }
     
     this.setValue = function(_value) {
@@ -189,7 +189,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         paint();
     };
     
-    canvas.addEventListener("mousedown", function(e) {
+    canvas.addEventListener("pointerdown", function(e) {
         var 
             dragging = dragNormal || dragPrecise;
         
@@ -207,15 +207,17 @@ export default function CPSlider(minValue, maxValue, centerMode) {
                     return;
             }
             
-            window.addEventListener("mouseup", mouseUp);
-            window.addEventListener("mousemove", mouseDragged);
+            window.addEventListener("pointerup", mouseUp);
+            window.addEventListener("pointermove", mouseDragged);
         }
     });
     
     canvas.addEventListener("contextmenu", function(e) {
         e.preventDefault()
     });;
-    
+
+    canvas.setAttribute("touch-action", "none");
+
     canvas.className = 'chickenpaint-slider';
     
     if (!window.devicePixelRatio) {

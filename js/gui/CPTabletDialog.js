@@ -128,7 +128,8 @@ export default function CPTabletDialog(parent) {
         bothOptionsElem.hide();
     } else {
         // Chrome has dropped NPAPI support, so the Wacom plugin cannot be installed
-        if (/Chrome/i.test(navigator.userAgent) && !/OPR/.test(navigator.userAgent)) {
+        if (/Chrome/i.test(navigator.userAgent) && !/OPR/.test(navigator.userAgent)
+                || /iPad/.test(navigator.userAgent) || /iPhone/.test(navigator.userAgent)) {
             wacomSupportElem.addClass("not-supported");
         }
         

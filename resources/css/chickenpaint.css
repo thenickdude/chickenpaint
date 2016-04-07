@@ -8989,6 +8989,9 @@
   height: 700px;
   touch-action: none;
   cursor: default;
+  /* For mobile safari, prevent the canvas being highlighted grey on touch */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 .chickenpaint-canvas[data-cursor="grab"] {
   cursor: move;
@@ -9200,6 +9203,12 @@ body.chickenpaint-full-screen {
 .chickenpaint-colorpicker-select {
   margin-right: 4px;
 }
+.chickenpaint-colorpicker-select,
+.chickenpaint-colorpicker-slider {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
 .chickenpaint-colorpicker-top {
   display: -ms-flexbox;
   display: flex;
@@ -9267,6 +9276,8 @@ body.chickenpaint-full-screen {
 }
 .chickenpaint-slider {
   margin: 1px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 .chickenpaint-palette-layers {
   min-height: 250px;
