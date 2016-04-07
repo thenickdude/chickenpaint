@@ -1632,7 +1632,7 @@ export default function CPCanvas(controller) {
      */
     document.addEventListener("visibilitychange", function() {
         var
-            oldHeight = canvas.height;
+            oldHeight = canvas.height + $(canvasContainerBottom).outerHeight();
 
         canvas.width = 1;
         canvas.height = 1;
