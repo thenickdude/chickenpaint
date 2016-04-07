@@ -95,7 +95,7 @@ export default function CPCanvas(controller) {
         /* The last rectangle we dirtied with a brush preview circle, or null if one hasn't been drawn yet */
         oldPreviewRect = null,
         
-        defaultCursor = "auto", moveCursor = "grab", movingCursor = "grabbing", crossCursor = "crosshair",
+        defaultCursor = "default", moveCursor = "grab", movingCursor = "grabbing", crossCursor = "crosshair",
         mouseIn = false, mouseDown = false, wacomPenDown = false,
         
         dontStealFocus = false,
