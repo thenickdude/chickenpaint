@@ -1850,7 +1850,7 @@ export default function CPArtwork(_width, _height) {
         } else {
             srcRect = moveInitSelect.clone();
         }
-        curLayer.copyFrom(undoBuffer);
+        curLayer.copyDataFrom(undoBuffer);
 
         if (!moveModeCopy) {
             curLayer.clearRect(srcRect, 0);
