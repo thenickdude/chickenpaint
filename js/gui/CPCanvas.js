@@ -30,34 +30,15 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
 
-/**
- * Stroke the polygon represented by the array of `points` (x:?, y:?} to the given canvas context. 
- * 
- * @param offset Added to each point before plotting (suggest 0.5 offset for a line to center on the middle of a pixel) 
- */
-function plotPolygon(context, points, offset) {
-    offset = offset || 0.0;
-    
-    context.beginPath();
-    
-    context.moveTo(points[0].x + offset, points[0].y + offset);
-    
-    for (var i = 1; i < points.length; i++) {
-        context.lineTo(points[i].x + offset, points[i].y + offset);
-    }
-    
-    // Close the polygon
-    context.lineTo(points[0].x + offset, points[0].y + offset);
-    
-    context.stroke();
-}
-
 export default function CPCanvas(controller) {
     const
         BUTTON_PRIMARY = 0,
         BUTTON_WHEEL = 1,
-        BUTTON_SECONDARY = 2;
-    
+        BUTTON_SECONDARY = 2,
+
+        MIN_ZOOM = 0.10,
+        MAX_ZOOM = 16.0;
+
     var
         that = this,
     
@@ -78,7 +59,7 @@ export default function CPCanvas(controller) {
         artwork = controller.getArtwork(),
 
         // Canvas transformations
-        zoom = 1, minZoom = 0.05, maxZoom = 16.0,
+        zoom = 1,
         offsetX = 0, offsetY = 0,
         canvasRotation = 0.0,
         transform = new CPTransform(),
@@ -698,18 +679,18 @@ export default function CPCanvas(controller) {
 
             if (p.x >= firstClick.x) {
                 curRect.left = firstClick.x;
-                curRect.right = square ? firstClick.x + squareDist : p.x;
+                curRect.right = (square ? firstClick.x + squareDist : p.x) + 1;
             } else {
                 curRect.left = square ? firstClick.x - squareDist : p.x;
-                curRect.right = firstClick.x;
+                curRect.right = firstClick.x + 1;
             }
 
             if (p.y >= firstClick.y) {
                 curRect.top = firstClick.y;
-                curRect.bottom = square ? firstClick.y + squareDist : p.y;
+                curRect.bottom = (square ? firstClick.y + squareDist : p.y) + 1;
             } else {
                 curRect.top = square ? firstClick.y - squareDist : p.y;
-                curRect.bottom = firstClick.y;
+                curRect.bottom = firstClick.y + 1;
             }
 
             that.repaintAll();
@@ -725,8 +706,8 @@ export default function CPCanvas(controller) {
 
         this.paint = function() {
             if (!curRect.isEmpty()) {
-                canvas.lineWidth = 1;
-                plotPolygon(canvasContext, rectToDisplay(curRect), 0.5);
+                canvasContext.lineWidth = 1;
+                plotSelectionRect(canvasContext, curRect);
             }
         };
     };
@@ -916,18 +897,6 @@ export default function CPCanvas(controller) {
         that.repaintAll();
     }
     
-    function rectToDisplay(rect) {
-        var
-            points = [];
-
-        points.push(coordToDisplay({x: rect.left, y: rect.top}));
-        points.push(coordToDisplay({x: rect.right - 1, y: rect.top}));
-        points.push(coordToDisplay({x: rect.right - 1, y: rect.bottom - 1}));
-        points.push(coordToDisplay({x: rect.left, y: rect.bottom - 1}));
-        
-        return points;
-    }
-    
     /**
      * Convert a canvas-relative coordinate into document coordinates.
      */
@@ -944,8 +913,8 @@ export default function CPCanvas(controller) {
         var 
             result = coordToDocument(coord);
         
-        result.x = Math.round(result.x);
-        result.y = Math.round(result.y);
+        result.x = Math.floor(result.x);
+        result.y = Math.floor(result.y);
         
         return result;
     }
@@ -968,12 +937,44 @@ export default function CPCanvas(controller) {
         var
             result = coordToDisplay(p);
         
-        result.x = result.x | 0;
-        result.y = result.y | 0;
+        result.x = Math.round(result.x);
+        result.y = Math.round(result.y);
         
         return result;
     }
-    
+
+    /**
+     * Stroke a selection rectangle that encloses the pixels in the given rectangle (in document co-ordinates).
+     */
+    function plotSelectionRect(context, rect) {
+        context.beginPath();
+
+        var
+            center = coordToDisplay({x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2}),
+            coords = [
+                {x: rect.left, y: rect.top},
+                {x: rect.right, y: rect.top},
+                {x: rect.right, y: rect.bottom},
+                {x: rect.left, y: rect.bottom},
+            ];
+
+        for (var i = 0; i < coords.length; i++) {
+            coords[i] = coordToDisplayInt(coords[i]);
+
+            // Need to inset the co-ordinates by 0.5 display pixels for the line to pass through the middle of the display pixel
+            coords[i].x +=  Math.sign(center.x - coords[i].x) * 0.5;
+            coords[i].y +=  Math.sign(center.y - coords[i].y) * 0.5;
+        }
+
+        context.moveTo(coords[0].x, coords[0].y);
+        for (var i = 1; i < coords.length; i++) {
+            context.lineTo(coords[i].x, coords[i].y);
+        }
+        context.lineTo(coords[0].x, coords[0].y);
+
+        context.stroke();
+    }
+
     /**
      * Take a CPRect of document coordinates and return a CPRect of canvas coordinates to repaint for that region.
      */
@@ -1129,7 +1130,7 @@ export default function CPCanvas(controller) {
      * @param centerY float Y co-ordinate in the canvas space
      */
     function zoomOnPoint(zoom, centerX, centerY) {
-        zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
         
         if (that.getZoom() != zoom) {
             var 
@@ -1428,8 +1429,7 @@ export default function CPCanvas(controller) {
         if (!artwork.getSelection().isEmpty()) {
             canvasContext.setLineDash([3, 2]);
             
-            // Ensure the selection line fills a complete pixel by offsetting the midpoint to the middle of the pixel
-            plotPolygon(canvasContext, rectToDisplay(artwork.getSelection()), 0.5);
+            plotSelectionRect(canvasContext, artwork.getSelection());
             
             canvasContext.setLineDash([]);
         }
