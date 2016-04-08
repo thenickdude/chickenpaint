@@ -755,7 +755,7 @@ export default function CPCanvas(controller) {
             var
                 p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
             
-            artwork.move(p.x - firstClick.x, p.y - firstClick.y);
+            artwork.move(Math.round(p.x - firstClick.x), Math.round(p.y - firstClick.y));
             
             that.repaintAll();
         };

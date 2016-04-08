@@ -453,6 +453,13 @@ export default function CPArtwork(_width, _height) {
         brushBuffer = null;
     };
 
+    /**
+     * Create a paint dab at the given position using the current brush, and paint it.
+     *
+     * @param x float
+     * @param y float
+     * @param pressure float
+     */
     CPBrushToolBase.prototype.createAndPaintDab = function(x, y, pressure) {
         curBrush.applyPressure(pressure);
         
@@ -467,6 +474,11 @@ export default function CPArtwork(_width, _height) {
         this.paintDab(dab);
     };
 
+    /**
+     * Paint a dab returned by brushManager.getDab()
+     *
+     * @param dab {byte[] brush; int x, y, alpha, width, height}
+     */
     CPBrushToolBase.prototype.paintDab = function(dab) {
         var
             srcRect = new CPRect(0, 0, dab.width, dab.height),
@@ -1835,12 +1847,19 @@ export default function CPArtwork(_width, _height) {
         prevModeCopy = moveModeCopy;
     };
 
+    /**
+     * Move the selected layer data by the given offset.
+     *
+     * @param offsetX int
+     * @param offsetY int
+     */
     this.move = function(offsetX, offsetY) {
         var
             srcRect;
 
-        offsetX += movePrevX;
-        offsetY += movePrevY;
+        // Add rounding to ensure we haven't been given float coordinates
+        offsetX = (movePrevX + offsetX) | 0;
+        offsetY = (movePrevY + offsetY) | 0;
 
         if (moveInitSelect == null) {
             srcRect = this.getSelectionAutoSelect();

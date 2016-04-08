@@ -390,6 +390,8 @@ export default function CPBrushManager() {
     }
     
     /**
+     * @param x float
+     * @param y float
      * brushInfo - a CPBrushInfo object
      */
     this.getDab = function(x, y, brushInfo) {
