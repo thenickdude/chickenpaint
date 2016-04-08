@@ -100,7 +100,7 @@ export default function CPResourceSaver(options) {
             flat,
             flatBlob,
             swatchesBlob;
-        
+
         flat = binaryStringToByteArray(options.artwork.getFlatPNG(options.rotation));
         flatBlob = new Blob([flat], {type: "image/png"});
         flat = null; // Don't need this any more
@@ -136,13 +136,18 @@ export default function CPResourceSaver(options) {
                 formData.append("picture", flatBlob);
                 flatBlob = null;
                 
-                if (options.rotation) {
-                    formData.append("rotation", "" + options.rotation);
-                }
-                
                 if (chibiBlob) {
                     formData.append("chibifile", chibiBlob);
                     chibiBlob = null;
+
+                    // Layers will need to be rotated upon opening
+                    formData.append("rotation", "" + options.rotation);
+                } else {
+                    /*
+                     * Because the image is a flat PNG, we rotate it before we saved it and it doesn't need further
+                     * rotation upon opening.
+                     */
+                    formData.append("rotation", "0");
                 }
                 
                 if (swatchesBlob) {
