@@ -130,8 +130,11 @@ export default function CPResourceSaver(options) {
             }
              
             if (options.url) {
-                var 
+                var
+                    marker = "This marker ensures the upload wasn't truncated",
                     formData = new FormData();
+
+                formData.append("beginMarker", marker);
                 
                 formData.append("picture", flatBlob);
                 flatBlob = null;
@@ -154,7 +157,9 @@ export default function CPResourceSaver(options) {
                     formData.append("swatches", swatchesBlob);
                     swatchesBlob = null;
                 }
-                
+
+                formData.append("endMarker", marker);
+
                 postDrawing(formData);
             } else {
                 window.saveAs(flatBlob, "oekaki.png");
