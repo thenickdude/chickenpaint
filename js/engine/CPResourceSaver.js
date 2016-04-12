@@ -124,7 +124,7 @@ export default function CPResourceSaver(options) {
                 var
                     aco = new AdobeColorTable();
                 
-                swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octect-stream"});
+                swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octet-stream"});
             } else {
                 swatchesBlob = null;
             }
