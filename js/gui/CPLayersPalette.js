@@ -387,14 +387,18 @@ export default function CPLayersPalette(controller) {
             
             that = this;
 
+        this.hide = function() {
+            layerIndex = -1;
+            textBox.style.display = 'none';
+        };
+
         this.renameAndHide = function() {
             var 
                 artwork = controller.getArtwork();
 
             artwork.setLayerName(layerIndex, textBox.value);
 
-            layerIndex = -1;
-            textBox.style.display = 'none';
+            this.hide();
         };
 
         this.isVisible = function() {
@@ -422,20 +426,27 @@ export default function CPLayersPalette(controller) {
         textBox.type = "text";
         textBox.className = "chickenpaint-layer-new-name form-control input-sm";
         textBox.style.display = 'none';
-        
+
+        textBox.addEventListener("keydown", function(e) {
+            // Prevent other keyhandlers (CPCanvas) from getting their grubby hands on the input
+            e.stopPropagation();
+        });
+
         textBox.addEventListener("keypress", function(e) {
-            if (e.keyCode == 13) {// Enter
+            if (e.keyCode == 13) { // Enter
                 that.renameAndHide();
             }
+            e.stopPropagation();
         });
-        
-        textBox.addEventListener("focus", function(e) {
-            // FIXME: hack to avoid losing the focus to the main canvas
-            // controller.getCanvas().dontStealFocus = true; TODO
+
+        textBox.addEventListener("keyup", function(e) {
+            if (e.keyCode == 27) { // Escape
+                that.hide();
+            }
+            e.stopPropagation();
         });
-        
+
         textBox.addEventListener("blur", function(e) {
-            // controller.getCanvas().dontStealFocus = false; TODO
             that.renameAndHide();
         });
     }
