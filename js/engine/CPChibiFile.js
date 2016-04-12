@@ -195,7 +195,7 @@ export default function CPChibiFile() {
                     
                     blobParts.push(deflator.result);
                     
-                    resolve(new Blob(blobParts, {type: "application/octect-stream"}));
+                    resolve(new Blob(blobParts, {type: "application/octet-stream"}));
                 } else {
                     deflator.push(serializeLayerChunk(layers[i++]), false);
                     
