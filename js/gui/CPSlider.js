@@ -27,6 +27,9 @@
  * receives the current value of the slider and should return the string to be painted to the slider. 
  */
 export default function CPSlider(minValue, maxValue, centerMode) {
+    const
+        PRECISE_DRAG_SCALE = 4;
+
     var 
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
@@ -124,11 +127,19 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             mouseSelect(e);
         } else if (dragPrecise) {
             var
-                diff = (e.pageX - dragPreciseX) / 4;
+                diff = (e.pageX - dragPreciseX) / PRECISE_DRAG_SCALE;
             
             if (diff != 0) {
-                that.setValue(that.value + diff);
-                dragPreciseX = e.pageX;
+                var
+                    unrounded = that.value + diff,
+                    rounded = unrounded | 0;
+
+                that.setValue(rounded);
+
+                /* Tweak the "old mouseX" position such that the fractional part of the value we were unable to set
+                 * will be accumulated
+                 */
+                dragPreciseX = e.pageX - (unrounded - rounded) * PRECISE_DRAG_SCALE;
             }
         }
     }
