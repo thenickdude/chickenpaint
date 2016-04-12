@@ -119,6 +119,14 @@ export default function CPCanvas(controller) {
         
         tablet = CPWacomTablet.getRef();
 
+    Math.sign = Math.sign || function(x) {
+        x = +x; // convert to a number
+        if (x === 0 || isNaN(x)) {
+            return x;
+        }
+        return x > 0 ? 1 : -1;
+    };
+
     // Parent class with empty event handlers for those drawing modes that don't need every event
     function CPMode() {
     }
