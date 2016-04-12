@@ -93,15 +93,15 @@ export default function CPBrushPalette(controller) {
         alphaSlider = new CPSlider(1, 255),
         
         sizeCB = new CPCheckbox(true, "Control brush size with pen pressure"), 
-        sizeSlider = new CPSlider(1, 200),
+        sizeSlider = new CPSlider(1, 200, false, true),
         
         scatteringCB  = new CPCheckbox(false, "Control brush scattering with pen pressure"),
-        scatteringSlider = new CPSlider(0, 1000), 
+        scatteringSlider = new CPSlider(0, 1000, false, true),
     
-        resatSlider = new CPSlider(0, 100), 
-        bleedSlider = new CPSlider(0, 100), 
-        spacingSlider = new CPSlider(0, 100), 
-        smoothingSlider = new CPSlider(0, 100),
+        resatSlider = new CPSlider(0, 100, false, true),
+        bleedSlider = new CPSlider(0, 100, false, true),
+        spacingSlider = new CPSlider(0, 100, false, true),
+        smoothingSlider = new CPSlider(0, 100, false, true),
 
         brushPreview = new CPBrushPalette.CPBrushPreview(controller),
 
@@ -143,7 +143,7 @@ export default function CPBrushPalette(controller) {
         };
 
         alphaSlider.on('valueChange', function (value) {
-            controller.setAlpha(this.value);
+            controller.setAlpha(value);
         });
 
         sizeSlider.title = function (value) {

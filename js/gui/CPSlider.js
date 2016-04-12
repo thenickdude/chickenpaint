@@ -22,13 +22,11 @@
 
 /**
  * A simple slider control.
- * 
- * The title property can be set to either a string to draw on the slider, or can be set to a function(value) which
- * receives the current value of the slider and should return the string to be painted to the slider. 
  */
-export default function CPSlider(minValue, maxValue, centerMode) {
+export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     const
-        PRECISE_DRAG_SCALE = 4;
+        PRECISE_DRAG_SCALE = 4,
+        EXP_MODE_FACTOR = 1.5;
 
     var 
         canvas = document.createElement("canvas"),
@@ -44,6 +42,14 @@ export default function CPSlider(minValue, maxValue, centerMode) {
         that = this;
     
     this.value = undefined;
+
+    /**
+     * Either a string to draw on the slider, or a function(value) which receives the current value of the slider and
+     * should return the string to be painted to the slider.
+     *
+     * @name CPSlider#title
+     * @default ""
+     */
     this.title = "";
     
     centerMode = centerMode || false;
@@ -82,13 +88,23 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             
             canvasContext.restore();
         } else {
+            var
+                barProp = (that.value - minValue) / valueRange,
+                barWidth;
+
+            if (expMode) {
+                barProp = Math.pow(barProp, 1 / EXP_MODE_FACTOR);
+            }
+
+            barWidth = barProp * width;
+
             canvasContext.save();
             canvasContext.save();
             
             canvasContext.fillStyle = 'black';
 
             canvasContext.beginPath();
-            canvasContext.rect(0, 0, that.value * width / valueRange, height);
+            canvasContext.rect(0, 0, barWidth, height);
             canvasContext.fill();
             
             canvasContext.clip();
@@ -102,7 +118,7 @@ export default function CPSlider(minValue, maxValue, centerMode) {
             canvasContext.fillStyle = 'white';
 
             canvasContext.beginPath();
-            canvasContext.rect(that.value * width / valueRange, 0, width, height);
+            canvasContext.rect(barWidth, 0, width, height);
             canvasContext.fill();
             
             canvasContext.clip();
@@ -117,9 +133,16 @@ export default function CPSlider(minValue, maxValue, centerMode) {
     function mouseSelect(e) {
         var 
             width = $(canvas).width(),
-            left = $(canvas).offset().left;
+            left = $(canvas).offset().left,
 
-        that.setValue((e.pageX - left) * valueRange / width);
+            proportion = (e.pageX - left) / width;
+
+        if (expMode) {
+            // Give the user finer control over the low values
+            proportion = Math.pow(Math.max(proportion, 0.0), EXP_MODE_FACTOR);
+        }
+
+        that.setValue(proportion * valueRange + minValue);
     }
         
     function mouseDragged(e) {
