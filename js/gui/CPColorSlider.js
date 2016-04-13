@@ -97,17 +97,18 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
     }
 
     function endDrag(e) {
+        canvas.releasePointerCapture(e.pointerId);
         capturedMouse = false;
-        window.removeEventListener("pointerup", endDrag);
-        window.removeEventListener("pointermove", continueDrag);
+        canvas.removeEventListener("pointerup", endDrag);
+        canvas.removeEventListener("pointermove", continueDrag);
     }
 
     function startDrag(e) {
         if (!capturedMouse) {
             capturedMouse = true;
             canvas.setPointerCapture(e.pointerId);
-            window.addEventListener("pointerup", endDrag);
-            window.addEventListener("pointermove", continueDrag);
+            canvas.addEventListener("pointerup", endDrag);
+            canvas.addEventListener("pointermove", continueDrag);
         }
 
         mousePickColor(e);

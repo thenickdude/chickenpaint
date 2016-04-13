@@ -9276,6 +9276,7 @@ body.chickenpaint-full-screen {
 }
 .chickenpaint-slider {
   margin: 1px;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }

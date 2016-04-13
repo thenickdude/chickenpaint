@@ -175,9 +175,10 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
         } else {
             return;
         }
-        
-        window.removeEventListener("pointerup", mouseUp);
-        window.removeEventListener("pointermove", mouseDragged);
+
+        canvas.releasePointerCapture(e.pointerId);
+        canvas.removeEventListener("pointerup", mouseUp);
+        canvas.removeEventListener("pointermove", mouseDragged);
     }
     
     this.setValue = function(_value) {
@@ -224,10 +225,12 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     };
     
     canvas.addEventListener("pointerdown", function(e) {
-        var 
+        var
             dragging = dragNormal || dragPrecise;
         
         if (!dragging) {
+            canvas.setPointerCapture(e.pointerId);
+            
             switch (e.button) {
                 case 0: // Left
                     dragNormal = true;
@@ -241,14 +244,14 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
                     return;
             }
             
-            window.addEventListener("pointerup", mouseUp);
-            window.addEventListener("pointermove", mouseDragged);
+            canvas.addEventListener("pointerup", mouseUp);
+            canvas.addEventListener("pointermove", mouseDragged);
         }
     });
     
     canvas.addEventListener("contextmenu", function(e) {
         e.preventDefault()
-    });;
+    });
 
     canvas.setAttribute("touch-action", "none");
 

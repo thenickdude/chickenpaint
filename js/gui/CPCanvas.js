@@ -1284,6 +1284,7 @@ export default function CPCanvas(controller) {
         mouseDown = false;
         wacomPenDown = false;
         activeMode.mouseReleased(e);
+        canvas.releasePointerCapture(e.pointerId);
     }
     
     function handlePointerDown(e) {
