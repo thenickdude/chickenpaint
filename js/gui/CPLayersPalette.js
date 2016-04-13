@@ -328,7 +328,7 @@ export default function CPLayersPalette(controller) {
                 
                 layerIndex = getLayerIndex(mouseLoc);
 
-            if (mouseLoc.x * window.devicePixelRatio > eyeW) {
+            if (mouseLoc.x * window.devicePixelRatio > eyeW && layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
                 showRenameControl(layerIndex);
             }
         });
