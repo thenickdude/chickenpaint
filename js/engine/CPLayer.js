@@ -388,7 +388,7 @@ CPLayer.prototype.gradientHorzReplace = function(rect, fromX, toX, gradientPoint
 /**
  * Replace the pixels in the given rect with the given vertical gradient.
  *
- * @param rect CPRect
+ * @param {CPRect} rect
  * @param fromY int
  * @param toY int
  * @param gradientPoints int[]
@@ -753,11 +753,6 @@ CPLayer.prototype.hasAlphaInRect = function(rect) {
     }
     
     return false;
-};
-
-// Return the canvas ImageData that backs this layer
-CPLayer.prototype.getImageData = function() {
-    return this.imageData;
 };
 
 CPLayer.LM_NORMAL = 0;

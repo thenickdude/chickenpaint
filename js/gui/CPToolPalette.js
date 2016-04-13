@@ -21,6 +21,7 @@
 */
 
 import CPPalette from './CPPalette';
+import ChickenPaint from '../ChickenPaint';
 
 export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");
@@ -33,97 +34,124 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-rect-selection",
                 command: "CPRectSelection",
                 toolTip: "Marquee",
-                shortcut: "m"
+                shortcut: "m",
+                mode: ChickenPaint.M_RECT_SELECTION
             },
             {
                 className: "chickenpaint-tool-move",
                 command: "CPMoveTool",
                 toolTip: "Move tool",
-                shortcut: "v"
+                shortcut: "v",
+                mode: ChickenPaint.M_MOVE_TOOL
             },
             {
                 className: "chickenpaint-tool-flood-fill",
                 command: "CPFloodFill",
                 toolTip: "Flood fill",
-                shortcut: "f"
+                shortcut: "f",
+                mode: ChickenPaint.M_FLOODFILL
             },
             {
                 className: "chickenpaint-tool-gradient-fill",
                 command: "CPGradientFill",
                 toolTip: "Gradient fill",
-                shortcut: "g"
+                shortcut: "g",
+                mode: ChickenPaint.M_GRADIENTFILL
             },
             {
                 className: "chickenpaint-tool-color-picker",
                 command: "CPColorPicker",
                 toolTip: "Color picker",
-                shortcut: "i"
+                shortcut: "i",
+                mode: ChickenPaint.M_COLOR_PICKER
             },
             {
                 className: "chickenpaint-tool-rotate-canvas",
                 command: "CPRotateCanvas",
                 commandDoubleClick: "CPResetCanvasRotation",
-                toolTip: "Rotate canvas"
+                toolTip: "Rotate canvas",
+                mode: ChickenPaint.M_ROTATE_CANVAS
             },
             {
                 className: "chickenpaint-tool-pencil",
                 command: "CPPencil",
                 toolTip: "Pencil",
-                
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_PENCIL
             },
             {
                 className: "chickenpaint-tool-pen",
                 command: "CPPen",
                 toolTip: "Pen",
-                selected: true // TODO a better mechanism for the controller to let us know the initial tool 
+                selected: true, // TODO a better mechanism for the controller to let us know the initial tool
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_PEN
             },
             {
                 className: "chickenpaint-tool-airbrush",
                 command: "CPAirbrush",
-                toolTip: "Airbrush"
+                toolTip: "Airbrush",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_AIRBRUSH
             },
             {
                 className: "chickenpaint-tool-water",
                 command: "CPWater",
-                toolTip: "Waterpaint"
+                toolTip: "Waterpaint",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_WATER
             },
             {
                 className: "chickenpaint-tool-eraser",
                 command: "CPEraser",
                 toolTip: "Eraser",
-                shortcut: "e"
+                shortcut: "e",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_ERASER
             },
             {
                 className: "chickenpaint-tool-soft-eraser",
                 command: "CPSoftEraser",
-                toolTip: "Soft eraser"
+                toolTip: "Soft eraser",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_SOFTERASER
             },
             {
                 className: "chickenpaint-tool-smudge",
                 command: "CPSmudge",
-                toolTip: "Smudge"
+                toolTip: "Smudge",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_SMUDGE
             },
             {
                 className: "chickenpaint-tool-blender",
                 command: "CPBlender",
-                toolTip: "Blender"
+                toolTip: "Blender",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_BLENDER
             },
             {
                 className: "chickenpaint-tool-dodge",
                 command: "CPDodge",
                 toolTip: "Dodge",
-                shortcut: "o"
+                shortcut: "o",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_DODGE
             },
             {
                 className: "chickenpaint-tool-burn",
                 command: "CPBurn",
                 toolTip: "Burn",
-                shortcut: "p"
+                shortcut: "p",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_BURN
             },
             {
                 className: "chickenpaint-tool-blur",
                 command: "CPBlur",
-                toolTip: "Blur"
+                toolTip: "Blur",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_BLUR
             }
         ],
         listElem = document.createElement("ul");
@@ -132,10 +160,7 @@ export default function CPToolPalette(cpController) {
         if (this.nodeName == "LI") {
             var
                 button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
-            
-            $("li", listElem).removeClass("selected");
-            $(this).addClass("selected");
-            
+
             cpController.actionPerformed({action: button.command});
         }
     }
@@ -154,6 +179,12 @@ export default function CPToolPalette(cpController) {
                 
                 buttonElem.className = "chickenpaint-toolbar-button " + button.className;
                 buttonElem.setAttribute("data-buttonIndex", i);
+
+                buttonElem.setAttribute('data-mode', button.mode);
+                if (button.tool !== undefined) {
+                    buttonElem.setAttribute('data-tool', button.tool);
+                }
+                
                 buttonElem.title = button.toolTip;
                 
                 if (button.shortcut) {
@@ -189,6 +220,30 @@ export default function CPToolPalette(cpController) {
         
         body.appendChild(listElem);
     }
+
+    cpController.on("modeChange", function(newMode) {
+        var
+            body = that.getBodyElement();
+
+        $("li", body).removeClass("selected");
+        
+        if (newMode == ChickenPaint.M_DRAW) {
+            $("li[data-tool=" + cpController.getCurTool() + "]", body).addClass("selected");
+        } else {
+            $("li[data-mode=" + newMode + "]", body).addClass("selected");
+        }
+    });
+
+    cpController.on("toolChange", function(newTool) {
+        var
+            body = that.getBodyElement();
+
+        if (cpController.getCurMode() == ChickenPaint.M_DRAW) {
+            $("li", body).removeClass("selected");
+
+            $("li[data-tool=" + newTool + "]", body).addClass("selected");
+        }
+    });
     
     buildButtons();
 }

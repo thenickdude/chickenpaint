@@ -113,7 +113,7 @@ var
                     name: "Transform",
                     action: "CPTransform",
                     mnemonic: "T",
-                    shortcut: "ctrl+t"
+                    shortcut: "ctrl+y"
                 },
             ]
         },

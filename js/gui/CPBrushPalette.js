@@ -106,10 +106,16 @@ export default function CPBrushPalette(controller) {
         brushPreview = new CPBrushPalette.CPBrushPreview(controller),
 
         gradientPanel = document.createElement("div"),
+
         gradientPreview = new CPGradientPreview(controller),
         
         gradientStartSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[0] & 0xFFFFFF)),
         gradientEndSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[1] & 0xFFFFFF)),
+
+        transformPanel = document.createElement("div"),
+
+        transformAccept = document.createElement("button"),
+        transformReject = document.createElement("button"),
 
         body = this.getBodyElement();
 
@@ -298,11 +304,41 @@ export default function CPBrushPalette(controller) {
         gradientPanel.appendChild(colorsGroup);
     }
 
+    function buildTransformPanel() {
+        transformPanel.className = "chickenpaint-transform-panel";
+        transformPanel.style.display = "none";
+
+        transformAccept.type = "button";
+        transformReject.type = "button";
+
+        transformAccept.className = "btn btn-primary btn-block";
+        transformReject.className = "btn btn-default btn-block";
+
+        transformAccept.innerHTML = "Apply transform";
+        transformReject.innerHTML = "Cancel";
+
+        transformPanel.appendChild(transformAccept);
+        transformPanel.appendChild(transformReject);
+
+        transformAccept.addEventListener("click", function(e) {
+            controller.actionPerformed({action: "CPTransformAccept"});
+            e.preventDefault();
+        });
+
+        transformReject.addEventListener("click", function(e) {
+            controller.actionPerformed({action: "CPTransformReject"});
+            e.preventDefault();
+        });
+    }
+
     buildBrushPanel();
     body.appendChild(brushPanel);
 
     buildGradientPanel();
     body.appendChild(gradientPanel);
+
+    buildTransformPanel();
+    body.appendChild(transformPanel);
 
     controller.on('toolChange', function(tool, toolInfo) {
         alphaSlider.setValue(toolInfo.alpha);
@@ -334,15 +370,20 @@ export default function CPBrushPalette(controller) {
     });
 
     controller.on('modeChange', function(mode) {
-       switch (mode) {
-           case ChickenPaint.M_GRADIENTFILL:
-               brushPanel.style.display = "none";
-               gradientPanel.style.display = "block";
-           break;
-           default:
-               brushPanel.style.display = "block";
-               gradientPanel.style.display = "none";
-           break;
+        brushPanel.style.display = "none";
+        gradientPanel.style.display = "none";
+        transformPanel.style.display = "none";
+
+        switch (mode) {
+            case ChickenPaint.M_GRADIENTFILL:
+                gradientPanel.style.display = "block";
+            break;
+            case ChickenPaint.M_TRANSFORM:
+                transformPanel.style.display = "block";
+            break;
+            default:
+                brushPanel.style.display = "block";
+            break;
        }
     });
 

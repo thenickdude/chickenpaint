@@ -124,7 +124,7 @@ export default function CPLayersPalette(controller) {
          */
         this.getCSSSize = function() {
             return {width: $(canvas).width(), height: $(canvas).height()};
-        }
+        };
         
         function getLayerIndex(point) {
             return Math.floor((canvas.height - point.y / $(canvas).height() * canvas.height) / layerH);
@@ -187,7 +187,7 @@ export default function CPLayersPalette(controller) {
                 //layerDragY = e.pageY - offset.top;
                 
                 if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
-                    artwork.moveLayer(layerDragIndex, layerOver);
+                    controller.actionPerformed({action: "CPMoveLayer", fromIndex: layerDragIndex, toIndex: layerOver});
                 }
 
                 // Do we need to repaint to erase draglines?
@@ -351,11 +351,9 @@ export default function CPLayersPalette(controller) {
                         layer = artwork.getLayer(layerIndex);
                     
                     if (mouseLoc.x / $(canvas).width() * canvas.width < eyeW) {
-                        artwork.setLayerVisibility(layerIndex, !layer.visible);
-                    } else {
-                        artwork.setActiveLayerIndex(layerIndex);
-                        // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
-                        artwork.performIdleTasks();
+                        controller.actionPerformed({action: "CPSetLayerVisibility", layerIndex: layerIndex, visible: !layer.visible});
+                    } else if (artwork.getActiveLayerIndex() != layerIndex) {
+                        controller.actionPerformed({action: "CPSetActiveLayerIndex", layerIndex: layerIndex});
                     }
                 }
                 
@@ -393,10 +391,9 @@ export default function CPLayersPalette(controller) {
         };
 
         this.renameAndHide = function() {
-            var 
-                artwork = controller.getArtwork();
-
-            artwork.setLayerName(layerIndex, textBox.value);
+            if (artwork.getLayer(layerIndex).name != textBox.value) {
+                controller.actionPerformed({action: "CPSetLayerName", layerIndex: layerIndex, name: textBox.value});
+            }
 
             this.hide();
         };
@@ -447,17 +444,16 @@ export default function CPLayersPalette(controller) {
         });
 
         textBox.addEventListener("blur", function(e) {
-            that.renameAndHide();
+            if (layerIndex != -1) {
+                that.renameAndHide();
+            }
         });
     }
     
     blendCombo.className = "form-control";
     blendCombo.title = "Layer blending mode";
     blendCombo.addEventListener("change", function(e) {
-        var
-            artwork = controller.getArtwork();
-        
-        artwork.setLayerBlendMode(artwork.getActiveLayerIndex(), parseInt(blendCombo.value, 10));
+        controller.actionPerformed({action: "CPSetLayerBlendMode", layerIndex: artwork.getActiveLayerIndex(), blendMode: parseInt(blendCombo.value, 10)});
     });
     
     fillCombobox(blendCombo, MODE_NAMES);
@@ -469,10 +465,7 @@ export default function CPLayersPalette(controller) {
     };
     
     alphaSlider.on("valueChange", function(value) {
-        var
-            artwork = controller.getArtwork();
-        
-        artwork.setLayerAlpha(artwork.getActiveLayerIndex(), value);
+        controller.actionPerformed({action: "CPSetLayerAlpha", layerIndex: artwork.getActiveLayerIndex(), alpha: value});
     });
     
     body.appendChild(alphaSlider.getElement());
@@ -510,15 +503,13 @@ export default function CPLayersPalette(controller) {
     addButton.className = 'chickenpaint-small-toolbar-button chickenpaint-add-layer';
     addButton.title = 'Add layer';
     addButton.addEventListener("click", function() {
-        controller.getArtwork().addLayer();
+        controller.actionPerformed({action: "CPAddLayer"});
     });
 
     removeButton.className = 'chickenpaint-small-toolbar-button chickenpaint-remove-layer';
     removeButton.title = "Delete layer";
     removeButton.addEventListener("click", function() {
-        if (!controller.getArtwork().removeLayer()) {
-            alert("Error: You can't remove the last remaining layer in the drawing.");
-        }
+        controller.actionPerformed({action: "CPRemoveLayer"});
     });
     
     addRemoveContainer.appendChild(addButton);
@@ -526,15 +517,14 @@ export default function CPLayersPalette(controller) {
 
     body.appendChild(addRemoveContainer);
     
-    // Set initial values
     var
         artwork = controller.getArtwork();
-    
+
+    // Set initial values
     alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
     blendCombo.value = artwork.getActiveLayer().getBlendMode();
 
-    // add listeners
-    controller.getArtwork().on("changeLayer", function(layerIndex) {
+    artwork.on("changeLayer", function(layerIndex) {
         var
             artwork = this;
         

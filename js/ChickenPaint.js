@@ -30,6 +30,7 @@ import CPSpashScreen from "./gui/CPSplashScreen.js";
 import CPMainGUI from "./gui/CPMainGUI";
 
 import CPAboutDialog from "./gui/CPAboutDialog";
+import CPConfirmTransformDialog from "./gui/CPConfirmTransformDialog";
 import CPShortcutsDialog from "./gui/CPShortcutsDialog";
 import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
@@ -268,13 +269,448 @@ export default function ChickenPaint(options) {
         curColor = new CPColor(0),
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
+        preTransformMode = curMode,
         curGradient = [0xFF000000, 0xFFFFFFFF],
 
         fullScreenMode = false,
 
         tools = createDrawingTools(),
 
-        boxBlurDialog, gridDialog;
+        boxBlurDialog, gridDialog,
+
+        actions = {
+            // GUI actions
+
+            CPFullScreen: {
+                action: function () {
+                    fullScreenMode = !fullScreenMode;
+
+                    $("body").toggleClass("chickenpaint-full-screen", fullScreenMode);
+                    $(uiElem).toggleClass("chickenpaint-full-screen", fullScreenMode);
+
+                    setTimeout(function () {
+                        mainGUI.setFullScreenMode(fullScreenMode);
+                    }, 200);
+                },
+                isSupported: function() {
+                    return options.allowFullScreen !== false;
+                },
+                modifies: {gui: true}
+            },
+            CPZoomIn: {
+                action: function () {
+                    canvas.zoomIn();
+                },
+                modifies: {gui: true}
+            },
+            CPZoomOut: {
+                action: function () {
+                    canvas.zoomOut();
+                },
+                modifies: {gui: true}
+            },
+            CPZoom100: {
+                action: function () {
+                    canvas.zoom100();
+                },
+                modifies: {gui: true}
+            },
+
+            // History actions
+
+            CPUndo: {
+                action: function () {
+                    that.artwork.undo();
+                },
+                modifies: {document: true}
+            },
+            CPRedo: {
+                action: function () {
+                    that.artwork.redo();
+                },
+                modifies: {document: true}
+            },
+            CPClearHistory: {
+                action: function () {
+                    if (confirm("You're about to clear the current Undo/Redo history.\nThis operation cannot be undone, are you sure you want to do that?")) {
+                        that.artwork.clearHistory();
+                    }
+                },
+                modifies: {document: true}
+            },
+
+            // Drawing tools
+
+            CPPencil:     new ToolChangeAction(ChickenPaint.T_PENCIL),
+            CPPen:        new ToolChangeAction(ChickenPaint.T_PEN),
+            CPEraser:     new ToolChangeAction(ChickenPaint.T_ERASER),
+            CPSoftEraser: new ToolChangeAction(ChickenPaint.T_SOFTERASER),
+            CPAirbrush  : new ToolChangeAction(ChickenPaint.T_AIRBRUSH),
+            CPDodge:      new ToolChangeAction(ChickenPaint.T_DODGE),
+            CPBurn:       new ToolChangeAction(ChickenPaint.T_BURN),
+            CPWater:      new ToolChangeAction(ChickenPaint.T_WATER),
+            CPBlur:       new ToolChangeAction(ChickenPaint.T_BLUR),
+            CPSmudge:     new ToolChangeAction(ChickenPaint.T_SMUDGE),
+            CPBlender:    new ToolChangeAction(ChickenPaint.T_BLENDER),
+
+            // Modes
+
+            CPFloodFill:     new ModeChangeAction(ChickenPaint.M_FLOODFILL),
+            CPGradientFill:  new ModeChangeAction(ChickenPaint.M_GRADIENTFILL),
+            CPRectSelection: new ModeChangeAction(ChickenPaint.M_RECT_SELECTION),
+            CPMoveTool:      new ModeChangeAction(ChickenPaint.M_MOVE_TOOL),
+            CPRotateCanvas:  new ModeChangeAction(ChickenPaint.M_ROTATE_CANVAS),
+            CPColorPicker:   new ModeChangeAction(ChickenPaint.M_COLOR_PICKER),
+
+            // Layer transform
+
+            CPTransform: new ModeChangeAction(ChickenPaint.M_TRANSFORM),
+            CPTransformAccept: {
+                action: function () {
+                    if (curMode == ChickenPaint.M_TRANSFORM) {
+                        that.artwork.transformAffineFinish();
+                        setMode(preTransformMode);
+                    }
+                },
+                modifies: {mode: true}
+            },
+            CPTransformReject: {
+                action: function () {
+                    if (curMode == ChickenPaint.M_TRANSFORM) {
+                        that.artwork.transformAffineAbort();
+                        setMode(preTransformMode);
+                    }
+                },
+                modifies: {document: true, mode: true}
+            },
+
+            // Stroke modes
+
+            CPFreeHand: {
+                action: function () {
+                    tools[curBrush].strokeMode = CPBrushInfo.SM_FREEHAND;
+                    callToolListeners();
+                },
+                modifies: {tool: true}
+            },
+            CPLine: {
+                action: function () {
+                    tools[curBrush].strokeMode = CPBrushInfo.SM_LINE;
+                    callToolListeners();
+                },
+                modifies: {tool: true}
+            },
+            CPBezier: {
+                action: function () {
+                    tools[curBrush].strokeMode = CPBrushInfo.SM_BEZIER;
+                    callToolListeners();
+                },
+                modifies: {tool: true}
+            },
+
+            // Help dialogs
+
+            CPAbout: {
+                action: function () {
+                    new CPAboutDialog(uiElem).show();
+                },
+                modifies: {}
+            },
+            CPShortcuts: {
+                action: function () {
+                    new CPShortcutsDialog(uiElem).show();
+                },
+                modifies: {}
+            },
+            CPTabletSupport: {
+                action: function () {
+                    new CPTabletDialog(uiElem).show();
+                },
+                modifies: {}
+            },
+
+            // Layer actions
+
+            CPLayerDuplicate: {
+                action: function () {
+                    that.artwork.duplicateLayer();
+                },
+                modifies: {document: true}
+            },
+            CPLayerMergeDown: {
+                action: function () {
+                    that.artwork.mergeDown(true);
+                },
+                modifies: {document: true}
+            },
+            CPLayerMergeAll: {
+                action: function () {
+                    that.artwork.mergeAllLayers(true);
+                },
+                modifies: {document: true}
+            },
+            CPFill: {
+                action: function () {
+                    that.artwork.fill(that.getCurColorRgb() | 0xff000000);
+                },
+                modifies: {document: true}
+            },
+            CPClear: {
+                action: function () {
+                    that.artwork.clear();
+                },
+                modifies: {document: true}
+            },
+            CPSelectAll: {
+                action: function () {
+                    that.artwork.rectangleSelection(that.artwork.getBounds());
+                    canvas.repaintAll();
+                },
+                modifies: {document: true}
+            },
+            CPDeselectAll: {
+                action: function () {
+                    that.artwork.rectangleSelection(new CPRect(0, 0, 0, 0));
+                    canvas.repaintAll();
+                },
+                modifies: {document: true}
+            },
+            CPHFlip: {
+                action: function () {
+                    that.artwork.hFlip();
+                },
+                modifies: {document: true}
+            },
+            CPVFlip: {
+                action: function () {
+                    that.artwork.vFlip();
+                },
+                modifies: {document: true}
+            },
+            CPMNoise: {
+                action: function () {
+                    that.artwork.monochromaticNoise();
+                },
+                modifies: {document: true}
+            },
+            CPCNoise: {
+                action: function () {
+                    that.artwork.colorNoise();
+                },
+                modifies: {document: true}
+            },
+            CPFXBoxBlur: {
+                action: function () {
+                    showBoxBlurDialog();
+                },
+                modifies: {document: true}
+            },
+            CPFXInvert: {
+                action: function () {
+                    that.artwork.invert();
+                },
+                modifies: {document: true}
+            },
+
+            CPCut: {
+                action: function () {
+                    that.artwork.cutSelection(true);
+                },
+                modifies: {document: true}
+            },
+            CPCopy: {
+                action: function () {
+                    that.artwork.copySelection();
+                },
+                modifies: {document: true}
+            },
+            CPCopyMerged: {
+                action: function () {
+                    that.artwork.copySelectionMerged();
+                },
+                modifies: {document: true}
+            },
+            CPPaste: {
+                action: function () {
+                    that.artwork.pasteClipboard(true);
+                },
+                modifies: {document: true}
+            },
+
+            CPToggleGrid: {
+                action: function(e) {
+                    canvas.showGrid(e.selected);
+                },
+                modifies: {gui: true}
+            },
+            CPGridOptions: {
+                action: function () {
+                    showGridOptionsDialog();
+                },
+                modifies: {gui: true}
+            },
+
+            CPLinearInterpolation: {
+                action: function(e) {
+                    canvas.setInterpolation(e.selected);
+                },
+                modifies: {gui: true}
+            },
+            CPResetCanvasRotation: {
+                action: function () {
+                    canvas.resetRotation();
+                },
+                modifies: {gui: true}
+            },
+
+            // Layer palette
+
+            CPAddLayer: {
+                action: function() {
+                    that.artwork.addLayer();
+                },
+                modifies: {document: true}
+            },
+            CPRemoveLayer: {
+                action: function() {
+                    if (!that.artwork.removeLayer()) {
+                        alert("Sorry, you can't remove the last remaining layer in the drawing.");
+                    }
+                },
+                modifies: {document: true}
+            },
+            CPMoveLayer: {
+                action: function(e) {
+                    that.artwork.moveLayer(e.fromIndex, e.toIndex);
+                },
+                modifies: {document: true}
+            },
+            CPSetActiveLayerIndex: {
+                action: function(e) {
+                    that.artwork.setActiveLayerIndex(e.layerIndex);
+
+                    // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
+                    that.artwork.performIdleTasks();
+                },
+                modifies: {document: true}
+            },
+            CPSetLayerVisibility: {
+                action: function(e) {
+                    that.artwork.setLayerVisibility(e.layerIndex, e.visible);
+                },
+                modifies: {layerProp: true}
+            },
+            CPSetLayerName: {
+                action: function(e) {
+                    that.artwork.setLayerName(e.layerIndex, e.name);
+                },
+                modifies: {layerProp: true}
+            },
+            CPSetLayerBlendMode: {
+                action: function(e) {
+                    that.artwork.setLayerBlendMode(e.layerIndex, e.blendMode);
+                },
+                modifies: {layerProp: true}
+            },
+            CPSetLayerAlpha: {
+                action: function(e) {
+                    that.artwork.setLayerAlpha(e.layerIndex, e.alpha);
+                },
+                modifies: {layerProp: true}
+            },
+
+            // Palettes
+
+            CPPalColor: new PaletteToggleAction("color"),
+            CPPalBrush: new PaletteToggleAction("brush"),
+            CPPalLayers: new PaletteToggleAction("layers"),
+            CPPalStroke: new PaletteToggleAction("stroke"),
+            CPPalSwatches: new PaletteToggleAction("swatches"),
+            CPPalTool: new PaletteToggleAction("tool"),
+            CPPalMisc: new PaletteToggleAction("misc"),
+            CPPalTextures: new PaletteToggleAction("textures"),
+
+            CPTogglePalettes: {
+                action: function () {
+                    mainGUI.togglePalettes();
+                },
+                modifies: {gui: true}
+            },
+            CPArrangePalettes: {
+                action: function () {
+                    mainGUI.arrangePalettes();
+                },
+                modifies: {gui: true}
+            },
+
+            // Saving
+
+            CPSave: {
+                action: function () {
+                    saveDrawing();
+                },
+                isSupported: function() {
+                    return options.allowDownload !== false;
+                },
+                modifies: {document: true}
+            },
+            CPSend: {
+                action: function () {
+                    sendDrawing();
+                },
+                isSupported: function() {
+                    return !!options.saveUrl;
+                },
+                modifies: {document: true}
+            },
+            CPPost: {
+                action: function () {
+                    window.location = options.postUrl;
+                },
+                isSupported: function() {
+                    return !!options.postUrl;
+                },
+                modifies: {document: true}
+            },
+            CPExit: {
+                action: function () {
+                    // Exit the drawing session without posting the drawing to the forum
+                    window.location = options.exitUrl;
+                },
+                isSupported: function() {
+                    return !!options.exitUrl;
+                },
+                modifies: {}
+            }
+        };
+
+    function PaletteToggleAction(palName) {
+        this.palName = palName;
+    }
+
+    PaletteToggleAction.prototype.action = function(e) {
+        mainGUI.showPalette(this.palName, e.selected);
+    };
+    PaletteToggleAction.prototype.modifies = {gui: true};
+
+    function ToolChangeAction(toolNum) {
+        this.toolNum = toolNum;
+    }
+
+    ToolChangeAction.prototype.action = function() {
+        setTool(this.toolNum);
+    };
+
+    ToolChangeAction.prototype.modifies = {mode: true, tool: true};
+
+    function ModeChangeAction(modeNum) {
+        this.modeNum = modeNum;
+    }
+
+    ModeChangeAction.prototype.action = function() {
+        setMode(this.modeNum);
+    };
+    ModeChangeAction.prototype.modifies = {mode: true};
 
     function showBoxBlurDialog() {
         if (!boxBlurDialog) {
@@ -371,10 +807,23 @@ export default function ChickenPaint(options) {
         return tools[curBrush].alpha;
     };
 
-    function setMode(mode) {
-        curMode = mode;
-        callModeListeners();
+    this.getCurMode = function() {
+        return curMode;
+    };
+
+    function setMode(newMode) {
+        if (curMode != newMode) {
+            if (newMode == ChickenPaint.M_TRANSFORM) {
+                preTransformMode = curMode;
+            }
+            curMode = newMode;
+            callModeListeners();
+        }
     }
+
+    this.getCurTool = function() {
+        return curBrush;
+    };
 
     function setTool(tool) {
         setMode(ChickenPaint.M_DRAW);
@@ -385,7 +834,7 @@ export default function ChickenPaint(options) {
 
     this.getBrushInfo = function() {
         return tools[curBrush];
-    }
+    };
     
     function saveDrawing() {
         var
@@ -433,260 +882,54 @@ export default function ChickenPaint(options) {
      * to check for support for a given action.
      */
     this.isActionSupported = function(actionName) {
-        switch (actionName) {
-            case "CPSend":
-                return !!options.saveUrl;
+        if (actions[actionName]) {
+            var
+                supportedType = typeof actions[actionName].isSupported;
 
-            case "CPSave":
-                return options.allowDownload !== false;
-
-            case "CPExit":
-                return !!options.exitUrl;
-
-            case "CPPost":
-                return !!options.postUrl;
-
-            case "CPFullScreen":
-                return options.allowFullScreen !== false;
-
-            default:
+            if (supportedType == "function") {
+                return actions[actionName].isSupported();
+            } else if (supportedType == "undefined") {
+                // If not otherwise specified, an action defaults to supported
                 return true;
+            } else {
+                return actions[actionName].isSupported;
+            }
         }
+
+        return false;
     };
     
     this.actionPerformed = function(e) {
         if (this.artwork == null || canvas == null) {
-            return; // this shouldn't happen but just in case
+            return; // this shouldn't happen, but just in case
         }
 
-        switch (e.action) {
-            case "CPFullScreen":
-                fullScreenMode = !fullScreenMode;
+        var
+            action = actions[e.action];
 
-                $("body").toggleClass("chickenpaint-full-screen", fullScreenMode);
-                $(uiElem).toggleClass("chickenpaint-full-screen", fullScreenMode);
+        if (action) {
+            if (curMode == ChickenPaint.M_TRANSFORM && (action.modifies.document || action.modifies.mode)
+                    && ["CPTransformAccept", "CPTransformReject"].indexOf(e.action) == -1) {
+                if (e.action == "CPUndo") {
+                    actions.CPTransformReject.action();
+                } else if (e.action == "CPTransform") {
+                    // You're already transforming the selection!
+                } else {
+                    // Prompt the user to finish their transform before starting something else
+                    var
+                        dialog = new CPConfirmTransformDialog(uiElem, this);
 
-                setTimeout(function() {
-                    mainGUI.setFullScreenMode(fullScreenMode);
-                }, 200);
-            break;
-            
-            case "CPZoomIn":
-                canvas.zoomIn();
-            break;
-            case "CPZoomOut":
-                canvas.zoomOut();
-            break;
-            case "CPZoom100":
-                canvas.zoom100();
-            break;
-            case "CPUndo":
-                this.artwork.undo();
-            break;
-            case "CPRedo":
-                this.artwork.redo();
-            break;
-            case "CPClearHistory":
-                if (confirm("You're about to clear the current Undo/Redo history.\nThis operation cannot be undone, are you sure you want to do that?")) {
-                    this.artwork.clearHistory();
+                    /* If they decide to finish up with the transform, we can apply the original action they
+                     * attempted afterwards.
+                     */
+                    dialog.on("accept", this.actionPerformed.bind(this, e));
+                    dialog.on("reject", this.actionPerformed.bind(this, e));
+
+                    dialog.show();
                 }
-            break;
-            case "CPPencil":
-                setTool(ChickenPaint.T_PENCIL);
-            break;
-            case "CPPen":
-                setTool(ChickenPaint.T_PEN);
-            break;
-            case "CPEraser":
-                setTool(ChickenPaint.T_ERASER);
-            break;
-            case "CPSoftEraser":
-                setTool(ChickenPaint.T_SOFTERASER);
-            break;
-            case "CPAirbrush":
-                setTool(ChickenPaint.T_AIRBRUSH);
-            break;
-            case "CPDodge":
-                setTool(ChickenPaint.T_DODGE);
-            break;
-            case "CPBurn":
-                setTool(ChickenPaint.T_BURN);
-            break;
-            case "CPWater":
-                setTool(ChickenPaint.T_WATER);
-            break;
-            case "CPBlur":
-                setTool(ChickenPaint.T_BLUR);
-            break;
-            case "CPSmudge":
-                setTool(ChickenPaint.T_SMUDGE);
-            break;
-            case "CPBlender":
-                setTool(ChickenPaint.T_BLENDER);
-            break;
-
-            // Modes
-
-            case "CPFloodFill":
-                setMode(ChickenPaint.M_FLOODFILL);
-            break;
-            case "CPGradientFill":
-                setMode(ChickenPaint.M_GRADIENTFILL);
-            break;
-            case "CPRectSelection":
-                setMode(ChickenPaint.M_RECT_SELECTION);
-            break;
-            case "CPMoveTool":
-                setMode(ChickenPaint.M_MOVE_TOOL);
-            break;
-            case "CPRotateCanvas":
-                setMode(ChickenPaint.M_ROTATE_CANVAS);
-            break;
-            case "CPColorPicker":
-                setMode(ChickenPaint.M_COLOR_PICKER);
-            break;
-            case "CPTransform":
-                setMode(ChickenPaint.M_TRANSFORM);
-            break;
-
-            // Stroke modes
-
-            case "CPFreeHand":
-                tools[curBrush].strokeMode = CPBrushInfo.SM_FREEHAND;
-                callToolListeners();
-            break;
-            case "CPLine":
-                tools[curBrush].strokeMode = CPBrushInfo.SM_LINE;
-                callToolListeners();
-            break;
-            case "CPBezier":
-                tools[curBrush].strokeMode = CPBrushInfo.SM_BEZIER;
-                callToolListeners();
-            break;
-
-            case "CPAbout":
-                new CPAboutDialog(uiElem).show();
-            break;
-            case "CPShortcuts":
-                new CPShortcutsDialog(uiElem).show();
-            break;
-            case "CPTabletSupport":
-                new CPTabletDialog(uiElem).show();
-            break;
-
-            // Layers actions
-
-            case "CPLayerDuplicate":
-                this.artwork.duplicateLayer();
-            break;
-            case "CPLayerMergeDown":
-                this.artwork.mergeDown(true);
-            break;
-            case "CPLayerMergeAll":
-                this.artwork.mergeAllLayers(true);
-            break;
-            case "CPFill":
-                this.artwork.fill(this.getCurColorRgb() | 0xff000000);
-            break;
-            case "CPClear":
-                this.artwork.clear();
-            break;
-            case "CPSelectAll":
-                this.artwork.rectangleSelection(this.artwork.getBounds());
-                canvas.repaintAll();
-            break;
-            case "CPDeselectAll":
-                this.artwork.rectangleSelection(new CPRect(0, 0, 0, 0));
-                canvas.repaintAll();
-            break;
-            case "CPHFlip":
-                this.artwork.hFlip();
-            break;
-            case "CPVFlip":
-                this.artwork.vFlip();
-            break;
-            case "CPMNoise":
-                this.artwork.monochromaticNoise();
-            break;
-            case "CPCNoise":
-                this.artwork.colorNoise();
-            break;
-            case "CPFXBoxBlur":
-                showBoxBlurDialog();
-            break;
-            case "CPFXInvert":
-                this.artwork.invert();
-            break;
-            case "CPCut":
-                this.artwork.cutSelection(true);
-            break;
-            case "CPCopy":
-                this.artwork.copySelection();
-            break;
-            case "CPCopyMerged":
-                this.artwork.copySelectionMerged();
-            break;
-            case "CPPaste":
-                this.artwork.pasteClipboard(true);
-            break;
-            case "CPLinearInterpolation":
-                canvas.setInterpolation(e.selected);
-            break;
-            case "CPToggleGrid":
-                canvas.showGrid(e.selected);
-            break;
-            case "CPGridOptions":
-                showGridOptionsDialog();
-            break;
-            case "CPResetCanvasRotation":
-                canvas.resetRotation();
-            break;
-            case "CPPalColor":
-                mainGUI.showPalette("color", e.selected);
-            break;
-            case "CPPalBrush":
-                mainGUI.showPalette("brush", e.selected);
-            break;
-            case "CPPalLayers":
-                mainGUI.showPalette("layers", e.selected);
-            break;
-            case "CPPalStroke":
-                mainGUI.showPalette("stroke", e.selected);
-            break;
-            case "CPPalSwatches":
-                mainGUI.showPalette("swatches", e.selected);
-            break;
-            case "CPPalTool":
-                mainGUI.showPalette("tool", e.selected);
-            break;
-            case "CPPalMisc":
-                mainGUI.showPalette("misc", e.selected);
-            break;
-            case "CPPalTextures":
-                mainGUI.showPalette("textures", e.selected);
-            break;
-            case "CPTogglePalettes":
-                mainGUI.togglePalettes();
-            break;
-            case "CPArrangePalettes":
-                mainGUI.arrangePalettes();
-            break;
-            
-            // Saving
-            
-            case "CPSave":
-                saveDrawing();
-            break;
-            case "CPSend":
-                sendDrawing();
-            break;
-            case "CPPost":
-                window.location = options.postUrl;
-            break;
-            case "CPExit":
-                // Exit the drawing session without posting the drawing to the forum
-                window.location = options.exitUrl;
-            break;
+            } else {
+                action.action(e);
+            }
         }
 
         // callCPEventListeners(); TODO

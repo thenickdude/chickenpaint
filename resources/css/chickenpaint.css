@@ -9009,6 +9009,12 @@
 .chickenpaint-canvas[data-cursor="move"] {
   cursor: move;
 }
+.chickenpaint-canvas[data-cursor="nesw-resize"] {
+  cursor: nesw-resize;
+}
+.chickenpaint-canvas[data-cursor="nwse-resize"] {
+  cursor: nwse-resize;
+}
 .chickenpaint-palettes {
   position: absolute;
   top: 0;

@@ -695,3 +695,19 @@ CPColorBmp.prototype.loadFromImage = function(image) {
     this.imageData = imageContext.getImageData(0, 0, this.width, this.height);
     this.data = this.imageData.data;
 };
+
+CPColorBmp.prototype.getImageData = function() {
+    return this.imageData;
+};
+
+/**
+ * Replace the image data with the provided ImageData object.
+ *
+ * @param imageData {ImageData}
+ */
+CPColorBmp.prototype.setImageData = function(imageData) {
+    this.width = imageData.width;
+    this.height = imageData.height;
+    this.imageData = imageData;
+    this.data = imageData.data;
+};

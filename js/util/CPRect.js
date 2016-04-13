@@ -55,6 +55,15 @@ CPRect.prototype.union = function(that) {
     }
 };
 
+CPRect.prototype.getUnion = function(that) {
+    var
+        result = this.clone();
+
+    result.union(that);
+
+    return result;
+};
+
 /**
  * Clip this rectangle to fit within `that`.
  * 
@@ -180,6 +189,56 @@ CPRect.prototype.grow = function(h, v) {
 
 CPRect.prototype.toString = function() {
     return "(" + this.left + "," + this.top + "," + this.right + "," + this.bottom + ")";
+};
+
+/**
+ * Convert the rectangle into an array of points of the corners of the rectangle (clockwise starting from the top left
+ * point).
+ */
+CPRect.prototype.toPoints = function() {
+    return [
+        {x: this.left, y: this.top},
+        {x: this.right, y: this.top},
+        {x: this.right, y: this.bottom},
+        {x: this.left, y: this.bottom}
+    ];
+};
+
+/**
+ * Round the rectangle coordinates to the nearest integer.
+ */
+CPRect.prototype.roundNearest = function() {
+    this.left = Math.round(this.left);
+    this.top = Math.round(this.top);
+    this.right = Math.round(this.right);
+    this.bottom = Math.round(this.bottom);
+};
+
+/**
+ * Round the rectangle coordinates to integers so that the old rectangle is contained by the new one.
+ */
+CPRect.prototype.roundContain = function() {
+    this.left = Math.floor(this.left);
+    this.top = Math.floor(this.top);
+    this.right = Math.ceil(this.right);
+    this.bottom = Math.ceil(this.bottom);
+};
+
+/**
+ * Create an AABB CPRect which encloses the given array of points.
+ */
+CPRect.createBoundingBox = function(points) {
+    var
+        result = new CPRect(points[0].x, points[0].y, points[0].x, points[0].y);
+
+    for (var i = 1; i < points.length; i++) {
+        result.left = Math.min(result.left, points[i].x);
+        result.top = Math.min(result.top, points[i].y);
+        result.right = Math.max(result.right, points[i].x);
+        result.bottom = Math.max(result.bottom, points[i].y);
+    }
+
+    return result;
 };
 
 /* 

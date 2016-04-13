@@ -31,6 +31,7 @@ import CPClip from "./CPClip";
 import CPColorFloat from "../util/CPColorFloat";
 import CPRect from "../util/CPRect";
 import CPRandom from "../util/CPRandom";
+import CPTransform from "../util/CPTransform";
 
 // Polyfill, used in duplicateLayer
 if (!String.prototype.endsWith) {
@@ -122,6 +123,8 @@ export default function CPArtwork(_width, _height) {
         undoArea = new CPRect(0, 0, 0, 0),
 
         rnd = new CPRandom(),
+
+        previewOperation = null,
         
         clipboard = null, // A CPClip
         undoList = [], redoList = [],
@@ -1936,6 +1939,52 @@ export default function CPArtwork(_width, _height) {
             addUndo(activeOp);
         }
     };
+
+	/**
+     * If the current operation is an affine transform, roll it back and remove it from the undo history.
+     */
+    this.transformAffineAbort = function() {
+        if (previewOperation instanceof CPActionTransformSelection) {
+            previewOperation.undo();
+            previewOperation = null;
+        }
+    };
+
+	/**
+     * Return the identity transform you can use in a call to transformAffine.
+     */
+    this.transformAffineBegin = function() {
+        if (previewOperation instanceof CPActionTransformSelection) {
+            return {transform: previewOperation.getTransform(), selection: previewOperation.getInitialSelection()};
+        }
+
+        return {transform: new CPTransform(), selection: this.getSelectionAutoSelect()};
+    };
+
+	/**
+     * Finish and save the transform that is currently in progress.
+     */
+    this.transformAffineFinish = function() {
+        if (previewOperation instanceof CPActionTransformSelection) {
+            addUndo(previewOperation);
+            previewOperation = null;
+        }
+    };
+
+    /**
+     * Transform the currently selected layer data using the given AffineTransform.
+     *
+     * @param {CPTransform} affineTransform
+     */
+    this.transformAffine = function(affineTransform) {
+        opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
+
+        if (previewOperation instanceof CPActionTransformSelection) {
+            previewOperation.amend(affineTransform);
+        } else {
+            previewOperation = new CPActionTransformSelection(this.getSelectionAutoSelect(), affineTransform);
+        }
+    };
     
     // Copy/Paste functions
     
@@ -2462,7 +2511,193 @@ export default function CPArtwork(_width, _height) {
     CPUndoRectangleSelection.prototype = Object.create(CPUndo.prototype);
     CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
 
-	/**
+    /**
+     * Upon creation, transforms the currently selected region of the current layer by the given affine transform.
+     *
+     * @param {CPRect} srcRect - Rectangle to transform
+     * @param {CPTransform} affineTransform - Transform to apply
+     */
+    function CPActionTransformSelection(srcRect, affineTransform) {
+        var
+            fromSelection = that.getSelection(),
+            dstRect = null,
+
+            tempCanvas = document.createElement("canvas"),
+            tempCanvasContext = tempCanvas.getContext("2d"),
+
+            undoData, // A copy of the original layer within the undoDataRect
+            undoDataRect,
+
+            // A canvas for composing the transform onto
+            fullUndoCanvas = document.createElement("canvas"),
+            fullUndoCanvasContext = fullUndoCanvas.getContext("2d");
+
+        affineTransform = affineTransform.clone();
+
+        this.undo = function() {
+            var
+                layer = that.getLayer(this.layerIndex),
+                invalidateRegion = dstRect.clone(),
+                undoSrcRegion;
+
+            invalidateRegion.union(srcRect);
+            
+            undoSrcRegion = invalidateRegion.clone();
+            undoSrcRegion.translate(-undoDataRect.left, -undoDataRect.top);
+
+            layer.copyBitmapRect(undoData, invalidateRegion.left, invalidateRegion.top, undoSrcRegion);
+
+            that.setSelection(fromSelection);
+            that.setActiveLayerIndex(this.layerIndex);
+
+            invalidateFusionRect(invalidateRegion);
+
+            /*
+             * Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
+             * won't end up repainting the selection rectangle there.
+             */
+            callListenersSelectionChange();
+        };
+
+        this.redo = function() {
+            var
+                layer = that.getLayer(this.layerIndex);
+
+            // Make a fresh copy of the layer into a Canvas to compose onto
+            fullUndoCanvasContext.putImageData(layer.getImageData(), 0, 0);
+
+            // Erase the region we moved from
+            fullUndoCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+
+            fullUndoCanvasContext.save();
+
+            // Apply the transform when drawing the transformed fragment
+            fullUndoCanvasContext.setTransform(
+                affineTransform.m[0], affineTransform.m[1], affineTransform.m[2],
+                affineTransform.m[3], affineTransform.m[4], affineTransform.m[5]
+            );
+            fullUndoCanvasContext.drawImage(tempCanvas, srcRect.left, srcRect.top);
+
+            fullUndoCanvasContext.restore();
+
+            // Copy back to the layer data
+            layer.setImageData(fullUndoCanvasContext.getImageData(0, 0, layer.width, layer.height));
+
+            // Invalidate the source and destination regions we touched
+            var
+                invalidateRegion = srcRect.clone(),
+                dstCorners = srcRect.toPoints();
+
+            affineTransform.transformPoints(dstCorners);
+
+            dstRect = CPRect.createBoundingBox(dstCorners);
+            dstRect.roundContain();
+            layer.getBounds().clip(dstRect);
+            
+            invalidateRegion.union(dstRect);
+
+            invalidateFusionRect(invalidateRegion);
+
+            // Transform the selection rect to enclose the transformed selection
+            if (!fromSelection.isEmpty()) {
+                var
+                    toSelectionPoints = fromSelection.toPoints(),
+                    toSelectionRect;
+
+                affineTransform.transformPoints(toSelectionPoints);
+
+                toSelectionRect = CPRect.createBoundingBox(toSelectionPoints);
+                toSelectionRect.roundNearest();
+                layer.getBounds().clip(toSelectionRect);
+
+                that.setSelection(toSelectionRect);
+                callListenersSelectionChange();
+            }
+        };
+
+        /**
+         * Replace the transform with the given one.
+         *
+         * @param {CPTransform} _affineTransform
+         */
+        this.amend = function(_affineTransform) {
+            var
+                layer = that.getLayer(this.layerIndex);
+
+            this.undo();
+
+            if (undoDataRect.getWidth() < layer.width || undoDataRect.getHeight() < layer.height) {
+                /*
+                 * We need a complete copy of the layer in undoData to support further redo().
+                 */
+                undoData = layer.clone();
+                undoDataRect = layer.getBounds();
+            }
+
+            affineTransform = _affineTransform.clone();
+            this.redo();
+        };
+
+        /**
+         * Called when we're no longer the top operation in the undo stack, so that we can optimize for lower memory
+         * usage instead of faster revision speed
+         */
+        this.compact = function() {
+            var
+                layer = that.getLayer(this.layerIndex);
+            
+            // If we have a full undo, and we don't need very much area for undo, trim it to just the area we need
+            if (undoDataRect.getWidth() == layer.width && undoDataRect.getHeight() == layer.height) {
+                var
+                    dirtyRect = srcRect.getUnion(dstRect);
+
+                if (dirtyRect.getArea() * 2 < layer.width * layer.height) {
+                    undoDataRect = dirtyRect;
+                    undoData = undoData.cloneRect(undoDataRect);
+                }
+            }
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return undoData.getMemorySize();
+        };
+
+	    /**
+         * Get a copy of the affine transform.
+         */
+        this.getTransform = function() {
+            return affineTransform.clone();
+        };
+
+        /**
+         * Get a copy of the initial selection rectangle (before the transform was applied)
+         */
+        this.getInitialSelection = function() {
+            return srcRect.clone();
+        };
+
+        this.layerIndex = that.getActiveLayerIndex();
+
+        let
+            layer = that.getLayer(this.layerIndex);
+
+        undoData = layer.clone();
+        undoDataRect = layer.getBounds();
+        fullUndoCanvas.width = layer.width;
+        fullUndoCanvas.height = layer.height;
+
+        // Make a copy of just the source rectangle in its own canvas so we have it as an image to be drawn later
+        tempCanvas.width = srcRect.getWidth();
+        tempCanvas.height = srcRect.getHeight();
+        tempCanvasContext.putImageData(undoData.getImageData(), -srcRect.left, -srcRect.top, srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+
+        this.redo();
+    }
+
+    CPActionTransformSelection.prototype = Object.create(CPUndo.prototype);
+    CPActionTransformSelection.prototype.constructor = CPActionTransformSelection;
+
+    /**
      * Upon creation, moves the currently selected region of the current layer by the given offset (or copies it if
      * 'copy' is true).
      *
