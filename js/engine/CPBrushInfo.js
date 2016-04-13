@@ -94,7 +94,7 @@ CPBrushInfo.prototype.applyPressure = function(pressure) {
         this.curSize = Math.floor(this.curSize);
     }
 
-    this.curAlpha = this.pressureAlpha ? Math.floor(this.alpha * pressure) : this.alpha;
+    this.curAlpha = this.pressureAlpha ? Math.floor(this.alpha * Math.min(pressure, 1.0)) : this.alpha;
     this.curSqueeze = this.squeeze;
     this.curAngle = this.angle;
     this.curScattering = this.scattering * this.curSize * (this.pressureScattering ? pressure : 1.0);

@@ -591,7 +591,9 @@ export default function CPArtwork(_width, _height) {
             
             srcYStride = brushWidth - dstWidth,
             dstYStride = that.width - dstWidth;
-        
+
+        alpha = Math.min(255, alpha);
+
         for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
             for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
                 opacityData[dstOffset] = Math.max(brush[srcOffset] * alpha, opacityData[dstOffset]);
