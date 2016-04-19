@@ -2235,7 +2235,7 @@ export default function CPArtwork(_width, _height) {
     
     function CPUndoMergeDownLayer(layerIndex) {
         var
-            layerBottom = layerBottom = new CPLayer(that.width, that.height), 
+            layerBottom = new CPLayer(that.width, that.height),
             layerTop;
 
         layerBottom.copyFrom(layers[layerIndex - 1]);
