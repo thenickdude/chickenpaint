@@ -163,20 +163,16 @@ CPTransform.prototype.scaleAroundPoint = function(sx, sy, px, py) {
     this.translate(-px, -py);
 };
 
-CPTransform.prototype.transformPoint = function(px, py) {
-    var 
-        x = px,
-        y = py;
-    
-    px = x * this.m[0] + y * this.m[2] + this.m[4];
-    py = x * this.m[1] + y * this.m[3] + this.m[5];
-    
-    return {x: px, y: py};
+CPTransform.prototype.getTransformedPoint = function(p) {
+    return {
+        x: p.x * this.m[0] + p.y * this.m[2] + this.m[4],
+        y: p.x * this.m[1] + p.y * this.m[3] + this.m[5]
+    };
 };
 
 CPTransform.prototype.transformPoints = function(points) {
     for (var i = 0; i < points.length; i++) {
-        points[i] = this.transformPoint(points[i].x, points[i].y);
+        points[i] = this.getTransformedPoint(points[i]);
     }
 };
 

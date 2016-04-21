@@ -33,13 +33,13 @@ export default function CPConfirmTransformDialog(parent, controller) {
 	                    </div>
 	                    <div class="modal-body">
 	                        <p>
-	                            You're currently transforming the layer, what would you like to do with the transform?
+	                            You need to finish transforming this layer before you can do that. What would you like to do with the transform?
 							</p>
 	                    </div>
 	                    <div class="modal-footer">
 	                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
 	                        <button type="button" class="btn btn-default chickenpaint-reject-transform" data-dismiss="modal">Undo transform</button>
-	                        <button type="button" class="btn btn-primary chickenpaint-accept-transform" data-dismiss="modal">Save transform</button>
+	                        <button type="button" class="btn btn-primary chickenpaint-accept-transform" data-dismiss="modal">Apply transform</button>
 	                    </div>
 	                </div>
 	            </div>

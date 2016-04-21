@@ -49,7 +49,7 @@ CPPolygon.prototype.getTransformed = function(affineTransform) {
 		result = new CPPolygon(new Array(this.points.length));
 
 	for (var i = 0; i < this.points.length; i++) {
-		result.points[i] = affineTransform.transformPoint(this.points[i].x, this.points[i].y);
+		result.points[i] = affineTransform.getTransformedPoint(this.points[i]);
 	}
 
 	return result;

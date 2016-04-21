@@ -9015,6 +9015,12 @@
 .chickenpaint-canvas[data-cursor="nwse-resize"] {
   cursor: nwse-resize;
 }
+.chickenpaint-canvas[data-cursor="ns-resize"] {
+  cursor: ns-resize;
+}
+.chickenpaint-canvas[data-cursor="ew-resize"] {
+  cursor: ew-resize;
+}
 .chickenpaint-palettes {
   position: absolute;
   top: 0;

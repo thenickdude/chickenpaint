@@ -33,6 +33,7 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
 import ChickenPaint from "../ChickenPaint";
+import CPVector from "../util/CPVector";
 
 function CPModeStack() {
     this.modes = [];
@@ -66,6 +67,12 @@ CPModeStack.prototype.setDefaultMode = function(newMode) {
 };
 
 CPModeStack.prototype.setUserMode = function(newMode) {
+    // Leave any transient modes that were on top of the user mode
+    for (var i = this.modes.length - 1; i > CPModeStack.MODE_INDEX_USER; i--) {
+        this.modes[i].leave();
+        this.modes.splice(i, 1);
+    }
+
     newMode.transient = false;
     this.setMode(CPModeStack.MODE_INDEX_USER, newMode);
 };
@@ -155,7 +162,8 @@ export default function CPCanvas(controller) {
         MAX_ZOOM = 16.0,
 
         CURSOR_DEFAULT = "default", CURSOR_PANNABLE = "grab", CURSOR_PANNING = "grabbing", CURSOR_CROSSHAIR = "crosshair",
-        CURSOR_MOVE = "move", CURSOR_NESW_RESIZE = "nesw-resize", CURSOR_NWSE_RESIZE = "nwse-resize";
+        CURSOR_MOVE = "move", CURSOR_NESW_RESIZE = "nesw-resize", CURSOR_NWSE_RESIZE = "nwse-resize",
+        CURSOR_NS_RESIZE = "ns-resize", CURSOR_EW_RESIZE = "ew-resize";
 
     var
         that = this,
@@ -189,7 +197,7 @@ export default function CPCanvas(controller) {
         
         mouseX = 0, mouseY = 0,
 
-        mouseIn = false, mouseDown = false, wacomPenDown = false,
+        mouseIn = false, mouseDown = [false, false, false] /* Track each button independently */, wacomPenDown = false,
         
         /* The area of the document that should have its layers fused and repainted to the screen
          * (i.e. an area modified by drawing tools). 
@@ -431,7 +439,7 @@ export default function CPCanvas(controller) {
     function CPFreehandMode() {
         CPDrawingMode.call(this);
 
-        this.dragLeft = false;
+        this.painting = false;
         this.smoothMouse = {x:0.0, y:0.0};
     }
     
@@ -445,7 +453,7 @@ export default function CPCanvas(controller) {
 
             this.eraseBrushPreview();
 
-            this.dragLeft = true;
+            this.painting = true;
             artwork.beginStroke(pf.x, pf.y, pressure);
 
             this.smoothMouse = pf;
@@ -455,21 +463,25 @@ export default function CPCanvas(controller) {
     };
 
     CPFreehandMode.prototype.mouseDrag = function(e, pressure) {
-        var 
-            pf = coordToDocument({x: mouseX, y: mouseY}),
-            smoothing = Math.min(0.999, Math.pow(controller.getBrushInfo().smoothing, 0.3));
+        if (this.painting) {
+            var
+                pf = coordToDocument({x: mouseX, y: mouseY}),
+                smoothing = Math.min(0.999, Math.pow(controller.getBrushInfo().smoothing, 0.3));
 
-        this.smoothMouse.x = (1.0 - smoothing) * pf.x + smoothing * this.smoothMouse.x;
-        this.smoothMouse.y = (1.0 - smoothing) * pf.y + smoothing * this.smoothMouse.y;
+            this.smoothMouse.x = (1.0 - smoothing) * pf.x + smoothing * this.smoothMouse.x;
+            this.smoothMouse.y = (1.0 - smoothing) * pf.y + smoothing * this.smoothMouse.y;
 
-        if (this.dragLeft) {
             artwork.continueStroke(this.smoothMouse.x, this.smoothMouse.y, pressure);
+
+            return true;
+        } else {
+            this.mouseMove.call(this, e);
         }
     };
 
     CPFreehandMode.prototype.mouseUp = function(e) {
-        if (this.dragLeft && e.button == BUTTON_PRIMARY) {
-            this.dragLeft = false;
+        if (this.painting && e.button == BUTTON_PRIMARY) {
+            this.painting = false;
             artwork.endStroke();
 
             return true;
@@ -545,6 +557,8 @@ export default function CPCanvas(controller) {
                 repaintRect(invalidateRect);
 
                 return true;
+            } else {
+                this.mouseMove.call(this, e);
             }
         };
 
@@ -608,7 +622,7 @@ export default function CPCanvas(controller) {
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
 
         this.mouseDown = function(e) {
-            if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
+            if (!dragBezier && e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
                 var
                     p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
 
@@ -632,6 +646,8 @@ export default function CPCanvas(controller) {
                 that.repaintAll();
 
                 return true;
+            } else {
+                this.mouseMove.call(this, e);
             }
         };
 
@@ -754,7 +770,7 @@ export default function CPCanvas(controller) {
             mouseButton;
 
         this.mouseDown = function(e) {
-            if (!key.isPressed("space") && (e.button == BUTTON_PRIMARY || e.button == BUTTON_SECONDARY)) {
+            if (!key.isPressed("space") && (e.button == BUTTON_PRIMARY && (!this.transient || e.altKey) || e.button == BUTTON_SECONDARY)) {
                 mouseButton = e.button;
 
                 setCursor(CURSOR_CROSSHAIR);
@@ -762,6 +778,12 @@ export default function CPCanvas(controller) {
                 this.mouseDrag(e);
 
                 return true;
+            } else if (mouseButton != -1) {
+                // While we're sampling, we'll take over any other mouse buttons
+                return true;
+            } else if (this.transient) {
+                // If we're not sampling and we get a button not intended for us, we probably shouldn't be on the stack
+                modeStack.pop();
             }
         };
 
@@ -792,6 +814,7 @@ export default function CPCanvas(controller) {
         };
 
         this.enter = function() {
+            CPMode.prototype.enter.call(this);
             mouseButton = -1;
         };
     }
@@ -802,12 +825,12 @@ export default function CPCanvas(controller) {
     function CPPanMode() {
         var
             panning = false,
-            dragMoveX, dragMoveY,
-            dragMoveOffset,
-            dragMoveButton;
+            panningX, panningY,
+            panningOffset,
+            panningButton;
 
         this.keyDown = function(e) {
-            if (e.keyCode == 32 /* Space */) {
+            if (this.transient && e.keyCode == 32 /* Space */) {
                 if (!panning) {
                     setCursor(CURSOR_PANNABLE);
                 }
@@ -819,8 +842,9 @@ export default function CPCanvas(controller) {
         };
 
         this.keyUp = function(e) {
-            if (dragMoveButton != BUTTON_WHEEL && e.keyCode == 32 /* Space */) {
+            if (this.transient && panningButton != BUTTON_WHEEL && e.keyCode == 32 /* Space */) {
                 setCursor(CURSOR_DEFAULT);
+
                 modeStack.pop(); // yield control to the default mode
 
                 return true;
@@ -828,21 +852,31 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDown = function(e) {
-            if (!panning && (e.button == BUTTON_WHEEL || key.isPressed("space"))) {
-                panning = true;
-                dragMoveButton = e.button;
-                dragMoveX = e.pageX;
-                dragMoveY = e.pageY;
-                dragMoveOffset = that.getOffset();
-                setCursor(CURSOR_PANNING);
+            if (!panning) {
+                if (e.button == BUTTON_WHEEL || key.isPressed("space") && e.button == BUTTON_PRIMARY) {
+                    panning = true;
+                    panningButton = e.button;
+                    panningX = e.pageX;
+                    panningY = e.pageY;
+                    panningOffset = that.getOffset();
+                    setCursor(CURSOR_PANNING);
 
+                    return true;
+                }
+
+                if (this.transient) {
+                    // If we're not panning and we get a button not intended for us, we probably shouldn't be on the stack
+                    modeStack.pop();
+                }
+            } else {
+                // While we're panning, we'll take over any other mouse buttons
                 return true;
             }
         };
 
         this.mouseDrag = function(e) {
             if (panning) {
-                that.setOffset(dragMoveOffset.x + e.pageX - dragMoveX, dragMoveOffset.y + e.pageY - dragMoveY);
+                that.setOffset(panningOffset.x + e.pageX - panningX, panningOffset.y + e.pageY - panningY);
                 that.repaintAll();
 
                 return true;
@@ -850,11 +884,11 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function(e) {
-            if (panning && e.button == dragMoveButton) {
-                dragMoveButton = -1;
+            if (panning && e.button == panningButton) {
+                panningButton = -1;
                 panning = false;
 
-                if (!key.isPressed("space")) {
+                if (this.transient && !key.isPressed("space")) {
                     setCursor(CURSOR_DEFAULT);
 
                     modeStack.pop();
@@ -865,6 +899,7 @@ export default function CPCanvas(controller) {
         };
 
         this.enter = function() {
+            setCursor(CURSOR_PANNABLE);
             panning = false;
         };
     }
@@ -896,12 +931,15 @@ export default function CPCanvas(controller) {
         var
             firstClick,
             curRect = new CPRect(0, 0, 0, 0),
-            selecting = false;
+            selecting = false,
+            selectingButton = -1;
 
         this.mouseDown = function (e) {
             if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 var
                     p = coordToDocumentInt(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+
+                selectingButton = e.button;
 
                 curRect.makeEmpty();
                 firstClick = p;
@@ -946,13 +984,15 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function (e) {
-            if (selecting) {
+            if (selecting && e.button == selectingButton) {
                 artwork.rectangleSelection(curRect);
                 curRect.makeEmpty();
 
                 that.repaintAll();
 
                 selecting = false;
+                selectingButton = -1;
+
                 return true;
             }
         };
@@ -1011,7 +1051,7 @@ export default function CPCanvas(controller) {
         });
 
         this.mouseUp = function(e) {
-            if (capturedMouse) {
+            if (capturedMouse && e.button == BUTTON_PRIMARY) {
                 capturedMouse = false;
                 if (this.transient) {
                     modeStack.pop();
@@ -1047,9 +1087,13 @@ export default function CPCanvas(controller) {
             DRAG_ROTATE = -2,
             DRAG_MOVE = -3,
             DRAG_NW_CORNER = 0,
-            DRAG_NE_CORNER = 1,
-            DRAG_SE_CORNER = 2,
-            DRAG_SW_CORNER = 3;
+            DRAG_N_EDGE = 1,
+            DRAG_NE_CORNER = 2,
+            DRAG_E_EDGE = 3,
+            DRAG_SE_CORNER = 4,
+            DRAG_S_EDGE = 5,
+            DRAG_SW_CORNER = 6,
+            DRAG_W_EDGE = 7;
 
         var
             affine, // A CPTransform
@@ -1069,7 +1113,10 @@ export default function CPCanvas(controller) {
          */
         function cornersToDisplayPolygon() {
             return cornerPoints.getTransformed(transform);
+        }
 
+        function averagePoints(p1, p2) {
+            return {x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2};
         }
 
 		/**
@@ -1082,11 +1129,41 @@ export default function CPCanvas(controller) {
         function classifyDragAction(corners, mouse) {
             const
                 HANDLE_CAPTURE_RADIUS = 7,
-                HANDLE_CAPTURE_RADIUS_SQR = HANDLE_CAPTURE_RADIUS * HANDLE_CAPTURE_RADIUS;
+                HANDLE_CAPTURE_RADIUS_SQR = HANDLE_CAPTURE_RADIUS * HANDLE_CAPTURE_RADIUS,
+                EDGE_CAPTURE_RADIUS = HANDLE_CAPTURE_RADIUS,
+                EDGE_CAPTURE_RADIUS_SQR = EDGE_CAPTURE_RADIUS * EDGE_CAPTURE_RADIUS;
 
+            // Are we dragging a corner?
             for (var i = 0; i < corners.points.length; i++) {
                 if ((mouse.x - corners.points[i].x) * (mouse.x - corners.points[i].x) + (mouse.y - corners.points[i].y) * (mouse.y - corners.points[i].y) <= HANDLE_CAPTURE_RADIUS_SQR) {
-                    return i;
+                    return i * 2;
+                }
+            }
+
+            // Are we dragging an edge?
+            for (var i = 0; i < corners.points.length; i++) {
+                var
+                    edgeP1 = corners.points[i],
+                    edgeP2 = corners.points[(i + 1) % corners.points.length],
+
+                    vEdge = new CPVector(edgeP2.x - edgeP1.x, edgeP2.y - edgeP1.y),
+                    vMouse = new CPVector(mouse.x - edgeP1.x, mouse.y - edgeP1.y),
+                    
+                    vEdgeLen = vEdge.getLength(),
+
+                    vEdgeScaled = vEdge.getScaled(1 / vEdgeLen),
+                    vMouseScaled = vMouse.getScaled(1 / vEdgeLen),
+
+                    mousePropOnLine = vEdgeScaled.getDotProduct(vMouseScaled);
+
+                // If we're within the ends of the line (perpendicularly speaking)
+                if (mousePropOnLine >= 0.0 && mousePropOnLine <= 1.0) {
+                    // This gives us the point on the line closest to the mouse
+                    vEdge.scale(mousePropOnLine);
+                    
+                    if ((vEdge.x - vMouse.x) * (vEdge.x - vMouse.x) + (vEdge.y - vMouse.y) * (vEdge.y - vMouse.y) <= EDGE_CAPTURE_RADIUS_SQR) {
+                        return i * 2 + 1;
+                    }
                 }
             }
 
@@ -1115,6 +1192,9 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDrag = throttle(40, function(e) {
+            const
+                MIN_SCALE = 0.001;
+
             if (transforming) {
                 var
                     dragPointDisplay = {x: mouseX, y: mouseY};
@@ -1159,49 +1239,89 @@ export default function CPCanvas(controller) {
                     case DRAG_NE_CORNER:
                     case DRAG_SE_CORNER:
                     case DRAG_SW_CORNER:
+                    {
                         let
-                            draggingCorner = draggingMode,
+                            draggingCorner = ~~(draggingMode / 2),
 
                             oldCorner = origCornerPoints.points[draggingCorner],
                         // The corner we dragged will move into its new position
-                            newCorner = coordToDocument(dragPointDisplay),
+                            newCorner = affine.getInverted().getTransformedPoint(coordToDocument(dragPointDisplay)),
 
                         // The opposite corner to the one we dragged must not move
-                            fixCornerIndex = (draggingCorner + 2) % 4,
-
-                            oldFixCorner = origCornerPoints.points[fixCornerIndex],
-
-                            invAffine = affine.getInverted();
-
-                        // Transform the new corner position back into the pre-transformed space
-                        newCorner = invAffine.transformPoint(newCorner.x, newCorner.y);
+                            fixCorner = origCornerPoints.points[(draggingCorner + 2) % 4],
 
                         /* Now we can see how much we'd need to scale the original rectangle about the fixed corner
                          * for the other corner to reach the new position.
                          */
-                        var 
-                            scaleX = (newCorner.x - oldFixCorner.x) / (oldCorner.x - oldFixCorner.x),
-                            scaleY = (newCorner.y - oldFixCorner.y) / (oldCorner.y - oldFixCorner.y);
+                            scaleX = (newCorner.x - fixCorner.x) / (oldCorner.x - fixCorner.x),
+                            scaleY = (newCorner.y - fixCorner.y) / (oldCorner.y - fixCorner.y);
 
                         /*
                          * If the user resized it until it was zero-sized, just ignore that position and assume they'll move
                          * past it in a msec.
                          */
-                        if (Math.abs(scaleX) < 0.001 || Math.abs(scaleY) < 0.001 || isNaN(scaleX) || isNaN(scaleY)) {
+                        if (Math.abs(scaleX) < MIN_SCALE || Math.abs(scaleY) < MIN_SCALE || isNaN(scaleX) || isNaN(scaleY)) {
                             return true;
                         }
 
-                        // TODO Does user want proportional resize?
-                        if (false && e.shiftKey) {
+                        // Does user want proportional resize?
+                        if (e.shiftKey) {
                             var
-                                largestScale = Math.max(solution[0], solution[1]);
+                                largestScale = Math.max(scaleX, scaleY);
 
-                            solution[0] = largestScale;
-                            solution[1] = largestScale;
+                            scaleX = largestScale;
+                            scaleY = largestScale;
                         }
 
                         // The transform we do here will be performed first before any of the other transforms (scale, rotate, etc)
-                        affine.scaleAroundPoint(scaleX, scaleY, oldFixCorner.x, oldFixCorner.y);
+                        affine.scaleAroundPoint(scaleX, scaleY, fixCorner.x, fixCorner.y);
+                    }
+                    break;
+                    case DRAG_N_EDGE:
+                    case DRAG_S_EDGE:
+                    case DRAG_E_EDGE:
+                    case DRAG_W_EDGE:
+                    {
+                        let
+                            cornerIndex = ~~(draggingMode / 2),
+
+                            oldHandle = averagePoints(origCornerPoints.points[cornerIndex], origCornerPoints.points[(cornerIndex + 1) % 4]),
+
+                        // The handle we dragged will move into its new position
+                            newHandle = affine.getInverted().getTransformedPoint(coordToDocument(dragPointDisplay)),
+
+                        // The opposite handle to the one we dragged must not move
+                            fixHandle = averagePoints(origCornerPoints.points[(cornerIndex + 2) % 4], origCornerPoints.points[(cornerIndex + 3) % 4]),
+
+                            scaleX, scaleY,
+
+                            oldVector = new CPVector(oldHandle.x - fixHandle.x, oldHandle.y - fixHandle.y),
+                            newVector = new CPVector(newHandle.x - fixHandle.x, newHandle.y - fixHandle.y),
+
+                            oldLength = oldVector.getLength(),
+                        // We only take the length in the perpendicular direction to the transform edge:
+                            newLength = oldVector.getDotProduct(newVector) / oldLength,
+
+                            newScale = newLength / oldLength;
+
+                        /*
+                         * If the user resized it until it was zero-sized, just ignore that position and assume they'll move
+                         * past it in a msec.
+                         */
+                        if (Math.abs(newScale) < MIN_SCALE || isNaN(newScale)) {
+                            return true;
+                        }
+
+                        if (draggingMode == DRAG_N_EDGE || draggingMode == DRAG_S_EDGE) {
+                            scaleX = 1.0;
+                            scaleY = newScale;
+                        } else {
+                            scaleX = newScale;
+                            scaleY = 1.0;
+                        }
+
+                        affine.scaleAroundPoint(scaleX, scaleY, fixHandle.x, fixHandle.y);
+                    }
                     break;
                 }
 
@@ -1217,30 +1337,83 @@ export default function CPCanvas(controller) {
         });
 
         this.mouseUp = function(e) {
-            transforming = false;
-            draggingMode = DRAG_NONE;
-            return true;
+            if (transforming && e.button == BUTTON_PRIMARY) {
+                transforming = false;
+                draggingMode = DRAG_NONE;
+                return true;
+            }
         };
+
+        /*
+         * Set an appropriate resize cursor for the specified vector from the center to the handle.
+         */
+        function setResizeCursorForVector(v) {
+            let
+                angle = Math.atan2(-v.y, v.x),
+                /*
+                 * Slice up into 30 degrees slices so that there are +-15 degrees centered around each corner,
+                 * and two 30 degree segments for each edge
+                 */
+                slice = Math.floor(angle / (Math.PI / 6)),
+                cursor;
+
+            // Wrap angles below the x-axis wrap to positive ones...
+            if (slice < 0) {
+                slice += 6;
+            }
+
+            switch (slice) {
+                case 0:
+                case 5:
+                default:
+                    cursor = CURSOR_EW_RESIZE;
+                break;
+                case 1:
+                    cursor = CURSOR_NESW_RESIZE;
+                break;
+                case 2:
+                case 3:
+                    cursor = CURSOR_NS_RESIZE;
+                break;
+                case 4:
+                    cursor = CURSOR_NWSE_RESIZE;
+                break;
+            }
+
+            setCursor(cursor);
+        }
 
         this.mouseMove = function(e) {
             var
                 corners = cornersToDisplayPolygon(),
-                cornerIndex = classifyDragAction(corners, {x: mouseX, y: mouseY});
+                mouse = {x: mouseX, y: mouseY},
+                dragAction = classifyDragAction(corners, mouse),
+                center;
 
-            switch (cornerIndex) {
+            switch (dragAction) {
                 case DRAG_NW_CORNER:
                 case DRAG_NE_CORNER:
                 case DRAG_SE_CORNER:
                 case DRAG_SW_CORNER:
                     let
-                        corner = corners.points[cornerIndex],
-                        center = corners.getCenter();
+                        corner = corners.points[~~(dragAction / 2)];
 
-                    if ((corner.x < center.x) ^ (corner.y < center.y)) {
-                        setCursor(CURSOR_NESW_RESIZE);
-                    } else {
-                        setCursor(CURSOR_NWSE_RESIZE);
-                    }
+                    center = corners.getCenter();
+
+                    setResizeCursorForVector({x: corner.x - center.x, y: corner.y - center.y});
+                break;
+                case DRAG_N_EDGE:
+                case DRAG_E_EDGE:
+                case DRAG_S_EDGE:
+                case DRAG_W_EDGE:
+                    let
+                        corner1 = corners.points[~~(dragAction / 2)],
+                        corner2 = corners.points[(~~(dragAction / 2) + 1) % 4],
+                        edgeMidpoint = averagePoints(corner1, corner2);
+
+                    center = corners.getCenter();
+
+                    setResizeCursorForVector({x: edgeMidpoint.x - center.x, y: edgeMidpoint.y - center.y});
                 break;
                 case DRAG_MOVE:
                     setCursor(CURSOR_MOVE);
@@ -1255,14 +1428,30 @@ export default function CPCanvas(controller) {
 
         this.paint = function() {
             var
-                corners = cornersToDisplayPolygon();
+                corners = cornersToDisplayPolygon().points,
+                handles = new Array(corners.length * 2);
 
-            setContrastingDrawStyle(canvasContext, "fill");
-            for (var i = 0; i < corners.points.length; i++) {
-                canvasContext.fillRect(corners.points[i].x - HANDLE_RADIUS, corners.points[i].y - HANDLE_RADIUS, HANDLE_RADIUS * 2 + 1, HANDLE_RADIUS * 2 + 1);
+            // Collect the positions of the edge and corner handles...
+            for (var i = 0; i < corners.length; i++) {
+                handles[i] = corners[i];
             }
 
-            strokePolygon(canvasContext, corners.points);
+            for (var i = 0; i < corners.length; i++) {
+                var
+                    edgeP1 = corners[i],
+                    edgeP2 = corners[(i + 1) % corners.length],
+
+                    midWay = {x: (edgeP1.x + edgeP2.x) / 2, y: (edgeP1.y + edgeP2.y) / 2};
+
+                handles[i + corners.length] = midWay;
+            }
+
+            setContrastingDrawStyle(canvasContext, "fill");
+            for (var i = 0; i < handles.length; i++) {
+                canvasContext.fillRect(handles[i].x - HANDLE_RADIUS, handles[i].y - HANDLE_RADIUS, HANDLE_RADIUS * 2 + 1, HANDLE_RADIUS * 2 + 1);
+            }
+
+            strokePolygon(canvasContext, corners);
         };
 
         this.keyDown = function(e) {
@@ -1278,6 +1467,8 @@ export default function CPCanvas(controller) {
         },
 
         this.enter = function() {
+            CPMode.prototype.enter.call(this);
+
             draggingMode = -1;
 
             // Start off with the identity transform
@@ -1307,10 +1498,12 @@ export default function CPCanvas(controller) {
             initAngle = 0.0,
             initTransform,
             dragged = false,
-            rotating = false;
+
+            rotating = false,
+            rotateButton = -1;
 
         this.mouseDown = function(e) {
-            if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
+            if (!this.transient && e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
                     || e.altKey && (e.button == BUTTON_WHEEL || e.button == BUTTON_PRIMARY && key.isPressed("space"))) {
                 firstClick = {x: mouseX, y: mouseY};
 
@@ -1318,9 +1511,13 @@ export default function CPCanvas(controller) {
                 initTransform = transform.clone();
 
                 dragged = false;
+
                 rotating = true;
+                rotateButton = e.button;
 
                 return true;
+            } else if (this.transient) {
+                modeStack.pop();
             }
         };
 
@@ -1380,7 +1577,7 @@ export default function CPCanvas(controller) {
         }
         
         this.mouseUp = function(e) {
-            if (rotating) {
+            if (rotating && e.button == rotateButton) {
                 if (dragged) {
                     finishRotation();
                 } else {
@@ -1396,6 +1593,7 @@ export default function CPCanvas(controller) {
         };
 
         this.enter = function() {
+            CPMode.prototype.enter.call(this);
             rotating = false;
         };
     }
@@ -1413,6 +1611,10 @@ export default function CPCanvas(controller) {
 
     CPGradientFillMode.prototype.drawLine = function(from, to) {
         artwork.gradientFill(Math.round(from.x), Math.round(from.y), Math.round(to.x), Math.round(to.y), controller.getCurGradient());
+    };
+
+    CPGradientFillMode.prototype.queueBrushPreview = function() {
+        //Suppress the drawing of the brush preview (inherited from CPDrawingMode)
     };
 
     function setCursor(cursor) {
@@ -1465,11 +1667,11 @@ export default function CPCanvas(controller) {
     }
     
     /**
-     * Convert a canvas-relative coordinate into document coordinates.
+     * Convert a canvas-relative coordinate into document coordinates and return the new coordinate.
      */
     function coordToDocument(coord) {
         // TODO cache inverted transform
-        return transform.getInverted().transformPoint(coord.x, coord.y);
+        return transform.getInverted().getTransformedPoint(coord);
     }
     
     /**
@@ -1496,7 +1698,7 @@ export default function CPCanvas(controller) {
     }
     
     function coordToDisplay(p) {
-        return transform.transformPoint(p.x, p.y);
+        return transform.getTransformedPoint(p);
     }
 
     function coordToDisplayInt(p) {
@@ -1809,7 +2011,7 @@ export default function CPCanvas(controller) {
         mouseX = mousePos.x;
         mouseY = mousePos.y;
 
-        if (mouseDown) {
+        if (mouseDown[0] || mouseDown[1] || mouseDown[2]) {
             modeStack.mouseDrag(e, getPointerPressure(e));
         } else {
             modeStack.mouseMove(e, getPointerPressure(e));
@@ -1817,7 +2019,7 @@ export default function CPCanvas(controller) {
     }
     
     function handlePointerUp(e) {
-        mouseDown = false;
+        mouseDown[e.button] = false;
         wacomPenDown = false;
         modeStack.mouseUp(e);
         canvas.releasePointerCapture(e.pointerId);
@@ -1828,19 +2030,14 @@ export default function CPCanvas(controller) {
 
         canvasClientRect = canvas.getBoundingClientRect();
 
-        var
-            mousePos = {x: e.clientX - canvasClientRect.left, y: e.clientY - canvasClientRect.top};
-
         // Store these globally for the event handlers to refer to
-        mouseX = mousePos.x;
-        mouseY = mousePos.y;
+        mouseX = e.clientX - canvasClientRect.left;
+        mouseY = e.clientY - canvasClientRect.top;
 
-        if (!mouseDown) {
-            mouseDown = true;
-            wacomPenDown = tablet.isPen();
-            
-            modeStack.mouseDown(e, getPointerPressure(e));
-        }
+        mouseDown[e.button] = true;
+        wacomPenDown = tablet.isPen();
+
+        modeStack.mouseDown(e, getPointerPressure(e));
     }
     
     function handleKeyDown(e) {
@@ -2174,7 +2371,7 @@ export default function CPCanvas(controller) {
     canvas.addEventListener("mouseleave", function() {
         mouseIn = false;
         
-        if (!mouseDown) {
+        if (!mouseDown[0] && !mouseDown[1] && !mouseDown[2]) {
             that.repaintAll();
         }
     });
