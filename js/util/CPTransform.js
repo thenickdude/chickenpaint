@@ -157,6 +157,12 @@ CPTransform.prototype.scale = function(sx, sy) {
     this.m[3] *= sy;
 };
 
+CPTransform.prototype.scaleAroundPoint = function(sx, sy, px, py) {
+    this.translate(px, py);
+    this.scale(sx, sy);
+    this.translate(-px, -py);
+};
+
 CPTransform.prototype.transformPoint = function(px, py) {
     var 
         x = px,

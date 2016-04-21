@@ -26,7 +26,6 @@ import CPWacomTablet from "../util/CPWacomTablet";
 import CPBezier from "../util/CPBezier";
 import {throttle} from "../util/throttle-debounce";
 import CPPolygon from "../util/CPPolygon";
-import gauss from "../util/Gauss";
 import ChickenPaint from "../ChickenPaint";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
@@ -1171,36 +1170,25 @@ export default function CPCanvas(controller) {
                             fixCornerIndex = (draggingCorner + 2) % 4,
 
                             oldFixCorner = origCornerPoints.points[fixCornerIndex],
-                            fixCorner = cornerPoints.points[fixCornerIndex];
 
-                        /*
-                         * Now we need to figure out how to scale and translate our transform's matrix in order to move the
-                         * dragged corner into its new position without disturbing the fixed corner.
-                         *
-                         * With some algebra to represent the application of the scale + translate operation later,
-                         * we come up with this augmented matrix to solve...
+                            invAffine = affine.getInverted();
+
+                        // Transform the new corner position back into the pre-transformed space
+                        newCorner = invAffine.transformPoint(newCorner.x, newCorner.y);
+
+                        /* Now we can see how much we'd need to scale the original rectangle about the fixed corner
+                         * for the other corner to reach the new position.
                          */
-                        var
-                            augmented = [
-                                [affine.m[0] * oldCorner.x,    affine.m[2] * oldCorner.y,    affine.m[0], affine.m[2],   newCorner.x - affine.m[4]],
-                                [affine.m[0] * oldFixCorner.x, affine.m[2] * oldFixCorner.y, affine.m[0], affine.m[2],   fixCorner.x - affine.m[4]],
-                                [affine.m[1] * oldCorner.x,    affine.m[3] * oldCorner.y,    affine.m[1], affine.m[3],   newCorner.y - affine.m[5]],
-                                [affine.m[1] * oldFixCorner.x, affine.m[3] * oldFixCorner.y, affine.m[1], affine.m[3],   fixCorner.y - affine.m[5]],
-                            ],
-                            solution = gauss(augmented); // The solution vector is [scaleX, scaleY, translateX, translateY]
+                        var 
+                            scaleX = (newCorner.x - oldFixCorner.x) / (oldCorner.x - oldFixCorner.x),
+                            scaleY = (newCorner.y - oldFixCorner.y) / (oldCorner.y - oldFixCorner.y);
 
                         /*
                          * If the user resized it until it was zero-sized, just ignore that position and assume they'll move
                          * past it in a msec.
                          */
-                        if (Math.abs(solution[0]) < 0.001 || Math.abs(solution[1]) < 0.001) {
+                        if (Math.abs(scaleX) < 0.001 || Math.abs(scaleY) < 0.001 || isNaN(scaleX) || isNaN(scaleY)) {
                             return true;
-                        }
-
-                        for (var i = 0; i < solution.length; i++) {
-                            if (isNaN(solution[i])) {
-                                return true;
-                            }
                         }
 
                         // TODO Does user want proportional resize?
@@ -1212,8 +1200,8 @@ export default function CPCanvas(controller) {
                             solution[1] = largestScale;
                         }
 
-                        affine.translate(solution[2], solution[3]);
-                        affine.scale(solution[0], solution[1]);
+                        // The transform we do here will be performed first before any of the other transforms (scale, rotate, etc)
+                        affine.scaleAroundPoint(scaleX, scaleY, oldFixCorner.x, oldFixCorner.y);
                     break;
                 }
 
