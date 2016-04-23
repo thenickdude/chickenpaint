@@ -29,6 +29,7 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
+import ChickenPaint from "../ChickenPaint";
 
 export default function CPCanvas(controller) {
     const

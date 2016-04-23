@@ -115,7 +115,7 @@ export default function CPBrushPalette(controller) {
 
     function sliderCheckboxGroup(checkbox, slider) {
         var
-        group = document.createElement("div");
+            group = document.createElement("div");
         
         group.className = "chickenpaint-checkbox-slider-group";
         
