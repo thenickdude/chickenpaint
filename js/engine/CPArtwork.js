@@ -1602,11 +1602,22 @@ export default function CPArtwork(_width, _height) {
         
         return 0;
     };
-    
+
+	/**
+     * Get the layer with the specified index (no bounds checking)
+     *
+     * @param {int} i
+     * @returns {CPLayer}
+     */
     this.getLayer = function(i) {
         return layers[i];
     };
-    
+
+	/**
+     * Get the currently active layer (the layer that drawing operations will be applied to))
+     *
+     * @returns {CPLayer}
+     */
     this.getActiveLayer = function() {
         return curLayer;
     };

@@ -324,15 +324,6 @@ export default function CPCanvas(controller) {
     CPDrawingMode.prototype = Object.create(CPMode.prototype);
     CPDrawingMode.prototype.constructor = CPDrawingMode;
 
-    CPDrawingMode.prototype.shouldDrawHere = function() {
-        if (!artwork.getActiveLayer().visible) {
-            // TODO give the user a notification that they can't draw here
-            return false;
-        }
-
-        return true;
-    };
-
     /**
      * Get a rectangle that encloses the preview brush, in screen coordinates.
      */
@@ -446,7 +437,7 @@ export default function CPCanvas(controller) {
     CPFreehandMode.prototype.constructor = CPFreehandMode;
     
     CPFreehandMode.prototype.mouseDown = function(e, pressure) {
-        if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
+        if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
             var
                 pf = coordToDocument({x: mouseX, y:mouseY});
 
@@ -494,7 +485,7 @@ export default function CPCanvas(controller) {
             LINE_PREVIEW_WIDTH = 1;
 
         this.mouseDown = function(e) {
-            if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
+            if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
                 dragLine = true;
                 dragLineFrom = dragLineTo = {x: mouseX + 0.5, y: mouseY + 0.5};
 
@@ -621,7 +612,7 @@ export default function CPCanvas(controller) {
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
 
         this.mouseDown = function(e) {
-            if (!dragBezier && e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
+            if (!dragBezier && e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
                 var
                     p = coordToDocument({x: mouseX, y: mouseY});
 
@@ -913,7 +904,7 @@ export default function CPCanvas(controller) {
     CPFloodFillMode.prototype.constructor = CPFloodFillMode;
 
     CPFloodFillMode.prototype.mouseDown = function(e) {
-        if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
+        if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
             var
                 pf = coordToDocument({x: mouseX, y: mouseY});
 
@@ -1621,7 +1612,30 @@ export default function CPCanvas(controller) {
             canvas.setAttribute("data-cursor", cursor);
         }
     }
-    
+
+	/**
+     * Check that we should be drawing to the current layer, and let the user know if they are being blocked by the
+     * layer settings.
+     *
+     * @returns {boolean} True if we should draw to the current layer
+     */
+    function shouldDrawToThisLayer() {
+        var
+            activeLayer = artwork.getActiveLayer();
+
+        if (!activeLayer.visible) {
+            controller.showLayerNotification(artwork.getActiveLayerIndex(), "Whoops! This layer is currently hidden", "layer");
+
+            return false;
+        } else if (activeLayer.alpha == 0) {
+            controller.showLayerNotification(artwork.getActiveLayerIndex(), "Whoops! This layer's opacity is currently 0%", "opacity");
+
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * Update the scrollbar's range/position to match the current view settings for the document.
      *

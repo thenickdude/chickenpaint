@@ -33,6 +33,7 @@ export default function CPLayersPalette(controller) {
         ];
     
     var
+        palette = this,
         layerH = 32, eyeW = 24,
         
         body = this.getBodyElement(),
@@ -108,6 +109,9 @@ export default function CPLayersPalette(controller) {
     };
 
     function CPLayerWidget() {
+        const
+            NOTIFICATION_HIDE_DELAY = 3000;
+
         var 
             layerDrag, layerDragReally,
             layerDragIndex, layerDragY,
@@ -116,6 +120,13 @@ export default function CPLayersPalette(controller) {
             
             canvas = document.createElement("canvas"),
             canvasContext = canvas.getContext("2d"),
+
+            oldApplyPlacement,
+            notificationMessage = "",
+            notificationLayerIndex = -1,
+            notificationLocation = "",
+
+            dismissTimer = false,
             
             that = this;
 
@@ -165,10 +176,10 @@ export default function CPLayersPalette(controller) {
 
             canvasContext.beginPath();
             if (layer.visible) {
-                canvasContext.arc(eyeW / 2, layerH / 2, 10 * window.devicePixelRatio, 0, Math.PI * 2);
+                canvasContext.arc(eyeW / 2, layerH / 2, 9 * window.devicePixelRatio, 0, Math.PI * 2);
                 canvasContext.fill();
             } else {
-                canvasContext.arc(eyeW / 2, layerH / 2, 10 * window.devicePixelRatio, 0, Math.PI * 2);
+                canvasContext.arc(eyeW / 2, layerH / 2, 9 * window.devicePixelRatio, 0, Math.PI * 2);
                 canvasContext.stroke();
             }
         }
@@ -309,6 +320,7 @@ export default function CPLayersPalette(controller) {
             canvasContext.font = (layerH * 0.25) + "pt sans-serif";
             
             this.paint();
+            this.dismissNotification();
         };
         
         this.getElement = function() {
@@ -367,11 +379,114 @@ export default function CPLayersPalette(controller) {
                 }
             }
         });
+
+        /**
+         * Scroll the layer widget until the layer with the given index is fully visible.
+         *
+         * @param layerIndex
+         */
+        function revealLayer(layerIndex) {
+            var
+                layerWidgetPos = canvas.getBoundingClientRect(),
+
+                scrollBoxPos = container.getBoundingClientRect(),
+                scrollBoxHeight = scrollBoxPos.bottom - scrollBoxPos.top,
+
+                layerHeight = layerH / window.devicePixelRatio,
+
+                layerTop = layerWidgetPos.bottom - layerHeight * (layerIndex + 1),
+                layerBottom = layerTop + layerHeight;
+
+            container.scrollTop = Math.max(Math.min(Math.max(container.scrollTop, layerBottom - layerWidgetPos.top - scrollBoxHeight), layerTop - layerWidgetPos.top), 0);
+        }
+
+        this.dismissNotification = function() {
+            $(canvas).popover('hide');
+        };
+
+        this.showNotification = function(layerIndex, message, where) {
+            notificationMessage = message;
+            notificationLayerIndex = layerIndex;
+
+            if (artwork.getActiveLayerIndex() == layerIndex && where == "opacity") {
+                notificationLocation = "opacity";
+            } else {
+                notificationLocation = "layer";
+                revealLayer(layerIndex);
+            }
+
+            $(canvas).popover("show");
+
+            if (dismissTimer) {
+                clearTimeout(dismissTimer);
+            }
+            dismissTimer = setTimeout(function() {
+                dismissTimer = false;
+                that.dismissNotification()
+            }, NOTIFICATION_HIDE_DELAY);
+        };
+
+        /* Reposition the popover to the layer/location that the notification applies to */
+        function applyNotificationPlacement(offset, placement) {
+            oldApplyPlacement.call(this, offset, placement);
+
+            var
+                $tip = this.tip(),
+                $arrow = this.arrow(),
+                layerWidgetPos = canvas.getBoundingClientRect(),
+                scrollBoxPos = container.getBoundingClientRect();
+
+            switch (notificationLocation) {
+                case "layer":
+                    var
+                        layerMiddle = layerWidgetPos.bottom - layerH / window.devicePixelRatio * (notificationLayerIndex + 0.5);
+
+                    layerMiddle = Math.min(Math.max(layerMiddle, scrollBoxPos.top), scrollBoxPos.bottom);
+
+                    $tip.offset({
+                        top: layerMiddle + document.body.scrollTop - $tip.height() / 2,
+                        left: layerWidgetPos.left - $tip.outerWidth() - $arrow.outerWidth()
+                    });
+                break;
+                case "opacity":
+                    var
+                        alphaSliderPos = alphaSlider.getElement().getBoundingClientRect();
+
+                    $tip.offset({
+                        top: (alphaSliderPos.top + alphaSliderPos.bottom - $tip.height()) / 2 + document.body.scrollTop,
+                        left: alphaSliderPos.left - $tip.outerWidth() - $arrow.outerWidth()
+                    });
+                break;
+            }
+
+            $arrow.css("top", "50%");
+        }
+
+        controller.on("layerNotification", this.showNotification.bind(this));
+
+        $(canvas)
+            .popover({
+                html: false,
+                content: function() {
+                    return notificationMessage;
+                },
+                placement: "left",
+                trigger: "manual",
+                container: palette.getElement()
+            });
+
+        var
+            popover = $(canvas).data('bs.popover');
+
+        // Save the old positioning routine so we can call it later
+        oldApplyPlacement = popover.applyPlacement;
+
+        popover.applyPlacement = applyNotificationPlacement;
         
         if (!window.devicePixelRatio) {
             window.devicePixelRatio = 1.0;
         }
-        
+
         canvasContext.strokeStyle = 'black';
         
         container.className = "chickenpaint-layers-widget";
@@ -449,7 +564,7 @@ export default function CPLayersPalette(controller) {
             }
         });
     }
-    
+
     blendCombo.className = "form-control";
     blendCombo.title = "Layer blending mode";
     blendCombo.addEventListener("change", function(e) {
@@ -542,6 +657,8 @@ export default function CPLayersPalette(controller) {
             // We may have added or removed layers, resize as appropriate
             layerWidget.resize();
         }
+
+        layerWidget.dismissNotification();
     });
 }
 

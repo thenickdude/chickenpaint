@@ -364,7 +364,21 @@ export default function ChickenPaint(options) {
 
             // Layer transform
 
-            CPTransform: new ModeChangeAction(ChickenPaint.M_TRANSFORM),
+            CPTransform: {
+                action: function () {
+                    var
+                        activeLayer = that.artwork.getActiveLayer();
+                    
+                    if (!activeLayer.visible) {
+                        that.showLayerNotification(that.artwork.getActiveLayerIndex(), "Whoops! This layer is currently hidden", "layer");
+                    } else if (activeLayer.alpha == 0) {
+                        that.showLayerNotification(that.artwork.getActiveLayerIndex(), "Whoops! This layer's opacity is currently 0%", "opacity");
+                    } else {
+                        setMode(ChickenPaint.M_TRANSFORM);
+                    }
+                },
+                modifies: {mode: true}
+            },
             CPTransformAccept: {
                 action: function () {
                     if (curMode == ChickenPaint.M_TRANSFORM) {
@@ -735,7 +749,7 @@ export default function ChickenPaint(options) {
     // TODO make me private
     this.callToolListeners = function() {
         callToolListeners();
-    }
+    };
 
     function callModeListeners() {
         that.emitEvent('modeChange', [curMode]);
@@ -897,6 +911,10 @@ export default function ChickenPaint(options) {
         }
 
         return false;
+    };
+
+    this.showLayerNotification = function(layerIndex, message, where) {
+        this.emitEvent("layerNotification", [layerIndex, message, where]);
     };
     
     this.actionPerformed = function(e) {
