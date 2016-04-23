@@ -736,7 +736,7 @@ export default function ChickenPaint(options) {
         throw new ChickenPaint.UnsupportedBrowserException();
     }
 
-    if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string") {
+    if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string" || /Presto/.test(navigator.userAgent)) {
         uiElem.className += " no-flexbox";
     }
 

@@ -9589,6 +9589,7 @@ chickenpaint-aftersave-actions {
 .chickenpaint.no-flexbox .chickenpaint-stroke-tools,
 .chickenpaint.no-flexbox .chickenpaint-misc-tools,
 .chickenpaint.no-flexbox .chickenpaint-colorpicker-top {
+  display: block;
   white-space: nowrap;
 }
 .chickenpaint.no-flexbox .chickenpaint-palette-swatches .chickenpaint-palette-body,
@@ -9610,6 +9611,9 @@ chickenpaint-aftersave-actions {
   display: table-cell;
   vertical-align: top;
 }
+.chickenpaint.no-flexbox .chickenpaint-checkbox-slider-group {
+  display: block;
+}
 .chickenpaint.no-flexbox .chickenpaint-checkbox-slider-group .chickenpaint-checkbox,
 .chickenpaint.no-flexbox .chickenpaint-checkbox-slider-group .chickenpaint-slider {
   float: left;
@@ -9624,6 +9628,7 @@ chickenpaint-aftersave-actions {
 .chickenpaint.no-flexbox .chickenpaint-palette-layers .chickenpaint-palette-body {
   position: relative;
   overflow: hidden;
+  display: block;
 }
 .chickenpaint.no-flexbox .chickenpaint-layers-widget {
   position: absolute;
