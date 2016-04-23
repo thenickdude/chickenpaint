@@ -32,7 +32,6 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
-import ChickenPaint from "../ChickenPaint";
 import CPVector from "../util/CPVector";
 
 function CPModeStack() {
@@ -624,7 +623,7 @@ export default function CPCanvas(controller) {
         this.mouseDown = function(e) {
             if (!dragBezier && e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && this.shouldDrawHere()) {
                 var
-                    p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                    p = coordToDocument({x: mouseX, y: mouseY});
 
                 dragBezier = true;
                 dragBezierMode = 0;
@@ -639,7 +638,7 @@ export default function CPCanvas(controller) {
         // Handles the first part of the Bezier where the user drags out a straight line
         this.mouseDrag = function(e) {
             var
-                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                p = coordToDocument({x: mouseX, y: mouseY});
 
             if (dragBezier && dragBezierMode == 0) {
                 dragBezierP2 = dragBezierP3 = p;
@@ -697,7 +696,7 @@ export default function CPCanvas(controller) {
 
         this.mouseMove = function(e, pressure) {
             var
-                p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                p = coordToDocument({x: mouseX, y: mouseY});
 
             if (dragBezier) {
                 if (dragBezierMode == 1) {
@@ -790,7 +789,7 @@ export default function CPCanvas(controller) {
         this.mouseDrag = function(e) {
             if (mouseButton != -1) {
                 var
-                    pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                    pf = coordToDocument({x: mouseX, y: mouseY});
 
                 if (artwork.isPointWithin(pf.x, pf.y)) {
                     controller.setCurColorRgb(artwork.colorPicker(pf.x, pf.y));
@@ -916,7 +915,7 @@ export default function CPCanvas(controller) {
     CPFloodFillMode.prototype.mouseDown = function(e) {
         if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
             var
-                pf = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                pf = coordToDocument({x: mouseX, y: mouseY});
 
             if (artwork.isPointWithin(pf.x, pf.y)) {
                 artwork.floodFill(pf.x, pf.y);
@@ -937,7 +936,7 @@ export default function CPCanvas(controller) {
         this.mouseDown = function (e) {
             if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 var
-                    p = coordToDocumentInt(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                    p = coordToDocumentInt({x: mouseX, y: mouseY});
 
                 selectingButton = e.button;
 
@@ -957,7 +956,7 @@ export default function CPCanvas(controller) {
                 return false;
 
             var
-                p = coordToDocumentInt(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
+                p = coordToDocumentInt({x: mouseX, y: mouseY}),
                 square = e.shiftKey,
                 
                 squareDist = ~~Math.max(Math.abs(p.x - firstClick.x), Math.abs(p.y - firstClick.y));
@@ -1017,7 +1016,7 @@ export default function CPCanvas(controller) {
 
         this.mouseDown = function(e) {
             if (e.button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
-                lastPoint = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY}));
+                lastPoint = coordToDocument({x: mouseX, y: mouseY});
 
                 copyMode = e.altKey;
                 firstMove = true;
@@ -1030,7 +1029,7 @@ export default function CPCanvas(controller) {
         this.mouseDrag = throttle(25, function(e) {
             if (capturedMouse) {
                 var
-                    p = coordToDocument(mouseCoordToCanvas({x: e.pageX, y: e.pageY})),
+                    p = coordToDocument({x: mouseX, y: mouseY}),
 
                     moveFloat = {x: p.x - lastPoint.x, y: p.y - lastPoint.y},
                     moveInt = {x: ~~moveFloat.x, y: ~~moveFloat.y}; // Round towards zero
@@ -2004,12 +2003,11 @@ export default function CPCanvas(controller) {
             canvasClientRect = canvas.getBoundingClientRect();
         }
 
-        var
-            mousePos = {x: e.clientX - canvasClientRect.left, y: e.clientY - canvasClientRect.top};
-        
-        // Store these globally for the event handlers to refer to
-        mouseX = mousePos.x;
-        mouseY = mousePos.y;
+        /* Store these globally for the event handlers to refer to (we'd write to the event itself but some browsers
+         * don't enjoy that)
+         */
+        mouseX = e.clientX - canvasClientRect.left;
+        mouseY = e.clientY - canvasClientRect.top;
 
         if (mouseDown[0] || mouseDown[1] || mouseDown[2]) {
             modeStack.mouseDrag(e, getPointerPressure(e));
