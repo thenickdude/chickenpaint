@@ -104,6 +104,14 @@
     /* For mobile safari, prevent the canvas being highlighted grey on touch */
     -webkit-tap-highlight-color:transparent;
     -webkit-touch-callout: none;
+
+    /* Pixelate the canvas on high DPI displays instead of using default blurry scaling */
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
 }
 .chickenpaint-canvas[data-cursor="grab"] {
     cursor:move;
