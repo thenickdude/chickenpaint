@@ -690,21 +690,20 @@ export default function ChickenPaint(options) {
     };
 
     function installUnsavedWarning() {
-        var
-            confirmMessage = "Your drawing has unsaved changes!";
-        
         if (isEventSupported("onbeforeunload")) {
             window.addEventListener("beforeunload", function(e) {
                 if (that.artwork.getHasUnsavedChanges()) {
+                    var
+                        confirmMessage = "Your drawing has unsaved changes!";
                     e.returnValue = confirmMessage;
                     return confirmMessage;
                 }
             });
         } else {
+            // Fall back to just catching links
             $("a").click(function(e) {
-                // Fall back to just catching links
-                if (that.artwork.getHasUnsavedChanges()) { 
-                    return confirm(confirmMessage);
+                if (this.getAttribute("href") != "#" && that.artwork.getHasUnsavedChanges()) {
+                    return confirm("Your drawing has unsaved changes! Are you sure to want to navigate away?");
                 }
             });
         }
