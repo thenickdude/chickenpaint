@@ -8987,6 +8987,7 @@
 }
 .chickenpaint-canvas {
   height: 700px;
+  -ms-touch-action: none;
   touch-action: none;
   cursor: default;
   /* For mobile safari, prevent the canvas being highlighted grey on touch */
@@ -9220,6 +9221,7 @@ body.chickenpaint-full-screen {
 }
 .chickenpaint-colorpicker-select,
 .chickenpaint-colorpicker-slider {
+  -ms-touch-action: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -9291,6 +9293,7 @@ body.chickenpaint-full-screen {
 }
 .chickenpaint-slider {
   margin: 1px;
+  -ms-touch-action: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
