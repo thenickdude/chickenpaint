@@ -1,0 +1,40 @@
+From https://github.com/madrobby/keymaster/pull/154
+Adds =- support in Firefox
+
+diff --git a/keymaster.js b/keymaster.js
+index 8f5b5fc..404d4b4 100644
+--- a/keymaster.js
++++ b/keymaster.js
+@@ -25,12 +25,19 @@
+       home: 36, end: 35,
+       pageup: 33, pagedown: 34,
+       ',': 188, '.': 190, '/': 191,
+-      '`': 192, '-': 189, '=': 187,
++      '`': 192,
++      '-': function() {
++        return (getBrowserName() == "firefox") ? 173 : 189;
++      },
++      '=': function() {
++        return (getBrowserName() == "firefox") ? 61 : 187;
++      },
+       ';': 186, '\'': 222,
+       '[': 219, ']': 221, '\\': 220
+     },
+     code = function(x){
+-      return _MAP[x] || x.toUpperCase().charCodeAt(0);
++      var code = _MAP[x] || x.toUpperCase().charCodeAt(0);
++      return (typeof code === "function") ? code() : code;
+     },
+     _downKeys = [];
+
+@@ -52,6 +59,10 @@
+     return true;
+   }
+
++  function getBrowserName() {
++    if(navigator.userAgent.toLowerCase().indexOf('firefox') > 0) return "firefox";
++  }
++
+   var modifierMap = {
+       16:'shiftKey',
+       18:'altKey',

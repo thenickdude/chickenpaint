@@ -498,9 +498,12 @@ export default function CPMainMenu(controller, mainGUI) {
                 
                 menuLink.append(shortcutDesc);
                 
-                key(entry.shortcut, function() {
+                key(entry.shortcut, function(e) {
                     menuItemClicked(menuLink);
-                    
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
                     return false;
                 });
             }
