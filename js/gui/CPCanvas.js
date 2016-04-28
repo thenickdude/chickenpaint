@@ -62,6 +62,8 @@ CPModeStack.prototype.setMode = function(index, newMode) {
 
 CPModeStack.prototype.setDefaultMode = function(newMode) {
     newMode.transient = false;
+    newMode.capture = false;
+
     this.setMode(CPModeStack.MODE_INDEX_DEFAULT, newMode);
 };
 
@@ -73,16 +75,30 @@ CPModeStack.prototype.setUserMode = function(newMode) {
     }
 
     newMode.transient = false;
+    newMode.capture = false;
+
     this.setMode(CPModeStack.MODE_INDEX_USER, newMode);
 };
 
+/**
+ * Deliver the event with the given name and array of parameters to the mode stack.
+ *
+ * @param event
+ * @param params
+ * @returns {boolean} True if any mode captured the event
+ */
 CPModeStack.prototype.deliverEvent = function(event, params) {
     for (var i = this.modes.length - 1; i >= 0; i--) {
-        if (this.modes[i][event].apply(this.modes[i], params)) {
-            // If the event was handled, don't try to deliver it to anything further up the stack
-            break;
+        var
+            mode = this.modes[i];
+
+        if (mode[event].apply(mode, params) || mode.capture && event != "paint") {
+            /* If the event was handled, don't try to deliver it to anything further up the stack */
+            return true;
         }
     }
+
+    return false;
 };
 
 // We can call these routines to deliver events that bubble up the mode stack
@@ -100,7 +116,10 @@ for (let eventName of ["mouseDrag", "mouseMove"]) {
 
 for (let eventName of ["keyDown", "keyUp"]) {
     CPModeStack.prototype[eventName] = function (e) {
-        this.deliverEvent(eventName, [e]);
+        if (this.deliverEvent(eventName, [e])) {
+            // Swallow handled keypresses
+            e.preventDefault();
+        }
     };
 }
 
@@ -123,6 +142,8 @@ CPModeStack.prototype.push = function(mode, transient) {
     }
 
     mode.transient = transient;
+    mode.capture = false;
+
     mode.enter();
 
     this.modes.push(mode);
@@ -256,23 +277,34 @@ export default function CPCanvas(controller) {
     // Parent class with empty event handlers for those drawing modes that don't need every event
     function CPMode() {
     }
-    
+
+	/**
+     * True if this mode will be exiting the mode stack as soon as the current interation is complete.
+     *
+     * @type {boolean}
+     */
     CPMode.prototype.transient = false;
-    
-    CPMode.prototype.keyDown = function(e) {
-        if (e.keyCode == 32 /* Space */) {
-            // Stop the page from scrolling in modes that don't care about space
-            e.preventDefault();
-        }
-    };
+
+	/**
+     * If true, no input events will be sent to any modes underneath this one (event stream is captured).
+     *
+     * Painting events will continue to bubble.
+     *
+     * @type {boolean}
+     */
+    CPMode.prototype.capture = false;
     
     CPMode.prototype.enter = function() {
         setCursor(CURSOR_DEFAULT);
     };
 
+    CPMode.prototype.leave = function() {
+        this.capture = false;
+    };
+
     CPMode.prototype.mouseMove = CPMode.prototype.paint = CPMode.prototype.mouseDown
-        = CPMode.prototype.mouseDrag = CPMode.prototype.mouseUp
-        = CPMode.prototype.suspend = CPMode.prototype.resume = CPMode.prototype.leave = CPMode.prototype.keyUp = function() {};
+        = CPMode.prototype.mouseDrag = CPMode.prototype.mouseUp = CPMode.prototype.keyDown
+        = CPMode.prototype.suspend = CPMode.prototype.resume = CPMode.prototype.keyUp = function() {};
 
     //
     // Default UI Mode when not doing anything: used to start the other modes
@@ -291,10 +323,7 @@ export default function CPCanvas(controller) {
         if (!spacePressed
                 && (button == BUTTON_SECONDARY || button == BUTTON_PRIMARY && e.altKey)) {
             modeStack.push(colorPickerMode, true);
-            /*
-             * We only deliver this message to the new mode (not to bubble up the whole stack), since we have a good idea
-             * that it'll want to handle it!
-             */
+            // Avoid infinite recursion by only delivering the event to the new mode (don't let it bubble back to us!)
             modeStack.peek().mouseDown(e, button, pressure);
         } else if (button == BUTTON_WHEEL || spacePressed && button == BUTTON_PRIMARY) {
             if (e.altKey) {
@@ -317,6 +346,7 @@ export default function CPCanvas(controller) {
                 modeStack.push(panMode, true);
                 modeStack.peek().keyDown(e);
             }
+            return true;
         }
     };
 
@@ -402,6 +432,7 @@ export default function CPCanvas(controller) {
     };
 
     CPDrawingMode.prototype.leave = function() {
+        CPMode.prototype.leave.call(this);
         this.eraseBrushPreview();
     };
 
@@ -440,7 +471,6 @@ export default function CPCanvas(controller) {
     function CPFreehandMode() {
         CPDrawingMode.call(this);
 
-        this.painting = false;
         this.smoothMouse = {x:0.0, y:0.0};
     }
     
@@ -448,16 +478,13 @@ export default function CPCanvas(controller) {
     CPFreehandMode.prototype.constructor = CPFreehandMode;
     
     CPFreehandMode.prototype.mouseDown = function(e, button, pressure) {
-        if (this.painting) {
-            // Swallow all mouse events during painting
-            return true;
-        } else if (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
+        if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
             var
                 pf = coordToDocument({x: mouseX, y:mouseY});
 
             this.eraseBrushPreview();
 
-            this.painting = true;
+            this.capture = true;
             artwork.beginStroke(pf.x, pf.y, pressure);
 
             this.smoothMouse = pf;
@@ -467,7 +494,7 @@ export default function CPCanvas(controller) {
     };
 
     CPFreehandMode.prototype.mouseDrag = function(e, pressure) {
-        if (this.painting) {
+        if (this.capture) {
             var
                 pf = coordToDocument({x: mouseX, y: mouseY}),
                 smoothing = Math.min(0.999, Math.pow(controller.getBrushInfo().smoothing, 0.3));
@@ -484,34 +511,23 @@ export default function CPCanvas(controller) {
     };
 
     CPFreehandMode.prototype.mouseUp = function(e, button, pressure) {
-        if (this.painting) {
+        if (this.capture) {
             if (button == BUTTON_PRIMARY) {
-                this.painting = false;
+                this.capture = false;
                 artwork.endStroke();
             }
-            return true;
-        }
-    };
-
-    CPFreehandMode.prototype.keyDown = function(e, button, pressure) {
-        if (this.painting) {
-            e.preventDefault();
-
             return true;
         }
     };
         
     function CPLineMode() {
         var
-            dragLine = false,
             dragLineFrom, dragLineTo,
             LINE_PREVIEW_WIDTH = 1;
 
         this.mouseDown = function(e, button, pressure) {
-            if (dragLine) {
-                return true;
-            } else if (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
-                dragLine = true;
+            if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
+                this.capture = true;
                 dragLineFrom = dragLineTo = {x: mouseX + 0.5, y: mouseY + 0.5};
 
                 this.eraseBrushPreview();
@@ -521,7 +537,7 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDrag = function(e) {
-            if (dragLine) {
+            if (this.capture) {
                 var
                 // The old line position that we'll invalidate for redraw
                     invalidateRect = new CPRect(
@@ -578,12 +594,12 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function(e, button, pressure) {
-            if (dragLine && button == BUTTON_PRIMARY) {
+            if (this.capture && button == BUTTON_PRIMARY) {
                 var
                     from = coordToDocument(dragLineFrom),
                     to = coordToDocument(dragLineTo);
 
-                dragLine = false;
+                this.capture = false;
 
                 this.drawLine(from, to);
 
@@ -602,7 +618,7 @@ export default function CPCanvas(controller) {
         };
 
         this.paint = function() {
-            if (dragLine) {
+            if (this.capture) {
                 canvasContext.lineWidth = LINE_PREVIEW_WIDTH;
                 canvasContext.beginPath();
                 canvasContext.moveTo(dragLineFrom.x, dragLineFrom.y);
@@ -632,18 +648,14 @@ export default function CPCanvas(controller) {
             BEZIER_POINTS_PREVIEW = 100;
 
         var
-            dragBezier = false,
             dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
 
         this.mouseDown = function(e, button, pressure) {
-            if (dragBezier) {
-                return true
-            } else if (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
+            if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
                 var
                     p = coordToDocument({x: mouseX, y: mouseY});
 
-                dragBezier = true;
                 dragBezierMode = 0;
                 dragBezierP0 = dragBezierP1 = dragBezierP2 = dragBezierP3 = p;
 
@@ -655,11 +667,12 @@ export default function CPCanvas(controller) {
 
         // Handles the first part of the Bezier where the user drags out a straight line
         this.mouseDrag = function(e) {
-            var
-                p = coordToDocument({x: mouseX, y: mouseY});
+            if (this.capture && dragBezierMode == 0) {
+                var
+                    p = coordToDocument({x: mouseX, y: mouseY});
 
-            if (dragBezier && dragBezierMode == 0) {
                 dragBezierP2 = dragBezierP3 = p;
+
                 that.repaintAll();
 
                 return true;
@@ -669,13 +682,13 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function(e, button, pressure) {
-            if (dragBezier && button == BUTTON_PRIMARY) {
+            if (this.capture && button == BUTTON_PRIMARY) {
                 if (dragBezierMode == 0) {
                     dragBezierMode = 1;
                 } else if (dragBezierMode == 1) {
                     dragBezierMode = 2;
                 } else if (dragBezierMode == 2) {
-                    dragBezier = false;
+                    this.capture = false;
 
                     var 
                         p0 = dragBezierP0,
@@ -713,10 +726,10 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseMove = function(e, pressure) {
-            var
-                p = coordToDocument({x: mouseX, y: mouseY});
+            if (this.capture) {
+                var
+                    p = coordToDocument({x: mouseX, y: mouseY});
 
-            if (dragBezier) {
                 if (dragBezierMode == 1) {
                     dragBezierP1 = p;
                 } else if (dragBezierMode == 2) {
@@ -732,7 +745,7 @@ export default function CPCanvas(controller) {
         };
 
         this.paint = function() {
-            if (dragBezier) {
+            if (this.capture) {
                 var
                     bezier = new CPBezier(),
 
@@ -787,16 +800,16 @@ export default function CPCanvas(controller) {
             mouseButton;
 
         this.mouseDown = function(e, button, pressure) {
-            if (!key.isPressed("space") && (button == BUTTON_PRIMARY && (!this.transient || e.altKey) || button == BUTTON_SECONDARY)) {
+            if (this.capture) {
+                return true;
+            } else if (!key.isPressed("space") && (button == BUTTON_PRIMARY && (!this.transient || e.altKey) || button == BUTTON_SECONDARY)) {
                 mouseButton = button;
+                this.capture = true;
 
                 setCursor(CURSOR_CROSSHAIR);
 
                 this.mouseDrag(e);
 
-                return true;
-            } else if (mouseButton != -1) {
-                // While we're sampling, we'll take over any other mouse buttons
                 return true;
             } else if (this.transient) {
                 // If we're not sampling and we get a button not intended for us, we probably shouldn't be on the stack
@@ -805,7 +818,7 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDrag = function(e) {
-            if (mouseButton != -1) {
+            if (this.capture) {
                 var
                     pf = coordToDocument({x: mouseX, y: mouseY});
 
@@ -818,8 +831,9 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function(e, button, pressure) {
-            if (button == mouseButton) {
+            if (this.capture && button == mouseButton) {
                 mouseButton = -1;
+                this.capture = false;
                 setCursor(CURSOR_DEFAULT);
 
                 if (this.transient) {
@@ -841,18 +855,16 @@ export default function CPCanvas(controller) {
 
     function CPPanMode() {
         var
-            panning = false,
             panningX, panningY,
             panningOffset,
             panningButton;
 
         this.keyDown = function(e) {
-            if (this.transient && e.keyCode == 32 /* Space */) {
-                if (!panning) {
+            if (e.keyCode == 32 /* Space */) {
+                // If we're not already panning, then advertise that a left-click would pan
+                if (!this.capture) {
                     setCursor(CURSOR_PANNABLE);
                 }
-
-                e.preventDefault();
 
                 return true;
             }
@@ -869,30 +881,26 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDown = function(e, button, pressure) {
-            if (!panning) {
-                if (button == BUTTON_WHEEL || key.isPressed("space") && button == BUTTON_PRIMARY) {
-                    panning = true;
-                    panningButton = button;
-                    panningX = e.pageX;
-                    panningY = e.pageY;
-                    panningOffset = that.getOffset();
-                    setCursor(CURSOR_PANNING);
-
-                    return true;
-                }
-
-                if (this.transient) {
-                    // If we're not panning and we get a button not intended for us, we probably shouldn't be on the stack
-                    modeStack.pop();
-                }
-            } else {
-                // While we're panning, we'll take over any other mouse buttons
+            if (this.capture) {
                 return true;
+            } else if (button == BUTTON_WHEEL || key.isPressed("space") && button == BUTTON_PRIMARY) {
+                this.capture = true;
+                panningButton = button;
+                panningX = e.pageX;
+                panningY = e.pageY;
+                panningOffset = that.getOffset();
+                setCursor(CURSOR_PANNING);
+
+                return true;
+            } else if (this.transient) {
+                // If we're not panning and we get a button not intended for us, we probably shouldn't be on the stack
+                modeStack.pop();
             }
         };
 
         this.mouseDrag = function(e) {
-            if (panning) {
+            if (this.capture) {
+                console.log(panningOffset.x + e.pageX - panningX + "," + panningOffset.y + e.pageY - panningY);
                 that.setOffset(panningOffset.x + e.pageX - panningX, panningOffset.y + e.pageY - panningY);
 
                 return true;
@@ -900,9 +908,9 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function(e, button, pressure) {
-            if (panning && button == panningButton) {
+            if (this.capture && button == panningButton) {
                 panningButton = -1;
-                panning = false;
+                this.capture = false;
 
                 if (this.transient && !key.isPressed("space")) {
                     setCursor(CURSOR_DEFAULT);
@@ -916,7 +924,6 @@ export default function CPCanvas(controller) {
 
         this.enter = function() {
             setCursor(CURSOR_PANNABLE);
-            panning = false;
         };
     }
     
@@ -947,11 +954,10 @@ export default function CPCanvas(controller) {
         var
             firstClick,
             curRect = new CPRect(0, 0, 0, 0),
-            selecting = false,
             selectingButton = -1;
 
         this.mouseDown = function (e, button, pressure) {
-            if (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
+            if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 var
                     p = coordToDocumentInt({x: mouseX, y: mouseY});
 
@@ -962,14 +968,14 @@ export default function CPCanvas(controller) {
 
                 that.repaintAll();
 
-                selecting = true;
+                this.capture = true;
 
                 return true;
             }
         };
 
         this.mouseDrag = function(e) {
-            if (!selecting)
+            if (!this.capture)
                 return false;
 
             var
@@ -1000,13 +1006,13 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseUp = function (e, button, pressure) {
-            if (selecting && button == selectingButton) {
+            if (this.capture && button == selectingButton) {
                 artwork.rectangleSelection(curRect);
                 curRect.makeEmpty();
 
                 that.repaintAll();
 
-                selecting = false;
+                this.capture = false;
                 selectingButton = -1;
 
                 return true;
@@ -1028,23 +1034,22 @@ export default function CPCanvas(controller) {
         var 
             lastPoint,
             copyMode,
-            firstMove = false,
-            capturedMouse = false;
+            firstMove = false;
 
         this.mouseDown = function(e, button, pressure) {
-            if (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
+            if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 lastPoint = coordToDocument({x: mouseX, y: mouseY});
 
                 copyMode = e.altKey;
                 firstMove = true;
-                capturedMouse = true;
+                this.capture = true;
 
                 return true;
             }
         };
 
         this.mouseDrag = throttle(25, function(e) {
-            if (capturedMouse) {
+            if (this.capture) {
                 var
                     p = coordToDocument({x: mouseX, y: mouseY}),
 
@@ -1067,8 +1072,8 @@ export default function CPCanvas(controller) {
         });
 
         this.mouseUp = function(e, button, pressure) {
-            if (capturedMouse && button == BUTTON_PRIMARY) {
-                capturedMouse = false;
+            if (this.capture && button == BUTTON_PRIMARY) {
+                this.capture = false;
                 if (this.transient) {
                     modeStack.pop();
                 }
@@ -1089,10 +1094,6 @@ export default function CPCanvas(controller) {
 
     CPMoveToolMode.prototype.enter = function() {
         setCursor(CURSOR_MOVE);
-    };
-
-    CPMoveToolMode.prototype.paint = function() {
-        return true;
     };
 
     function CPTransformMode() {
@@ -1117,7 +1118,6 @@ export default function CPCanvas(controller) {
             origCornerPoints,
             cornerPoints, // A CPPolygon in document space for the current corners of the transform rect
             draggingMode = DRAG_NONE,
-            transforming = false,
 
             firstDragPoint,
             lastDragPoint;
@@ -1191,7 +1191,7 @@ export default function CPCanvas(controller) {
         }
 
         this.mouseDown = function(e, button, pressure) {
-            if (!transforming && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
+            if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 var
                     corners = cornersToDisplayPolygon(),
                     cornerIndex = classifyDragAction(corners, {x: mouseX, y: mouseY});
@@ -1201,7 +1201,7 @@ export default function CPCanvas(controller) {
                 firstDragPoint = {x: mouseX, y: mouseY};
                 lastDragPoint = {x: mouseX, y: mouseY};
 
-                transforming = true;
+                this.capture = true;
 
                 return true;
             }
@@ -1211,7 +1211,7 @@ export default function CPCanvas(controller) {
             const
                 MIN_SCALE = 0.001;
 
-            if (transforming) {
+            if (this.capture) {
                 var
                     dragPointDisplay = {x: mouseX, y: mouseY};
 
@@ -1353,8 +1353,8 @@ export default function CPCanvas(controller) {
         });
 
         this.mouseUp = function(e, button, pressure) {
-            if (transforming && button == BUTTON_PRIMARY) {
-                transforming = false;
+            if (this.capture && button == BUTTON_PRIMARY) {
+                this.capture = false;
                 draggingMode = DRAG_NONE;
                 return true;
             }
@@ -1480,7 +1480,7 @@ export default function CPCanvas(controller) {
 
                 return true;
             }
-        },
+        };
 
         this.enter = function() {
             CPMode.prototype.enter.call(this);
@@ -1501,6 +1501,7 @@ export default function CPCanvas(controller) {
         };
 
         this.leave = function() {
+            CPMode.prototype.leave.call(this);
             that.repaintAll();
         };
     }
@@ -1515,11 +1516,12 @@ export default function CPCanvas(controller) {
             initTransform,
             dragged = false,
 
-            rotating = false,
             rotateButton = -1;
 
         this.mouseDown = function(e, button, pressure) {
-            if (!this.transient && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
+            if (this.capture) {
+                return true;
+            } else if (!this.transient && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
                     || e.altKey && (button == BUTTON_WHEEL || button == BUTTON_PRIMARY && key.isPressed("space"))) {
                 firstClick = {x: mouseX, y: mouseY};
 
@@ -1528,7 +1530,7 @@ export default function CPCanvas(controller) {
 
                 dragged = false;
 
-                rotating = true;
+                this.capture = true;
                 rotateButton = button;
 
                 return true;
@@ -1538,7 +1540,7 @@ export default function CPCanvas(controller) {
         };
 
         this.mouseDrag = function(e) {
-            if (rotating) {
+            if (this.capture) {
                 var
                     p = {x: mouseX, y: mouseY},
 
@@ -1592,25 +1594,18 @@ export default function CPCanvas(controller) {
         }
         
         this.mouseUp = function(e, button, pressure) {
-            if (rotating && button == rotateButton) {
+            if (this.capture && button == rotateButton) {
                 if (dragged) {
                     finishRotation();
                 } else {
                     that.resetRotation();
                 }
 
+                this.capture = false;
+
                 if (this.transient && !(key.isPressed("space") && key.alt)) {
                     modeStack.pop();
                 }
-
-                return true;
-            }
-        };
-
-        this.keyDown = function(e) {
-            if (e.altKey && e.keyCode == 32 /* Space */) {
-
-                e.preventDefault();
 
                 return true;
             }
@@ -1626,9 +1621,11 @@ export default function CPCanvas(controller) {
             }
         };
 
-        this.enter = function() {
-            CPMode.prototype.enter.call(this);
-            rotating = false;
+        this.keyDown = function(e) {
+            if (e.keyCode == 32 /* Space */ && e.altKey) {
+                // That's our hotkey, so stay in this mode (don't forward to CPDefaultMode)
+                return true;
+            }
         };
     }
     
