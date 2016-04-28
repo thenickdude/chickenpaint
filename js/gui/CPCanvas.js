@@ -2328,8 +2328,8 @@ export default function CPCanvas(controller) {
 
         canvasContext.lineWidth = 1.0;
         
-        // Draw selection
-        if (!artwork.getSelection().isEmpty()) {
+        // Draw the artwork selection so long as we're not in the middle of selecting a new rectangle
+        if (!artwork.getSelection().isEmpty() && !(modeStack.peek() instanceof CPRectSelectionMode && modeStack.peek().capture)) {
             canvasContext.setLineDash([3, 2]);
             
             plotSelectionRect(canvasContext, artwork.getSelection());

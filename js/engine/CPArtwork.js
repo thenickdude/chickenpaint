@@ -1767,7 +1767,7 @@ export default function CPArtwork(_width, _height) {
 
     this.emptySelection = function() {
         curSelection.makeEmpty();
-    }
+    };
 
     this.floodFill = function(x, y) {
         prepareForLayerUndo();
