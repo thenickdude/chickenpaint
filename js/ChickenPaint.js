@@ -367,12 +367,15 @@ export default function ChickenPaint(options) {
             CPTransform: {
                 action: function () {
                     var
-                        activeLayer = that.artwork.getActiveLayer();
+                        layer = that.artwork.getActiveLayer(),
+                        layerIndex = that.artwork.getActiveLayerIndex();
                     
-                    if (!activeLayer.visible) {
-                        that.showLayerNotification(that.artwork.getActiveLayerIndex(), "Whoops! This layer is currently hidden", "layer");
-                    } else if (activeLayer.alpha == 0) {
-                        that.showLayerNotification(that.artwork.getActiveLayerIndex(), "Whoops! This layer's opacity is currently 0%", "opacity");
+                    if (!layer.visible) {
+                        that.showLayerNotification(layerIndex, "Whoops! This layer is currently hidden", "layer");
+                    } else if (layer.alpha == 0) {
+                        that.showLayerNotification(layerIndex, "Whoops! This layer's opacity is currently 0%", "opacity");
+                    } else if (that.artwork.transformAffineBegin() == null) {
+                        that.showLayerNotification(layerIndex, "Whoops! All of the selected pixels are transparent!", "layer");
                     } else {
                         setMode(ChickenPaint.M_TRANSFORM);
                     }

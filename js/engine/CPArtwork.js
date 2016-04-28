@@ -1962,14 +1962,39 @@ export default function CPArtwork(_width, _height) {
     };
 
 	/**
-     * Return the identity transform you can use in a call to transformAffine.
+     * Begins transforming the current selection/layer, and returns the initial source rectangle and initial transform.
+     * You can update the transform by calling transformAffine().
+     * 
+     * You must call transformAffineFinish() or transformAffineAbort() to finish the transformation.
+     * 
+     * Returns null if the current selection/layer doesn't contain any non-transparent pixels, and doesn't start
+     * transforming.
      */
     this.transformAffineBegin = function() {
+        // Are we already transforming? Continue that instead
         if (previewOperation instanceof CPActionTransformSelection) {
-            return {transform: previewOperation.getTransform(), selection: previewOperation.getInitialSelection()};
+            return {transform: previewOperation.getTransform(), rect: previewOperation.getInitialTransformRect(), selection: previewOperation.getInitialSelectionRect()};
         }
 
-        return {transform: new CPTransform(), selection: this.getSelectionAutoSelect()};
+        // Only transform the non-transparent pixels
+        var
+            layer = this.getActiveLayer(),
+            selection = this.getSelectionAutoSelect(),
+            initialRect = layer.getNonTransparentBounds(selection),
+            initialTransform = new CPTransform();
+
+        if (initialRect.isEmpty()) {
+            return null;
+        }
+
+        /* If we introduce other previewOperations, we might want to check we aren't overwriting them here...
+         * Though probably ChickenPaint's global exclusive mode will enforce this for us.
+         */
+        previewOperation = new CPActionTransformSelection(initialRect, initialTransform);
+    
+        opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
+    
+        return {transform: initialTransform, rect: initialRect, selection: selection};
     };
 
 	/**
@@ -1987,13 +2012,9 @@ export default function CPArtwork(_width, _height) {
      *
      * @param {CPTransform} affineTransform
      */
-    this.transformAffine = function(affineTransform) {
-        opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
-
+    this.transformAffineAmend = function(affineTransform) {
         if (previewOperation instanceof CPActionTransformSelection) {
             previewOperation.amend(affineTransform);
-        } else {
-            previewOperation = new CPActionTransformSelection(this.getSelectionAutoSelect(), affineTransform);
         }
     };
     
@@ -2681,10 +2702,22 @@ export default function CPArtwork(_width, _height) {
         };
 
         /**
-         * Get a copy of the initial selection rectangle (before the transform was applied)
+         * Get a copy of the initial document rectangle (before the transform was applied)
+         *
+         * @returns {CPRect}
          */
-        this.getInitialSelection = function() {
+        this.getInitialTransformRect = function() {
             return srcRect.clone();
+        };
+
+        /**
+         * Get a copy of the initial user selection rectangle (before the transform was applied). Can be empty if
+         * the user didn't have anything selected before the transform began.
+         *
+         * @returns {CPRect}
+         */
+        this.getInitialSelectionRect = function() {
+            return fromSelection.clone();
         };
 
         this.layerIndex = that.getActiveLayerIndex();

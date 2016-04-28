@@ -110,7 +110,8 @@ export default function CPLayersPalette(controller) {
 
     function CPLayerWidget() {
         const
-            NOTIFICATION_HIDE_DELAY = 3000;
+            NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,
+            NOTIFICATION_HIDE_DELAY_MIN = 3000;
 
         var 
             layerDrag, layerDragReally,
@@ -423,7 +424,7 @@ export default function CPLayersPalette(controller) {
             dismissTimer = setTimeout(function() {
                 dismissTimer = false;
                 that.dismissNotification()
-            }, NOTIFICATION_HIDE_DELAY);
+            }, Math.max(Math.round(notificationMessage.length * NOTIFICATION_HIDE_DELAY_MS_PER_CHAR), NOTIFICATION_HIDE_DELAY_MIN));
         };
 
         /* Reposition the popover to the layer/location that the notification applies to */

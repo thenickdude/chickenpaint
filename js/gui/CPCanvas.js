@@ -1114,8 +1114,8 @@ export default function CPCanvas(controller) {
 
         var
             affine, // A CPTransform
-            srcRect, // The initial document rectangle that was selected to transform
-            origCornerPoints,
+            srcRect, // The initial document rectangle to transform
+            origCornerPoints, // A CPPolygon of the initial transform rect 
             cornerPoints, // A CPPolygon in document space for the current corners of the transform rect
             draggingMode = DRAG_NONE,
 
@@ -1343,7 +1343,7 @@ export default function CPCanvas(controller) {
 
                 cornerPoints = origCornerPoints.getTransformed(affine);
 
-                artwork.transformAffine(affine);
+                artwork.transformAffineAmend(affine);
 
                 // TODO make me more specific
                 that.repaintAll();
@@ -1489,12 +1489,21 @@ export default function CPCanvas(controller) {
 
             // Start off with the identity transform
             var
-                initial = artwork.transformAffineBegin();
+                initial = artwork.transformAffineBegin(),
+                initialSelection;
 
             affine = initial.transform;
-            srcRect = initial.selection;
+            srcRect = initial.rect;
 
-            origCornerPoints = new CPPolygon(srcRect.toPoints());
+            // Decide on the rectangle we'll show as the boundary of the transform area
+            initialSelection = initial.selection;
+
+            /* If the user didn't have anything selected, we'll use the actual shrink-wrapped transform area instead. */
+            if (initialSelection.isEmpty()) {
+                initialSelection = initial.rect.clone();
+            }
+
+            origCornerPoints = new CPPolygon(initialSelection.toPoints());
             cornerPoints = origCornerPoints.getTransformed(affine);
 
             that.repaintAll();
