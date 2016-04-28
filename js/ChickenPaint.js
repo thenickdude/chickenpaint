@@ -773,7 +773,16 @@ export default function ChickenPaint(options) {
     this.setCanvas = function(_canvas) {
         canvas = _canvas;
     };
-
+	
+	/**
+     * Change the interpolation mode used by Free Transform operations
+     * 
+     * @param {string} interpolation - Either "sharp" or "smooth"
+     */
+    this.setTransformInterpolation = function(interpolation) {
+        this.artwork.setTransformInterpolation(interpolation);
+    };
+    
     this.setCurColor = function(color) {
         if (!curColor.isEqual(color)) {
             this.artwork.setForegroundColor(color.getRgb());

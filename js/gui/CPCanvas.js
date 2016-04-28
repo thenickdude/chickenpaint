@@ -26,6 +26,8 @@ import CPWacomTablet from "../util/CPWacomTablet";
 import CPBezier from "../util/CPBezier";
 import {throttle} from "../util/throttle-debounce";
 import CPPolygon from "../util/CPPolygon";
+import {setCanvasInterpolation} from "../util/CPPolyfill";
+
 import ChickenPaint from "../ChickenPaint";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
@@ -900,7 +902,6 @@ export default function CPCanvas(controller) {
 
         this.mouseDrag = function(e) {
             if (this.capture) {
-                console.log(panningOffset.x + e.pageX - panningX + "," + panningOffset.y + e.pageY - panningY);
                 that.setOffset(panningOffset.x + e.pageX - panningX, panningOffset.y + e.pageY - panningY);
 
                 return true;
@@ -1113,14 +1114,22 @@ export default function CPCanvas(controller) {
             DRAG_W_EDGE = 7;
 
         var
-            affine, // A CPTransform
-            srcRect, // The initial document rectangle to transform
-            origCornerPoints, // A CPPolygon of the initial transform rect 
-            cornerPoints, // A CPPolygon in document space for the current corners of the transform rect
+            /** @type {CPTransform} The current transformation */
+            affine,
+            /** @type {CPRect} The initial document rectangle to transform */
+            srcRect,
+            /** @type {CPPolygon} The initial transform rect */
+            origCornerPoints,
+            /** @type {CPPolygon} The current corners of the transform rect in document space */
+            cornerPoints,
+
             draggingMode = DRAG_NONE,
 
-            firstDragPoint,
-            lastDragPoint;
+            lastDragPointDisplay,
+            lastDragPointDoc,
+
+            // Keep track of how many degrees we've rotated so far during this transformation
+            rotationAccumulator;
 
 		/**
          * Get the polygon that represents the current transform result area in display coordinates.
@@ -1133,6 +1142,10 @@ export default function CPCanvas(controller) {
 
         function averagePoints(p1, p2) {
             return {x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2};
+        }
+
+        function roundPoint(p) {
+            return {x : Math.round(p.x), y: Math.round(p.y)};
         }
 
 		/**
@@ -1190,18 +1203,65 @@ export default function CPCanvas(controller) {
             return DRAG_ROTATE;
         }
 
+        function setCursorForHandles() {
+            var
+                corners = cornersToDisplayPolygon(),
+                mouse = {x: mouseX, y: mouseY},
+                dragAction = classifyDragAction(corners, mouse);
+
+            switch (dragAction) {
+                case DRAG_NW_CORNER:
+                case DRAG_NE_CORNER:
+                case DRAG_SE_CORNER:
+                case DRAG_SW_CORNER:
+                    // Choose a cursor for a 45-degree resize from this corner
+                    let
+                        cornerIndex = ~~(dragAction / 2),
+                        cornerBefore = corners.points[(cornerIndex + 3) % 4],
+                        corner = corners.points[cornerIndex],
+                        cornerAfter = corners.points[(cornerIndex + 1) % 4],
+
+                    // Get a vector which points 45 degrees toward the center of the box, this'll do for cursor direction
+                        v45 = CPVector.subtractPoints(cornerBefore, corner).normalize().add(CPVector.subtractPoints(cornerAfter, corner).normalize());
+
+                    setResizeCursorForVector(v45);
+                    break;
+                case DRAG_N_EDGE:
+                case DRAG_E_EDGE:
+                case DRAG_S_EDGE:
+                case DRAG_W_EDGE:
+                    // Resizing from here will move edge perpendicularly
+                    let
+                        corner1 = corners.points[~~(dragAction / 2)],
+                        corner2 = corners.points[(~~(dragAction / 2) + 1) % 4],
+                        vPerp = CPVector.subtractPoints(corner2, corner1).getPerpendicular();
+
+                    setResizeCursorForVector(vPerp);
+                    break;
+                case DRAG_MOVE:
+                    setCursor(CURSOR_MOVE);
+                    break;
+                case DRAG_ROTATE:
+                    setCursor(CURSOR_DEFAULT); // TODO add a custom rotation cursor
+                    break;
+                default:
+                    setCursor(CURSOR_DEFAULT);
+            }
+        }
+
         this.mouseDown = function(e, button, pressure) {
             if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")) {
                 var
-                    corners = cornersToDisplayPolygon(),
-                    cornerIndex = classifyDragAction(corners, {x: mouseX, y: mouseY});
+                    corners = cornersToDisplayPolygon();
 
-                draggingMode = cornerIndex;
+                draggingMode = classifyDragAction(corners, {x: mouseX, y: mouseY});
 
-                firstDragPoint = {x: mouseX, y: mouseY};
-                lastDragPoint = {x: mouseX, y: mouseY};
+                lastDragPointDisplay = {x: mouseX, y: mouseY};
+                lastDragPointDoc = coordToDocument(lastDragPointDisplay);
 
                 this.capture = true;
+
+                setCursorForHandles();
 
                 return true;
             }
@@ -1218,38 +1278,63 @@ export default function CPCanvas(controller) {
                 switch (draggingMode) {
                     case DRAG_MOVE:
                         let
-                            dragPointDoc = coordToDocument(dragPointDisplay),
-                            lastDragPointDoc = coordToDocument(lastDragPoint),
+                            dragPointDoc = roundPoint(coordToDocument(dragPointDisplay)),
+
+                            translation = CPVector.subtractPoints(dragPointDoc, lastDragPointDoc),
+
+                            // Only translate in whole-pixel increments (in document space not canvas space)
+                            translationRounded = translation.getTruncated(),
+
+                            translationRemainder = translation.subtract(translationRounded),
 
                             translateInstance = new CPTransform();
 
                         /*
                          * Apply the translate *after* the current affine is applied.
                          */
-                        translateInstance.translate(dragPointDoc.x - lastDragPointDoc.x, dragPointDoc.y - lastDragPointDoc.y);
+                        translateInstance.translate(translationRounded.x, translationRounded.y);
 
                         affine.preMultiply(translateInstance);
 
-                        lastDragPoint = dragPointDisplay;
+                        // Accumulate the fractional move that we didn't apply for next time
+                        lastDragPointDoc = CPVector.subtractPoints(dragPointDoc, translationRemainder);
                     break;
                     case DRAG_ROTATE:
+                        const
+                            DRAG_ROTATE_SNAP_ANGLE = Math.PI / 4;
+
                         let
                             centerDoc = cornerPoints.getCenter(),
                             centerDisplay = coordToDisplay(centerDoc),
 
-                            deltaAngle = Math.atan2(dragPointDisplay.y - centerDisplay.y, dragPointDisplay.x - centerDisplay.x)
-                                - Math.atan2(lastDragPoint.y - centerDisplay.y, lastDragPoint.x - centerDisplay.x),
+                            oldMouseAngle = Math.atan2(lastDragPointDisplay.y - centerDisplay.y, lastDragPointDisplay.x - centerDisplay.x),
+                            newMouseAngle = Math.atan2(dragPointDisplay.y - centerDisplay.y, dragPointDisplay.x - centerDisplay.x),
+                            deltaMouseAngle = newMouseAngle - oldMouseAngle,
 
+                            rotateAngle,
                             rotateInstance = new CPTransform();
+
+                        rotationAccumulator += deltaMouseAngle;
+
+                        if (e.shiftKey) {
+                            /*
+                             * The rotation in the decomposition was made about the origin. We want to rotate about the
+                             * center of the selection, so first rotate the selection to square it up with the axes,
+                             * then we'll pivot the selection about its center to the new angle.
+                             */
+                            rotateAngle = -affine.decompose().rotate + Math.round(rotationAccumulator / DRAG_ROTATE_SNAP_ANGLE) * DRAG_ROTATE_SNAP_ANGLE;
+                        } else {
+                            rotateAngle = deltaMouseAngle;
+                        }
 
                         /* Apply the rotation *after* the current affine instead of before it, so that we don't
                          * end up scaling on top of the rotated selection later (which would cause an unwanted shear)
                          */
-                        rotateInstance.rotateAroundPoint(deltaAngle, centerDoc.x, centerDoc.y);
+                        rotateInstance.rotateAroundPoint(rotateAngle, centerDoc.x, centerDoc.y);
 
                         affine.preMultiply(rotateInstance);
 
-                        lastDragPoint = dragPointDisplay;
+                        lastDragPointDisplay = dragPointDisplay;
                     break;
                     case DRAG_NW_CORNER:
                     case DRAG_NE_CORNER:
@@ -1261,7 +1346,7 @@ export default function CPCanvas(controller) {
 
                             oldCorner = origCornerPoints.points[draggingCorner],
                         // The corner we dragged will move into its new position
-                            newCorner = affine.getInverted().getTransformedPoint(coordToDocument(dragPointDisplay)),
+                            newCorner = affine.getInverted().getTransformedPoint(roundPoint(coordToDocument(dragPointDisplay))),
 
                         // The opposite corner to the one we dragged must not move
                             fixCorner = origCornerPoints.points[(draggingCorner + 2) % 4],
@@ -1304,15 +1389,15 @@ export default function CPCanvas(controller) {
                             oldHandle = averagePoints(origCornerPoints.points[cornerIndex], origCornerPoints.points[(cornerIndex + 1) % 4]),
 
                         // The handle we dragged will move into its new position
-                            newHandle = affine.getInverted().getTransformedPoint(coordToDocument(dragPointDisplay)),
+                            newHandle = affine.getInverted().getTransformedPoint(roundPoint(coordToDocument(dragPointDisplay))),
 
                         // The opposite handle to the one we dragged must not move
                             fixHandle = averagePoints(origCornerPoints.points[(cornerIndex + 2) % 4], origCornerPoints.points[(cornerIndex + 3) % 4]),
 
                             scaleX, scaleY,
 
-                            oldVector = new CPVector(oldHandle.x - fixHandle.x, oldHandle.y - fixHandle.y),
-                            newVector = new CPVector(newHandle.x - fixHandle.x, newHandle.y - fixHandle.y),
+                            oldVector = CPVector.subtractPoints(oldHandle, fixHandle),
+                            newVector = CPVector.subtractPoints(newHandle, fixHandle),
 
                             oldLength = oldVector.getLength(),
                         // We only take the length in the perpendicular direction to the transform edge:
@@ -1366,21 +1451,20 @@ export default function CPCanvas(controller) {
         function setResizeCursorForVector(v) {
             let
                 angle = Math.atan2(-v.y, v.x),
-                /*
-                 * Slice up into 30 degrees slices so that there are +-15 degrees centered around each corner,
-                 * and two 30 degree segments for each edge
+            /*
+                 * Slice up into 45 degrees slices so that there are +-22.5 degrees centered around each corner,
+                 * and a 45 degree segment for each edge
                  */
-                slice = Math.floor(angle / (Math.PI / 6)),
+                slice = Math.floor(angle / (Math.PI / 4) + 0.5),
                 cursor;
 
             // Wrap angles below the x-axis wrap to positive ones...
             if (slice < 0) {
-                slice += 6;
+                slice += 4;
             }
 
             switch (slice) {
                 case 0:
-                case 5:
                 default:
                     cursor = CURSOR_EW_RESIZE;
                 break;
@@ -1388,10 +1472,9 @@ export default function CPCanvas(controller) {
                     cursor = CURSOR_NESW_RESIZE;
                 break;
                 case 2:
-                case 3:
                     cursor = CURSOR_NS_RESIZE;
                 break;
-                case 4:
+                case 3:
                     cursor = CURSOR_NWSE_RESIZE;
                 break;
             }
@@ -1399,46 +1482,10 @@ export default function CPCanvas(controller) {
             setCursor(cursor);
         }
 
-        this.mouseMove = function(e) {
-            var
-                corners = cornersToDisplayPolygon(),
-                mouse = {x: mouseX, y: mouseY},
-                dragAction = classifyDragAction(corners, mouse),
-                center;
-
-            switch (dragAction) {
-                case DRAG_NW_CORNER:
-                case DRAG_NE_CORNER:
-                case DRAG_SE_CORNER:
-                case DRAG_SW_CORNER:
-                    let
-                        corner = corners.points[~~(dragAction / 2)];
-
-                    center = corners.getCenter();
-
-                    setResizeCursorForVector({x: corner.x - center.x, y: corner.y - center.y});
-                break;
-                case DRAG_N_EDGE:
-                case DRAG_E_EDGE:
-                case DRAG_S_EDGE:
-                case DRAG_W_EDGE:
-                    let
-                        corner1 = corners.points[~~(dragAction / 2)],
-                        corner2 = corners.points[(~~(dragAction / 2) + 1) % 4],
-                        edgeMidpoint = averagePoints(corner1, corner2);
-
-                    center = corners.getCenter();
-
-                    setResizeCursorForVector({x: edgeMidpoint.x - center.x, y: edgeMidpoint.y - center.y});
-                break;
-                case DRAG_MOVE:
-                    setCursor(CURSOR_MOVE);
-                break;
-                case DRAG_ROTATE:
-                    setCursor(CURSOR_DEFAULT); // TODO add a custom rotation cursor
-                break;
-                default:
-                    setCursor(CURSOR_DEFAULT);
+        this.mouseMove = function() {
+            // We want to stick with our choice of cursor throughout the drag operation
+            if (!this.capture) {
+                setCursorForHandles();
             }
         };
 
@@ -1485,8 +1532,6 @@ export default function CPCanvas(controller) {
         this.enter = function() {
             CPMode.prototype.enter.call(this);
 
-            draggingMode = -1;
-
             // Start off with the identity transform
             var
                 initial = artwork.transformAffineBegin(),
@@ -1505,6 +1550,9 @@ export default function CPCanvas(controller) {
 
             origCornerPoints = new CPPolygon(initialSelection.toPoints());
             cornerPoints = origCornerPoints.getTransformed(affine);
+
+            draggingMode = -1;
+            rotationAccumulator = 0;
 
             that.repaintAll();
         };
@@ -1887,19 +1935,8 @@ export default function CPCanvas(controller) {
     
     this.setInterpolation = function(enabled) {
         interpolation = enabled;
-        
-        var
-            browserProperties = [
-                 "imageSmoothingEnabled", "mozImageSmoothingEnabled", "webkitImageSmoothingEnabled",
-                 "msImageSmoothingEnabled"
-            ];
-        
-        for (var i = 0; i < browserProperties.length; i++) {
-            if (browserProperties[i] in canvasContext) {
-                canvasContext[browserProperties[i]] = enabled;
-                break;
-            }
-        }
+
+        setCanvasInterpolation(canvasContext, enabled);
 
         this.repaintAll();
     };

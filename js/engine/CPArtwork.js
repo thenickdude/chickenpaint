@@ -32,6 +32,7 @@ import CPColorFloat from "../util/CPColorFloat";
 import CPRect from "../util/CPRect";
 import CPRandom from "../util/CPRandom";
 import CPTransform from "../util/CPTransform";
+import {setCanvasInterpolation} from "../util/CPPolyfill";
 
 // Polyfill, used in duplicateLayer
 if (!String.prototype.endsWith) {
@@ -51,7 +52,7 @@ export default function CPArtwork(_width, _height) {
     _width = _width | 0;
     _height = _height | 0;
     
-    var
+    const
         MAX_UNDO = 30,
         EMPTY_BACKGROUND_COLOR = 0xFFFFFFFF,
         EMPTY_LAYER_COLOR = 0x00FFFFFF,
@@ -140,6 +141,7 @@ export default function CPArtwork(_width, _height) {
         lockAlpha = false,
         
         curColor = 0x000000, // Black
+        transformInterpolation = "smooth",
         
         that = this;
     
@@ -1951,6 +1953,18 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
+    /**
+     * Change the interpolation mode used by Free Transform operations
+     *
+     * @param {string} interpolation - Either "sharp" or "smooth"
+     */
+    this.setTransformInterpolation = function(interpolation) {
+        transformInterpolation = interpolation;
+        if (previewOperation instanceof CPActionTransformSelection) {
+            previewOperation.setInterpolation(interpolation);
+        }
+    };
+
 	/**
      * If the current operation is an affine transform, roll it back and remove it from the undo history.
      */
@@ -1990,7 +2004,7 @@ export default function CPArtwork(_width, _height) {
         /* If we introduce other previewOperations, we might want to check we aren't overwriting them here...
          * Though probably ChickenPaint's global exclusive mode will enforce this for us.
          */
-        previewOperation = new CPActionTransformSelection(initialRect, initialTransform);
+        previewOperation = new CPActionTransformSelection(initialRect, initialTransform, transformInterpolation);
     
         opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
     
@@ -2548,8 +2562,9 @@ export default function CPArtwork(_width, _height) {
      *
      * @param {CPRect} srcRect - Rectangle to transform
      * @param {CPTransform} affineTransform - Transform to apply
+     * @param {string} interpolation - "smooth" or "sharp"
      */
-    function CPActionTransformSelection(srcRect, affineTransform) {
+    function CPActionTransformSelection(srcRect, affineTransform, interpolation) {
         var
             fromSelection = that.getSelection(),
             dstRect = null,
@@ -2565,6 +2580,7 @@ export default function CPArtwork(_width, _height) {
             fullUndoCanvasContext = fullUndoCanvas.getContext("2d");
 
         affineTransform = affineTransform.clone();
+        interpolation = interpolation || "smooth";
 
         this.undo = function() {
             var
@@ -2600,6 +2616,8 @@ export default function CPArtwork(_width, _height) {
 
             // Erase the region we moved from
             fullUndoCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+
+            setCanvasInterpolation(fullUndoCanvasContext, interpolation == "smooth");
 
             fullUndoCanvasContext.save();
 
@@ -2660,7 +2678,8 @@ export default function CPArtwork(_width, _height) {
 
             if (undoDataRect.getWidth() < layer.width || undoDataRect.getHeight() < layer.height) {
                 /*
-                 * We need a complete copy of the layer in undoData to support further redo().
+                 * We need a complete copy of the layer in undoData to support further redo(). (As we probably previously
+                 * only made a backup copy of the areas we erased using the old transform).
                  */
                 undoData = layer.clone();
                 undoDataRect = layer.getBounds();
@@ -2668,6 +2687,15 @@ export default function CPArtwork(_width, _height) {
 
             affineTransform = _affineTransform.clone();
             this.redo();
+        };
+
+        this.setInterpolation = function(newInterpolation) {
+            if (newInterpolation != interpolation) {
+                interpolation = newInterpolation;
+
+                this.undo();
+                this.redo();
+            }
         };
 
         /**
