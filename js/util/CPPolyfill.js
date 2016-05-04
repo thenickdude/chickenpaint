@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-export function setCanvasInterpolation(canvasContext, enabled) {
+function getCanvasInterpolationPropName(canvasContext) {
 	var
 		browserProperties = [
 			"imageSmoothingEnabled", "mozImageSmoothingEnabled", "webkitImageSmoothingEnabled",
@@ -29,8 +29,46 @@ export function setCanvasInterpolation(canvasContext, enabled) {
 
 	for (var i = 0; i < browserProperties.length; i++) {
 		if (browserProperties[i] in canvasContext) {
-			canvasContext[browserProperties[i]] = enabled;
-			break;
+			return browserProperties[i];
 		}
 	}
-};
+
+	return null;
+}
+
+export function isCanvasInterpolationSupported() {
+	var
+		canvas = document.createElement("canvas"),
+		canvasContext = canvas.getContext("2d");
+
+	return !!getCanvasInterpolationPropName(canvasContext);
+}
+
+export function setCanvasInterpolation(canvasContext, enabled) {
+	var
+		propName = getCanvasInterpolationPropName(canvasContext);
+
+	if (propName) {
+		canvasContext[propName] = enabled;
+	}
+}
+
+export function isEventSupported(eventName) {
+	var
+		isSupported = eventName in window;
+
+	if (!isSupported) {
+		var
+			el = document.createElement('div');
+		el.setAttribute(eventName, 'return;');
+
+		isSupported = typeof el[eventName] == 'function';
+	}
+
+	return isSupported;
+}
+
+export function isCanvasSupported(){
+	var elem = document.createElement('canvas');
+	return !!(elem.getContext && elem.getContext('2d'));
+}

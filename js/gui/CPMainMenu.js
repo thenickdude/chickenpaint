@@ -244,6 +244,7 @@ var
                     title: "Resets the zoom factor to 100%"
                 },
                 {
+                    action: "CPLinearInterpolation",
                     name: "-"
                 },
                 {

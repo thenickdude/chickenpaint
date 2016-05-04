@@ -37,29 +37,11 @@ import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPGridDialog";
 import CPSendDialog from "./gui/CPSendDialog";
 
+
+import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported} from "./util/CPPolyfill";
 import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
-
-function isEventSupported(eventName) {
-    var 
-        isSupported = eventName in window;
-    
-    if (!isSupported) {
-      var 
-          el = document.createElement('div');
-      el.setAttribute(eventName, 'return;');
-      
-      isSupported = typeof el[eventName] == 'function';
-    }
-    
-    return isSupported;
-}
-
-function isCanvasSupported(){
-    var elem = document.createElement('canvas');
-    return !!(elem.getContext && elem.getContext('2d'));
-}
 
 function isBrowserSupported() {
     return isCanvasSupported() && "Uint8Array" in window;
@@ -571,7 +553,10 @@ export default function ChickenPaint(options) {
                 action: function(e) {
                     canvas.setInterpolation(e.selected);
                 },
-                modifies: {gui: true}
+                modifies: {gui: true},
+                isSupported: function() {
+                    return isCanvasInterpolationSupported();
+                }
             },
             CPResetCanvasRotation: {
                 action: function () {

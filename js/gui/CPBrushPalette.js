@@ -31,6 +31,7 @@ import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPLayer from "../engine/CPLayer";
 
 import CPColor from "../util/CPColor";
+import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
 
 function sliderCheckboxGroup(checkbox, slider) {
     var
@@ -524,26 +525,29 @@ function CPTransformPanel(controller) {
     interpCombo.className = 'form-control chickenpaint-transform-interpolation';
     fillCombobox(interpCombo, TRANSFORM_INTERPOLATION);
 
+    if (isCanvasInterpolationSupported()) {
+        var
+            interpGroup = document.createElement("div"),
+            interpLabel = document.createElement("label");
+
+        interpLabel.innerHTML = "Transform style";
+
+        interpGroup.className = "form-group";
+        interpGroup.appendChild(interpLabel);
+        interpGroup.appendChild(interpCombo);
+
+        panel.appendChild(interpGroup);
+    }
+
     var
-        topGroup = document.createElement("div");
+        buttonGroup = document.createElement("div");
 
-    topGroup.appendChild(acceptButton);
-    topGroup.appendChild(rejectButton);
+    buttonGroup.appendChild(acceptButton);
+    buttonGroup.appendChild(rejectButton);
 
-    topGroup.className = "form-group";
+    buttonGroup.className = "form-group";
 
-    var
-        interpGroup = document.createElement("div"),
-        interpLabel = document.createElement("label");
-
-    interpLabel.innerHTML = "Transform style";
-
-    interpGroup.className = "form-group";
-    interpGroup.appendChild(interpLabel);
-    interpGroup.appendChild(interpCombo);
-
-    panel.appendChild(interpGroup);
-    panel.appendChild(topGroup);
+    panel.appendChild(buttonGroup);
 
     acceptButton.addEventListener("click", function(e) {
         controller.actionPerformed({action: "CPTransformAccept"});
