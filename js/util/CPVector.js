@@ -77,7 +77,7 @@ CPVector.prototype.getRounded = function() {
 };
 
 CPVector.prototype.getTruncated = function() {
-	return new CPVector(Math.trunc(this.x), Math.trunc(this.y));
+	return new CPVector(~~this.x, ~~this.y);
 };
 
 CPVector.prototype.getPerpendicular = function() {
