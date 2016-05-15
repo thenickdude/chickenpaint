@@ -660,6 +660,7 @@ export default function CPCanvas(controller) {
 
                 dragBezierMode = 0;
                 dragBezierP0 = dragBezierP1 = dragBezierP2 = dragBezierP3 = p;
+                this.capture = true;
 
                 this.eraseBrushPreview();
 
