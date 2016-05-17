@@ -254,11 +254,7 @@ CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
                     alpha12 = alpha1 * alpha2;
 
                 for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        channel = ((alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha) | 0;
-                    
-                    // binary magic to clamp negative values to zero without using a condition
-                    fusion.data[pixIndex] = channel & (~channel >>> 24); 
+                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha) | 0;
                 }
                 fusion.data[pixIndex++] = newAlpha;
             } else {
