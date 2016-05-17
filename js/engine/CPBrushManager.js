@@ -53,17 +53,17 @@ export default function CPBrushManager() {
      * The resulting brush array is 1 pixel larger than the original one in both dimensions.
      */
     function getBrushWithAA(brushInfo, dx, dy) {
-        var
+        let
             nonAABrush = getBrush(brushInfo),
 
             intSize = Math.ceil(brushInfo.curSize),
             intSizeAA = Math.ceil(brushInfo.curSize) + 1;
         
-        for (var x = 0; x < intSizeAA * intSizeAA; x++) {
+        for (let x = 0; x < intSizeAA * intSizeAA; x++) {
             brushAA[x] = 0;
         }
         
-        var
+        let
             invdx_invdy = (1 - dx) * (1 - dy),
             dx_invdy = dx * (1 - dy),
             dx_dy = dx * dy,
@@ -72,9 +72,9 @@ export default function CPBrushManager() {
             srcIndex = 0,
             dstIndex = 0;
         
-        for (var y = 0; y < intSize; y++) {
-            for (var x = 0; x < intSize; x++) {
-                var 
+        for (let y = 0; y < intSize; y++) {
+            for (let x = 0; x < intSize; x++) {
+                let
                     brushAlpha = nonAABrush[srcIndex];
 
                 /* 
@@ -308,7 +308,7 @@ export default function CPBrushManager() {
     /**
      * Build and return a brush that conforms to the given brush settings.
      * 
-     * @returns a Uint8Array
+     * @returns {Uint8Array}
      */ 
     function getBrush(brushInfo) {
         if (cacheBrush != null && brushInfo.curSize == cacheSize && brushInfo.curSqueeze == cacheSqueeze
@@ -390,9 +390,9 @@ export default function CPBrushManager() {
     }
     
     /**
-     * @param x float
-     * @param y float
-     * brushInfo - a CPBrushInfo object
+     * @param {numeric} x
+     * @param {numeric} y
+     * @param brushInfo - a CPBrushInfo object
      */
     this.getDab = function(x, y, brushInfo) {
         var 
@@ -447,7 +447,7 @@ export default function CPBrushManager() {
         }
         
         return dab;
-    }
+    };
 
     this.setTexture = function(texture) {
         this.texture = texture;

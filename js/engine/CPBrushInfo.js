@@ -21,14 +21,17 @@
 */
 
 export default function CPBrushInfo(properties) {
+    var
+        propName;
+
     // Set brush setting fields with default values, then apply the supplied 'properties' on top
-    for (var propName in CPBrushInfo.DEFAULTS) {
+    for (propName in CPBrushInfo.DEFAULTS) {
         if (CPBrushInfo.DEFAULTS.hasOwnProperty(propName)) {
             this[propName] = CPBrushInfo.DEFAULTS[propName];
         }
     }
     
-    for (var propName in properties) {
+    for (propName in properties) {
         if (properties.hasOwnProperty(propName)) {
             this[propName] = properties[propName];
         }

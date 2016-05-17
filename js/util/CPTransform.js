@@ -198,8 +198,8 @@ CPTransform.prototype.scaleAroundPoint = function(sx, sy, px, py) {
  * [sy 1  0]
  * [0  0  1]
  *
- * @param sx
- * @param sy
+ * @param {number} x
+ * @param {number} y
  */
 CPTransform.prototype.shear = function(x, y) {
   var

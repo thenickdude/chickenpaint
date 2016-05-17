@@ -124,7 +124,7 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         headTitle = document.createElement("h4");
     
     headTitle.className = 'modal-title';
-    headTitle.appendChild(document.createTextNode(this.title))
+    headTitle.appendChild(document.createTextNode(this.title));
     
     headElement.appendChild(closeButton);
     headElement.appendChild(headTitle);

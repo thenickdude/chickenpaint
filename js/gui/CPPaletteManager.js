@@ -173,8 +173,8 @@ export default function CPPaletteManager(cpController) {
 
     parentElem.className = "chickenpaint-palettes";
 
-    for (var paletteName in palettes) {
-        var 
+    for (let paletteName in palettes) {
+        let
             palette = palettes[paletteName],
             palElement = palette.getElement();
         
@@ -186,8 +186,8 @@ export default function CPPaletteManager(cpController) {
         paletteFrames.push(palElement);
     }
     
-    for (var paletteName in palettes) {
-        var 
+    for (let paletteName in palettes) {
+        let
             palElement = palettes[paletteName].getElement();
 
         parentElem.appendChild(palElement);

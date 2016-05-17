@@ -36,7 +36,7 @@ export default function ArrayDataStream(data, start, end) {
 /**
  * Read a single byte from the stream and turn it into a JavaScript string (assuming ASCII).
  * 
- * @returns String containing one character, or EOF if the end of file was reached (eof flag
+ * @returns {String|number} String containing one character, or EOF if the end of file was reached (eof flag
  * is set).
  */
 ArrayDataStream.prototype.readChar = function() {
@@ -51,7 +51,7 @@ ArrayDataStream.prototype.readChar = function() {
 /**
  * Read one unsigned byte from the stream
  * 
- * @returns Unsigned byte, or EOF if the end of file was reached (eof flag is set).
+ * @returns {number} Unsigned byte, or EOF if the end of file was reached (eof flag is set).
  */
 ArrayDataStream.prototype.readByte = function() {
     if (this.pos < this.end) {
@@ -147,7 +147,7 @@ ArrayDataStream.prototype.readBytes = function(count) {
     }
     
     return result;
-}
+};
 
 ArrayDataStream.prototype.skip = function(numBytes) {
     this.pos += numBytes;
@@ -240,6 +240,7 @@ ArrayDataStream.prototype.writeUnsignedIntBE = function(u, width) {
     }
     
     // Each case falls through:
+    //noinspection FallThroughInSwitchStatementJS
     switch (width) {
         case 5:
             this.writeU8(Math.floor(u / 4294967296)); // Need to use division to access >32 bits of floating point var
@@ -253,7 +254,7 @@ ArrayDataStream.prototype.writeUnsignedIntBE = function(u, width) {
             this.writeU8(u);
         break;
         default:
-            throw new RuntimeException("Bad UINT size " + width);
+            throw "Bad UINT size " + width;
     }
 };
 

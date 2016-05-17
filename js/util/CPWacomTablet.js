@@ -109,8 +109,8 @@ CPWacomTablet.getRef = function() {
         CPWacomTablet.instance = new CPWacomTablet();
     }
     return CPWacomTablet.instance;
-}
+};
 
 window.onWacomPluginLoaded = function() {
     CPWacomTablet.getRef().pluginLoaded();
-}
+};

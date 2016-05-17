@@ -46,6 +46,9 @@ export default function CPResourceLoader(options) {
 
     function decodeResource(resource, resourceData) {
         return new Promise(function(resolve, reject) {
+            var
+                reader;
+
             switch (resource.name) {
                 case "flat":
                     var 
@@ -76,15 +79,17 @@ export default function CPResourceLoader(options) {
                     }
                 break;
                 case "swatches":
+                    reader = new AdobeColorTable();
+
                     var
-                        reader = new AdobeColorTable(),
                         colors = reader.read(resourceData);
                     
                     resolve(colors);
                 break;
                 case "layers":
+                    reader = new CPChibiFile();
+                    
                     var
-                        reader = new CPChibiFile(),
                         artwork = reader.read(resourceData);
     
                     resolve(artwork);

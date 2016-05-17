@@ -22,6 +22,12 @@
 
 import CPRect from "../util/CPRect";
 
+/**
+ * 
+ * @param width
+ * @param height
+ * @constructor
+ */
 export default function CPBitmap(width, height) {
     // Width and height forced to integers
     this.width = width | 0;

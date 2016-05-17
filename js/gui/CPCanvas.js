@@ -261,7 +261,7 @@ export default function CPCanvas(controller) {
 
         modeStack = new CPModeStack(),
 
-        curDrawMode, curSelectedMode,
+        curDrawMode,
         
         horzScroll = new CPScrollbar(false), 
         vertScroll = new CPScrollbar(true),
@@ -1164,14 +1164,14 @@ export default function CPCanvas(controller) {
                 EDGE_CAPTURE_RADIUS_SQR = EDGE_CAPTURE_RADIUS * EDGE_CAPTURE_RADIUS;
 
             // Are we dragging a corner?
-            for (var i = 0; i < corners.points.length; i++) {
+            for (let i = 0; i < corners.points.length; i++) {
                 if ((mouse.x - corners.points[i].x) * (mouse.x - corners.points[i].x) + (mouse.y - corners.points[i].y) * (mouse.y - corners.points[i].y) <= HANDLE_CAPTURE_RADIUS_SQR) {
                     return i * 2;
                 }
             }
 
             // Are we dragging an edge?
-            for (var i = 0; i < corners.points.length; i++) {
+            for (let i = 0; i < corners.points.length; i++) {
                 var
                     edgeP1 = corners.points[i],
                     edgeP2 = corners.points[(i + 1) % corners.points.length],
@@ -1496,11 +1496,11 @@ export default function CPCanvas(controller) {
                 handles = new Array(corners.length * 2);
 
             // Collect the positions of the edge and corner handles...
-            for (var i = 0; i < corners.length; i++) {
+            for (let i = 0; i < corners.length; i++) {
                 handles[i] = corners[i];
             }
 
-            for (var i = 0; i < corners.length; i++) {
+            for (let i = 0; i < corners.length; i++) {
                 var
                     edgeP1 = corners[i],
                     edgeP2 = corners[(i + 1) % corners.length],
@@ -1511,7 +1511,7 @@ export default function CPCanvas(controller) {
             }
 
             setContrastingDrawStyle(canvasContext, "fill");
-            for (var i = 0; i < handles.length; i++) {
+            for (let i = 0; i < handles.length; i++) {
                 canvasContext.fillRect(handles[i].x - HANDLE_RADIUS, handles[i].y - HANDLE_RADIUS, HANDLE_RADIUS * 2 + 1, HANDLE_RADIUS * 2 + 1);
             }
 
@@ -1723,11 +1723,11 @@ export default function CPCanvas(controller) {
             activeLayer = artwork.getActiveLayer();
 
         if (!activeLayer.visible) {
-            controller.showLayerNotification(artwork.getActiveLayerIndex(), "Whoops! This layer is currently hidden", "layer");
+            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! This layer is currently hidden", "layer");
 
             return false;
         } else if (activeLayer.alpha == 0) {
-            controller.showLayerNotification(artwork.getActiveLayerIndex(), "Whoops! This layer's opacity is currently 0%", "opacity");
+            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! This layer's opacity is currently 0%", "opacity");
 
             return false;
         }
@@ -2008,7 +2008,7 @@ export default function CPCanvas(controller) {
     function zoomOnCenter(zoom) {
         var 
             width = $(canvas).width(),
-            height = $(canvas).height()
+            height = $(canvas).height();
             
         zoomOnPoint(zoom, width / 2, height / 2);
     }
@@ -2276,7 +2276,7 @@ export default function CPCanvas(controller) {
         if (!repaintRegion.isEmpty()) {
             canvasContext.save();
             
-            if (canvasContext.clip) {
+            if (canvasContext.clipTo) {
                 canvasContext.beginPath();
 
                 repaintRegion.left = repaintRegion.left | 0; 
@@ -2352,8 +2352,8 @@ export default function CPCanvas(controller) {
                 canvasContext.beginPath();
                 
                 // Vertical lines
-                for (var i = gridSize - 1; i < bounds.right; i += gridSize) {
-                    var
+                for (let i = gridSize - 1; i < bounds.right; i += gridSize) {
+                    let
                         p1 = coordToDisplay({x: i, y: bounds.top}),
                         p2 = coordToDisplay({x: i, y: bounds.bottom});
                     
@@ -2362,8 +2362,8 @@ export default function CPCanvas(controller) {
                 }
     
                 // Horizontal lines
-                for (var i = gridSize - 1; i < bounds.bottom; i += gridSize) {
-                    var
+                for (let i = gridSize - 1; i < bounds.bottom; i += gridSize) {
+                    let
                         p1 = coordToDisplay({x: 0, y: i}),
                         p2 = coordToDisplay({x: bounds.right, y: i});
                         

@@ -37,8 +37,8 @@ var
                     action: "CPSend",
                     mnemonic: "S",
                     shortcut: "ctrl+s"
-                },
-            ],
+                }
+            ]
         },
         {
             name: "Edit",
@@ -65,7 +65,7 @@ var
                     title: "Removes all undo/redo information to regain memory"
                 },
                 {
-                    name: "-",
+                    name: "-"
                 },
                 {
                     name: "Cut",
@@ -114,7 +114,7 @@ var
                     action: "CPTransform",
                     mnemonic: "T",
                     shortcut: "ctrl+y"
-                },
+                }
             ]
         },
         {
@@ -143,8 +143,8 @@ var
                     action: "CPLayerMergeAll",
                     mnemonic: "A",
                     title: "Merges all the layers"
-                },
-            ],
+                }
+            ]
         },
         {
             name: "Effects",
@@ -206,7 +206,7 @@ var
                     mnemonic: "C",
                     title: "Fills the selection with colored noise"
                 }
-            ],
+            ]
         },
         {
             name: "View",
@@ -270,9 +270,9 @@ var
                     name: "Grid options...",
                     action: "CPGridOptions",
                     mnemonic: "D",
-                    title: "Shows the grid options dialog box",
+                    title: "Shows the grid options dialog box"
                 }
-            ],
+            ]
         },
         {
             name: "Palettes",
@@ -377,7 +377,7 @@ var
                     title: "Displays some information about ChickenPaint"
                 }
             ]
-        },
+        }
     ];
 
 export default function CPMainMenu(controller, mainGUI) {

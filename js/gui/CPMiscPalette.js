@@ -58,7 +58,7 @@ export default function CPMiscPalette(cpController) {
                 className: "chickenpaint-tool-send",
                 command: "CPSend",
                 toolTip: "Save pic"
-            },
+            }
         ];
 
     function buildButtons() {

@@ -21,8 +21,10 @@
 */
 
 import CPLayer from "./CPLayer";
+import CPLayerGroup from "./CPLayerGroup";
 import CPBlend from "./CPBlend";
 import CPGreyBmp from "./CPGreyBmp";
+import CPBlendTree from "./CPBlendTree";
 import CPColorBmp from "./CPColorBmp";
 import CPBrushManager from "./CPBrushManager";
 import CPBrushInfo from "./CPBrushInfo";
@@ -48,6 +50,16 @@ if (!String.prototype.endsWith) {
     };
 }
 
+/**
+ * Cap
+ *
+ * @param {string} string
+ * @returns {string}
+ */
+function capitalizeFirst(string) {
+    return string.substring(0, 1).toUpperCase() + string.substring(1);
+}
+
 export default function CPArtwork(_width, _height) {
     
     _width = _width | 0;
@@ -63,7 +75,15 @@ export default function CPArtwork(_width, _height) {
         BLUR_MAX = 1;
     
     var
-        layers = [],
+        layersRoot = new CPLayerGroup(_width, _height, "Root", null, CPBlend.LM_NORMAL),
+
+        paintingModes = [],
+
+	    /**
+         * The currently selected layer (should never be null)
+         *
+         * @type {CPLayer}
+         */
         curLayer,
         
         hasUnsavedChanges = false,
@@ -71,26 +91,25 @@ export default function CPArtwork(_width, _height) {
         curSelection = new CPRect(0, 0, 0, 0),
 
         /**
-         * Our buffer for storing all the layers merged together according to their blending modes.
+         * Points to a scratch buffer which represents all the layers merged together.
          *
-         * @type {CPLayer}
+         * @type {CPColorBmp}
          */
-        fusionBuffer = new CPLayer(_width, _height),
+        fusion = null,
 
-        /**
-         * Points to the buffer which represents all the layers merged together (either fusionBuffer or curLayer
-         * depending on if the document is single-layered or not).
+	    /**
+         * Our cached strategy for merging the layers together into one for display.
          *
-         * @type {CPLayer}
+         * @type {?CPBlendTree}
          */
-        fusion = fusionBuffer,
+        blendTree = null,
 
         /**
          * A copy of the current layer's data that can be used for undo operations.
          * 
-         * @type {CPLayer}
+         * @type {CPColorBmp}
          */
-        undoBuffer = new CPLayer(_width, _height),
+        undoBuffer = new CPColorBmp(_width, _height),
 
         /**
          * The region of the undoBuffer which is out of date with respect to the content of the layer, and needs updated
@@ -105,16 +124,22 @@ export default function CPArtwork(_width, _height) {
          * 
          * Normally we use it as a 16-bit opacity channel per pixel, but some brushes use the full 32-bits per pixel
          * as ARGB.
+         *
+         * @type {CPGreyBmp}
          */
         opacityBuffer = new CPGreyBmp(_width, _height, 32),
 
         /**
          * The area of dirty data contained by opacityBuffer that should be merged by fusionLayers()
+         *
+         * @type {CPRect}
          */
         opacityArea = new CPRect(0, 0, 0, 0),
 
         /**
          * The area of dirty layer data that should be merged into the fusion by fusionLayers().
+         *
+         * @type {CPRect}
          */
         fusionArea = new CPRect(0, 0, _width, _height),
 
@@ -146,72 +171,34 @@ export default function CPArtwork(_width, _height) {
 
         that = this;
     
-    // FIXME: 2007-01-13 I'm moving this to the CPRect class
-    // find where this version is used and change the
-    // code to use the CPRect version
-    function clipSourceDest(srcRect, dstRect) {
-        // FIXME:
-        // /!\ dstRect bottom and right are ignored and instead we clip
-        // against the width, height of the layer. :/
-        //
-
-        // this version would be enough in most cases (when we don't need
-        // srcRect bottom and right to be clipped)
-        // it's left here in case it's needed to make a faster version
-        // of this function
-        // dstRect.right = Math.min(width, dstRect.left + srcRect.getWidth());
-        // dstRect.bottom = Math.min(height, dstRect.top + srcRect.getHeight());
-
-        // new dest bottom/right
-        dstRect.right = dstRect.left + srcRect.getWidth();
-        if (dstRect.right > that.width) {
-            srcRect.right -= dstRect.right - that.width;
-            dstRect.right = that.width;
-        }
-
-        dstRect.bottom = dstRect.top + srcRect.getHeight();
-        if (dstRect.bottom > that.height) {
-            srcRect.bottom -= dstRect.bottom - that.height;
-            dstRect.bottom = that.height;
-        }
-
-        // new src top/left
-        if (dstRect.left < 0) {
-            srcRect.left -= dstRect.left;
-            dstRect.left = 0;
-        }
-
-        if (dstRect.top < 0) {
-            srcRect.top -= dstRect.top;
-            dstRect.top = 0;
-        }
-    }
-    
     function callListenersUpdateRegion(region) {
         that.emitEvent("updateRegion", [region]);
     }
 
-    // layerIndex is optional, provide when only one layer has been updated
-    function callListenersLayerChange(layerIndex) {
-        that.emitEvent("changeLayer", [layerIndex]);
+	/**
+     * Notify listeners that the properties of one or all layers have changed.
+     *
+     * @param {?CPLayer} layer
+     */
+    function callListenersLayerChange(layer) {
+        that.emitEvent("changeLayer", [layer]);
+        // Invalidate our drawing stategy
+        blendTree = null;
     }
 
     // When the selected rectangle changes
     function callListenersSelectionChange() {
         that.emitEvent("changeSelection", []);
     }
-    
-    this.getLayers = function() {
-        return layers;
-    };
 
-    this.getLayerCount = function() {
-        return layers.length;
+	/**
+     * Get the root group which contains all the layers of the document.
+     *
+     * @returns {CPLayerGroup}
+     */
+    this.getLayersRoot = function() {
+        return layersRoot;
     };
-    
-    //
-    // Selection methods
-    //
 
     /**
      * Gets the current selection rect or a rectangle covering the whole canvas if there are no selections
@@ -239,7 +226,8 @@ export default function CPArtwork(_width, _height) {
      * Mark the given rectangle on the canvas as needing to be re-fused (i.e. we've drawn in this region).
      * Listeners are notified about our updated canvas region.
      *
-     * @param rect CPRect Rect to invalidate
+     * @param {CPRect} rect Rect to invalidate. Must have all integer co-ordinates, and the rectangle must be contained
+     * within the artwork bounds (elsewise the 
      */
     function invalidateFusionRect(rect) {
         fusionArea.union(rect);
@@ -248,14 +236,14 @@ export default function CPArtwork(_width, _height) {
         undoBufferInvalidRegion.union(rect);
 
         callListenersUpdateRegion(rect);
-    };
+    }
 
     /**
      * Mark the entire canvas as needing to be re-fused (we've drawn to the whole canvas)
      */
     function invalidateFusion() {
         invalidateFusionRect(new CPRect(0, 0, that.width, that.height));
-    };
+    }
     
     this.setHasUnsavedChanges = function(value) {
         hasUnsavedChanges = value;
@@ -265,38 +253,32 @@ export default function CPArtwork(_width, _height) {
         return hasUnsavedChanges;
     };
     
-    this.setLayerVisibility = function(layerIndex, visible) {
-        var
-            layer = this.getLayer(layerIndex);
-        
-        addUndo(new CPUndoLayerVisible(layerIndex, layer.visible, visible));
-        layer.visible = visible;
-        
-        invalidateFusion();
-        callListenersLayerChange(layerIndex);
-    };
-
     this.addLayer = function() {
         var
-            newLayer = new CPLayer(this.width, this.height, this.getDefaultLayerName()),
-            activeLayerIndex = this.getActiveLayerIndex();
+            parentGroup,
+            newLayerIndex;
         
-        newLayer.clearAll(EMPTY_LAYER_COLOR); // Transparent white
-        
-        addUndo(new CPUndoAddLayer(activeLayerIndex));
+        if (curLayer instanceof CPLayerGroup) {
+            parentGroup = curLayer;
+            newLayerIndex = curLayer.layers.length; 
+        } else {
+            parentGroup = curLayer.parent;
+            newLayerIndex = parentGroup.layers.indexOf(curLayer) + 1;
+        }
 
-        layers.splice(activeLayerIndex + 1, 0, newLayer);
-        this.setActiveLayerIndex(activeLayerIndex + 1);
-
-        invalidateFusion();
-        callListenersLayerChange();
+        addUndo(new CPActionAddLayer(parentGroup, newLayerIndex));
     };
-    
+
+	/**
+     * Effectively an internal method to be called by CPChibiFile to populate the layer stack.
+     *
+     * @param {CPLayer} layer
+     */
     this.addLayerObject = function(layer) {
-        layers.push(layer);
+        layersRoot.addLayer(layer);
         
-        if (layers.length == 1) {
-            curLayer = layers[0];
+        if (layersRoot.layers.length == 1) {
+            curLayer = layer;
         }
         
         invalidateFusion();
@@ -306,155 +288,119 @@ export default function CPArtwork(_width, _height) {
     /**
      * Remove the currently selected layer.
      * 
-     * Returns true if the layer was removed, or false when removal failed because there is currently only one layer in 
-     * the document.
+     * Returns true if the layer was removed, or false when removal failed because there is currently only one image
+     * layer in the document.
      */
     this.removeLayer = function() {
-        if (layers.length > 1) {
+        if (curLayer.isImageLayer()) {
             var
-                activeLayerIndex = this.getActiveLayerIndex();
-            
-            addUndo(new CPUndoRemoveLayer(activeLayerIndex, curLayer));
-            
-            layers.splice(activeLayerIndex, 1);
-            this.setActiveLayerIndex(activeLayerIndex < layers.length ? activeLayerIndex : activeLayerIndex - 1);
-            
-            invalidateFusion();
-            callListenersLayerChange();
-            
-            return true;
+                layers = layersRoot.getLinearizedLayerList(false),
+                imageLayerCount = 0;
+
+            for (let layer of layers) {
+                if (layer.isImageLayer()) {
+                    imageLayerCount++;
+                }
+            }
+
+            if (imageLayerCount <= 1) {
+                return false;
+            }
         }
         
-        return false;
+        addUndo(new CPActionRemoveLayer(curLayer));
+
+        return true;
     };
 
     this.duplicateLayer = function() {
-        var 
-            copySuffix = " Copy",
-            newLayer = new CPLayer(this.width, this.height),
-            activeLayerIndex = this.getActiveLayerIndex();
-
-        addUndo(new CPUndoDuplicateLayer(activeLayerIndex));
-        
-        newLayer.copyFrom(layers[activeLayerIndex]);
-        
-        if (!newLayer.name.endsWith(copySuffix)) {
-            newLayer.name += copySuffix;
-        }
-        
-        layers.splice(activeLayerIndex + 1, 0, newLayer);
-        this.setActiveLayerIndex(activeLayerIndex + 1);
-        
-        invalidateFusion();
-        callListenersLayerChange();
+        addUndo(new CPActionDuplicateLayer(curLayer));
     };
     
-    this.mergeDown = function(createUndo) {
+    this.mergeDown = function() {
         var
-            activeLayerIndex = this.getActiveLayerIndex();
-        
-        if (layers.length > 1 && activeLayerIndex > 0) {
-            if (createUndo) {
-                addUndo(new CPUndoMergeDownLayer(activeLayerIndex));
-            }
+            layerIndex = curLayer.parent.indexOf(curLayer),
+            underLayer;
 
-            CPBlend.fuseLayer(layers[activeLayerIndex - 1], true, layers[activeLayerIndex], this.getBounds());
-            layers.splice(activeLayerIndex, 1);
-            this.setActiveLayerIndex(activeLayerIndex - 1);
-
-            invalidateFusion();
-            callListenersLayerChange();
+        if (layerIndex > 0 && (underLayer = curLayer.parent.layers[layerIndex - 1]).isImageLayer()) {
+            addUndo(new CPActionMergeDownLayer(curLayer, underLayer));
         }
     };
 
-    this.mergeAllLayers = function(createUndo) {
-        if (layers.length > 1) {
-            if (createUndo) {
-                addUndo(new CPUndoMergeAllLayers());
-            }
+    this.mergeAllLayers = function() {
+        var
+            numLayers = layersRoot.getLinearizedLayerList(false).length;
+        
+        if (numLayers > 1) {
+            addUndo(new CPActionMergeAllLayers());
+        }
+    };
 
-            that.fusionLayers();
-            layers = [];
+	/**
+     *
+     * @param {CPLayer} layer
+     * @param {CPLayerGroup} toGroup
+     * @param {int} toIndex
+     */
+    function relocateLayerInternal(layer, toGroup, toIndex) {
+        var
+            fromIndex = layer.parent.indexOf(layer);
 
+        if (layer.parent.removeLayerAtIndex(fromIndex)) {
             var
-                layer = new CPLayer(that.width, that.height, this.getDefaultLayerName());
-            
-            layer.copyDataFrom(fusion);
-            
-            layers.push(layer);
-            this.setActiveLayerIndex(0);
+                adjustedTo = toIndex;
+
+            // If removing the layer caused the destination point to be renumbered, follow that new position
+            if (adjustedTo > fromIndex) {
+                adjustedTo--;
+            }
+
+            toGroup.insertLayer(adjustedTo, layer);
 
             invalidateFusion();
             callListenersLayerChange();
-        }
-    };
-    
-    function moveLayerReal(from, to) {
-        var
-            layer = layers.splice(from, 1)[0];
-        
-        if (to <= from) {
-            layers.splice(to, 0, layer);
-            that.setActiveLayerIndex(to);
-        } else {
-            layers.splice(to - 1, 0, layer);
-            that.setActiveLayerIndex(to - 1);
-        }
 
-        invalidateFusion();
-        callListenersLayerChange();
+            that.setActiveLayer(layer);
+        }
     }
-    
+
     /**
      * Move a layer in the stack from one index to another.
      * 
-     * @param from int
-     * @param to int
+     * @param {CPLayer} layer
+     * @param {CPLayerGroup} toGroup
+     * @param {int} toIndex
      */
-    this.moveLayer = function(from, to) {
-        if (from < 0 || from >= this.getLayerCount() || to < 0 || to > this.getLayerCount() || from == to) {
-            return;
-        }
-        
-        addUndo(new CPUndoMoveLayer(from, to));
-        moveLayerReal(from, to);
-    }
-    
-    this.setLayerAlpha = function(layerIndex, alpha) {
+    this.relocateLayer = function(layer, toGroup, toIndex) {
         var
-            layer = this.getLayer(layerIndex);
-        
-        if (layer.getAlpha() != alpha) {
-            addUndo(new CPUndoLayerAlpha(layerIndex, alpha));
-            layer.setAlpha(alpha);
-            
-            invalidateFusion();
-            callListenersLayerChange(layerIndex);
+            fromIndex = layer.parent.indexOf(layer);
+
+        if (layer && toGroup && toIndex >= 0 && (toIndex < fromIndex || toIndex > fromIndex + 1)) {
+            addUndo(new CPActionRelocateLayer(layer, toGroup, toIndex));
         }
     };
 
-    this.setLayerBlendMode = function(layerIndex, blendMode) {
-        var
-            layer = this.getLayer(layerIndex);
-    
-        if (layer.getBlendMode() != blendMode) {
-            addUndo(new CPUndoLayerMode(layerIndex, blendMode));
-            layer.setBlendMode(blendMode);
-            
-            invalidateFusion();
-            callListenersLayerChange(layerIndex);
+    this.setLayerVisibility = function(layer, visible) {
+        if (layer.visible != visible) {
+            addUndo(new CPActionChangeLayerVisible(layer, visible));
         }
     };
 
-    this.setLayerName = function(layerIndex, name) {
-        var
-            layer = this.getLayer(layerIndex);
-        
-        if (layer && layer.name != name) {
-            addUndo(new CPUndoLayerRename(layerIndex, name));
-            layer.name = name;
-            
-            callListenersLayerChange(layerIndex);
+    this.setLayerAlpha = function(alpha) {
+        if (curLayer.getAlpha() != alpha) {
+            addUndo(new CPActionChangeLayerAlpha(curLayer, alpha));
+        }
+    };
+
+    this.setLayerBlendMode = function(blendMode) {
+        if (curLayer.getBlendMode() != blendMode) {
+            addUndo(new CPActionChangeLayerMode(curLayer, blendMode));
+        }
+    };
+
+    this.setLayerName = function(layer, name) {
+        if (layer.getName() != name) {
+            addUndo(new CPActionChangeLayerName(layer, name));
         }
     };
     
@@ -498,7 +444,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     CPBrushToolBase.prototype.endStroke = function() {
-        undoArea.clip(that.getBounds());
+        undoArea.clipTo(that.getBounds());
 
         // Did we end up painting anything?
         if (!undoArea.isEmpty()) {
@@ -546,7 +492,7 @@ export default function CPArtwork(_width, _height) {
         
         dstRect.translate(dab.x, dab.y);
 
-        clipSourceDest(srcRect, dstRect);
+        that.getBounds().clipSourceDest(srcRect, dstRect);
 
         // drawing entirely outside the canvas
         if (dstRect.isEmpty()) {
@@ -559,7 +505,7 @@ export default function CPArtwork(_width, _height) {
         this.paintDabImplementation(srcRect, dstRect, dab);
         
         invalidateFusionRect(dstRect);
-    }
+    };
 
     function CPBrushToolSimpleBrush() {
     }
@@ -583,6 +529,9 @@ export default function CPArtwork(_width, _height) {
         var 
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
+
+            destImage = curLayer.image,
+            destData = destImage.data,
             
             red = (color >> 16) & 0xFF,
             green = (color >> 8) & 0xFF,
@@ -591,11 +540,11 @@ export default function CPArtwork(_width, _height) {
             width = dstRect.getWidth() | 0,
             height = dstRect.getHeight() | 0,
             
-            dstOffset = curLayer.offsetOfPixel(dstRect.left, dstRect.top),
+            dstOffset = destImage.offsetOfPixel(dstRect.left, dstRect.top),
             srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
         
             srcYStride = (opacityBuffer.width - width) | 0,
-            dstYStride = ((curLayer.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
+            dstYStride = ((destImage.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
 
         for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
             for (var x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
@@ -610,10 +559,10 @@ export default function CPArtwork(_width, _height) {
                         realAlpha = (255 * opacityAlpha / newLayerAlpha) | 0,
                         invAlpha = 255 - realAlpha;
                     
-                    curLayer.data[dstOffset] = ((red * realAlpha + undoData[dstOffset] * invAlpha) / 255) & 0xff;
-                    curLayer.data[dstOffset + 1] = ((green * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) & 0xff;
-                    curLayer.data[dstOffset + 2] = ((blue * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) & 0xff;
-                    curLayer.data[dstOffset + 3] = newLayerAlpha;
+                    destData[dstOffset] = ((red * realAlpha + undoData[dstOffset] * invAlpha) / 255) & 0xff;
+                    destData[dstOffset + 1] = ((green * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) & 0xff;
+                    destData[dstOffset + 2] = ((blue * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) & 0xff;
+                    destData[dstOffset + 3] = newLayerAlpha;
                 }
             }
         }
@@ -714,11 +663,12 @@ export default function CPArtwork(_width, _height) {
     CPBrushToolEraser.prototype.mergeOpacityBuf = function(dstRect, color) {
         var 
             opacityData = opacityBuffer.data,
-            undoData = undoBuffer.data;
+            undoData = undoBuffer.data,
+            curLayerData = curLayer.image.data;
     
         for (var y = dstRect.top; y < dstRect.bottom; y++) {
             var
-                dstOffset = curLayer.offsetOfPixel(dstRect.left, y) + CPColorBmp.ALPHA_BYTE_OFFSET,
+                dstOffset = curLayer.image.offsetOfPixel(dstRect.left, y) + CPColorBmp.ALPHA_BYTE_OFFSET,
                 srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
             
             for (var x = dstRect.left; x < dstRect.right; x++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
@@ -730,7 +680,7 @@ export default function CPArtwork(_width, _height) {
                         destAlpha = undoData[dstOffset],
                         realAlpha = destAlpha * (255 - opacityAlpha) / 255;
                     
-                    curLayer.data[dstOffset] = realAlpha;
+                    curLayerData[dstOffset] = realAlpha;
                 }
             }
         }
@@ -745,11 +695,13 @@ export default function CPArtwork(_width, _height) {
     CPBrushToolDodge.prototype.mergeOpacityBuf = function(dstRect, color) {
         var 
             opacityData = opacityBuffer.data,
-            undoData = undoBuffer.data;
+            undoData = undoBuffer.data,
+            destImage = curLayer.image,
+            destImageData = destImage.data;
     
         for (var y = dstRect.top; y < dstRect.bottom; y++) {
             var
-                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
+                dstOffset = destImage.offsetOfPixel(dstRect.left, y),
                 srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
@@ -766,7 +718,7 @@ export default function CPArtwork(_width, _height) {
                             channel = 255;
                         }
                         
-                        curLayer.data[dstOffset + i] = channel;
+                        destImageData[dstOffset + i] = channel;
                     }
                 }
             }
@@ -782,11 +734,13 @@ export default function CPArtwork(_width, _height) {
     CPBrushToolBurn.prototype.mergeOpacityBuf = function(dstRect, color) {
         var 
             opacityData = opacityBuffer.data,
-            undoData = undoBuffer.data;
+            undoData = undoBuffer.data,
+            destImage = curLayer.image,
+            destImageData = destImage.data;
     
         for (var y = dstRect.top; y < dstRect.bottom; y++) {
             var
-                dstOffset = curLayer.offsetOfPixel(dstRect.left, y),
+                dstOffset = destImage.offsetOfPixel(dstRect.left, y),
                 srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
             
             for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
@@ -803,7 +757,7 @@ export default function CPArtwork(_width, _height) {
                             channel = 0;
                         }
                         
-                        curLayer.data[dstOffset + i] = channel;
+                        destImageData[dstOffset + i] = channel;
                     }
                 }
             }
@@ -820,8 +774,10 @@ export default function CPArtwork(_width, _height) {
         var 
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
+            destImage = curLayer.image,
+            destImageData = destImage.data,
             
-            dstYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL,
+            destYStride = undoBuffer.width * CPColorBmp.BYTES_PER_PIXEL,
             
             r, g, b, a;
 
@@ -834,10 +790,10 @@ export default function CPArtwork(_width, _height) {
         
         for (var y = dstRect.top; y < dstRect.bottom; y++) {
             var 
-                dstOffset = undoBuffer.offsetOfPixel(dstRect.left, y),
+                destOffset = undoBuffer.offsetOfPixel(dstRect.left, y),
                 srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, y);
             
-            for (var x = dstRect.left; x < dstRect.right; x++, dstOffset += CPColorBmp.BYTES_PER_PIXEL, srcOffset++) {
+            for (var x = dstRect.left; x < dstRect.right; x++, destOffset += CPColorBmp.BYTES_PER_PIXEL, srcOffset++) {
                 var 
                     opacityAlpha = (opacityData[srcOffset] / 255) | 0;
                 
@@ -847,29 +803,29 @@ export default function CPArtwork(_width, _height) {
 
                         sum = blur + 4;
                     
-                    r = blur * undoData[dstOffset + CPColorBmp.RED_BYTE_OFFSET];
-                    g = blur * undoData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET];
-                    b = blur * undoData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET];
-                    a = blur * undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
+                    r = blur * undoData[destOffset + CPColorBmp.RED_BYTE_OFFSET];
+                    g = blur * undoData[destOffset + CPColorBmp.GREEN_BYTE_OFFSET];
+                    b = blur * undoData[destOffset + CPColorBmp.BLUE_BYTE_OFFSET];
+                    a = blur * undoData[destOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
 
-                    addSample(y > 0 ? dstOffset - dstYStride : dstOffset);
-                    addSample(y < undoBuffer.height - 1 ? dstOffset + dstYStride : dstOffset);
-                    addSample(x > 0 ? dstOffset - CPColorBmp.BYTES_PER_PIXEL : dstOffset);
-                    addSample(x < undoBuffer.width - 1 ? dstOffset + CPColorBmp.BYTES_PER_PIXEL : dstOffset);
+                    addSample(y > 0 ? destOffset - destYStride : destOffset);
+                    addSample(y < undoBuffer.height - 1 ? destOffset + destYStride : destOffset);
+                    addSample(x > 0 ? destOffset - CPColorBmp.BYTES_PER_PIXEL : destOffset);
+                    addSample(x < undoBuffer.width - 1 ? destOffset + CPColorBmp.BYTES_PER_PIXEL : destOffset);
 
                     a /= sum;
                     r /= sum;
                     g /= sum;
                     b /= sum;
                     
-                    curLayer.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = r | 0;
-                    curLayer.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = g | 0;
-                    curLayer.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = b | 0;
-                    curLayer.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = a | 0;
+                    destImageData[destOffset + CPColorBmp.RED_BYTE_OFFSET] = r | 0;
+                    destImageData[destOffset + CPColorBmp.GREEN_BYTE_OFFSET] = g | 0;
+                    destImageData[destOffset + CPColorBmp.BLUE_BYTE_OFFSET] = b | 0;
+                    destImageData[destOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = a | 0;
                 }
             }
         }
-    }
+    };
     
     /* Brushes derived from this class use the opacity buffer as a simple alpha layer (32-bit pixels in ARGB order) */
     function CPBrushToolDirectBrush() {
@@ -882,18 +838,22 @@ export default function CPArtwork(_width, _height) {
         var 
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
+            destImage = curLayer.image,
+            destImageData = destImage.data,
             
             srcOffset = opacityBuffer.offsetOfPixel(dstRect.left, dstRect.top),
-            dstOffset = curLayer.offsetOfPixel(dstRect.left, dstRect.top),
+            dstOffset = destImage.offsetOfPixel(dstRect.left, dstRect.top),
             
             width = dstRect.getWidth() | 0,
             height = dstRect.getHeight() | 0,
             
             srcYStride = (opacityBuffer.width - width) | 0,
-            dstYStride = ((curLayer.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
+            dstYStride = ((destImage.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0,
 
-        for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-            for (var x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+            x, y;
+
+        for (y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
+            for (x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                 var
                     color1 = opacityData[srcOffset],
                     alpha1 = color1 >>> 24;
@@ -912,10 +872,10 @@ export default function CPArtwork(_width, _height) {
                         realAlpha = (alpha1 * 255 / newAlpha) | 0,
                         invAlpha = 255 - realAlpha;
                     
-                    curLayer.data[dstOffset] = ((((color1 >> 16) & 0xFF) * realAlpha + undoData[dstOffset] * invAlpha) / 255) | 0;
-                    curLayer.data[dstOffset + 1] = ((((color1 >> 8) & 0xFF) * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) | 0;
-                    curLayer.data[dstOffset + 2] = (((color1 & 0xFF) * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) | 0;
-                    curLayer.data[dstOffset + 3] = newAlpha;
+                    destImageData[dstOffset] = ((((color1 >> 16) & 0xFF) * realAlpha + undoData[dstOffset] * invAlpha) / 255) | 0;
+                    destImageData[dstOffset + 1] = ((((color1 >> 8) & 0xFF) * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) | 0;
+                    destImageData[dstOffset + 2] = (((color1 & 0xFF) * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) | 0;
+                    destImageData[dstOffset + 3] = newAlpha;
                 }
             }
         }
@@ -940,23 +900,23 @@ export default function CPArtwork(_width, _height) {
             var
                 samples = [],
                 
-                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer();
+                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image;
             
             x = x | 0;
             y = y | 0;
 
-            samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, y)));
+            samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, y)));
 
             for (var r = 0.25; r < 1.001; r += .25) {
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * dx), y)));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * dx), y)));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, ~~(y + r * dy))));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(x, ~~(y - r * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * dx), y)));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * dx), y)));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, ~~(y + r * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, ~~(y - r * dy))));
 
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(layerToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
+                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
             }
 
             var
@@ -1100,18 +1060,18 @@ export default function CPArtwork(_width, _height) {
 
         function oilAccumBuffer(srcRect, dstRect, buffer, w, alpha) {
             var
-                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer(),
+                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image,
 
                 by = srcRect.top;
             
             for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
                 var 
                     srcOffset = srcRect.left + by * w,
-                    dstOffset = layerToSample.offsetOfPixel(dstRect.left, y);
+                    dstOffset = imageToSample.offsetOfPixel(dstRect.left, y);
                 
                 for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                     var
-                        alpha1 = (layerToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] * alpha / 255) | 0;
+                        alpha1 = (imageToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] * alpha / 255) | 0;
                     
                     if (alpha1 <= 0) {
                         continue;
@@ -1128,9 +1088,9 @@ export default function CPArtwork(_width, _height) {
                             realAlpha = (alpha1 * 255 / newAlpha) | 0,
                             invAlpha = 255 - realAlpha,
                             
-                            color1Red = layerToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
-                            color1Green = layerToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                            color1Blue = layerToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                            color1Red = imageToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
+                            color1Green = imageToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                            color1Blue = imageToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
 
                             newColor = newAlpha << 24
                                 | (color1Red + (((color2 >>> 16 & 0xff) * invAlpha - color1Red * invAlpha) / 255)) << 16
@@ -1181,6 +1141,8 @@ export default function CPArtwork(_width, _height) {
         function oilPasteBuffer(srcRect, dstRect, buffer, brush, w, alpha) {
             var
                 opacityData = opacityBuffer.data,
+                destImage = curLayer.image,
+                destImageData = destImage.data,
     
                 by = srcRect.top;
             
@@ -1188,7 +1150,7 @@ export default function CPArtwork(_width, _height) {
                 var 
                     bufferOffset = srcRect.left + by * w, // Brush buffer is 1 integer per pixel
                     opacityOffset = dstRect.left + y * that.width, // Opacity buffer is 1 integer per pixel
-                    layerOffset = curLayer.offsetOfPixel(dstRect.left, y); // 4 bytes per pixel 
+                    layerOffset = destImage.offsetOfPixel(dstRect.left, y); // 4 bytes per pixel
                 
                 for (var x = dstRect.left; x < dstRect.right; x++, bufferOffset++, layerOffset += CPColorBmp.BYTES_PER_PIXEL, opacityOffset++) {
                     var 
@@ -1200,15 +1162,15 @@ export default function CPArtwork(_width, _height) {
                     }
 
                     var
-                        alpha2 = curLayer.data[layerOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+                        alpha2 = destImageData[layerOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
 
                         newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
                     
                     if (newAlpha > 0) {
                         var 
-                            color2Red = curLayer.data[layerOffset + CPColorBmp.RED_BYTE_OFFSET],
-                            color2Green = curLayer.data[layerOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                            color2Blue = curLayer.data[layerOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                            color2Red = destImageData[layerOffset + CPColorBmp.RED_BYTE_OFFSET],
+                            color2Green = destImageData[layerOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                            color2Blue = destImageData[layerOffset + CPColorBmp.BLUE_BYTE_OFFSET],
                             
                             realAlpha = (alpha1 * 255 / newAlpha) | 0,
                             invAlpha = 255 - realAlpha,
@@ -1250,34 +1212,34 @@ export default function CPArtwork(_width, _height) {
         
         /**
          * 
-         * @param srcRect
-         * @param dstRect
-         * @param buffer Uint32Array
-         * @param w int
-         * @param alpha int
+         * @param {CPRect} srcRect
+         * @param {CPRect} dstRect
+         * @param {Uint32Array} buffer
+         * @param {integer} w
+         * @param {integer} alpha
          */
         function smudgeAccumBuffer(srcRect, dstRect, buffer, w, alpha) {
-            var
-                layerToSample = sampleAllLayers ? fusion : that.getActiveLayer(),
+            let
+                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image,
 
                 by = srcRect.top;
             
-            for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
-                var
+            for (let y = dstRect.top; y < dstRect.bottom; y++, by++) {
+                let
                     srcOffset = srcRect.left + by * w,
-                    dstOffset = layerToSample.offsetOfPixel(dstRect.left, y);
+                    dstOffset = imageToSample.offsetOfPixel(dstRect.left, y);
                 
-                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        layerRed = layerToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
-                        layerGreen = layerToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                        layerBlue = layerToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-                        layerAlpha = layerToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+                for (let x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                    let
+                        layerRed = imageToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
+                        layerGreen = imageToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                        layerBlue = imageToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                        layerAlpha = imageToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
                         
                         opacityAlpha = 255 - alpha;
                     
                     if (opacityAlpha > 0) {
-                        var
+                        let
                             destColor = buffer[srcOffset],
 
                             destAlpha = 255,
@@ -1317,51 +1279,51 @@ export default function CPArtwork(_width, _height) {
             }
 
             if (srcRect.left > 0) {
-                var
+                let
                     fill = srcRect.left;
                 
-                for (var y = srcRect.top; y < srcRect.bottom; y++) {
-                    var 
+                for (let y = srcRect.top; y < srcRect.bottom; y++) {
+                    let
                         offset = y * w,
                         fillColor = buffer[offset + srcRect.left];
                     
-                    for (var x = 0; x < fill; x++) {
+                    for (let x = 0; x < fill; x++) {
                         buffer[offset++] = fillColor;
                     }
                 }
             }
 
             if (srcRect.right < w) {
-                var
+                let
                     fill = w - srcRect.right;
                 
-                for (var y = srcRect.top; y < srcRect.bottom; y++) {
+                for (let y = srcRect.top; y < srcRect.bottom; y++) {
                     var
                         offset = y * w + srcRect.right,
                         fillColor = buffer[offset - 1];
                     
-                    for (var x = 0; x < fill; x++) {
+                    for (let x = 0; x < fill; x++) {
                         buffer[offset++] = fillColor;
                     }
                 }
             }
 
-            for (var y = 0; y < srcRect.top; y++) {
-                var 
+            for (let y = 0; y < srcRect.top; y++) {
+                let
                     srcOffset = srcRect.top * w,
                     dstOffset = y * w;
                 
-                for (var x = 0; x < w; x++, srcOffset++, dstOffset++) {
+                for (let x = 0; x < w; x++, srcOffset++, dstOffset++) {
                     buffer[dstOffset] = buffer[srcOffset];
                 }
             }
             
-            for (var y = srcRect.bottom; y < w; y++) {
-                var 
+            for (let y = srcRect.bottom; y < w; y++) {
+                let
                     srcOffset = (srcRect.bottom - 1) * w,
                     dstOffset = y * w;
                 
-                for (var x = 0; x < w; x++, srcOffset++, dstOffset++) {
+                for (let x = 0; x < w; x++, srcOffset++, dstOffset++) {
                     buffer[dstOffset] = buffer[srcOffset];
                 }
             }
@@ -1378,12 +1340,14 @@ export default function CPArtwork(_width, _height) {
          */
         function smudgePasteBuffer(srcRect, dstRect, buffer, brush, w, alpha) {
             var
-                by = srcRect.top;
+                by = srcRect.top,
+                destImage = curLayer.image,
+                destImageData = destImage.data;
             
             for (var y = dstRect.top; y < dstRect.bottom; y++, by++) {
                 var 
                     srcOffset = srcRect.left + by * w,
-                    dstOffset = curLayer.offsetOfPixel(dstRect.left, y);
+                    dstOffset = destImage.offsetOfPixel(dstRect.left, y);
                 
                 for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                     var
@@ -1391,19 +1355,19 @@ export default function CPArtwork(_width, _height) {
                         opacityAlpha = (bufferColor >>> 24) * (brush[srcOffset] & 0xff) / 255;
                     
                     if (opacityAlpha > 0) {
-                        curLayer.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (bufferColor >> 16) & 0xff;
-                        curLayer.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (bufferColor >> 8) & 0xff;
-                        curLayer.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = bufferColor & 0xff;
-                        curLayer.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (bufferColor >> 24) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (bufferColor >> 16) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (bufferColor >> 8) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = bufferColor & 0xff;
+                        destImageData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (bufferColor >> 24) & 0xff;
                     }
                 }
             }
         }
         
         /**
-         * @param srcRect CPRect
-         * @param dstRect CPRect
-         * @param dab CPBrushDab
+         * @param {CPRect} srcRect
+         * @param {CPRect} dstRect
+         * @param {CPBrushDab} dab
          */
         this.paintDabImplementation = function(srcRect, dstRect, dab) {
             if (brushBuffer == null) {
@@ -1431,20 +1395,12 @@ export default function CPArtwork(_width, _height) {
 
     CPBrushToolSmudge.prototype.mergeOpacityBuf = function(dstRect, color) {
     };
-    
-    var paintingModes = [
-        new CPBrushToolSimpleBrush(), new CPBrushToolEraser(), new CPBrushToolDodge(),
-        new CPBrushToolBurn(), new CPBrushToolWatercolor(), new CPBrushToolBlur(), new CPBrushToolSmudge(),
-        new CPBrushToolOil()
-    ];
-    
-    this.width = _width;
-    this.height = _height;
 
     this.getDefaultLayerName = function() {
         var
             prefix = "Layer ",
-            highestLayerNb = 0;
+            highestLayerNb = 0,
+            layers = layersRoot.getLinearizedLayerList(false);
         
         for (var i = 0; i < layers.length; i++) {
             var
@@ -1458,7 +1414,7 @@ export default function CPArtwork(_width, _height) {
     };
     
     function restoreAlpha(rect) {
-        that.getActiveLayer().copyAlphaFrom(undoBuffer, rect);
+        that.getActiveLayer().image.copyAlphaFrom(undoBuffer, rect);
     }
     
     /**
@@ -1484,12 +1440,21 @@ export default function CPArtwork(_width, _height) {
             opacityArea.makeEmpty();
         }
     }
-    
+
+    function prepareForFusion() {
+        if (!blendTree) {
+            //console.log("Rebuild blendtree");
+            blendTree = new CPBlendTree();
+
+            blendTree.buildTree(layersRoot);
+        }
+    }
+
     this.addBackgroundLayer = function() {
         var
             layer = new CPLayer(that.width, that.height, this.getDefaultLayerName());
         
-        layer.clearAll(EMPTY_BACKGROUND_COLOR);
+        layer.image.clearAll(EMPTY_BACKGROUND_COLOR);
         
         this.addLayerObject(layer);
     };
@@ -1505,109 +1470,59 @@ export default function CPArtwork(_width, _height) {
             // The current brush renders out its buffers to the layer stack for us
             mergeOpacityBuffer(curColor, false);
 
-            // If the drawing is single-layered and opaque, just use the bottom-most layer as our fusion, we don't need to blend anything!
-            if (layers.length == 1 && layers[0].alpha >= 100 && layers[0].visible) {
-                fusion = layers[0];
-            } else {
-                // Fuse into the actual fusion buffer since we need to blend
-                fusion = fusionBuffer;
+            //console.log("Fusion start...");
 
-                var
-                    fusionIsSemiTransparent = true,
-                    first = true;
+            prepareForFusion();
 
-                layers.forEach(function (layer) {
-                    if (!first) {
-                        fusionIsSemiTransparent = fusionIsSemiTransparent && fusion.hasAlphaInRect(fusionArea);
-                    }
+            fusion = blendTree.blendTree(fusionArea);
 
-                    if (layer.visible && layer.alpha > 0) {
-                        if (first) {
-                            first = false;
-
-                            if (layer.alpha == 100) {
-                                /*
-                                 * Instead of blending the layer onto the empty transparent fusion, we can just copy the
-                                 * layer data right into the fusion. This works for all of our blending modes.
-                                 */
-
-                                fusion.copyBitmapRect(layer, fusionArea.left, fusionArea.top, fusionArea);
-                                return;
-                            }
-
-                            fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
-                        }
-
-                        CPBlend.fuseLayer(fusion, fusionIsSemiTransparent, layer, fusionArea);
-                    }
-                });
-
-                if (first) {
-                    // Didn't draw any layers? We have to clear the area, then
-                    fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
-                }
-            }
+            //console.log("Fusion done.\n");
 
             fusionArea.makeEmpty();
         }
         
         return fusion.getImageData();
-    }
+    };
     
-    this.setActiveLayerIndex = function(newIndex) {
-        if (newIndex < 0 || newIndex >= layers.length) {
-            return;
-        }
-
-        if (curLayer != layers[newIndex]) {
+    this.setActiveLayer = function(newLayer) {
+        if (curLayer != newLayer) {
             var
-                oldIndex = this.getActiveLayerIndex();
+                oldLayer = curLayer;
             
-            curLayer = layers[newIndex];
+            curLayer = newLayer;
             
-            // Was the old layer deleted?
-            if (oldIndex == -1) {
-                callListenersLayerChange();
-            } else {
-                callListenersLayerChange(oldIndex); // Old layer has now been deselected
-                callListenersLayerChange(newIndex); // New layer has now been selected
-            }
+            callListenersLayerChange(oldLayer); // Old layer has now been deselected
+            callListenersLayerChange(newLayer); // New layer has now been selected
 
             invalidateLayerUndo();
         }
     };
     
-    this.getActiveLayerIndex = function() {
-        for (var i = 0; i < layers.length; i++) {
-            if (layers[i] == curLayer) {
-                return i;
-            }
-        }
-        
-        return -1;
-    };
-    
-    /*
-     * Get the index of the topmost visible layer, or 0.
+    /**
+     * Select the topmost visible layer, or the topmost layer if none are visible.
      */
-    this.getTopmostVisibleLayer = function() {
-        for (var i = layers.length - 1; i >= 0; i--) {
-            if (layers[i].visible) {
-                return i;
-            }
-        }
-        
-        return 0;
-    };
+    this.selectTopmostVisibleLayer = function() {
+        var
+            list = layersRoot.getLinearizedLayerList();
 
-	/**
-     * Get the layer with the specified index (no bounds checking)
-     *
-     * @param {int} i
-     * @returns {CPLayer}
-     */
-    this.getLayer = function(i) {
-        return layers[i];
+        // Find a visible, non-group layer
+        for (var i = list.length - 1; i >= 0; i--) {
+            if (!(list[i] instanceof CPLayerGroup) && list[i].getEffectiveAlpha() > 0) {
+                this.setActiveLayer(list[i]);
+                return;
+            }
+        }
+
+        // None? Okay, how about just a non-group layer
+        for (var i = list.length - 1; i >= 0; i--) {
+            if (!(list[i] instanceof CPLayerGroup)) {
+                this.setActiveLayer(list[i]);
+                return;
+            }
+        }
+
+        // Trying to be difficult, huh?
+        this.setActiveLayer(list[list.length - 1]);
     };
 
 	/**
@@ -1619,6 +1534,10 @@ export default function CPArtwork(_width, _height) {
         return curLayer;
     };
 
+	/**
+     *
+     * @returns {number}
+     */
     this.getDocMemoryUsed = function() {
         var
             total = fusionBuffer.getMemorySize() * (3 + layers.length);
@@ -1630,21 +1549,19 @@ export default function CPArtwork(_width, _height) {
         return total;
     };
 
+	/**
+     *
+     * @returns {number}
+     */
     this.getUndoMemoryUsed = function() {
         var
             total = 0;
 
-        for (var i = 0; i < redoList.length; i++) {
-            var
-                undo = redoList[i];
-
-            total += undo.getMemoryUsed(true, null);
+        for (let redo of redoList) {
+            total += redo.getMemoryUsed(true, null);
         }
 
-        for (var i = 0; i < undoList.length; i++) {
-            var
-                undo = undoList[i];
-
+        for (let undo of undoList) {
             total += undo.getMemoryUsed(false, null);
         }
 
@@ -1675,7 +1592,7 @@ export default function CPArtwork(_width, _height) {
         undo.undo();
         
         redoList.push(undo);
-    }
+    };
 
     this.redo = function() {
         if (!canRedo()) {
@@ -1689,7 +1606,7 @@ export default function CPArtwork(_width, _height) {
         redo.redo();
         
         undoList.push(redo);
-    }
+    };
 
     /**
      * Ensures that the state of the current layer has been stored in undoBuffer so it can be undone later.
@@ -1697,7 +1614,7 @@ export default function CPArtwork(_width, _height) {
     function prepareForLayerUndo() {
         if (!undoBufferInvalidRegion.isEmpty()) {
             //console.log("Copying " + undoBufferInvalidRegion + " to the undo buffer");
-            undoBuffer.copyBitmapRect(curLayer, undoBufferInvalidRegion.left, undoBufferInvalidRegion.top, undoBufferInvalidRegion);
+            undoBuffer.copyBitmapRect(curLayer.image, undoBufferInvalidRegion.left, undoBufferInvalidRegion.top, undoBufferInvalidRegion);
             undoBufferInvalidRegion.makeEmpty();
         }
     }
@@ -1718,6 +1635,8 @@ export default function CPArtwork(_width, _height) {
      */
     this.performIdleTasks = function() {
         prepareForLayerUndo();
+
+        prepareForFusion();
     };
 
     function addUndo(undo) {
@@ -1753,11 +1672,11 @@ export default function CPArtwork(_width, _height) {
         // this.fusionLayers();
 
         return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
-    }
+    };
 
     this.setSelection = function(rect) {
         curSelection.set(rect);
-        curSelection.clip(this.getBounds());
+        curSelection.clipTo(this.getBounds());
     };
 
     this.emptySelection = function() {
@@ -1768,7 +1687,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = this.getBounds();
 
-        curLayer.floodFill(~~x, ~~y, curColor | 0xff000000);
+        curLayer.image.floodFill(~~x, ~~y, curColor | 0xff000000);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1781,7 +1700,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.gradient(r, fromX, fromY, toX, toY, gradientPoints);
+        curLayer.image.gradient(r, fromX, fromY, toX, toY, gradientPoints);
 
         if (lockAlpha) {
             restoreAlpha(r);
@@ -1798,7 +1717,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.clearRect(r, color);
+        curLayer.image.clearRect(r, color);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1815,7 +1734,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.copyRegionHFlip(r, undoBuffer);
+        curLayer.image.copyRegionHFlip(r, undoBuffer);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1828,7 +1747,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.copyRegionVFlip(r, undoBuffer);
+        curLayer.image.copyRegionVFlip(r, undoBuffer);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1841,7 +1760,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.fillWithNoise(r);
+        curLayer.image.fillWithNoise(r);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1854,7 +1773,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.fillWithColorNoise(r);
+        curLayer.image.fillWithColorNoise(r);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1867,7 +1786,7 @@ export default function CPArtwork(_width, _height) {
         prepareForLayerUndo();
         undoArea = r;
 
-        curLayer.invert(r);
+        curLayer.image.invert(r);
 
         addUndo(new CPUndoPaint());
         invalidateFusion();
@@ -1881,7 +1800,7 @@ export default function CPArtwork(_width, _height) {
         undoArea = r;
 
         for (var i = 0; i < iterations; i++) {
-            curLayer.boxBlur(r, radiusX, radiusY);
+            curLayer.image.boxBlur(r, radiusX, radiusY);
         }
 
         addUndo(new CPUndoPaint());
@@ -1892,7 +1811,7 @@ export default function CPArtwork(_width, _height) {
         var
             newSelection = r.clone();
         
-        newSelection.clip(this.getBounds());
+        newSelection.clipTo(this.getBounds());
 
         addUndo(new CPUndoRectangleSelection(this.getSelection(), newSelection));
 
@@ -1937,7 +1856,7 @@ export default function CPArtwork(_width, _height) {
             activeOp = getActiveOperation();
 
         // If we've changed layers since our last move, we want to move the new layer, not the old one, so can't amend
-        if (!copy && activeOp instanceof CPActionMoveSelection && activeOp.layerIndex == this.getActiveLayerIndex()) {
+        if (!copy && activeOp instanceof CPActionMoveSelection && activeOp.layer == this.getActiveLayer()) {
             activeOp.amend(offsetX, offsetY);
             redoList = [];
             hasUnsavedChanges = true;
@@ -2029,22 +1948,13 @@ export default function CPArtwork(_width, _height) {
     
     // Copy/Paste functions
     
-    this.cutSelection = function(createUndo) {
+    this.cutSelection = function() {
         var
             selection = this.getSelection();
         
-        if (selection.isEmpty()) {
-            return;
+        if (!selection.isEmpty()) {
+            addUndo(new CPActionCut(curLayer, selection));
         }
-
-        clipboard = new CPClip(curLayer.cloneRect(selection), selection.left, selection.top);
-
-        if (createUndo) {
-            addUndo(new CPUndoCut(clipboard.bmp, this.getActiveLayerIndex(), selection));
-        }
-
-        curLayer.clearRect(selection, EMPTY_LAYER_COLOR);
-        invalidateFusionRect(selection);
     };
 
     this.copySelection = function() {
@@ -2055,7 +1965,7 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        clipboard = new CPClip(curLayer.cloneRect(selection), selection.left, selection.top);
+        clipboard = new CPClip(curLayer.image.cloneRect(selection), selection.left, selection.top);
     };
 
     this.copySelectionMerged = function() {
@@ -2070,46 +1980,10 @@ export default function CPArtwork(_width, _height) {
         this.fusionLayers();
         clipboard = new CPClip(fusion.cloneRect(selection), selection.left, selection.top);
     };
-
-    /**
-     *
-     * @param createUndo boolean
-     * @param clip CPClip
-     */
-    function pasteClip(createUndo, clip) {
-        var
-            activeLayerIndex = that.getActiveLayerIndex();
-        
-        if (createUndo) {
-            addUndo(new CPUndoPaste(clip, activeLayerIndex, that.getSelection()));
-        }
-
-        var
-            newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName()),
-            sourceRect = clip.bmp.getBounds(),
-            x, y;
-        
-        layers.splice(activeLayerIndex + 1, 0, newLayer);
-        that.setActiveLayerIndex(activeLayerIndex + 1);
-
-        if (sourceRect.isInside(that.getBounds())) {
-            x = clip.x;
-            y = clip.y;
-        } else {
-            x = ((that.width - clip.bmp.width) / 2) | 0;
-            y = ((that.height - clip.bmp.height) / 2) | 0;
-        }
-
-        curLayer.copyBitmapRect(clip.bmp, x, y, sourceRect);
-        that.emptySelection();
-
-        invalidateFusion();
-        callListenersLayerChange();
-    }
     
-    this.pasteClipboard = function(createUndo) {
-        if (clipboard != null) {
-            pasteClip(createUndo, clipboard);
+    this.pasteClipboard = function() {
+        if (clipboard) {
+            addUndo(new CPActionPaste(clipboard, this.getActiveLayer()));
         }
     };
     
@@ -2131,7 +2005,7 @@ export default function CPArtwork(_width, _height) {
     
     this.setBrushTexture = function(texture) {
         brushManager.setTexture(texture);
-    }
+    };
     
     // ///////////////////////////////////////////////////////////////////////////////////
     // Paint engine
@@ -2184,7 +2058,7 @@ export default function CPArtwork(_width, _height) {
      * layers, and base layer's opacity is set to 100%).
      */
     this.isSimpleDrawing = function() {
-        return this.getLayerCount() == 1 && this.getLayer(0).getAlpha() == 100;
+        return layersRoot.layers.length == 1 && layersRoot.layers[0].getEffectiveAlpha() == 100;
     };
     
     // ////////////////////////////////////////////////////
@@ -2199,19 +2073,19 @@ export default function CPArtwork(_width, _height) {
     function CPUndoPaint() {
         var
             rect = undoArea.clone(),
-            data = undoBuffer.copyRectXOR(curLayer, rect);
+            data = undoBuffer.copyRectXOR(curLayer.image, rect);
         
-        this.layer = that.getActiveLayerIndex();
+        this.layer = curLayer;
 
         undoArea.makeEmpty();
 
         this.undo = function() {
-            that.getLayer(this.layer).setRectXOR(data, rect);
+            this.layer.image.setRectXOR(data, rect);
             invalidateFusionRect(rect);
         };
 
         this.redo = function() {
-            that.getLayer(this.layer).setRectXOR(data, rect);
+            this.layer.image.setRectXOR(data, rect);
             invalidateFusionRect(rect);
         };
 
@@ -2222,313 +2096,343 @@ export default function CPArtwork(_width, _height) {
     
     CPUndoPaint.prototype = Object.create(CPUndo.prototype);
     CPUndoPaint.prototype.constructor = CPUndoPaint;
-    
-    function CPUndoLayerVisible(_layerIndex, _oldVis, _newVis) {
-        this.layerIndex = _layerIndex;
-        this.oldVis = _oldVis;
-        this.newVis = _newVis;
-    }
-    
-    CPUndoLayerVisible.prototype = Object.create(CPUndo.prototype);
-    CPUndoLayerVisible.prototype.constructor = CPUndoLayerVisible;
-    
-    CPUndoLayerVisible.prototype.redo = function() {
-        that.getLayer(this.layerIndex).visible = this.newVis;
-        
-        invalidateFusion();
-        callListenersLayerChange(this.layerIndex);
-    };
 
-    CPUndoLayerVisible.prototype.undo = function() {
-        that.getLayer(this.layerIndex).visible = this.oldVis;
-        
-        invalidateFusion();
-        callListenersLayerChange(this.layerIndex);
-    };
+	/**
+     * Upon creation, adds a layer at the given index in the given layer group.
+     *
+     * @param {CPLayerGroup} parentGroup
+     * @param {int} newLayerIndex
+     * @constructor
+     */
+    function CPActionAddLayer(parentGroup, newLayerIndex) {
+        var
+            newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName());
 
-    CPUndoLayerVisible.prototype.merge = function(u) {
-        if (u instanceof CPUndoLayerVisible && this.layerIndex == u.layerIndex) {
-            this.newVis = u.newVis;
-            return true;
-        }
-        return false;
-    };
-
-    CPUndoLayerVisible.prototype.noChange = function() {
-        return this.oldVis == this.newVis;
-    };
-    
-    function CPUndoAddLayer(layerIndex) {
         this.undo = function() {
-            layers.splice(layerIndex + 1, 1);
-            that.setActiveLayerIndex(layerIndex);
+            parentGroup.removeLayer(newLayer);
+
+            var
+                newSelection = parentGroup.layers[newLayerIndex - 1] || parentGroup.layers[0] || parentGroup;
+
+            that.setActiveLayer(newSelection);
+
             invalidateFusion();
             callListenersLayerChange();
-        }
+        };
 
         this.redo = function() {
-            var
-                newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName());
-            newLayer.clearAll(EMPTY_LAYER_COLOR);
-            layers.splice(layerIndex + 1, 0, newLayer);
-            that.setActiveLayerIndex(layerIndex + 1);
+            newLayer.image.clearAll(EMPTY_LAYER_COLOR);
+            
+            parentGroup.insertLayer(newLayerIndex, newLayer);
+            
+            that.setActiveLayer(newLayer);
             
             invalidateFusion();
             callListenersLayerChange();
-        }
+        };
+
+        this.redo();
     }
     
-    CPUndoAddLayer.prototype = Object.create(CPUndo.prototype);
-    CPUndoAddLayer.prototype.constructor = CPUndoAddLayer;
+    CPActionAddLayer.prototype = Object.create(CPUndo.prototype);
+    CPActionAddLayer.prototype.constructor = CPActionAddLayer;
 
-    function CPUndoDuplicateLayer(layerIndex) {
+	/**
+     *
+     * @param {CPLayer} sourceLayer
+     * @constructor
+     */
+    function CPActionDuplicateLayer(sourceLayer) {
+        var
+            newLayer = new CPLayer(that.width, that.height, "");
+
         this.undo = function() {
-            layers.splice(layerIndex + 1, 1);
-            that.setActiveLayerIndex(layerIndex);
+            newLayer.parent.removeLayer(newLayer);
+            that.setActiveLayer(sourceLayer);
             
             invalidateFusion();
             callListenersLayerChange();
         };
 
         this.redo = function() {
-            var
-                copySuffix = " Copy",
+            const
+                COPY_SUFFIX = " Copy";
 
-                sourceLayer = layers[layerIndex],
-                newLayer = new CPLayer(that.width, that.height),
-                
+            var
                 newLayerName = sourceLayer.name;
             
-            if (!newLayerName.endsWith(copySuffix)) {
-                newLayerName += copySuffix;
+            if (!newLayerName.endsWith(COPY_SUFFIX)) {
+                newLayerName += COPY_SUFFIX;
             }
             
             newLayer.copyFrom(sourceLayer);
             newLayer.name = newLayerName;
-            
-            layers.splice(layerIndex + 1, 0, newLayer);
 
-            that.setActiveLayerIndex(layerIndex + 1);
+            sourceLayer.parent.insertLayer(sourceLayer.parent.indexOf(sourceLayer) + 1, newLayer);
+
+            that.setActiveLayer(newLayer);
             
             invalidateFusion();
             callListenersLayerChange();
         };
+
+        this.redo();
     }
     
-    CPUndoDuplicateLayer.prototype = Object.create(CPUndo.prototype);
-    CPUndoDuplicateLayer.prototype.constructor = CPUndoDuplicateLayer;
+    CPActionDuplicateLayer.prototype = Object.create(CPUndo.prototype);
+    CPActionDuplicateLayer.prototype.constructor = CPActionDuplicateLayer;
 
     /**
-     * @param layerIndex int
-     * @param layer CPLayer
+     * @param {CPLayer} layer
      */
-    function CPUndoRemoveLayer(layerIndex, layer) {
+    function CPActionRemoveLayer(layer) {
+        var
+            oldGroup = layer.parent,
+            oldIndex = oldGroup.indexOf(layer);
+    
         this.undo = function() {
-            layers.splice(layerIndex, 0, layer);
-            that.setActiveLayerIndex(layerIndex);
-            
+            oldGroup.insertLayer(oldIndex, layer);
+
             invalidateFusion();
             callListenersLayerChange();
+
+            that.setActiveLayer(layer);
         };
 
         this.redo = function() {
-            layers.splice(layerIndex, 1);
-            that.setActiveLayerIndex(layerIndex < layers.length ? layerIndex : layerIndex - 1);
-            
+            oldGroup.removeLayerAtIndex(oldIndex);
+
+            var
+                newSelectedLayer;
+
+            /* Attempt to select the layer on top of the one that was removed, otherwise the one underneath,
+             * otherwise the group that contained the layer.
+             */
+            if (oldIndex >= oldGroup.layers.length) {
+                if (oldGroup.layers.length == 0) {
+                    newSelectedLayer = layer.parent;
+                } else {
+                    newSelectedLayer = oldGroup.layers[oldIndex - 1];
+                }
+            } else {
+                newSelectedLayer = oldGroup.layers[oldIndex];
+            }
+
             invalidateFusion();
             callListenersLayerChange();
+
+            that.setActiveLayer(newSelectedLayer);
         };
 
         this.getMemoryUsed = function(undone) {
-            return undone ? 0 : layer.width * layer.height * CPColorBmp.BYTES_PER_PIXEL;
+            return undone ? 0 : layer.getMemoryUsed();
         };
+        
+        this.redo();
     }
     
-    CPUndoRemoveLayer.prototype = Object.create(CPUndo.prototype);
-    CPUndoRemoveLayer.prototype.constructor = CPUndoRemoveLayer;
-    
-    function CPUndoMergeDownLayer(layerIndex) {
+    CPActionRemoveLayer.prototype = Object.create(CPUndo.prototype);
+    CPActionRemoveLayer.prototype.constructor = CPActionRemoveLayer;
+	
+	/**
+     * Merge the top layer onto the under layer and remove the top layer.
+     *
+     * @param {CPLayer} topLayer
+     * @param {CPLayer} underLayer
+     * @constructor
+     */
+    function CPActionMergeDownLayer(topLayer, underLayer) {
         var
-            layerBottom = new CPLayer(that.width, that.height),
-            layerTop;
-
-        layerBottom.copyFrom(layers[layerIndex - 1]);
-        layerTop = layers[layerIndex];
+            mergedLayer = new CPLayer(that.width, that.height, "");
 
         this.undo = function() {
-            layers[layerIndex - 1].copyFrom(layerBottom);
-            layers.splice(layerIndex, 0, layerTop);
-            that.setActiveLayerIndex(layerIndex);
+            var
+                group = mergedLayer.parent,
+                mergedIndex = group.indexOf(mergedLayer);
 
-            layerBottom = layerTop = null;
+            group.removeLayerAtIndex(mergedIndex);
+
+            group.insertLayer(mergedIndex, topLayer);
+            group.insertLayer(mergedIndex, underLayer);
+
+            that.setActiveLayer(topLayer);
 
             invalidateFusion();
             callListenersLayerChange();
         };
 
         this.redo = function() {
-            layerBottom = new CPLayer(that.width, that.height);
-            layerBottom.copyFrom(layers[layerIndex - 1]);
-            layerTop = layers[layerIndex];
+            mergedLayer.copyFrom(underLayer);
+    
+            CPBlend.fuseLayerOntoLayer(mergedLayer, true, topLayer, mergedLayer.image.getBounds());
+            
+            var
+                group = underLayer.parent,
+                underIndex = group.indexOf(underLayer);
 
-            that.setActiveLayerIndex(layerIndex);
-            that.mergeDown(false);
+            // Remove both of the layers to be merged
+            group.removeLayerAtIndex(underIndex);
+            group.removeLayerAtIndex(underIndex);
+
+            // And put our new one in its place
+            group.insertLayer(underIndex, mergedLayer);
+
+            invalidateFusion();
+            callListenersLayerChange();
+    
+            that.setActiveLayer(mergedLayer);
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return undone ? 0 : that.width * that.height * CPColorBmp.BYTES_PER_PIXEL * 2;
+            return undone ? 0 : topLayer.getMemoryUsed() + mergedLayer.getMemoryUsed();
         };
+
+        this.redo();
     }
     
-    CPUndoMergeDownLayer.prototype = Object.create(CPUndo.prototype);
-    CPUndoMergeDownLayer.prototype.constructor = CPUndoMergeDownLayer;
+    CPActionMergeDownLayer.prototype = Object.create(CPUndo.prototype);
+    CPActionMergeDownLayer.prototype.constructor = CPActionMergeDownLayer;
 
-    function CPUndoMergeAllLayers() {
+    function CPActionMergeAllLayers() {
         var 
-            oldActiveLayerIndex = that.getActiveLayerIndex(),
-            oldLayers = layers.slice(0); // Clone old layers array
+            oldActiveLayer = that.getActiveLayer(),
+            oldRootLayers = layersRoot.layers.slice(0), // Clone old layers array
+            flattenedLayer = null;
 
         this.undo = function() {
-            layers = oldLayers.slice(0);
-            that.setActiveLayerIndex(oldActiveLayerIndex);
+            // Keep a reference to the flattened layer so we can restore its identity for redo
+            flattenedLayer = layersRoot.layers[0];
+
+            layersRoot.layers = oldRootLayers.slice(0);
+            that.setActiveLayer(oldActiveLayer);
 
             invalidateFusion();
             callListenersLayerChange();
         };
 
         this.redo = function() {
-            that.mergeAllLayers(false);
+            if (!flattenedLayer) {
+                var
+                    oldFusion = that.fusionLayers();
+
+                flattenedLayer = new CPLayer(that.width, that.height, "");
+
+                flattenedLayer.copyImageFrom(oldFusion);
+            }
+
+            layersRoot.clearLayers();
+
+            // Generate the name after the document is empty (so it can be "Layer 1")
+            flattenedLayer.setName(that.getDefaultLayerName());
+
+            layersRoot.addLayer(flattenedLayer);
+
+            that.setActiveLayer(flattenedLayer);
+
+            invalidateFusion();
+            callListenersLayerChange();
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return undone ? 0 : oldLayers.length * width * height * CPColorBmp.BYTES_PER_PIXEL;
+            // TODO
+            return 0;
         };
+
+        this.redo();
     }
     
-    CPUndoMergeAllLayers.prototype = Object.create(CPUndo.prototype);
-    CPUndoMergeAllLayers.prototype.constructor = CPUndoMergeAllLayers;
-    
-    function CPUndoMoveLayer(from, to) {
+    CPActionMergeAllLayers.prototype = Object.create(CPUndo.prototype);
+    CPActionMergeAllLayers.prototype.constructor = CPActionMergeAllLayers;
+
+	/**
+     * Move the layer to the given position in the layer tree.
+     *
+     * @param {CPLayer} layer
+     * @param {CPLayerGroup} toGroup
+     * @param {int} toIndex
+     * @constructor
+     */
+    function CPActionRelocateLayer(layer, toGroup, toIndex) {
+        var
+            fromGroup = layer.parent,
+            fromIndex = fromGroup.indexOf(layer);
+
         this.undo = function() {
-            if (to <= from) {
-                moveLayerReal(to, from + 1);
-            } else {
-                moveLayerReal(to - 1, from);
-            }
+            if (toIndex < fromIndex)
+                relocateLayerInternal(layer, fromGroup, fromIndex + 1);
+            else
+                relocateLayerInternal(layer, fromGroup, fromIndex);
         };
 
         this.redo = function() {
-            moveLayerReal(from, to);
+            relocateLayerInternal(layer, toGroup, toIndex);
         };
+
+        this.redo();
     }
     
-    CPUndoMoveLayer.prototype = Object.create(CPUndo.prototype);
-    CPUndoMoveLayer.prototype.constructor = CPUndoMoveLayer;
+    CPActionRelocateLayer.prototype = Object.create(CPUndo.prototype);
+    CPActionRelocateLayer.prototype.constructor = CPActionRelocateLayer;
 
-    function CPUndoLayerAlpha(layerIndex, alpha) {
-        this.from = that.getLayer(layerIndex).getAlpha();
-        this.to = alpha;
-        this.layerIndex = layerIndex;
-    }
-    
-    CPUndoLayerAlpha.prototype = Object.create(CPUndo.prototype);
-    CPUndoLayerAlpha.prototype.constructor = CPUndoLayerAlpha;
+    function generateLayerPropertyChangeAction(propertyName, invalidatesFusion) {
+        propertyName = capitalizeFirst(propertyName);
 
-    CPUndoLayerAlpha.prototype.undo = function() {
-        that.getLayer(this.layerIndex).setAlpha(this.from);
-        
-        invalidateFusion();
-        callListenersLayerChange(this.layerIndex);
-    };
+        var
+            ChangeAction = function(layer, newValue) {
+                this.layer = layer;
+                this.from = layer["get" + propertyName]();
+                this.to = newValue;
 
-    CPUndoLayerAlpha.prototype.redo = function() {
-        that.getLayer(this.layerIndex).setAlpha(this.to);
-        
-        invalidateFusion();
-        callListenersLayerChange(this.layerIndex);
-    }
+                this.redo();
+            };
 
-    CPUndoLayerAlpha.prototype.merge = function(u) {
-        if (u instanceof CPUndoLayerAlpha && this.layerIndex == u.layerIndex) {
-            this.to = u.to;
-            return true;
-        }
-        return false;
-    };
+        ChangeAction.prototype = Object.create(CPUndo.prototype);
+        ChangeAction.prototype.constructor = ChangeAction;
 
-    CPUndoLayerAlpha.prototype.noChange = function() {
-        return this.from == this.to;
-    }
+        ChangeAction.prototype.undo = function () {
+            this.layer["set" + propertyName](this.from);
 
-    function CPUndoLayerMode(layerIndex, to) {
-        this.layerIndex = layerIndex;
-        this.from = that.getLayer(layerIndex).getBlendMode();
-        this.to = to;
-    }
-    
-    CPUndoLayerMode.prototype = Object.create(CPUndo.prototype);
-    CPUndoLayerMode.prototype.constructor = CPUndoLayerMode;
+            if (invalidatesFusion) {
+                invalidateFusion();
+            }
 
-    CPUndoLayerMode.prototype.undo = function() {
-        that.getLayer(this.layerIndex).setBlendMode(this.from);
-        
-        invalidateFusion();
-        callListenersLayerChange();
-    };
+            callListenersLayerChange(this.layer);
+        };
 
-    CPUndoLayerMode.prototype.redo = function() {
-        that.getLayer(this.layerIndex).setBlendMode(this.to);
-        
-        invalidateFusion();
-        callListenersLayerChange();
-    };
+        ChangeAction.prototype.redo = function () {
+            this.layer["set" + propertyName](this.to);
 
-    CPUndoLayerMode.prototype.merge = function(u) {
-        if (u instanceof CPUndoLayerMode && this.layerIndex == u.layerIndex) {
-            this.to = u.to;
-            return true;
-        }
-        return false;
-    };
+            if (invalidatesFusion) {
+                invalidateFusion();
+            }
 
-    CPUndoLayerMode.prototype.noChange = function() {
-        return this.from == this.to;
+            callListenersLayerChange(this.layer);
+        };
+
+        ChangeAction.prototype.merge = function (u) {
+            if (u instanceof ChangeAction && this.layer == u.layer) {
+                this.to = u.to;
+                return true;
+            }
+            return false;
+        };
+
+        ChangeAction.prototype.noChange = function () {
+            return this.from == this.to;
+        };
+
+        return ChangeAction;
     }
 
-    function CPUndoLayerRename(layerIndex, to) {
-        this.layerIndex = layerIndex;
-        this.to = to;
-        this.from = that.getLayer(layerIndex).name;
-    }
-    
-    CPUndoLayerRename.prototype = Object.create(CPUndo.prototype);
-    CPUndoLayerRename.prototype.constructor = CPUndoLayerRename;
-    
-    CPUndoLayerRename.prototype.undo = function() {
-        that.getLayer(this.layerIndex).name = this.from;
-        callListenersLayerChange(this.layerIndex);
-    };
-
-    CPUndoLayerRename.prototype.redo = function() {
-        that.getLayer(this.layerIndex).name = this.to;
-        callListenersLayerChange(this.layerIndex);
-    };
-
-    CPUndoLayerRename.prototype.merge = function(u) {
-        if (u instanceof CPUndoLayerRename && this.layerIndex == u.layerIndex) {
-            this.to = u.to;
-            return true;
-        }
-        return false;
-    };
-
-    CPUndoLayerRename.prototype.noChange = function() {
-        return this.from == this.to;
-    };
+    var
+        CPActionChangeLayerAlpha = generateLayerPropertyChangeAction("alpha", true),
+        CPActionChangeLayerMode = generateLayerPropertyChangeAction("blendMode", true),
+        CPActionChangeLayerName = generateLayerPropertyChangeAction("name", false),
+        CPActionChangeLayerVisible = generateLayerPropertyChangeAction("visible", true);
     
     /**
-     * @param from CPRect
-     * @param to CPRect
+     * @param {CPRect} from
+     * @param {CPRect} to
      */
     function CPUndoRectangleSelection(from, to) {
         from = from.clone();
@@ -2536,6 +2440,7 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             that.setSelection(from);
+            // TODO this is just because CPCanvas doesn't know when to repaint the selection box
             callListenersUpdateRegion(that.getBounds());
         };
 
@@ -2567,7 +2472,12 @@ export default function CPArtwork(_width, _height) {
             tempCanvas = document.createElement("canvas"),
             tempCanvasContext = tempCanvas.getContext("2d"),
 
-            undoData, // A copy of the original layer within the undoDataRect
+	        /**
+             * A copy of the original layer within the undoDataRect
+             *
+             * @type {CPColorBmp}
+             */
+            undoData,
             undoDataRect,
 
             // A canvas for composing the transform onto
@@ -2579,7 +2489,7 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             var
-                layer = that.getLayer(this.layerIndex),
+                layerImage = this.layer.image,
                 invalidateRegion = dstRect.clone(),
                 undoSrcRegion;
 
@@ -2588,10 +2498,10 @@ export default function CPArtwork(_width, _height) {
             undoSrcRegion = invalidateRegion.clone();
             undoSrcRegion.translate(-undoDataRect.left, -undoDataRect.top);
 
-            layer.copyBitmapRect(undoData, invalidateRegion.left, invalidateRegion.top, undoSrcRegion);
+            layerImage.copyBitmapRect(undoData, invalidateRegion.left, invalidateRegion.top, undoSrcRegion);
 
             that.setSelection(fromSelection);
-            that.setActiveLayerIndex(this.layerIndex);
+            that.setActiveLayer(this.layer);
 
             invalidateFusionRect(invalidateRegion);
 
@@ -2604,10 +2514,10 @@ export default function CPArtwork(_width, _height) {
 
         this.redo = function() {
             var
-                layer = that.getLayer(this.layerIndex);
+                layerImage = this.layer.image;
 
             // Make a fresh copy of the layer into a Canvas to compose onto
-            fullUndoCanvasContext.putImageData(layer.getImageData(), 0, 0);
+            fullUndoCanvasContext.putImageData(layerImage.getImageData(), 0, 0);
 
             // Erase the region we moved from
             fullUndoCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
@@ -2626,7 +2536,7 @@ export default function CPArtwork(_width, _height) {
             fullUndoCanvasContext.restore();
 
             // Copy back to the layer data
-            layer.setImageData(fullUndoCanvasContext.getImageData(0, 0, layer.width, layer.height));
+            layerImage.setImageData(fullUndoCanvasContext.getImageData(0, 0, layerImage.width, layerImage.height));
 
             // Invalidate the source and destination regions we touched
             var
@@ -2636,8 +2546,7 @@ export default function CPArtwork(_width, _height) {
             affineTransform.transformPoints(dstCorners);
 
             dstRect = CPRect.createBoundingBox(dstCorners);
-            dstRect.roundContain();
-            layer.getBounds().clip(dstRect);
+            dstRect.roundContain().clipTo(layerImage.getBounds());
             
             invalidateRegion.union(dstRect);
 
@@ -2653,11 +2562,12 @@ export default function CPArtwork(_width, _height) {
 
                 toSelectionRect = CPRect.createBoundingBox(toSelectionPoints);
                 toSelectionRect.roundNearest();
-                layer.getBounds().clip(toSelectionRect);
 
                 that.setSelection(toSelectionRect);
                 callListenersSelectionChange();
             }
+
+            that.setActiveLayer(this.layer);
         };
 
         /**
@@ -2667,17 +2577,17 @@ export default function CPArtwork(_width, _height) {
          */
         this.amend = function(_affineTransform) {
             var
-                layer = that.getLayer(this.layerIndex);
+                layerImage = this.layer.image;
 
             this.undo();
 
-            if (undoDataRect.getWidth() < layer.width || undoDataRect.getHeight() < layer.height) {
+            if (undoDataRect.getWidth() < layerImage.width || undoDataRect.getHeight() < layerImage.height) {
                 /*
                  * We need a complete copy of the layer in undoData to support further redo(). (As we probably previously
                  * only made a backup copy of the areas we erased using the old transform).
                  */
-                undoData = layer.clone();
-                undoDataRect = layer.getBounds();
+                undoData = layerImage.clone();
+                undoDataRect = layerImage.getBounds();
             }
 
             affineTransform = _affineTransform.clone();
@@ -2699,14 +2609,14 @@ export default function CPArtwork(_width, _height) {
          */
         this.compact = function() {
             var
-                layer = that.getLayer(this.layerIndex);
+                layerImage = this.layer.image;
             
             // If we have a full undo, and we don't need very much area for undo, trim it to just the area we need
-            if (undoDataRect.getWidth() == layer.width && undoDataRect.getHeight() == layer.height) {
+            if (undoDataRect.getWidth() == layerImage.width && undoDataRect.getHeight() == layerImage.height) {
                 var
                     dirtyRect = srcRect.getUnion(dstRect);
 
-                if (dirtyRect.getArea() * 2 < layer.width * layer.height) {
+                if (dirtyRect.getArea() * 2 < layerImage.width * layerImage.height) {
                     undoDataRect = dirtyRect;
                     undoData = undoData.cloneRect(undoDataRect);
                 }
@@ -2743,15 +2653,15 @@ export default function CPArtwork(_width, _height) {
             return fromSelection.clone();
         };
 
-        this.layerIndex = that.getActiveLayerIndex();
+        this.layer = that.getActiveLayer();
 
         let
-            layer = that.getLayer(this.layerIndex);
+            layerImage = this.layer.image;
 
-        undoData = layer.clone();
-        undoDataRect = layer.getBounds();
-        fullUndoCanvas.width = layer.width;
-        fullUndoCanvas.height = layer.height;
+        undoData = layerImage.clone();
+        undoDataRect = layerImage.getBounds();
+        fullUndoCanvas.width = layerImage.width;
+        fullUndoCanvas.height = layerImage.height;
 
         // Make a copy of just the source rectangle in its own canvas so we have it as an image to be drawn later
         tempCanvas.width = srcRect.getWidth();
@@ -2765,28 +2675,32 @@ export default function CPArtwork(_width, _height) {
     CPActionTransformSelection.prototype.constructor = CPActionTransformSelection;
 
     /**
-     * Upon creation, moves the currently selected region of the current layer by the given offset (or copies it if
-     * 'copy' is true).
+     * Upon creation, moves the currently selected region of the current layer by the given offset
      *
-     * @param srcRect
-     * @param offsetX
-     * @param offsetY
-     * @param copy
+     * @param {CPRect} srcRect - Rectangle that will be moved
+     * @param {int} offsetX
+     * @param {int} offsetY
+     * @param {boolean} copy - True if we should copy to the destination instead of move.
      * @constructor
      */
     function CPActionMoveSelection(srcRect, offsetX, offsetY, copy) {
         var
             fromSelection = that.getSelection(),
-            dstRect = null,
+            dstRect = new CPRect(0, 0, 0, 0),
 
-            fullUndo, // A copy of the entire layer
+	        /**
+             * A copy of the entire layer
+             *
+             * @type {CPColorBmp}
+             */
+            fullUndo,
             srcData = null, // A copy of the original pixels at the srcRect, or null if we use a fullUndo instead
             dstData = null // A copy of the original pixels at the dstRect, or null
         ;
-        
+
         this.undo = function() {
             var
-                layer = that.getLayer(this.layerIndex),
+                layerImage = this.layer.image,
                 invalidateRegion = dstRect.clone();
 
             if (!copy) {
@@ -2794,17 +2708,17 @@ export default function CPArtwork(_width, _height) {
             }
 
             if (fullUndo) {
-                layer.copyBitmapRect(fullUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
+                layerImage.copyBitmapRect(fullUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
             } else {
-                layer.copyBitmapRect(srcData, srcRect.left, srcRect.top, srcData.getBounds());
+                layerImage.copyBitmapRect(srcData, srcRect.left, srcRect.top, srcData.getBounds());
 
                 if (dstData) {
-                    layer.copyBitmapRect(dstData, dstRect.left, dstRect.top, dstData.getBounds());
+                    layerImage.copyBitmapRect(dstData, dstRect.left, dstRect.top, dstData.getBounds());
                 }
             }
 
             that.setSelection(fromSelection);
-            that.setActiveLayerIndex(this.layerIndex);
+            that.setActiveLayer(this.layer);
 
             invalidateFusionRect(invalidateRegion);
 
@@ -2817,27 +2731,30 @@ export default function CPArtwork(_width, _height) {
 
         this.redo = function() {
             var
-                layer = that.getLayer(this.layerIndex),
+                layerImage = this.layer.image,
                 invalidateRegion = new CPRect(0, 0, 0, 0);
 
             if (!copy) {
-                layer.clearRect(srcRect, 0);
+                layerImage.clearRect(srcRect, EMPTY_LAYER_COLOR);
                 invalidateRegion.set(srcRect);
             }
 
-            dstRect = srcRect.clone();
+            dstRect.set(srcRect);
             dstRect.translate(offsetX, offsetY);
-            layer.getBounds().clip(dstRect);
 
             /* Note that while we could copy image data from the layer itself onto the layer (instead of sourcing that
              * data from the undo buffers), this would require that pasteAlphaRect do the right thing when source and
              * dest rects overlap, which it doesn't.
              */
             if (fullUndo) {
-                layer.pasteAlphaRect(fullUndo, srcRect, dstRect.left, dstRect.top);
+                // This function clamps the rectangles to the bounds for us
+                CPBlend.normalFuseImageOntoImageAtPosition(layerImage, fullUndo, srcRect, dstRect.left, dstRect.top);
             } else {
-                layer.pasteAlphaRect(srcData, srcData.getBounds(), dstRect.left, dstRect.top);
+                CPBlend.normalFuseImageOntoImageAtPosition(layerImage, srcData, srcData.getBounds(), dstRect.left, dstRect.top);
             }
+
+            // Clip dest rectangle to the bounds so we can update the invalidateRegion accurately
+            dstRect.clipTo(layerImage.getBounds());
 
             invalidateRegion.union(dstRect);
 
@@ -2860,7 +2777,7 @@ export default function CPArtwork(_width, _height) {
          */
         this.amend = function(_offsetX, _offsetY) {
             var
-                layer = that.getLayer(this.layerIndex);
+                layerImage = this.layer.image;
 
             if (fullUndo) {
                 if (copy) {
@@ -2870,7 +2787,7 @@ export default function CPArtwork(_width, _height) {
                      * We don't need to restore the image at the *source* location as a full undo would do, since
                      * we'll only erase that area again once we redo(). So just restore the data at the dest.
                      */
-                    layer.copyBitmapRect(fullUndo, dstRect.left, dstRect.top, dstRect);
+                    layerImage.copyBitmapRect(fullUndo, dstRect.left, dstRect.top, dstRect);
                     invalidateFusionRect(dstRect);
                 }
             } else {
@@ -2879,7 +2796,7 @@ export default function CPArtwork(_width, _height) {
                  */
                 this.undo();
 
-                fullUndo = layer.clone();
+                fullUndo = layerImage.clone();
                 srcData = null;
                 dstData = null;
             }
@@ -2899,7 +2816,7 @@ export default function CPArtwork(_width, _height) {
 
                 srcData = fullUndo.cloneRect(srcRect);
 
-                if (!copy && dstRect.isInside(srcRect)) {
+                if (dstRect.isInside(srcRect)) { // Likely if we're moving the whole layer
                     dstData = null;
                 } else {
                     dstData = fullUndo.cloneRect(dstRect);
@@ -2909,7 +2826,7 @@ export default function CPArtwork(_width, _height) {
             }
         };
 
-        this.getMemoryUsed = function() {
+        this.getMemoryUsed = function(undone, param) {
             var
                 size = 0;
 
@@ -2926,8 +2843,10 @@ export default function CPArtwork(_width, _height) {
             return size;
         };
 
-        this.layerIndex = that.getActiveLayerIndex();
-        fullUndo = that.getLayer(this.layerIndex).clone();
+        srcRect = srcRect.clone(); // Don't damage the caller's srcRect
+        this.layer = that.getActiveLayer();
+
+        fullUndo = this.layer.image.clone();
 
         this.redo();
     }
@@ -2936,114 +2855,111 @@ export default function CPArtwork(_width, _height) {
     CPActionMoveSelection.prototype.constructor = CPActionMoveSelection;
 
     /**
-     * Used to encapsulate multiple undo operation as one
+     * Cut the selected rectangle from the layer
      * 
-     * @param undoes CPUndo[] List of undo operations to encapsulate
+     * @param {CPLayer} layer - Layer to cut from
+     * @param {CPRect} selection - The cut rectangle co-ordinates
      */
-    function CPMultiUndo(undoes) {
-        this.undoes = undoes;
-    }
-
-    CPMultiUndo.prototype = Object.create(CPUndo.prototype);
-    CPMultiUndo.prototype.constructor = CPMultiUndo;
-
-    CPMultiUndo.prototype.undo = function() {
-        for (var i = this.undoes.length - 1; i >= 0; i--) {
-            this.undoes[i].undo();
-        }
-    };
-
-    CPMultiUndo.prototype.redo = function() {
-        for (var i = 0; i < this.undoes.length; i++) {
-            this.undoes[i].redo();
-        }
-    };
-
-    CPMultiUndo.prototype.noChange = function() {
-        for (var i = 0; i < undoes.length; i++) {
-            if (!undoes[i].noChange()) {
-                return false;
-            }
-        }
-        
-        return true;
-    };
-
-    CPMultiUndo.prototype.getMemoryUsed = function(undone, param) {
+    function CPActionCut(layer, selection) {
         var
-            total = 0;
-        
-        for (var i = 0; i < undoes.length; i++) {
-            total += undoes[i].getMemoryUsed(undone, param);
-        }
-        
-        return total;
-    };
-    
-    /**
-     * Store data to undo a cut operation
-     * 
-     * @param bmp CPColorBmp The rectangle of image data that was cut
-     * @param layerIndex int Index of the layer the cut came from
-     * @param selection CPRect The cut rectangle co-ordinates
-     */
-    function CPUndoCut(bmp, layerIndex, selection) {
+            bmp = layer.image.cloneRect(selection);
+
         selection = selection.clone();
 
         this.undo = function() {
-            that.setActiveLayerIndex(layerIndex);
-            curLayer.copyBitmapRect(bmp, selection.left, selection.top, bmp.getBounds());
+            layer.image.copyBitmapRect(bmp, selection.left, selection.top, bmp.getBounds());
+
+            that.setActiveLayer(layer);
             that.setSelection(selection);
             invalidateFusionRect(selection);
         };
 
         this.redo = function() {
-            that.setActiveLayerIndex(layerIndex);
-            curLayer.clearRect(selection, EMPTY_LAYER_COLOR);
+            clipboard = new CPClip(bmp, selection.left, selection.top);
+
+            layer.image.clearRect(selection, EMPTY_LAYER_COLOR);
+
+            that.setActiveLayer(layer);
             that.emptySelection();
             invalidateFusionRect(selection);
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return bmp == param ? 0 : bmp.width * bmp.height * CPColorBmp.BYTES_PER_PIXEL;
+            return bmp == param ? 0 : bmp.getMemorySize();
         };
+
+        this.redo();
     }
     
-    CPUndoCut.prototype = Object.create(CPUndo.prototype);
-    CPUndoCut.prototype.constructor = CPUndoCut;
+    CPActionCut.prototype = Object.create(CPUndo.prototype);
+    CPActionCut.prototype.constructor = CPActionCut;
 
     /**
-     * Store data to undo a paste operation
+     * Paste the given clipboard onto the given layer.
      * 
-     * @param clip CPClip
-     * @param layerIndex int
-     * @param selection CPRect
+     * @param {CPClip} clip
+     * @param {CPLayer} oldLayer
      */
-    function CPUndoPaste(clip, layerIndex, selection) {
-        selection = selection.clone();
+    function CPActionPaste(clip, oldLayer) {
+        var
+            oldSelection = that.getSelection(),
+            newLayer = new CPLayer(that.width, that.height, that.getDefaultLayerName()),
+            parentGroup = oldLayer.parent;
 
         this.undo = function() {
-            layers.splice(layerIndex + 1, 1);
-            
-            that.setActiveLayerIndex(layerIndex);
-            that.setSelection(selection);
+            parentGroup.removeLayer(newLayer);
 
-            invalidateFusionRect(selection);
+            that.setSelection(oldSelection);
+
+            invalidateFusion();
             callListenersLayerChange();
+
+            that.setActiveLayer(oldLayer);
         };
 
         this.redo = function() {
-            that.setActiveLayerIndex(layerIndex);
-            pasteClip(false, clip);
+            var
+                layerIndex = parentGroup.indexOf(oldLayer),
+                sourceRect = clip.bmp.getBounds(),
+                x, y;
+
+            parentGroup.insertLayer(layerIndex + 1, newLayer);
+
+            if (sourceRect.isInside(that.getBounds())) {
+                x = clip.x;
+                y = clip.y;
+            } else {
+                x = ((that.width - clip.bmp.width) / 2) | 0;
+                y = ((that.height - clip.bmp.height) / 2) | 0;
+            }
+
+            newLayer.image.copyBitmapRect(clip.bmp, x, y, sourceRect);
+            that.emptySelection();
+
+            invalidateFusion();
+            callListenersLayerChange();
+
+            that.setActiveLayer(newLayer);
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return clip.bmp == param ? 0 : clip.bmp.width * clip.bmp.height * 4;
+            return clip.bmp == param ? 0 : clip.bmp.getMemorySize();
         };
+
+        this.redo();
     }
     
-    CPUndoPaste.prototype = Object.create(CPUndo.prototype);
-    CPUndoPaste.prototype.constructor = CPUndoPaste;
+    CPActionPaste.prototype = Object.create(CPUndo.prototype);
+    CPActionPaste.prototype.constructor = CPActionPaste;
+
+    paintingModes = [
+        new CPBrushToolSimpleBrush(), new CPBrushToolEraser(), new CPBrushToolDodge(),
+        new CPBrushToolBurn(), new CPBrushToolWatercolor(), new CPBrushToolBlur(), new CPBrushToolSmudge(),
+        new CPBrushToolOil()
+    ];
+
+    this.width = _width;
+    this.height = _height;
 };
 
 CPArtwork.prototype = Object.create(EventEmitter.prototype);
@@ -3051,7 +2967,7 @@ CPArtwork.prototype.constructor = CPArtwork;
 
 CPArtwork.prototype.getBounds = function() {
     return new CPRect(0, 0, this.width, this.height);
-}
+};
 
 CPArtwork.prototype.isPointWithin = function(x, y) {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;

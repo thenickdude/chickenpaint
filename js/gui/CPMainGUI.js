@@ -89,7 +89,7 @@ export default function CPMainGUI(controller, uiElem) {
         that.constrainPalettes();
     };
 
-    menuBar = new CPMainMenu(controller, this)
+    menuBar = new CPMainMenu(controller, this);
 
     uiElem.appendChild(menuBar.getElement());
     

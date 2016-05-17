@@ -21,8 +21,8 @@ export default function AdobeColorTable() {
  * 
  * Supports version 1 palettes, only RGB format.
  * 
- * @param input A Uint8Array of the .aco file contents
- * @return An array of colours, or null if the file was not supported.
+ * @param {Uint8Array} input - The .aco file contents
+ * @return {?Object[]} An array of colours, or null if the file was not supported.
  */
 AdobeColorTable.prototype.read = function(input) {
     if (input == null) {
@@ -42,9 +42,9 @@ AdobeColorTable.prototype.read = function(input) {
 
     for (var i = 0; i < count; i++) {
         var
-            colourspace = stream.readU16BE();
+            colorSpace = stream.readU16BE();
 
-        if (colourspace != ACO_COLORSPACE_RGB) {
+        if (colorSpace != ACO_COLORSPACE_RGB) {
             continue; // Drop unsupported colours silently
         }
 

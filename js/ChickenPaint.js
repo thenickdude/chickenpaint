@@ -349,15 +349,14 @@ export default function ChickenPaint(options) {
             CPTransform: {
                 action: function () {
                     var
-                        layer = that.artwork.getActiveLayer(),
-                        layerIndex = that.artwork.getActiveLayerIndex();
+                        layer = that.artwork.getActiveLayer();
                     
                     if (!layer.visible) {
-                        that.showLayerNotification(layerIndex, "Whoops! This layer is currently hidden", "layer");
+                        that.showLayerNotification(layer, "Whoops! This layer is currently hidden", "layer");
                     } else if (layer.alpha == 0) {
-                        that.showLayerNotification(layerIndex, "Whoops! This layer's opacity is currently 0%", "opacity");
+                        that.showLayerNotification(layer, "Whoops! This layer's opacity is currently 0%", "opacity");
                     } else if (that.artwork.transformAffineBegin() == null) {
-                        that.showLayerNotification(layerIndex, "Whoops! All of the selected pixels are transparent!", "layer");
+                        that.showLayerNotification(layer, "Whoops! All of the selected pixels are transparent!", "layer");
                     } else {
                         setMode(ChickenPaint.M_TRANSFORM);
                     }
@@ -438,13 +437,13 @@ export default function ChickenPaint(options) {
             },
             CPLayerMergeDown: {
                 action: function () {
-                    that.artwork.mergeDown(true);
+                    that.artwork.mergeDown();
                 },
                 modifies: {document: true}
             },
             CPLayerMergeAll: {
                 action: function () {
-                    that.artwork.mergeAllLayers(true);
+                    that.artwork.mergeAllLayers();
                 },
                 modifies: {document: true}
             },
@@ -513,7 +512,7 @@ export default function ChickenPaint(options) {
 
             CPCut: {
                 action: function () {
-                    that.artwork.cutSelection(true);
+                    that.artwork.cutSelection();
                 },
                 modifies: {document: true}
             },
@@ -531,7 +530,7 @@ export default function ChickenPaint(options) {
             },
             CPPaste: {
                 action: function () {
-                    that.artwork.pasteClipboard(true);
+                    that.artwork.pasteClipboard();
                 },
                 modifies: {document: true}
             },
@@ -581,15 +580,15 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {document: true}
             },
-            CPMoveLayer: {
+            CPRelocateLayer: {
                 action: function(e) {
-                    that.artwork.moveLayer(e.fromIndex, e.toIndex);
+                    that.artwork.relocateLayer(e.layer, e.toGroup, e.toIndex);
                 },
                 modifies: {document: true}
             },
-            CPSetActiveLayerIndex: {
+            CPSetActiveLayer: {
                 action: function(e) {
-                    that.artwork.setActiveLayerIndex(e.layerIndex);
+                    that.artwork.setActiveLayer(e.layer);
 
                     // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
                     that.artwork.performIdleTasks();
@@ -598,25 +597,25 @@ export default function ChickenPaint(options) {
             },
             CPSetLayerVisibility: {
                 action: function(e) {
-                    that.artwork.setLayerVisibility(e.layerIndex, e.visible);
+                    that.artwork.setLayerVisibility(e.layer, e.visible);
                 },
                 modifies: {layerProp: true}
             },
             CPSetLayerName: {
                 action: function(e) {
-                    that.artwork.setLayerName(e.layerIndex, e.name);
+                    that.artwork.setLayerName(e.layer, e.name);
                 },
                 modifies: {layerProp: true}
             },
             CPSetLayerBlendMode: {
                 action: function(e) {
-                    that.artwork.setLayerBlendMode(e.layerIndex, e.blendMode);
+                    that.artwork.setLayerBlendMode(e.blendMode);
                 },
                 modifies: {layerProp: true}
             },
             CPSetLayerAlpha: {
                 action: function(e) {
-                    that.artwork.setLayerAlpha(e.layerIndex, e.alpha);
+                    that.artwork.setLayerAlpha(e.alpha);
                 },
                 modifies: {layerProp: true}
             },
@@ -746,11 +745,10 @@ export default function ChickenPaint(options) {
     function callViewListeners(viewInfo) {
         that.emitEvent('viewChange', [viewInfo]);
     }
-    
-    this.getMainGUI = function() {
-        return mainGUI;
-    };
 
+	/**
+     * @returns {CPArtwork}
+     */
     this.getArtwork = function() {
         return this.artwork;
     };
@@ -860,7 +858,7 @@ export default function ChickenPaint(options) {
         });
         
         saver.on("savingFailure", function() {
-            alert("An error occured while trying to save your drawing! Please try again!");
+            alert("An error occurred while trying to save your drawing! Please try again!");
         });
         
         saver.save();
@@ -910,8 +908,8 @@ export default function ChickenPaint(options) {
         return false;
     };
 
-    this.showLayerNotification = function(layerIndex, message, where) {
-        this.emitEvent("layerNotification", [layerIndex, message, where]);
+    this.showLayerNotification = function(layer, message, where) {
+        this.emitEvent("layerNotification", [layer, message, where]);
     };
     
     this.actionPerformed = function(e) {

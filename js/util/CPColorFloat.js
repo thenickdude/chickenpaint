@@ -20,7 +20,14 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-// An RGB color with floating point values for each channel (between 0.0 and 1.0)
+/**
+ * An RGB color with floating point values for each channel (between 0.0 and 1.0)
+ *
+ * @param r
+ * @param g
+ * @param b
+ * @constructor
+ */
 export default function CPColorFloat(r, g, b) {
     this.r = r;
     this.g = g;

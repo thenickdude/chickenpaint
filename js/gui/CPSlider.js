@@ -186,7 +186,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
         
         if (this.value != _value) {
             this.value = _value;
-            
+
             // The event listeners might like to update our title property at this point to reflect the new value
             this.emitEvent('valueChange', [this.value]);
         

@@ -20,6 +20,13 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+ *
+ * @param {CPColorBmp} bmp
+ * @param x
+ * @param y
+ * @constructor
+ */
 export default function CPClip(bmp, x, y) {
     this.bmp = bmp;
     

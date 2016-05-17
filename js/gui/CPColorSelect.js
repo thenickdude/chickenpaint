@@ -50,8 +50,8 @@ export default function CPColorSelect(cpController, initialColor) {
                 col.setSaturation((x * 255) / w);
 
                 data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (col.rgb >> 16) & 0xFF;
-                data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (col.rgb >> 8) & 0xFF
-                data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col.rgb & 0xFF
+                data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (col.rgb >> 8) & 0xFF;
+                data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col.rgb & 0xFF;
                 data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
 
                 pixIndex += CPColorBmp.BYTES_PER_PIXEL;

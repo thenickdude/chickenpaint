@@ -67,9 +67,9 @@ CPRect.prototype.getUnion = function(that) {
 /**
  * Clip this rectangle to fit within `that`.
  * 
- * @returns a reference to this rectangle for chaining
+ * @returns {CPRect} A reference to this rectangle for chaining
  */
-CPRect.prototype.clip = function(that) {
+CPRect.prototype.clipTo = function(that) {
     if (!this.isEmpty()) {
         if (that.isEmpty()) {
             this.makeEmpty();
@@ -154,15 +154,30 @@ CPRect.prototype.set = function(r) {
     this.bottom = r.bottom;
 };
 
+/**
+ * Get an independent copy of this rectangle.
+ *
+ * @returns {CPRect}
+ */
 CPRect.prototype.clone = function() {
     return new CPRect(this.left, this.top, this.right, this.bottom);
 };
 
+/**
+ * Move the rectangle by the given offset
+ *
+ * @param {number} x
+ * @param {number} y
+ *
+ * @returns {CPRect} This rectangle for chaining
+ */
 CPRect.prototype.translate = function(x, y) {
     this.left += x;
     this.right += x;
     this.top += y;
     this.bottom += y;
+
+    return this;
 };
 
 CPRect.prototype.moveTo = function(x, y) {
@@ -206,22 +221,30 @@ CPRect.prototype.toPoints = function() {
 
 /**
  * Round the rectangle coordinates to the nearest integer.
+ *
+ * @returns {CPRect} This rectangle for chaining
  */
 CPRect.prototype.roundNearest = function() {
     this.left = Math.round(this.left);
     this.top = Math.round(this.top);
     this.right = Math.round(this.right);
     this.bottom = Math.round(this.bottom);
+
+    return this;
 };
 
 /**
  * Round the rectangle coordinates to integers so that the old rectangle is contained by the new one.
+ *
+ * @returns {CPRect} This rectangle for chaining
  */
 CPRect.prototype.roundContain = function() {
     this.left = Math.floor(this.left);
     this.top = Math.floor(this.top);
     this.right = Math.ceil(this.right);
     this.bottom = Math.ceil(this.bottom);
+
+    return this;
 };
 
 /**

@@ -140,7 +140,7 @@ export default function CPColor(rgb) {
     
     this.setRgbComponents = function(r, g, b) {
         this.setRgb((r << 16) | (g << 8) | b);
-    }
+    };
     
     this.setRgb = function(rgb) {
         this.rgb = rgb;

@@ -58,7 +58,7 @@ export default function CPCheckbox(state, title) {
     
     this.getElement = function() {
         return canvas;
-    }
+    };
     
     canvas.addEventListener("mousedown", function(e) {
         that.setValue(!that.state);

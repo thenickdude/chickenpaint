@@ -22,6 +22,15 @@
 
 import CPBitmap from "./CPBitmap";
 
+/**
+ *
+ * @param width
+ * @param height
+ * @param bitDepth
+ *
+ * @constructor
+ * @extends CPBitmap
+ */
 export default function CPGreyBmp(width, height, bitDepth) {
 
     CPBitmap.call(this, width, height);
@@ -56,8 +65,9 @@ export default function CPGreyBmp(width, height, bitDepth) {
     };
     
     this.clearRect = function(rect, value) {
+        rect = this.getBounds().clipTo(rect);
+        
         var
-            rect = this.getBounds().clip(rect),
             yStride = this.width - rect.getWidth(),
             pixIndex = this.offsetOfPixel(rect.left, rect.top);
         
@@ -127,4 +137,4 @@ export default function CPGreyBmp(width, height, bitDepth) {
 
 CPGreyBmp.prototype.offsetOfPixel = function(x, y) {
     return y * this.width + x;
-}
+};

@@ -55,6 +55,11 @@ CPPolygon.prototype.getTransformed = function(affineTransform) {
 	return result;
 };
 
+/**
+ * Get the average of all the points in the polygon (the "center").
+ *
+ * @returns {{x: number, y: number}}
+ */
 CPPolygon.prototype.getCenter = function() {
 	var
 		centerX = this.points[0].x,

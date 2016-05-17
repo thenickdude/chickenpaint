@@ -122,7 +122,7 @@ export default function CPChibiFile() {
         stream.writeString(CHUNK_TAG_HEAD);
         stream.writeU32BE(16); // ChunkSize
 
-        stream.writeU32BE(0); // Current Version: Major: 0 Minor: 0
+        stream.writeU32BE(16); // Current Version: Major: 1 Minor: 0
         stream.writeU32BE(artwork.width);
         stream.writeU32BE(artwork.height);
         stream.writeU32BE(artwork.getLayerCount());
@@ -132,7 +132,8 @@ export default function CPChibiFile() {
 
     function serializeLayerChunk(layer) {
         var
-            chunkSize = 20 + layer.name.length + layer.data.length,
+            layerData = layer.image.data,
+            chunkSize = 20 + layer.name.length + layerData.length,
 
             buffer = new Uint8Array(CHUNK_TAG_LAYER.length + 4 + chunkSize),
             stream = new ArrayDataStream(buffer),
@@ -152,11 +153,11 @@ export default function CPChibiFile() {
 
         // Convert layer bytes from RGBA to ARGB order to match the Chibi specs
         pos = stream.pos;
-        for (var i = 0; i < layer.data.length; i += BYTES_PER_PIXEL) {
-            buffer[pos++] = layer.data[i + ALPHA_BYTE_OFFSET];
-            buffer[pos++] = layer.data[i + RED_BYTE_OFFSET];
-            buffer[pos++] = layer.data[i + GREEN_BYTE_OFFSET];
-            buffer[pos++] = layer.data[i + BLUE_BYTE_OFFSET];
+        for (var i = 0; i < layerData.length; i += BYTES_PER_PIXEL) {
+            buffer[pos++] = layerData[i + ALPHA_BYTE_OFFSET];
+            buffer[pos++] = layerData[i + RED_BYTE_OFFSET];
+            buffer[pos++] = layerData[i + GREEN_BYTE_OFFSET];
+            buffer[pos++] = layerData[i + BLUE_BYTE_OFFSET];
         }
 
         return buffer;
@@ -175,7 +176,7 @@ export default function CPChibiFile() {
                 magic = new Uint8Array(CHI_MAGIC.length);
     
             // The magic file signature is not ZLIB compressed:
-            for (var i = 0; i < CHI_MAGIC.length; i++) {
+            for (let i = 0; i < CHI_MAGIC.length; i++) {
                 magic[i] = CHI_MAGIC.charCodeAt(i);
             }
             blobParts.push(magic);
@@ -183,7 +184,7 @@ export default function CPChibiFile() {
             // The rest gets compressed
             deflator.push(serializeHeaderChunk(artwork), false);
     
-            var
+            let
                 layers = artwork.getLayers(),
                 i = 0;
             
@@ -274,7 +275,7 @@ export default function CPChibiFile() {
          * 
          * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
          */
-        function decodePixels(buffer, layerPix) {
+        function decodePixels(buffer, imagePix) {
             var
                 subpixel = layerBytesRead % BYTES_PER_PIXEL,
                 dstPixelStartOffset = layerBytesRead - subpixel,
@@ -287,7 +288,7 @@ export default function CPChibiFile() {
             
             // The first pixel might be a partial one since we might be continuing a pixel split over buffers
             for (; subpixel < BYTES_PER_PIXEL && bufferPos < buffer.length; subpixel++) {
-                layerPix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+                imagePix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
                 layerBytesRead++;
                 bufferPos++;
             }
@@ -299,10 +300,10 @@ export default function CPChibiFile() {
                 subpixelsRemain = bytesRemain % BYTES_PER_PIXEL;
             
             for (var i = 0; i < fullPixelsRemain; i++) {
-                layerPix[layerBytesRead + ALPHA_BYTE_OFFSET] = buffer[bufferPos];
-                layerPix[layerBytesRead + RED_BYTE_OFFSET] = buffer[bufferPos + 1];
-                layerPix[layerBytesRead + GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
-                layerPix[layerBytesRead + BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
+                imagePix[layerBytesRead + ALPHA_BYTE_OFFSET] = buffer[bufferPos];
+                imagePix[layerBytesRead + RED_BYTE_OFFSET] = buffer[bufferPos + 1];
+                imagePix[layerBytesRead + GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
+                imagePix[layerBytesRead + BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
                 layerBytesRead += BYTES_PER_PIXEL;
                 bufferPos += BYTES_PER_PIXEL;
             }
@@ -310,7 +311,7 @@ export default function CPChibiFile() {
             // Read a fractional pixel at the end of the buffer
             dstPixelStartOffset = layerBytesRead;
             for (subpixel = 0; subpixel < subpixelsRemain; subpixel++) {
-                layerPix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+                imagePix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
                 layerBytesRead++;
                 bufferPos++;
             }
@@ -415,7 +416,7 @@ export default function CPChibiFile() {
                         
                         buffer = buffer.subarray(stream.pos);
                         
-                        state = STATE_DECODE_LAYER_HEADER_VARIABLE
+                        state = STATE_DECODE_LAYER_HEADER_VARIABLE;
                         continue;
                     break;
                     case STATE_DECODE_LAYER_HEADER_VARIABLE:
@@ -457,7 +458,7 @@ export default function CPChibiFile() {
                          * data, and only read from incoming 'block's.
                          */ 
                         if (block != null) {
-                            block = decodePixels(block, layer.data);
+                            block = decodePixels(block, layer.image.data);
                             
                             if (layerBytesRead >= layerBytesTotal) {
                                 artwork.addLayerObject(layer);
@@ -504,7 +505,7 @@ export default function CPChibiFile() {
         
         pako.onEnd = function(status) {
             if (status === 0 && state == STATE_SUCCESS) {
-                artwork.setActiveLayerIndex(artwork.getTopmostVisibleLayer());
+                artwork.selectTopmostVisibleLayer();
                 
                 this.result = artwork;
             } else {

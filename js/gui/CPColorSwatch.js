@@ -145,8 +145,7 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
                 return buildColorEditPanel();
             },
             trigger: "manual",
-            placement: "bottom",
-
+            placement: "bottom"
         })
         .on("click", function() {
             $(this).popover("toggle");

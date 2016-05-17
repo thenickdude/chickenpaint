@@ -20,6 +20,13 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+ *
+ * @param x
+ * @param y
+ *
+ * @constructor
+ */
 export default function CPVector(x, y) {
 	this.x = x;
 	this.y = y;
@@ -53,7 +60,7 @@ CPVector.prototype.getDotProduct = function(that) {
 
 /**
  *
- * @param scaleFactor
+ * @param {numeric} scaleFactor
  * @returns {CPVector} This vector for chaining
  */
 CPVector.prototype.scale = function(scaleFactor) {

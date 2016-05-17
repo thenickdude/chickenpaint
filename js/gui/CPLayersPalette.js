@@ -22,6 +22,7 @@
 
 import CPPalette from "./CPPalette";
 import CPSlider from "./CPSlider";
+import CPLayerGroup from "../engine/CPLayerGroup";
 
 export default function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers", true);
@@ -35,7 +36,12 @@ export default function CPLayersPalette(controller) {
     var
         palette = this,
         layerH = 32, eyeW = 24,
-        
+
+        artwork = controller.getArtwork(),
+    
+        // How many layers are expanded/visible right now?
+        numLayersHigh = 0,
+
         body = this.getBodyElement(),
 
         layerWidget = new CPLayerWidget(),
@@ -76,20 +82,6 @@ export default function CPLayersPalette(controller) {
         
         return div;
     }
-
-    function showRenameControl(layerIndex) {
-        var
-            d = layerWidget.getCSSSize(),
-            artwork = controller.getArtwork(),
-            layer = artwork.getLayer(layerIndex);
-
-        renameField.show(
-            eyeW / window.devicePixelRatio, 
-            d.height - (layerIndex + 1) * layerH / window.devicePixelRatio,
-            layerIndex,
-            layer.name
-       );
-    }
     
     var
         parentSetSize = this.setSize,
@@ -114,8 +106,8 @@ export default function CPLayersPalette(controller) {
             NOTIFICATION_HIDE_DELAY_MIN = 3000;
 
         var 
-            layerDrag, layerDragReally,
-            layerDragIndex, layerDragY,
+            isDragging = false, isDraggingReally,
+            layerDragIndex, layerDrag, layerDragY,
             
             container = document.createElement("div"),
             
@@ -124,6 +116,7 @@ export default function CPLayersPalette(controller) {
 
             oldApplyPlacement,
             notificationMessage = "",
+            notificationLayer = null,
             notificationLayerIndex = -1,
             notificationLocation = "",
 
@@ -137,18 +130,51 @@ export default function CPLayersPalette(controller) {
         this.getCSSSize = function() {
             return {width: $(canvas).width(), height: $(canvas).height()};
         };
+    
+        function showRenameControl(displayIndex) {
+            var
+                d = that.getCSSSize(),
+                layer = getLayerFromDisplayIndex(displayIndex);
         
-        function getLayerIndex(point) {
-            return Math.floor((canvas.height - point.y / $(canvas).height() * canvas.height) / layerH);
+            renameField.show(
+                eyeW / window.devicePixelRatio,
+                d.height - (displayIndex + 1) * layerH / window.devicePixelRatio,
+                layer,
+                layer.name
+            );
+        }
+
+        function getLayerFromDisplayIndex(displayIndex) {
+            return controller.getArtwork().getLayersRoot().getLinearizedLayerList(true)[displayIndex];
+        }
+
+        function getDisplayIndexFromLayer(layer) {
+            return controller.getArtwork().getLayersRoot().getLinearizedLayerList(true).indexOf(layer);
+        }
+
+        function getDisplayIndexFromPoint(point) {
+            var
+                index = Math.floor((canvas.height - point.y / $(canvas).height() * canvas.height) / layerH);
+
+            // We also return the index of the one-after-last layer for the sake of drag operations
+            if (index < 0 || index > numLayersHigh) {
+                return -1;
+            }
+
+            return index;
         }
         
         /**
-         * @param layer CPLayer
-         * @param selected boolean
+         * Paint the given layer above the current translate position.
+         *
+         * @param {CPLayer} layer
+         * @param {boolean} selected
          */
-        function drawLayer(layer, selected) {
+        function paintLayer(layer, selected) {
             var
                 d = {width: canvas.width, height: canvas.height};
+
+            canvasContext.translate(0, -layerH);
 
             if (selected) {
                 canvasContext.fillStyle = '#B0B0C0';
@@ -189,68 +215,123 @@ export default function CPLayersPalette(controller) {
             if (e.button == 0) {
                 var
                     offset = $(canvas).offset(),
-                    
-                    artwork = controller.getArtwork(),
-                    layers = artwork.getLayers(),
-                    
-                    mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                    layerOver = getLayerIndex(mouseLoc);
 
-                //layerDragY = e.pageY - offset.top;
-                
-                if (layerOver >= 0 && layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
-                    controller.actionPerformed({action: "CPMoveLayer", fromIndex: layerDragIndex, toIndex: layerOver});
+                    mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
+                    displayIndex = getDisplayIndexFromPoint(mouseLoc);
+
+                if (isDraggingReally && displayIndex >= 0 && displayIndex <= numLayersHigh && displayIndex != layerDragIndex && displayIndex != layerDragIndex + 1) {
+                    // Adding to the topmost position of the document
+                    if (displayIndex == numLayersHigh) {
+                        controller.actionPerformed({
+                            action: "CPRelocateLayer",
+                            layer: layerDrag,
+                            toGroup: artwork.getLayersRoot(),
+                            toIndex: artwork.getLayersRoot().layers.length
+                        });
+                    } else {
+                        var
+                            belowThisLayer = getLayerFromDisplayIndex(displayIndex),
+                            targetGroup = belowThisLayer.parent;
+
+                        controller.actionPerformed({
+                            action: "CPRelocateLayer",
+                            layer: layerDrag,
+                            toGroup: targetGroup,
+                            toIndex: targetGroup.indexOf(belowThisLayer)
+                        });
+                    }
                 }
 
                 // Do we need to repaint to erase draglines?
-                if (layerDragReally) {
-                    layerDragReally = false;
+                if (isDraggingReally) {
+                    isDraggingReally = false;
                     that.paint();
                 }
                 
-                layerDrag = false;
+                isDragging = false;
                 
                 window.removeEventListener("mousemove", mouseDragged);
                 window.removeEventListener("mouseup", mouseUp);
             }
         }
+    
+        function mouseDown(e) {
+            var
+                offset = $(canvas).offset(),
+                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top};
+        
+            if (e.button == 0) { /* Left button */
+                var
+                    displayIndex = getDisplayIndexFromPoint(mouseLoc);
+            
+                if (displayIndex != -1) {
+                    var
+                        layer = getLayerFromDisplayIndex(displayIndex);
+                
+                    if (mouseLoc.x / $(canvas).width() * canvas.width < eyeW) {
+                        controller.actionPerformed({action: "CPSetLayerVisibility", layer: layer, visible: !layer.visible});
+                    } else if (artwork.getActiveLayer() != layer) {
+                        controller.actionPerformed({action: "CPSetActiveLayer", layer: layer});
+                    }
+                
+                    isDragging = true;
+                    layerDragY = mouseLoc.y;
+                    layerDrag = layer;
+                    layerDragIndex = displayIndex;
+                
+                    window.addEventListener("mousemove", mouseDragged);
+                    window.addEventListener("mouseup", mouseUp);
+                }
+            }
+        }
 
         function mouseDragged(e) {
-            if (layerDrag) {
-                layerDragReally = true;
+            if (isDragging) {
+                isDraggingReally = true; // We actually moved the mouse from the starting position
                 layerDragY = e.pageY - $(canvas).offset().top;
                 that.paint();
             }
         }
 
         /**
-         * Repaint just the layer with the specified index
+         * Repaint just the specified layer
          */
-        this.paintLayer = function(layerIndex) {
+        this.repaintLayer = function(layer) {
             var
-                layer = artwork.getLayer(layerIndex),
-                layerTop = canvas.height - layerH * (layerIndex + 1);
+                layerBottom = canvas.height - layerH * artwork.getLayersRoot().getLinearizedLayerList(true).indexOf(layer);
             
             canvasContext.save();
-            
+
+            // Skip any layers before ours to get to the right position
+            canvasContext.translate(0, layerBottom);
+
+            // Repaint the background color behind the layer to erase it
             canvasContext.fillStyle = '#606060';
-            canvasContext.fillRect(0, layerTop, canvas.width, layerH);
+            canvasContext.fillRect(0, -layerH, canvas.width, layerH);
 
             canvasContext.strokeStyle = 'black';
-            
-            canvasContext.translate(0, layerTop);
-            drawLayer(layer, layerIndex == artwork.getActiveLayerIndex());
+
+            paintLayer(layer, layer == artwork.getActiveLayer());
             
             canvasContext.restore();
         };
+        
+        function paintLayerGroupContents(layerGroup) {
+            for (let layer of layerGroup.layers) {
+                // The contents of the layer display below the group marker itself
+                if (layer instanceof CPLayerGroup) {
+                    paintLayerGroupContents(layer);
+                }
+                paintLayer(layer, layer == artwork.getActiveLayer());
+            }
+        }
         
         /**
          * Repaint the entire control
          */
         this.paint = function() {
             var
-                artwork = controller.getArtwork(),
-                layers = artwork.getLayers(),
+                layersRoot = artwork.getLayersRoot(),
                 
                 d = {width: canvas.width, height: canvas.height},
                 
@@ -259,37 +340,37 @@ export default function CPLayersPalette(controller) {
             canvasContext.save();
             
             canvasContext.fillStyle = '#606060';
-            canvasContext.fillRect(0, 0, d.width, d.height - layers.length * layerH);
+            canvasContext.fillRect(0, 0, d.width, d.height - numLayersHigh * layerH);
 
             canvasContext.strokeStyle = 'black';
 
             // Draw the list of layers, with the first layer at the bottom of the control
-            canvasContext.translate(0, d.height - layerH);
+            canvasContext.translate(0, d.height);
             
-            for (var i = 0; i < layers.length; i++) {
-                drawLayer(layers[i], i == artwork.getActiveLayerIndex());
-                canvasContext.translate(0, -layerH);
-            }
+            paintLayerGroupContents(layersRoot);
 
-            if (layerDragReally) {
-                canvasContext.translate(0, layers.length * layerH - (d.height - layerH));
-                canvasContext.strokeRect(0, layerDragY * canvasScaleFactor  - layerH / 2, d.width, layerH);
+            if (isDraggingReally) {
+                var
+                    allLayersDrawnHeight = numLayersHigh * layerH;
+
+                // Get back to the bottom of the canvas
+                canvasContext.translate(0, allLayersDrawnHeight);
+                canvasContext.strokeRect(0, layerDragY * canvasScaleFactor - d.height -layerH / 2, d.width, layerH);
 
                 var
-                    layerOver = getLayerIndex({x: 0, y: layerDragY});
-                
-                if (layerOver <= layers.length && layerOver != layerDragIndex && layerOver != layerDragIndex + 1) {
-                    canvasContext.fillRect(0, d.height - layerOver * layerH - 2, d.width, 4 * window.devicePixelRatio);
+                    overIndex = getDisplayIndexFromPoint({x: 0, y: layerDragY});
+
+                // We offer to drop the layer below the layer the mouse is pointing at
+                if (overIndex != -1 && overIndex != layerDragIndex && overIndex != layerDragIndex + 1) {
+                    canvasContext.fillRect(0, -overIndex * layerH - 2, d.width, 4 * window.devicePixelRatio);
                 }
             }
-            
+
             canvasContext.restore();
-        }
+        };
 
         this.resize = function() {
             var
-                artwork = controller.getArtwork(),
-
                 // Our parent container will act as our scrollbar clip area
                 parent = $(canvas).parent(),
                 parentHeight = parent.height(),
@@ -301,7 +382,7 @@ export default function CPLayersPalette(controller) {
             eyeW = 24 * window.devicePixelRatio;
             
             newWidth = parentWidth * window.devicePixelRatio;
-            newHeight = Math.max(layerH * artwork.getLayerCount(), parentHeight * window.devicePixelRatio);
+            newHeight = Math.max(layerH * numLayersHigh, parentHeight * window.devicePixelRatio);
             
             // Should we trigger a scrollbar to appear?
             if (newHeight > parentHeight * window.devicePixelRatio) {
@@ -338,55 +419,24 @@ export default function CPLayersPalette(controller) {
             var 
                 offset = $(canvas).offset(),
                 mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                
-                layerIndex = getLayerIndex(mouseLoc);
 
-            if (mouseLoc.x * window.devicePixelRatio > eyeW && layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
-                showRenameControl(layerIndex);
-            }
-        });
+                displayIndex = getDisplayIndexFromPoint(mouseLoc);
 
-        canvas.addEventListener("mousedown", function(e) {
-            var
-                offset = $(canvas).offset(),
-                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top};
-
-            /* Click, moved from mouseClicked due to problems with focus and stuff */
-            if (e.button == 0) { /* Left button */
-                var
-                    artwork = controller.getArtwork(),
-                    layers = artwork.getLayers(),
-                    
-                    layerIndex = getLayerIndex(mouseLoc);
-                
-                if (layerIndex >= 0 && layerIndex < artwork.getLayerCount()) {
-                    var
-                        layer = artwork.getLayer(layerIndex);
-                    
-                    if (mouseLoc.x / $(canvas).width() * canvas.width < eyeW) {
-                        controller.actionPerformed({action: "CPSetLayerVisibility", layerIndex: layerIndex, visible: !layer.visible});
-                    } else if (artwork.getActiveLayerIndex() != layerIndex) {
-                        controller.actionPerformed({action: "CPSetActiveLayerIndex", layerIndex: layerIndex});
-                    }
-                }
-                
-                if (layerIndex < layers.length) {
-                    layerDrag = true;
-                    layerDragY = mouseLoc.y;
-                    layerDragIndex = layerIndex;
-                    
-                    window.addEventListener("mousemove", mouseDragged);
-                    window.addEventListener("mouseup", mouseUp);
+            if (displayIndex != -1) {
+                if (mouseLoc.x * window.devicePixelRatio > eyeW) {
+                    showRenameControl(displayIndex);
                 }
             }
         });
+
+        canvas.addEventListener("mousedown", mouseDown);
 
         /**
          * Scroll the layer widget until the layer with the given index is fully visible.
          *
-         * @param layerIndex
+         * @param {int} displayIndex
          */
-        function revealLayer(layerIndex) {
+        function revealLayer(displayIndex) {
             var
                 layerWidgetPos = canvas.getBoundingClientRect(),
 
@@ -395,7 +445,7 @@ export default function CPLayersPalette(controller) {
 
                 layerHeight = layerH / window.devicePixelRatio,
 
-                layerTop = layerWidgetPos.bottom - layerHeight * (layerIndex + 1),
+                layerTop = layerWidgetPos.bottom - layerHeight * (displayIndex + 1),
                 layerBottom = layerTop + layerHeight;
 
             container.scrollTop = Math.max(Math.min(Math.max(container.scrollTop, layerBottom - layerWidgetPos.top - scrollBoxHeight), layerTop - layerWidgetPos.top), 0);
@@ -405,15 +455,16 @@ export default function CPLayersPalette(controller) {
             $(canvas).popover('hide');
         };
 
-        this.showNotification = function(layerIndex, message, where) {
+        this.showNotification = function(layer, message, where) {
             notificationMessage = message;
-            notificationLayerIndex = layerIndex;
+            notificationLayer = layer;
+            notificationLayerIndex = getDisplayIndexFromLayer(layer);
 
-            if (artwork.getActiveLayerIndex() == layerIndex && where == "opacity") {
+            if (artwork.getActiveLayer() == layer && where == "opacity") {
                 notificationLocation = "opacity";
             } else {
                 notificationLocation = "layer";
-                revealLayer(layerIndex);
+                revealLayer(notificationLayerIndex);
             }
 
             $(canvas).popover("show");
@@ -494,21 +545,51 @@ export default function CPLayersPalette(controller) {
         container.appendChild(canvas);
     }
 
+	/**
+     *
+     * @param {?CPLayer} layer
+     */
+    function onChangeLayer(layer) {
+        artwork = this;
+
+        var
+            activeLayer = artwork.getActiveLayer();
+
+        if (activeLayer.getAlpha() != alphaSlider.value) {
+            alphaSlider.setValue(activeLayer.getAlpha());
+        }
+
+        if (activeLayer.getBlendMode() != parseInt(blendCombo.value, 10)) {
+            blendCombo.value = activeLayer.getBlendMode();
+        }
+
+        if (layer) {
+            layerWidget.repaintLayer(layer);
+        } else {
+            // We may have added or removed layers, resize as appropriate
+            numLayersHigh = artwork.getLayersRoot().getLinearizedLayerList(true).length;
+
+            layerWidget.resize();
+        }
+
+        layerWidget.dismissNotification();
+    }
+
     function CPRenameField() {
         var
-            layerIndex = -1,
+            layer = null,
             textBox = document.createElement("input"),
             
             that = this;
 
         this.hide = function() {
-            layerIndex = -1;
+            layer = null;
             textBox.style.display = 'none';
         };
 
         this.renameAndHide = function() {
-            if (artwork.getLayer(layerIndex).name != textBox.value) {
-                controller.actionPerformed({action: "CPSetLayerName", layerIndex: layerIndex, name: textBox.value});
+            if (layer.name != textBox.value) {
+                controller.actionPerformed({action: "CPSetLayerName", layer: layer, name: textBox.value});
             }
 
             this.hide();
@@ -523,8 +604,8 @@ export default function CPLayersPalette(controller) {
             textBox.style.top = positionY + "px";
         };
         
-        this.show = function(x, y, _layerIndex, layerName) {
-            layerIndex = _layerIndex;
+        this.show = function(x, y, _layer, layerName) {
+            layer = _layer;
             textBox.value = layerName;
             this.setLocation(x, y);
             
@@ -560,7 +641,7 @@ export default function CPLayersPalette(controller) {
         });
 
         textBox.addEventListener("blur", function(e) {
-            if (layerIndex != -1) {
+            if (layer) {
                 that.renameAndHide();
             }
         });
@@ -569,7 +650,7 @@ export default function CPLayersPalette(controller) {
     blendCombo.className = "form-control";
     blendCombo.title = "Layer blending mode";
     blendCombo.addEventListener("change", function(e) {
-        controller.actionPerformed({action: "CPSetLayerBlendMode", layerIndex: artwork.getActiveLayerIndex(), blendMode: parseInt(blendCombo.value, 10)});
+        controller.actionPerformed({action: "CPSetLayerBlendMode", blendMode: parseInt(blendCombo.value, 10)});
     });
     
     fillCombobox(blendCombo, MODE_NAMES);
@@ -581,16 +662,13 @@ export default function CPLayersPalette(controller) {
     };
     
     alphaSlider.on("valueChange", function(value) {
-        controller.actionPerformed({action: "CPSetLayerAlpha", layerIndex: artwork.getActiveLayerIndex(), alpha: value});
+        controller.actionPerformed({action: "CPSetLayerAlpha", alpha: value});
     });
     
     body.appendChild(alphaSlider.getElement());
 
     cbSampleAllLayers.type = "checkbox";
     cbSampleAllLayers.addEventListener("click", function(e) {
-        var
-            artwork = controller.getArtwork();
-        
         artwork.setSampleAllLayers(cbSampleAllLayers.checked);
     });
     
@@ -598,9 +676,6 @@ export default function CPLayersPalette(controller) {
     
     cbLockAlpha.type = "checkbox";
     cbLockAlpha.addEventListener("click", function(e) {
-        var
-            artwork = controller.getArtwork();
-        
        artwork.setLockAlpha(cbLockAlpha.checked);
     });
         
@@ -633,34 +708,10 @@ export default function CPLayersPalette(controller) {
 
     body.appendChild(addRemoveContainer);
     
-    var
-        artwork = controller.getArtwork();
+    artwork.on("changeLayer", onChangeLayer);
 
     // Set initial values
-    alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
-    blendCombo.value = artwork.getActiveLayer().getBlendMode();
-
-    artwork.on("changeLayer", function(layerIndex) {
-        var
-            artwork = this;
-        
-        if (artwork.getActiveLayer().getAlpha() != alphaSlider.value) {
-            alphaSlider.setValue(artwork.getActiveLayer().getAlpha());
-        }
-
-        if (artwork.getActiveLayer().getBlendMode() != parseInt(blendCombo.value, 10)) {
-            blendCombo.value = artwork.getActiveLayer().getBlendMode();
-        }
-
-        if (layerIndex !== undefined) {
-            layerWidget.paintLayer(layerIndex);
-        } else {
-            // We may have added or removed layers, resize as appropriate
-            layerWidget.resize();
-        }
-
-        layerWidget.dismissNotification();
-    });
+    onChangeLayer.call(artwork, null);
 }
 
 CPLayersPalette.prototype = Object.create(CPPalette.prototype);

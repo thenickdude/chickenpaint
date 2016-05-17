@@ -28,7 +28,7 @@ import CPColorSwatch from "./CPColorSwatch";
 import CPSlider from "./CPSlider";
 import {createCheckerboardPattern} from "./CPGUIUtils";
 
-import CPLayer from "../engine/CPLayer";
+import CPColorBmp from "../engine/CPColorBmp";
 
 import CPColor from "../util/CPColor";
 import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
@@ -59,8 +59,6 @@ function fillCombobox(combo, optionNames) {
 
 function CPGradientPreview(controller) {
     var
-        that = this,
-
         w = 150, h = 32,
 
         canvas = document.createElement("canvas"),
@@ -68,7 +66,7 @@ function CPGradientPreview(controller) {
 
         checkerboard = createCheckerboardPattern(canvasContext),
 
-        image = new CPLayer(w, h, ""),
+        image = new CPColorBmp(w, h),
         imageCanvas = document.createElement("canvas"),
         imageCanvasContext = imageCanvas.getContext("2d"),
 
@@ -196,7 +194,7 @@ function CPBrushPanel(controller) {
 
     sizeSlider.title = function (value) {
         return "Brush size: " + value;
-    }
+    };
 
     sizeSlider.on('valueChange', function (value) {
         controller.setBrushSize(value);
@@ -429,7 +427,7 @@ CPBrushPalette.CPBrushPreview = function(controller) {
     canvasContext.lineWidth = 1.0 * window.devicePixelRatio;
     
     paint();
-}
+};
 
 function CPGradientPanel(controller) {
     var
