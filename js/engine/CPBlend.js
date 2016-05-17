@@ -10,10 +10,28 @@ const
     
     ALPHA_BYTE_OFFSET = 3,
 
+    BLEND_MODE_NAMES = [
+        "normal",
+        "multiply",
+        "add",
+        "screen",
+        "lighten",
+        "darken",
+        "subtract",
+        "dodge",
+        "burn",
+        "overlay",
+        "hardLight",
+        "softLight",
+        "vividLight",
+        "linearLight",
+        "pinLight"
+    ],
+
     softLightLUTSquare = new Array(256),
     softLightLUTSquareRoot = new Array(256);
 
-CPBlend.prototype.fusionWithMultiply = function(that, fusion, rect) {
+CPBlend.multiplyOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var 
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -36,7 +54,7 @@ CPBlend.prototype.fusionWithMultiply = function(that, fusion, rect) {
 };
 
 /* Blend onto an opaque fusion. Supports .alpha < 100 on this layer */
-CPBlend.prototype.fusionWithNormal = function(that, fusion, rect) {
+CPBlend.normalOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
@@ -69,7 +87,7 @@ CPBlend.prototype.fusionWithNormal = function(that, fusion, rect) {
 };
 
 // Fusing onto an opaque layer when this layer has alpha set to 100
-CPBlend.prototype.fusionWithNormalNoAlpha = function(that, fusion, rect) {
+CPBlend.normalOntoOpaqueFusionWithOpaqueLayer = function(that, fusion, rect) {
     var 
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
@@ -101,7 +119,7 @@ CPBlend.prototype.fusionWithNormalNoAlpha = function(that, fusion, rect) {
     }
 };
 
-CPBlend.prototype.fusionWithAdd = function(that, fusion, rect) {
+CPBlend.addOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var 
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -125,7 +143,7 @@ CPBlend.prototype.fusionWithAdd = function(that, fusion, rect) {
 
 // Normal Alpha Mode
 // C = A*d + B*(1-d) and d = aa / (aa + ab - aa*ab)
-CPBlend.prototype.fusionWithNormalFullAlpha = function(that, fusion, rect) {
+CPBlend.normalOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
@@ -161,7 +179,7 @@ CPBlend.prototype.fusionWithNormalFullAlpha = function(that, fusion, rect) {
 // Multiply Mode
 // C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithMultiplyFullAlpha = function(that, fusion, rect) {
+CPBlend.multiplyOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -197,7 +215,7 @@ CPBlend.prototype.fusionWithMultiplyFullAlpha = function(that, fusion, rect) {
 // Linear Dodge (Add) Mode
 // C = (aa * A + ab * B) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithAddFullAlpha = function(that, fusion, rect) {
+CPBlend.addOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -236,7 +254,7 @@ CPBlend.prototype.fusionWithAddFullAlpha = function(that, fusion, rect) {
 // Linear Burn (Sub) Mode
 // C = (aa * A + ab * B - aa*ab ) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
+CPBlend.subtractOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -267,7 +285,7 @@ CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
 };
 
 // For opaque fusion
-CPBlend.prototype.fusionWithSubtract = function(that, fusion, rect) {
+CPBlend.subtractOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
@@ -296,7 +314,7 @@ CPBlend.prototype.fusionWithSubtract = function(that, fusion, rect) {
 // same as Multiply except all color channels are inverted and the result too
 // C = 1 - (((1-A)*aa*(1-ab) + (1-B)*ab*(1-aa) + (1-A)*(1-B)*aa*ab) / (aa + ab - aa*ab))
 
-CPBlend.prototype.fusionWithScreenFullAlpha = function(that, fusion, rect) {
+CPBlend.screenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -336,7 +354,7 @@ CPBlend.prototype.fusionWithScreenFullAlpha = function(that, fusion, rect) {
 };
 
 // For opaque fusion
-CPBlend.prototype.fusionWithScreen = function(that, fusion, rect) {
+CPBlend.screenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
@@ -367,7 +385,7 @@ CPBlend.prototype.fusionWithScreen = function(that, fusion, rect) {
 // if B >= A: C = A*d + B*(1-d) and d = aa * (1-ab) / (aa + ab - aa*ab)
 // if A > B: C = B*d + A*(1-d) and d = ab * (1-aa) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithLightenFullAlpha = function(that, fusion, rect) {
+CPBlend.lightenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -408,7 +426,7 @@ CPBlend.prototype.fusionWithLightenFullAlpha = function(that, fusion, rect) {
 }
 
 // When fusion is opaque
-CPBlend.prototype.fusionWithLighten = function(that, fusion, rect) {
+CPBlend.lightenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -435,7 +453,7 @@ CPBlend.prototype.fusionWithLighten = function(that, fusion, rect) {
 // if B >= A: C = B*d + A*(1-d) and d = ab * (1-aa) / (aa + ab - aa*ab)
 // if A > B: C = A*d + B*(1-d) and d = aa * (1-ab) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithDarkenFullAlpha = function(that, fusion, rect) {
+CPBlend.darkenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -476,7 +494,7 @@ CPBlend.prototype.fusionWithDarkenFullAlpha = function(that, fusion, rect) {
 };
 
 // When fusion is opaque
-CPBlend.prototype.fusionWithDarken = function(that, fusion, rect) {
+CPBlend.darkenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
@@ -506,7 +524,7 @@ CPBlend.prototype.fusionWithDarken = function(that, fusion, rect) {
 //
 // C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*B/(1-A)) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithDodgeFullAlpha = function(that, fusion, rect) {
+CPBlend.dodgeOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -555,7 +573,7 @@ CPBlend.prototype.fusionWithDodgeFullAlpha = function(that, fusion, rect) {
 };
 
 // When fusion is opaque
-CPBlend.prototype.fusionWithDodge = function(that, fusion, rect) {
+CPBlend.dodgeOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -594,7 +612,7 @@ CPBlend.prototype.fusionWithDodge = function(that, fusion, rect) {
 //
 // C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*(1-(1-B)/A)) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithBurnFullAlpha = function(that, fusion, rect) {
+CPBlend.burnOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -644,7 +662,7 @@ CPBlend.prototype.fusionWithBurnFullAlpha = function(that, fusion, rect) {
 };
 
 // When fusion is opaque
-CPBlend.prototype.fusionWithBurn = function(that, fusion, rect) {
+CPBlend.burnOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
@@ -686,7 +704,7 @@ CPBlend.prototype.fusionWithBurn = function(that, fusion, rect) {
 // If B <= 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(2*A*B) / (aa + ab - aa*ab)
 // If B > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithOverlayFullAlpha = function(that, fusion, rect) {
+CPBlend.overlayOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -738,7 +756,7 @@ CPBlend.prototype.fusionWithOverlayFullAlpha = function(that, fusion, rect) {
 };
 
 // When fusion is opaque
-CPBlend.prototype.fusionWithOverlay = function(that, fusion, rect) {
+CPBlend.overlayOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
         pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
@@ -780,7 +798,7 @@ CPBlend.prototype.fusionWithOverlay = function(that, fusion, rect) {
 // If A <= 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(2*A*B) / (aa + ab - aa*ab)
 // If A > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
 
-CPBlend.prototype.fusionWithHardLightFullAlpha = function(that, fusion, rect) {
+CPBlend.hardLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -835,7 +853,7 @@ CPBlend.prototype.fusionWithHardLightFullAlpha = function(that, fusion, rect) {
 // A < 0.5 => C = (2*A - 1) * (B - B^2) + B
 // A > 0.5 => C = (2*A - 1) * (sqrt(B) - B) + B
 
-CPBlend.prototype.fusionWithSoftLightFullAlpha = function(that, fusion, rect) {
+CPBlend.softLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -891,7 +909,7 @@ CPBlend.prototype.fusionWithSoftLightFullAlpha = function(that, fusion, rect) {
 // A < 0.5 => C = 1 - (1-B) / (2*A)
 // A > 0.5 => C = B / (2*(1-A))
 
-CPBlend.prototype.fusionWithVividLightFullAlpha = function(that, fusion, rect) {
+CPBlend.vividLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -945,7 +963,7 @@ CPBlend.prototype.fusionWithVividLightFullAlpha = function(that, fusion, rect) {
 // Linear Light Mode
 // C = B + 2*A -1
 
-CPBlend.prototype.fusionWithLinearLightFullAlpha = function(that, fusion, rect) {
+CPBlend.linearLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -997,7 +1015,7 @@ CPBlend.prototype.fusionWithLinearLightFullAlpha = function(that, fusion, rect) 
 // B < 2*A-1 => C = 2*A-1
 // else => C = B
 
-CPBlend.prototype.fusionWithPinLightFullAlpha = function(that, fusion, rect) {
+CPBlend.pinLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
     var
         yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
         pixIndex = that.offsetOfPixel(rect.left, rect.top);
@@ -1042,6 +1060,75 @@ CPBlend.prototype.fusionWithPinLightFullAlpha = function(that, fusion, rect) {
     }
     
     fusion.alpha = 100;
+};
+
+CPBlend.LM_NORMAL = 0;
+CPBlend.LM_MULTIPLY = 1;
+CPBlend.LM_ADD = 2;
+CPBlend.LM_SCREEN = 3;
+CPBlend.LM_LIGHTEN = 4;
+CPBlend.LM_DARKEN = 5;
+CPBlend.LM_SUBTRACT = 6;
+CPBlend.LM_DODGE = 7;
+CPBlend.LM_BURN = 8;
+CPBlend.LM_OVERLAY = 9;
+CPBlend.LM_HARDLIGHT = 10;
+CPBlend.LM_SOFTLIGHT = 11;
+CPBlend.LM_VIVIDLIGHT = 12;
+CPBlend.LM_LINEARLIGHT = 13;
+CPBlend.LM_PINLIGHT = 14;
+
+/**
+ * Fuse the given layer on top of the given fusion layer, using the blending operation defined in the layer.
+ *
+ * @param {CPLayer} fusion - Layer to fuse on top of
+ * @param {boolean} fusionHasTransparency - True if the fusion layer has alpha < 100, or any transparent pixels.
+ * @param {CPLayer} layer - Layer that should be drawn on top of the fusion
+ * @param {CPRect} rect - The rectangle of pixels that should be fused.
+ */
+CPBlend.fuseLayer = function (fusion, fusionHasTransparency, layer, rect) {
+    if (layer.alpha <= 0) {
+        return;
+    }
+
+    var
+        triesRemain = 2;
+
+    do {
+        var
+            funcName = BLEND_MODE_NAMES[layer.blendMode] + "Onto",
+            func;
+
+        if (fusion.alpha < 100) {
+            throw "Fusion layer alpha < 100 not supported.";
+        }
+
+        if (fusionHasTransparency) {
+            funcName += "TransparentFusion";
+        } else {
+            funcName += "OpaqueFusion";
+        }
+
+        if (layer.alpha == 100 && funcName == "normal") {
+            funcName += "WithOpaqueLayer";
+        } else {
+            funcName += "WithTransparentLayer";
+        }
+
+        fusion.getBounds().clip(rect);
+
+        func = this[funcName];
+
+        if (func) {
+            func(layer, fusion, rect);
+            return;
+        }
+
+        // We didn't have the version we asked for? Try the slower transparent variant
+        fusionHasTransparency = true;
+
+        triesRemain--;
+    } while (triesRemain > 0);
 };
 
 function makeLookUpTables() {

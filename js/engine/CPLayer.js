@@ -34,7 +34,7 @@ export default function CPLayer(width, height, name) {
     
     this.alpha = 100;
     this.visible = true;
-    this.blendMode = CPLayer.LM_NORMAL;
+    this.blendMode = CPBlend.LM_NORMAL;
 }
 
 CPLayer.prototype = Object.create(CPColorBmp.prototype);
@@ -43,153 +43,7 @@ CPLayer.prototype.constructor = CPLayer;
 const
     BYTES_PER_PIXEL = 4,
     
-    ALPHA_BYTE_OFFSET = 3,
-    
-    blend = new CPBlend();
-
-CPLayer.prototype.fusionWith = function(fusion, rect) {
-    if (this.alpha <= 0) {
-        return;
-    }
-    
-    rect = this.getBounds().clip(rect);
-    
-    switch (this.blendMode) {
-        case CPLayer.LM_NORMAL:
-            if (this.alpha >= 100) {
-                blend.fusionWithNormalNoAlpha(this, fusion, rect);
-            } else {
-                blend.fusionWithNormal(this, fusion, rect);
-            }
-            break;
-        
-        case CPLayer.LM_MULTIPLY:
-            blend.fusionWithMultiply(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_ADD:
-            blend.fusionWithAdd(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_SCREEN:
-            blend.fusionWithScreen(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_LIGHTEN:
-            blend.fusionWithLighten(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_DARKEN:
-            blend.fusionWithDarken(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_SUBTRACT:
-            blend.fusionWithSubtract(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_DODGE:
-            blend.fusionWithDodge(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_BURN:
-            blend.fusionWithBurn(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_OVERLAY:
-            blend.fusionWithOverlay(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_HARDLIGHT:
-            blend.fusionWithHardLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_SOFTLIGHT:
-            blend.fusionWithSoftLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_VIVIDLIGHT:
-            blend.fusionWithVividLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_LINEARLIGHT:
-            blend.fusionWithLinearLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_PINLIGHT:
-            blend.fusionWithPinLightFullAlpha(this, fusion, rect);
-            break;
-    }
-};
-
-CPLayer.prototype.fusionWithFullAlpha = function(fusion, rect) {
-    if (this.alpha <= 0) {
-        return;
-    }
-    
-    rect = this.getBounds().clip(rect);
-
-    switch (this.blendMode) {
-        case CPLayer.LM_NORMAL:
-            blend.fusionWithNormalFullAlpha(this, fusion, rect);
-            break;
-        
-        case CPLayer.LM_MULTIPLY:
-            blend.fusionWithMultiplyFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_ADD:
-            blend.fusionWithAddFullAlpha(this, fusion, rect);
-            break;
-            
-        case CPLayer.LM_SCREEN:
-            blend.fusionWithScreenFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_LIGHTEN:
-            blend.fusionWithLightenFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_DARKEN:
-            blend.fusionWithDarkenFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_SUBTRACT:
-            blend.fusionWithSubtractFullAlpha(this, fusion, rect);
-            break;
-            
-        case CPLayer.LM_DODGE:
-            blend.fusionWithDodgeFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_BURN:
-            blend.fusionWithBurnFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_OVERLAY:
-            blend.fusionWithOverlayFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_HARDLIGHT:
-            blend.fusionWithHardLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_SOFTLIGHT:
-            blend.fusionWithSoftLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_VIVIDLIGHT:
-            blend.fusionWithVividLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_LINEARLIGHT:
-            blend.fusionWithLinearLightFullAlpha(this, fusion, rect);
-            break;
-
-        case CPLayer.LM_PINLIGHT:
-            blend.fusionWithPinLightFullAlpha(this, fusion, rect);
-            break;
-    }
-};
+    ALPHA_BYTE_OFFSET = 3;
 
 CPLayer.prototype.clearAll = function(color) {
     var
@@ -844,23 +698,6 @@ CPLayer.prototype.getNonTransparentBounds = function(initialBounds) {
 
     return result;
 };
-
-
-CPLayer.LM_NORMAL = 0;
-CPLayer.LM_MULTIPLY = 1;
-CPLayer.LM_ADD = 2;
-CPLayer.LM_SCREEN = 3;
-CPLayer.LM_LIGHTEN = 4;
-CPLayer.LM_DARKEN = 5;
-CPLayer.LM_SUBTRACT = 6;
-CPLayer.LM_DODGE = 7;
-CPLayer.LM_BURN = 8;
-CPLayer.LM_OVERLAY = 9;
-CPLayer.LM_HARDLIGHT = 10;
-CPLayer.LM_SOFTLIGHT = 11;
-CPLayer.LM_VIVIDLIGHT = 12;
-CPLayer.LM_LINEARLIGHT = 13;
-CPLayer.LM_PINLIGHT = 14;
 
 CPLayer.prototype.setAlpha = function(alpha) {
     this.alpha = alpha;

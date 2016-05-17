@@ -21,6 +21,7 @@
 */
 
 import CPLayer from "./CPLayer";
+import CPBlend from "./CPBlend";
 import CPGreyBmp from "./CPGreyBmp";
 import CPColorBmp from "./CPColorBmp";
 import CPBrushManager from "./CPBrushManager";
@@ -142,7 +143,7 @@ export default function CPArtwork(_width, _height) {
         
         curColor = 0x000000, // Black
         transformInterpolation = "smooth",
-        
+
         that = this;
     
     // FIXME: 2007-01-13 I'm moving this to the CPRect class
@@ -357,7 +358,7 @@ export default function CPArtwork(_width, _height) {
                 addUndo(new CPUndoMergeDownLayer(activeLayerIndex));
             }
 
-            layers[activeLayerIndex].fusionWithFullAlpha(layers[activeLayerIndex - 1], this.getBounds());
+            CPBlend.fuseLayer(layers[activeLayerIndex - 1], true, layers[activeLayerIndex], this.getBounds());
             layers.splice(activeLayerIndex, 1);
             this.setActiveLayerIndex(activeLayerIndex - 1);
 
@@ -1537,13 +1538,7 @@ export default function CPArtwork(_width, _height) {
                             fusion.clearRect(fusionArea, 0x00FFFFFF); // Transparent white
                         }
 
-                        // If we're merging onto a semi-transparent canvas then we need to blend our opacity values onto the existing ones
-                        if (fusionIsSemiTransparent) {
-                            layer.fusionWithFullAlpha(fusion, fusionArea);
-                        } else {
-                            // Most drawings will end up having 100% coverage and we can speed things up with this version instead
-                            layer.fusionWith(fusion, fusionArea);
-                        }
+                        CPBlend.fuseLayer(fusion, fusionIsSemiTransparent, layer, fusionArea);
                     }
                 });
 
