@@ -1039,7 +1039,7 @@ export default function CPCanvas(controller) {
             firstMove = false;
 
         this.mouseDown = function(e, button, pressure) {
-            if (!this.capture && button == BUTTON_PRIMARY && !key.isPressed("space")) {
+            if (!this.capture && button == BUTTON_PRIMARY && !key.isPressed("space") && shouldDrawToThisLayer()) {
                 lastPoint = coordToDocument({x: mouseX, y: mouseY});
 
                 copyMode = e.altKey;
