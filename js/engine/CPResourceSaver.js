@@ -6,7 +6,7 @@ import AdobeColorTable from "../util/AdobeColorTable";
  * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
  * This function converts such a string to a Uint8Array instead.
  */
-function binaryStringToByteArray(s) {
+export function binaryStringToByteArray(s) {
     var
         result = new Uint8Array(s.length);
 

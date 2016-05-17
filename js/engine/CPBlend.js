@@ -1,1082 +1,4266 @@
-// Layer blending functions
-//
-// The FullAlpha versions are the ones that work in all cases
-// others need the bottom layer to be 100% opaque but are faster
-export default function CPBlend() {
-}
+// This file is generated, please see codegenerator/BlendGenerator.js!
 
-const
-    BYTES_PER_PIXEL = 4,
-    
-    ALPHA_BYTE_OFFSET = 3,
-
-    BLEND_MODE_NAMES = [
-        "normal",
-        "multiply",
-        "add",
-        "screen",
-        "lighten",
-        "darken",
-        "subtract",
-        "dodge",
-        "burn",
-        "overlay",
-        "hardLight",
-        "softLight",
-        "vividLight",
-        "linearLight",
-        "pinLight"
-    ],
-
-    softLightLUTSquare = new Array(256),
-    softLightLUTSquareRoot = new Array(256);
-
-CPBlend.multiplyOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var 
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha / 100) | 0;
-            
-            if (alpha > 0) {
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = (fusion.data[pixIndex] - (that.data[pixIndex] ^ 0xFF) * fusion.data[pixIndex] * alpha / (255 * 255)) | 0;
-                }
-                pixIndex++; // Don't need to update the alpha because it started out as 100%
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
+    export default function CPBlend() {
     }
-};
+    
+    const
+        BYTES_PER_PIXEL = 4,
+        ALPHA_BYTE_OFFSET = 3,
+        
+        BLEND_MODE_NAMES = [
+            "normal",
+            "multiply",
+            "add",
+            "screen",
+            "lighten",
+            "darken",
+            "subtract",
+            "dodge",
+            "burn",
+            "overlay",
+            "hardLight",
+            "softLight",
+            "vividLight",
+            "linearLight",
+            "pinLight"
+        ],
+        
+        softLightLUTSquare = new Array(256),
+        softLightLUTSquareRoot = new Array(256);
+    
+    
+                /**
+ * Blend the given layer onto the fusion using the multiply blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
 
-/* Blend onto an opaque fusion. Supports .alpha < 100 on this layer */
-CPBlend.normalOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
-        h = (rect.bottom - rect.top) | 0,
-        w = (rect.right - rect.left) | 0;
-
-    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
-        for (var x = 0; x < w; x++) {
-            var 
-                alpha = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha / 100) | 0;
+                CPBlend.multiplyOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (color2 - (layer.data[pixIndex] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (color2 - (layer.data[pixIndex + 1] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (color2 - (layer.data[pixIndex + 2] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
             
-            if (alpha > 0) {
-                if (alpha == 255) {
-                    fusion.data[pixIndex] = that.data[pixIndex];
-                    fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
-                    fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the multiply blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.multiplyOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (color2 - (layer.data[pixIndex] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (color2 - (layer.data[pixIndex + 1] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (color2 - (layer.data[pixIndex + 2] ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the multiply blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.multiplyOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the multiply blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.multiplyOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the normal blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.normalOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                if (alpha1 == 255) {
+
+                    fusion.data[pixIndex] = layer.data[pixIndex];
+                
+                    fusion.data[pixIndex + 1] = layer.data[pixIndex + 1];
+                
+                    fusion.data[pixIndex + 2] = layer.data[pixIndex + 2];
+                
                 } else {
                     var
-                        invAlpha = 255 - alpha;
+                        invAlpha1 = 255 - alpha1;
 
-                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 1] = ((that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 2] = ((that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255) | 0;
+                        color1 = layer.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = ((color1 * alpha1 + fusion.data[pixIndex] * invAlpha1) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = ((color1 * alpha1 + fusion.data[pixIndex + 1] * invAlpha1) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = ((color1 * alpha1 + fusion.data[pixIndex + 2] * invAlpha1) / 255) | 0;
+                
                 }
-            }
-
-            pixIndex += BYTES_PER_PIXEL;
-        }
-    }
-};
-
-// Fusing onto an opaque layer when this layer has alpha set to 100
-CPBlend.normalOntoOpaqueFusionWithOpaqueLayer = function(that, fusion, rect) {
-    var 
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
-        h = (rect.bottom - rect.top) | 0,
-        w = (rect.right - rect.left) | 0;
-    
-    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
-        for (var x = 0; x < w; x++) {
-            var 
-                alpha = that.data[pixIndex + ALPHA_BYTE_OFFSET];
             
-            if (alpha > 0) {
-                if (alpha == 255) {
-                    fusion.data[pixIndex] = that.data[pixIndex];
-                    fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
-                    fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the normal blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.normalOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                if (alpha1 == 255) {
+
+                    fusion.data[pixIndex] = layer.data[pixIndex];
+                
+                    fusion.data[pixIndex + 1] = layer.data[pixIndex + 1];
+                
+                    fusion.data[pixIndex + 2] = layer.data[pixIndex + 2];
+                
                 } else {
-                    var 
-                        invAlpha = 255 - alpha;
-    
-                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 1] = ((that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255) | 0;
-                    fusion.data[pixIndex + 2] = ((that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255) | 0;
+                    var
+                        invAlpha1 = 255 - alpha1;
+
+                        color1 = layer.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = ((color1 * alpha1 + fusion.data[pixIndex] * invAlpha1) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = ((color1 * alpha1 + fusion.data[pixIndex + 1] * invAlpha1) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = ((color1 * alpha1 + fusion.data[pixIndex + 2] * invAlpha1) / 255) | 0;
+                
                 }
-            }
             
-            pixIndex += BYTES_PER_PIXEL;
-        }
-    }
-};
-
-CPBlend.addOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var 
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha / 100) | 0;
+                            
+                    }
+                
+                        }
+                    }
+                };
             
-            if (alpha > 0) {
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = Math.min(255, (fusion.data[pixIndex] + alpha * that.data[pixIndex] / 255) | 0);
-                }
-                pixIndex++; // Don't need to update the alpha because it started out as 100%
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-};
+                /**
+ * Blend the given layer onto the fusion using the normal blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-// Normal Alpha Mode
-// C = A*d + B*(1-d) and d = aa / (aa + ab - aa*ab)
-CPBlend.normalOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0,
-        h = (rect.bottom - rect.top) | 0,
-        w = (rect.right - rect.left) | 0;
-
-    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
-        for (var x = 0; x < w; x++) {
-            var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
-
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
-                var 
+                CPBlend.normalOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     realAlpha = (alpha1 * 255 / newAlpha) | 0,
                     invAlpha = 255 - realAlpha;
 
-                fusion.data[pixIndex] = (that.data[pixIndex] * realAlpha + fusion.data[pixIndex] * invAlpha) / 255;
-                fusion.data[pixIndex + 1] = (that.data[pixIndex + 1] * realAlpha + fusion.data[pixIndex + 1] * invAlpha) / 255;
-                fusion.data[pixIndex + 2] = (that.data[pixIndex + 2] * realAlpha + fusion.data[pixIndex + 2] * invAlpha) / 255;
-                fusion.data[pixIndex + 3] = newAlpha;
-            }
+                    fusion.data[pixIndex] = (layer.data[pixIndex] * realAlpha + fusion.data[pixIndex] * invAlpha) / 255;
+                
+                    fusion.data[pixIndex + 1] = (layer.data[pixIndex + 1] * realAlpha + fusion.data[pixIndex + 1] * invAlpha) / 255;
+                
+                    fusion.data[pixIndex + 2] = (layer.data[pixIndex + 2] * realAlpha + fusion.data[pixIndex + 2] * invAlpha) / 255;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
             
-            pixIndex += BYTES_PER_PIXEL;
-        }
-    }
-
-    fusion.alpha = 100;
-};
-
-// Multiply Mode
-// C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
-
-CPBlend.multiplyOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
-
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                            
+                    }
+                
+                        }
+                    }
+                };
             
-            if (newAlpha > 0) {
-                var 
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+                /**
+ * Blend the given layer onto the fusion using the normal blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha1n2 + fusion.data[pixIndex] * alphan12 + that.data[pixIndex]
-                            * fusion.data[pixIndex] * alpha12 / 255) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                CPBlend.normalOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+                    realAlpha = (alpha1 * 255 / newAlpha) | 0,
+                    invAlpha = 255 - realAlpha;
 
-// Linear Dodge (Add) Mode
-// C = (aa * A + ab * B) / (aa + ab - aa*ab)
+                    fusion.data[pixIndex] = (layer.data[pixIndex] * realAlpha + fusion.data[pixIndex] * invAlpha) / 255;
+                
+                    fusion.data[pixIndex + 1] = (layer.data[pixIndex + 1] * realAlpha + fusion.data[pixIndex + 1] * invAlpha) / 255;
+                
+                    fusion.data[pixIndex + 2] = (layer.data[pixIndex + 2] * realAlpha + fusion.data[pixIndex + 2] * invAlpha) / 255;
 
-CPBlend.addOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the add blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
 
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = (that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100,
-                alpha2 = (fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100,
+                CPBlend.addOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                    fusion.data[pixIndex] = (fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] / 255) | 0;
+                
+                    fusion.data[pixIndex + 1] = (fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] / 255) | 0;
+                
+                    fusion.data[pixIndex + 2] = (fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] / 255) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the add blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
 
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                CPBlend.addOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                    fusion.data[pixIndex] = (fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] / 255) | 0;
+                
+                    fusion.data[pixIndex + 1] = (fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] / 255) | 0;
+                
+                    fusion.data[pixIndex + 2] = (fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] / 255) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the add blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-            if (newAlpha > 0) {
+                CPBlend.addOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 
-                /*
-             * // this version seems slower than the Math.min one int r = (alpha2 * (color2 >>> 16 & 0xff) +
-             * alpha1 * (color1 >>> 16 & 0xff)) / newAlpha; r |= ((~((r & 0xffffff00) - 1) >> 16) | r) & 0xff;
-             * int g = (alpha2 * (color2 >>> 8 & 0xff) + alpha1 * (color1 >>> 8 & 0xff)) / newAlpha; g |= ((~((g &
-             * 0xffffff00) - 1) >> 16) | g) & 0xff; int b = (alpha2 * (color2 & 0xff) + alpha1 * (color1 &
-             * 0xff)) / newAlpha; b |= ((~((b & 0xffffff00) - 1) >> 16) | b) & 0xff;
-             */
+                // No need to clamp the color to 0...255 since we're writing to a clamped array anyway
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = Math.min(255, ((alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex]) / newAlpha) | 0);
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * layer.data[pixIndex]) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 1] = ((alpha2 * fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1]) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 2] = ((alpha2 * fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2]) / newAlpha) | 0;
 
-// Linear Burn (Sub) Mode
-// C = (aa * A + ab * B - aa*ab ) / (aa + ab - aa*ab)
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the add blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-CPBlend.subtractOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
+                CPBlend.addOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
+                // No need to clamp the color to 0...255 since we're writing to a clamped array anyway
 
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * layer.data[pixIndex]) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 1] = ((alpha2 * fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1]) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 2] = ((alpha2 * fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2]) / newAlpha) | 0;
 
-            if (newAlpha > 0) {
-                var 
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the subtract blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.subtractOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                    fusion.data[pixIndex] = (fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] / 255 - alpha1) | 0;
+                
+                    fusion.data[pixIndex + 1] = (fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] / 255 - alpha1) | 0;
+                
+                    fusion.data[pixIndex + 2] = (fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] / 255 - alpha1) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the subtract blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.subtractOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                    fusion.data[pixIndex] = (fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] / 255 - alpha1) | 0;
+                
+                    fusion.data[pixIndex + 1] = (fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] / 255 - alpha1) | 0;
+                
+                    fusion.data[pixIndex + 2] = (fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] / 255 - alpha1) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the subtract blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.subtractOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     alpha12 = alpha1 * alpha2;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                // No need to clamp the color to 255 since we're writing to a clamped array anyway
 
-// For opaque fusion
-CPBlend.subtractOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                alpha12 = alpha1 * 255;
-
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    channel = (255 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / 255;
+                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] - alpha12) / newAlpha) | 0;
                 
-                // binary magic to clamp negative values to zero without using a condition
-                fusion.data[pixIndex] = channel & (~channel >>> 24); 
-            }
-            pixIndex++; // Alpha stays the same
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Screen Mode
-// same as Multiply except all color channels are inverted and the result too
-// C = 1 - (((1-A)*aa*(1-ab) + (1-B)*ab*(1-aa) + (1-A)*(1-B)*aa*ab) / (aa + ab - aa*ab))
-
-CPBlend.screenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-
-            if (newAlpha > 0) {
-                var 
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+                    fusion.data[pixIndex + 1] = ((alpha2 * fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] - alpha12) / newAlpha) | 0;
                 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    fusion.data[pixIndex] = 0xFF ^ (
-                        (
-                            (that.data[pixIndex] ^ 0xFF) * alpha1n2
-                            + (fusion.data[pixIndex] ^ 0xFF) * alphan12 
-                            + (that.data[pixIndex] ^ 0xFF) * (fusion.data[pixIndex] ^ 0xFF) * alpha12 / 255
-                        )
-                        / newAlpha
-                    );
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                    fusion.data[pixIndex + 2] = ((alpha2 * fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] - alpha12) / newAlpha) | 0;
 
-// For opaque fusion
-CPBlend.screenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                invAlpha1 = alpha1 ^ 0xff;
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
             
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                fusion.data[pixIndex] = 0xFF ^ (
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the subtract blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.subtractOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+                    alpha12 = alpha1 * alpha2;
+
+                // No need to clamp the color to 255 since we're writing to a clamped array anyway
+
+                    fusion.data[pixIndex] = ((alpha2 * fusion.data[pixIndex] + alpha1 * layer.data[pixIndex] - alpha12) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 1] = ((alpha2 * fusion.data[pixIndex + 1] + alpha1 * layer.data[pixIndex + 1] - alpha12) / newAlpha) | 0;
+                
+                    fusion.data[pixIndex + 2] = ((alpha2 * fusion.data[pixIndex + 2] + alpha1 * layer.data[pixIndex + 2] - alpha12) / newAlpha) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the screen blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.screenOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = 0xFF ^ (
                     (
-                        (fusion.data[pixIndex] ^ 0xFF) * invAlpha1
-                        + (that.data[pixIndex] ^ 0xFF) * (fusion.data[pixIndex] ^ 0xFF) * alpha1 / 255
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
                     )
                     / 255
                 );
-            }
-            pixIndex++; // Alpha stays the same
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Lighten Mode
-// if B >= A: C = A*d + B*(1-d) and d = aa * (1-ab) / (aa + ab - aa*ab)
-// if A > B: C = B*d + A*(1-d) and d = ab * (1-aa) / (aa + ab - aa*ab)
-
-CPBlend.lightenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-
-            if (newAlpha > 0) {
-                var 
-                // This alpha is used when color1 > color2
-                    alpha12 = (alpha2 * (alpha1 ^ 0xff) / newAlpha) | 0,
-                    invAlpha12 = alpha12 ^ 0xFF,
-
-                // This alpha is used when color2 > color1
-                    alpha21 = (alpha1 * (alpha2 ^ 0xff) / newAlpha) | 0,
-                    invAlpha21 = alpha21 ^ 0xFF;
-
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
+                
+                        color2 = fusion.data[pixIndex + 1];
                     
-                    fusion.data[pixIndex] = (((c2 >= c1) ? (c1 * alpha21 + c2 * invAlpha21) : (c2 * alpha12 + c1 * invAlpha12)) / 255) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-}
-
-// When fusion is opaque
-CPBlend.lightenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                invAlpha1 = alpha1 ^ 0xff;
-
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    c1 = that.data[pixIndex],
-                    c2 = fusion.data[pixIndex];
-                
-                fusion.data[pixIndex] = c2 >= c1 ? c2 : (c2 * invAlpha1 + c1 * alpha1) / 255;
-            }
-            pixIndex++; // Opacity unchanged (still 255)
-        }
-    }
-}
-
-// Darken Mode
-// if B >= A: C = B*d + A*(1-d) and d = ab * (1-aa) / (aa + ab - aa*ab)
-// if A > B: C = A*d + B*(1-d) and d = aa * (1-ab) / (aa + ab - aa*ab)
-
-CPBlend.darkenOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-
-            if (newAlpha > 0) {
-                var
-                    // This alpha is used when color1 > color2
-                alpha12 = (alpha1 * (alpha2 ^ 0xff) / newAlpha) | 0,
-                invAlpha12 = (alpha12 ^ 0xff) | 0,
-
-                // This alpha is used when color2 > color1
-                    alpha21 = (alpha2 * (alpha1 ^ 0xff) / newAlpha) | 0,
-                    invAlpha21 = (alpha21 ^ 0xff) | 0;
-
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
-                    
-                    fusion.data[pixIndex] = (((c2 >= c1) ? (c2 * alpha21 + c1 * invAlpha21) : (c1 * alpha12 + c2 * invAlpha12)) / 255) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// When fusion is opaque
-CPBlend.darkenOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0,
-                invAlpha1 = alpha1 ^ 0xff;
-
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    c1 = that.data[pixIndex],
-                    c2 = fusion.data[pixIndex];
-                
-                fusion.data[pixIndex] = c2 >= c1 ? (c2 * invAlpha1 + c1 * alpha1) / 255 : c2;
-            }
-            
-            pixIndex++; // Alpha stays the same
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Dodge Mode
-//
-// C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*B/(1-A)) / (aa + ab - aa*ab)
-
-CPBlend.dodgeOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
-                var
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
-                
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        color1 = that.data[pixIndex],
-                        color2 = fusion.data[pixIndex],
-                        invColor1 = color1 ^ 0xFF;
-                    
-                    fusion.data[pixIndex] = 
-                        ((
-                            (color1 * alpha1n2) 
-                            + (color2 * alphan12) 
-                            + alpha12 * (invColor1 == 0 ? 255 : Math.min(255, (255 * color2 / invColor1) | 0))
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// When fusion is opaque
-CPBlend.dodgeOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                invAlpha1 = alpha1 ^ 0xff;
-            
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    color1 = that.data[pixIndex],
-                    color2 = fusion.data[pixIndex],
-                    invColor1 = color1 ^ 0xFF;
-                
-                fusion.data[pixIndex] = 
-                    ((
-                        color2 * invAlpha1 
-                        + alpha1 * (invColor1 == 0 ? 255 : Math.min(255, (255 * color2 / invColor1) | 0))
-                    ) / 255) | 0;
-            }
-            pixIndex++; // Alpha stays the same
-        }
-    }
-};
-
-// Burn Mode
-//
-// C = (aa*(1-ab)*A + (1-aa)*ab*B + aa*ab*(1-(1-B)/A)) / (aa + ab - aa*ab)
-
-CPBlend.burnOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
-                var
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
-
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        color1 = that.data[pixIndex],
-                        color2 = fusion.data[pixIndex],
-                        invColor2 = color2 ^ 0xFF;
-                    
-                    fusion.data[pixIndex] = 
-                        ((
-                            color1 * alpha1n2 
-                            + color2 * alphan12 
-                            + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * invColor2 / color1) ^ 0xff)
-                        )
-                        / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;  
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// When fusion is opaque
-CPBlend.burnOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                invAlpha1 = alpha1 ^ 0xff;
-
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    color1 = that.data[pixIndex],
-                    color2 = fusion.data[pixIndex],
-                    invColor2 = color2 ^ 0xFF;
-                
-                fusion.data[pixIndex] = 
-                    ((
-                        color2 * invAlpha1 
-                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * invColor2 / color1) ^ 0xff)
+                    fusion.data[pixIndex + 1] = 0xFF ^ (
+                    (
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex + 1] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
                     )
-                    / 255) | 0;
-            }
-            pixIndex++; // Alpha stays the same
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Overlay Mode
-// If B <= 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(2*A*B) / (aa + ab - aa*ab)
-// If B > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
-
-CPBlend.overlayOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
-                var
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
-
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
-                    
-                    fusion.data[pixIndex] = 
-                        ((
-                            alpha1n2 * c1 
-                            + alphan12 * c2 
-                            + (
-                                c2 <= 127
-                                    ? (alpha12 * 2 * c1 * c2 / 255)
-                                    : (alpha12 * ((2 * (c1 ^ 0xff) * (c2 ^ 0xff) / 255) ^ 0xff))
-                            )
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// When fusion is opaque
-CPBlend.overlayOntoOpaqueFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = ((that.width - rect.getWidth()) * BYTES_PER_PIXEL) | 0,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top) | 0;
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alphan12 = alpha1 ^ 0xff;
-
-            for (var i = 0; i < 3; i++, pixIndex++) {
-                var 
-                    c1 = that.data[pixIndex],
-                    c2 = fusion.data[pixIndex];
+                    / 255
+                );
                 
-                fusion.data[pixIndex] = 
-                    ((
-                        alphan12 * c2 
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = 0xFF ^ (
+                    (
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex + 2] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
+                    )
+                    / 255
+                );
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the screen blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.screenOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = 0xFF ^ (
+                    (
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
+                    )
+                    / 255
+                );
+                
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = 0xFF ^ (
+                    (
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex + 1] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
+                    )
+                    / 255
+                );
+                
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = 0xFF ^ (
+                    (
+                        (color2 ^ 0xFF) * invAlpha1
+                        + (layer.data[pixIndex + 2] ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
+                    )
+                    / 255
+                );
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the screen blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.screenOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the screen blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.screenOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = 0xFF ^ (
+                    (
+                        (color1 ^ 0xFF) * alpha1n2
+                        + (color2 ^ 0xFF) * alphan12
+                        + (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+                    )
+                    / newAlpha
+                );
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the lighten blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.lightenOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the lighten blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.lightenOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the lighten blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.lightenOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                // This alpha is used when color1 > color2
+                    alpha12 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha12 = (alpha12 ^ 0xFF) | 0,
+
+                // This alpha is used when color2 > color1
+                    alpha21 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha21 = (alpha21 ^ 0xFF) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the lighten blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.lightenOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                // This alpha is used when color1 > color2
+                    alpha12 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha12 = (alpha12 ^ 0xFF) | 0,
+
+                // This alpha is used when color2 > color1
+                    alpha21 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha21 = (alpha21 ^ 0xFF) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the darken blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.darkenOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the darken blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.darkenOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the darken blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.darkenOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                // This alpha is used when color1 > color2
+                    alpha12 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha12 = (alpha12 ^ 0xFF) | 0,
+
+                // This alpha is used when color2 > color1
+                    alpha21 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha21 = (alpha21 ^ 0xFF) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the darken blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.darkenOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                // This alpha is used when color1 > color2
+                    alpha12 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha12 = (alpha12 ^ 0xFF) | 0,
+
+                // This alpha is used when color2 > color1
+                    alpha21 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
+                    invAlpha21 = (alpha21 ^ 0xFF) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the dodge blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.dodgeOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the dodge blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.dodgeOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the dodge blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.dodgeOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the dodge blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.dodgeOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        (color1 * alpha1n2)
+                        + (color2 * alphan12)
+                        + alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the burn blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.burnOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the burn blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.burnOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color2 * invAlpha1
+                        + alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the burn blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.burnOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the burn blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.burnOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        color1 * alpha1n2
+                        + color2 * alphan12
+                        + alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+                    )
+                    / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the overlay blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.overlayOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
                         + (
-                            c2 <= 127
-                                ? (alpha1 * 2 * c1 * c2 / 255)
-                                : (alpha1 * ((2 * (c1 ^ 0xff) * (c2 ^ 0xff) / 255) ^ 0xff))
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
                         )
-                    ) / 255) | 0;
-            }
-            pixIndex++; // Alpha stays 255
-        }
-    }
-};
-
-// Hard Light Mode (same as Overlay with A and B swapped)
-// If A <= 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(2*A*B) / (aa + ab - aa*ab)
-// If A > 0.5 C = (A*aa*(1-ab) + B*ab*(1-aa) + aa*ab*(1 - 2*(1-A)*(1-B)) / (aa + ab - aa*ab)
-
-CPBlend.hardLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
             
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
+                            
+                    }
+                
+                        }
+                    }
+                };
             
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
+                /**
+ * Blend the given layer onto the fusion using the overlay blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.overlayOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
                 var
+                    invAlpha1 = alpha1 ^ 0xFF;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the overlay blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.overlayOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     alpha12 = (alpha1 * alpha2 / 255) | 0,
                     alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
                     alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
+                        color1 = layer.data[pixIndex];
                     
-                    fusion.data[pixIndex] = 
-                        ((
-                            alpha1n2 * c1 
-                            + alphan12 * c2 
-                            + (
-                                c1 <= 127
-                                    ? (alpha12 * 2 * c1 * c2 / 255)
-                                    : (alpha12 * ((2 * (c1 ^ 0xff) * (c2 ^ 0xff) / 255) ^ 0xff))
-                            )
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
 
-// Soft Light Mode
-// A < 0.5 => C = (2*A - 1) * (B - B^2) + B
-// A > 0.5 => C = (2*A - 1) * (sqrt(B) - B) + B
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the overlay blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-CPBlend.softLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
+                CPBlend.overlayOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
                 var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     alpha12 = (alpha1 * alpha2 / 255) | 0,
                     alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
                     alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
+                        color1 = layer.data[pixIndex];
                     
-                    fusion.data[pixIndex] = 
-                        ((
-                            alpha1n2 * c1 
-                            + alphan12 * c2 
-                            + (
-                                c1 <= 127
-                                    ? alpha12 * ((2 * c1 - 255) * softLightLUTSquare[c2] / 255 + c2)
-                                    : alpha12 * ((2 * c1 - 255) * softLightLUTSquareRoot[c2] / 255 + c2)
-                            )
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color2 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
 
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Vivid Light Mode
-// A < 0.5 => C = 1 - (1-B) / (2*A)
-// A > 0.5 => C = B / (2*(1-A))
-
-CPBlend.vividLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
             
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
+                            
+                    }
+                
+                        }
+                    }
+                };
             
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
+                /**
+ * Blend the given layer onto the fusion using the hardLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.hardLightOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
                 var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the hardLight blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.hardLightOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * 2 * color1 * color2 / 255)
+                                : (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the hardLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.hardLightOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     alpha12 = (alpha1 * alpha2 / 255) | 0,
                     alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
                     alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
+                        color1 = layer.data[pixIndex];
                     
-                    fusion.data[pixIndex] = 
-                        ((
-                            alpha1n2 * c1 
-                            + alphan12 * c2 
-                            + (
-                                c1 <= 127
-                                    ? (alpha12 * ((c1 == 0) ? 0 : 255 - Math.min(255, (255 - c2) * 255 / (2 * c1))))
-                                    : (alpha12 * (c1 == 255 ? 255 : Math.min(255, c2 * 255 / (2 * (255 - c1)))))
-                            )
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
 
-// Linear Light Mode
-// C = B + 2*A -1
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the hardLight blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
 
-CPBlend.linearLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
+                CPBlend.hardLightOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
                 var
-                    alpha12 = (alpha1 * alpha2 / 255) | 0,
-                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
-                    
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex];
-                    
-                    fusion.data[pixIndex] = 
-                        ((
-                            alpha1n2 * c1 
-                            + alphan12 * c2 
-                            + alpha12 * Math.min(255, Math.max(0, c2 + 2 * c1 - 255))
-                        ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
-
-// Pin Light Mode
-// B > 2*A => C = 2*A
-// B < 2*A-1 => C = 2*A-1
-// else => C = B
-
-CPBlend.pinLightOntoTransparentFusionWithTransparentLayer = function(that, fusion, rect) {
-    var
-        yStride = (that.width - rect.getWidth()) * BYTES_PER_PIXEL,
-        pixIndex = that.offsetOfPixel(rect.left, rect.top);
-
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++) {
-            var 
-                alpha1 = ((that.data[pixIndex + ALPHA_BYTE_OFFSET] * that.alpha) / 100) | 0;
-            
-            if (alpha1 == 0) {
-                pixIndex += BYTES_PER_PIXEL;
-                continue;
-            }
-            
-            var
-                alpha2 = ((fusion.data[pixIndex + ALPHA_BYTE_OFFSET] * fusion.alpha) / 100) | 0,
-                newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-            
-            if (newAlpha > 0) {
-                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
                     alpha12 = (alpha1 * alpha2 / 255) | 0,
                     alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
                     alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 
-                for (var i = 0; i < 3; i++, pixIndex++) {
-                    var 
-                        c1 = that.data[pixIndex],
-                        c2 = fusion.data[pixIndex],
-                        c3 = (c2 >= 2 * c1) ? (2 * c1) : (c2 <= 2 * c1 - 255) ? (2 * c1 - 255) : c2;
+                        color1 = layer.data[pixIndex];
                     
-                    fusion.data[pixIndex] = ((
-                        alpha1n2 * c1 
-                        + alphan12 * c2 
-                        + alpha12 * c3
-                    ) / newAlpha) | 0;
-                }
-                fusion.data[pixIndex++] = newAlpha;
-            } else {
-                pixIndex += BYTES_PER_PIXEL;
-            }
-        }
-    }
-    
-    fusion.alpha = 100;
-};
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * 2 * color1 * color2 / 255)
+                                : (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+                        )
+                    ) / newAlpha
+                ) | 0;
 
-CPBlend.LM_NORMAL = 0;
-CPBlend.LM_MULTIPLY = 1;
-CPBlend.LM_ADD = 2;
-CPBlend.LM_SCREEN = 3;
-CPBlend.LM_LIGHTEN = 4;
-CPBlend.LM_DARKEN = 5;
-CPBlend.LM_SUBTRACT = 6;
-CPBlend.LM_DODGE = 7;
-CPBlend.LM_BURN = 8;
-CPBlend.LM_OVERLAY = 9;
-CPBlend.LM_HARDLIGHT = 10;
-CPBlend.LM_SOFTLIGHT = 11;
-CPBlend.LM_VIVIDLIGHT = 12;
-CPBlend.LM_LINEARLIGHT = 13;
-CPBlend.LM_PINLIGHT = 14;
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the softLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.softLightOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the softLight blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.softLightOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * (
+                            color1 <= 127
+                                ? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the softLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.softLightOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the softLight blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.softLightOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+                                : alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+                        )
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the vividLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.vividLightOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the vividLight blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.vividLightOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the vividLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.vividLightOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the vividLight blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.vividLightOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + (
+                            color1 <= 127
+                                ? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+                                : (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+                        )
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the linearLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.linearLightOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex] - 255))
+                    ) / 255
+                ) | 0;
+                
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex + 1] - 255))
+                    ) / 255
+                ) | 0;
+                
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex + 2] - 255))
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the linearLight blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.linearLightOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex] - 255))
+                    ) / 255
+                ) | 0;
+                
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex + 1] - 255))
+                    ) / 255
+                ) | 0;
+                
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * Math.min(255, Math.max(0, color2 + 2 * layer.data[pixIndex + 2] - 255))
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the linearLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.linearLightOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the linearLight blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.linearLightOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the pinLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.pinLightOntoOpaqueFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the pinLight blending operator.
+ * 
+ * Fusion pixels must be opaque, and the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.pinLightOntoOpaqueFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                
+                                
+                var
+                    invAlpha1 = alpha1 ^ 0xff;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        invAlpha1 * color2
+                        + alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / 255
+                ) | 0;
+                
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the pinLight blending operator.
+ * 
+ * The layer must have its layer alpha set to 100
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.pinLightOntoTransparentFusionWithOpaqueLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = layer.data[pixIndex + ALPHA_BYTE_OFFSET];
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+                /**
+ * Blend the given layer onto the fusion using the pinLight blending operator.
+ * 
+ * Fusion can contain transparent pixels, but the fusion layer's opacity must be set to 100.
+ */
+
+                CPBlend.pinLightOntoTransparentFusionWithTransparentLayer = function(layer, fusion, rect) {
+                    var
+                        h = rect.getHeight() | 0,
+w = rect.getWidth() | 0,
+yStride = ((layer.width - w) * BYTES_PER_PIXEL) | 0,
+pixIndex = layer.offsetOfPixel(rect.left, rect.top) | 0;
+                        
+                    for (var y = 0 ; y < h; y++, pixIndex += yStride) {
+                        for (var x = 0; x < w; x++, pixIndex += BYTES_PER_PIXEL) {
+                            var
+                                alpha1,
+alpha2,
+color1,
+color2;
+                            
+                            alpha1 = (((layer.data[pixIndex + ALPHA_BYTE_OFFSET]) * layer.alpha / 100)  | 0);
+                            
+                            
+                    if (alpha1) {
+                        alpha2 = fusion.data[pixIndex + ALPHA_BYTE_OFFSET];
+                
+                                
+                var
+                    newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+
+                    alpha12 = (alpha1 * alpha2 / 255) | 0,
+                    alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
+                    alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+
+                        color1 = layer.data[pixIndex];
+                    
+                        color2 = fusion.data[pixIndex];
+                    
+                    fusion.data[pixIndex] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 1];
+                    
+                        color2 = fusion.data[pixIndex + 1];
+                    
+                    fusion.data[pixIndex + 1] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+                
+                        color1 = layer.data[pixIndex + 2];
+                    
+                        color2 = fusion.data[pixIndex + 2];
+                    
+                    fusion.data[pixIndex + 2] = (
+                    (
+                        alpha1n2 * color1
+                        + alphan12 * color2
+                        + alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+                    ) / newAlpha
+                ) | 0;
+
+            fusion.data[pixIndex + ALPHA_BYTE_OFFSET] = newAlpha;
+        
+            
+                            
+                    }
+                
+                        }
+                    }
+                };
+            
+    
+    CPBlend.LM_NORMAL = 0;
+    CPBlend.LM_MULTIPLY = 1;
+    CPBlend.LM_ADD = 2;
+    CPBlend.LM_SCREEN = 3;
+    CPBlend.LM_LIGHTEN = 4;
+    CPBlend.LM_DARKEN = 5;
+    CPBlend.LM_SUBTRACT = 6;
+    CPBlend.LM_DODGE = 7;
+    CPBlend.LM_BURN = 8;
+    CPBlend.LM_OVERLAY = 9;
+    CPBlend.LM_HARDLIGHT = 10;
+    CPBlend.LM_SOFTLIGHT = 11;
+    CPBlend.LM_VIVIDLIGHT = 12;
+    CPBlend.LM_LINEARLIGHT = 13;
+    CPBlend.LM_PINLIGHT = 14;
 
 /**
  * Fuse the given layer on top of the given fusion layer, using the blending operation defined in the layer.
@@ -1092,50 +4276,33 @@ CPBlend.fuseLayer = function (fusion, fusionHasTransparency, layer, rect) {
     }
 
     var
-        triesRemain = 2;
+        funcName = BLEND_MODE_NAMES[layer.blendMode] + "Onto";
 
-    do {
-        var
-            funcName = BLEND_MODE_NAMES[layer.blendMode] + "Onto",
-            func;
+    if (fusion.alpha < 100) {
+        throw "Fusion layer alpha < 100 not supported.";
+    }
 
-        if (fusion.alpha < 100) {
-            throw "Fusion layer alpha < 100 not supported.";
-        }
+    if (fusionHasTransparency) {
+        funcName += "TransparentFusion";
+    } else {
+        funcName += "OpaqueFusion";
+    }
 
-        if (fusionHasTransparency) {
-            funcName += "TransparentFusion";
-        } else {
-            funcName += "OpaqueFusion";
-        }
+    if (layer.alpha == 100) {
+        funcName += "WithOpaqueLayer";
+    } else {
+        funcName += "WithTransparentLayer";
+    }
 
-        if (layer.alpha == 100 && funcName == "normal") {
-            funcName += "WithOpaqueLayer";
-        } else {
-            funcName += "WithTransparentLayer";
-        }
+    fusion.getBounds().clip(rect);
 
-        fusion.getBounds().clip(rect);
-
-        func = this[funcName];
-
-        if (func) {
-            func(layer, fusion, rect);
-            return;
-        }
-
-        // We didn't have the version we asked for? Try the slower transparent variant
-        fusionHasTransparency = true;
-
-        triesRemain--;
-    } while (triesRemain > 0);
+    this[funcName](layer, fusion, rect);
 };
-
-function makeLookUpTables() {
+function makeLookupTables() {
     // V - V^2 table
     for (var i = 0; i < 256; i++) {
         var
-            v = i / 255.;
+            v = i / 255;
 
         softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
     }
@@ -1143,10 +4310,9 @@ function makeLookUpTables() {
     // sqrt(V) - V table
     for (var i = 0; i < 256; i++) {
         var
-            v = i / 255.;
+            v = i / 255;
 
         softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
     }
 }
-
-makeLookUpTables();
+makeLookupTables();

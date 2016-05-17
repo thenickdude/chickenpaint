@@ -1,4 +1,8 @@
+/test/blending_bench/blending.js
+/test/blending_test/blending.js
 /.settings/
 /.project
 /node_modules/
 /dist/
+/js/engine/CPBlend2.js
+/js/engine/CPBlend.js
