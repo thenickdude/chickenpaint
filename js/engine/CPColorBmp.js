@@ -701,7 +701,7 @@ CPColorBmp.prototype.getImageData = function() {
 };
 
 /**
- * Replace the image data with the provided ImageData object.
+ * Replace the image data with the provided ImageData object (i.e. use it by reference).
  *
  * @param imageData {ImageData}
  */

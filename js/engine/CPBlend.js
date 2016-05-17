@@ -8,10 +8,10 @@ export default function CPBlend() {
 const
     BYTES_PER_PIXEL = 4,
     
-    RED_BYTE_OFFSET = 0,
-    GREEN_BYTE_OFFSET = 1,
-    BLUE_BYTE_OFFSET = 2,
-    ALPHA_BYTE_OFFSET = 3;
+    ALPHA_BYTE_OFFSET = 3,
+
+    softLightLUTSquare = new Array(256),
+    softLightLUTSquareRoot = new Array(256);
 
 CPBlend.prototype.fusionWithMultiply = function(that, fusion, rect) {
     var 
@@ -53,7 +53,6 @@ CPBlend.prototype.fusionWithNormal = function(that, fusion, rect) {
                     fusion.data[pixIndex] = that.data[pixIndex];
                     fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
                     fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
-                    fusion.data[pixIndex + 3] = 255;
                 } else {
                     var
                         invAlpha = 255 - alpha;
@@ -87,14 +86,13 @@ CPBlend.prototype.fusionWithNormalNoAlpha = function(that, fusion, rect) {
                     fusion.data[pixIndex] = that.data[pixIndex];
                     fusion.data[pixIndex + 1] = that.data[pixIndex + 1];
                     fusion.data[pixIndex + 2] = that.data[pixIndex + 2];
-                    fusion.data[pixIndex + 3] = that.data[pixIndex + 3];
                 } else {
                     var 
                         invAlpha = 255 - alpha;
     
-                    fusion.data[pixIndex] = (that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255;
-                    fusion.data[pixIndex + 1] = (that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255;
-                    fusion.data[pixIndex + 2] = (that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255;
+                    fusion.data[pixIndex] = ((that.data[pixIndex] * alpha + fusion.data[pixIndex] * invAlpha) / 255) | 0;
+                    fusion.data[pixIndex + 1] = ((that.data[pixIndex + 1] * alpha + fusion.data[pixIndex + 1] * invAlpha) / 255) | 0;
+                    fusion.data[pixIndex + 2] = ((that.data[pixIndex + 2] * alpha + fusion.data[pixIndex + 2] * invAlpha) / 255) | 0;
                 }
             }
             
@@ -257,7 +255,7 @@ CPBlend.prototype.fusionWithSubtractFullAlpha = function(that, fusion, rect) {
 
                 for (var i = 0; i < 3; i++, pixIndex++) {
                     var 
-                        channel = (alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha;
+                        channel = ((alpha2 * fusion.data[pixIndex] + alpha1 * that.data[pixIndex] - alpha12) / newAlpha) | 0;
                     
                     // binary magic to clamp negative values to zero without using a condition
                     fusion.data[pixIndex] = channel & (~channel >>> 24); 
@@ -877,8 +875,8 @@ CPBlend.prototype.fusionWithSoftLightFullAlpha = function(that, fusion, rect) {
                             + alphan12 * c2 
                             + (
                                 c1 <= 127
-                                    ? alpha12 * ((2 * c1 - 255) * that.softLightLUTSquare[c2] / 255 + c2)
-                                    : alpha12 * ((2 * c1 - 255) * that.softLightLUTSquareRoot[c2] / 255 + c2)
+                                    ? alpha12 * ((2 * c1 - 255) * softLightLUTSquare[c2] / 255 + c2)
+                                    : alpha12 * ((2 * c1 - 255) * softLightLUTSquareRoot[c2] / 255 + c2)
                             )
                         ) / newAlpha) | 0;
                 }
@@ -1049,3 +1047,23 @@ CPBlend.prototype.fusionWithPinLightFullAlpha = function(that, fusion, rect) {
     
     fusion.alpha = 100;
 };
+
+function makeLookUpTables() {
+    // V - V^2 table
+    for (var i = 0; i < 256; i++) {
+        var
+            v = i / 255.;
+
+        softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
+    }
+
+    // sqrt(V) - V table
+    for (var i = 0; i < 256; i++) {
+        var
+            v = i / 255.;
+
+        softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
+    }
+}
+
+makeLookUpTables();

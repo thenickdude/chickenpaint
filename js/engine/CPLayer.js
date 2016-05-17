@@ -43,9 +43,6 @@ CPLayer.prototype.constructor = CPLayer;
 const
     BYTES_PER_PIXEL = 4,
     
-    RED_BYTE_OFFSET = 0,
-    GREEN_BYTE_OFFSET = 1,
-    BLUE_BYTE_OFFSET = 2,
     ALPHA_BYTE_OFFSET = 3,
     
     blend = new CPBlend();
@@ -865,27 +862,6 @@ CPLayer.LM_VIVIDLIGHT = 12;
 CPLayer.LM_LINEARLIGHT = 13;
 CPLayer.LM_PINLIGHT = 14;
 
-CPLayer.prototype.makeLookUpTables = function() {
-    // V - V^2 table
-    CPLayer.prototype.softLightLUTSquare = new Array(256);
-    
-    for (var i = 0; i < 256; i++) {
-        var 
-            v = i / 255.;
-        
-        CPLayer.prototype.softLightLUTSquare[i] = ((v - v * v) * 255.) | 0;
-    }
-
-    // sqrt(V) - V table
-    CPLayer.prototype.softLightLUTSquareRoot = new Array(256);
-    for (var i = 0; i < 256; i++) {
-        var
-            v = i / 255.;
-        
-        CPLayer.prototype.softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255.) | 0;
-    }
-};
-
 CPLayer.prototype.setAlpha = function(alpha) {
     this.alpha = alpha;
 };
@@ -979,5 +955,3 @@ CPLayer.prototype.getAsPNG = function(rotation) {
     
     return decodeBase64PNGDataURL(canvas.toDataURL('image/png'));
 };
-
-CPLayer.prototype.makeLookUpTables();
