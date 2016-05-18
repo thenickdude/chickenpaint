@@ -1058,9 +1058,10 @@ export default function CPCanvas(controller) {
                     moveFloat = {x: p.x - lastPoint.x, y: p.y - lastPoint.y},
                     moveInt = {x: ~~moveFloat.x, y: ~~moveFloat.y}; // Round towards zero
 
-                artwork.move(moveInt.x, moveInt.y, copyMode && firstMove);
-
-                firstMove = false;
+                if (moveInt.x != 0 || moveInt.y != 0) {
+                    artwork.move(moveInt.x, moveInt.y, copyMode && firstMove);
+                    firstMove = false;
+                }
 
                 /*
                  * Nudge the last point by the remainder we weren't able to move this iteration (due to move() only
