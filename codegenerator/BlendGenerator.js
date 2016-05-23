@@ -531,12 +531,16 @@ const
 	REPLACE_OPERATION = {
 		displayName: "replace",
 		ignoresFusion: true,
-		ontoOpaque: function (color1, color2, alpha1) {
-			destColor = color1;
-			destAlpha = alpha1;
-		},
 		ontoTransparent: function (color1, color2, alpha1, alpha2) {
 			destColor = color1;
+			destAlpha = alpha1;
+		}
+	},
+
+	REPLACE_ALPHA_OPERATION = {
+		displayName: "replaceAlpha",
+		ignoresFusion: true,
+		ontoTransparent: function (color1, color2, alpha1, alpha2) {
 			destAlpha = alpha1;
 		}
 	};
@@ -681,33 +685,33 @@ function docCommentForVariant(operationDisplayName, variant, parameters) {
 	if (variant.layerAlpha100) {
 		comment += "The layer must have its layer alpha set to 100\n\n";
 	}
-	
-	if (variant.fusionHasTransparency) {
-		comment += "Fusion can contain transparent pixels, ";
-	} else {
-		comment += "Fusion pixels must be opaque, ";
+
+	if (!variant.ignoresFusion) {
+		if (variant.fusionHasTransparency) {
+			comment += "Fusion can contain transparent pixels, ";
+		} else {
+			comment += "Fusion pixels must be opaque, ";
+		}
+
+		if (variant.fusionHasTransparency) {
+			comment += "but ";
+		} else {
+			comment += "and ";
+		}
+		comment += "the fusion layer's opacity must be set to 100.\n\n";
 	}
-	
-	if (variant.fusionHasTransparency) {
-		comment += "but ";
-	} else {
-		comment += "and ";
-	}
-	comment += "the fusion layer's opacity must be set to 100.";
-	
+
 	if (variant.masked) {
-		comment += "\n\nThe given alpha mask will be multiplied with the layer alpha before blending.";
+		comment += "The given alpha mask will be multiplied with the layer alpha before blending.\n\n";
 	}
 
 	if (variant.fusionDifferentSize) {
-		comment += "\n\nThe destination's top left will be at destX, destY. The fusion can be a different size to\n"
-		"the layer.";
+		comment += "The destination's top left will be at destX, destY. The fusion can be a different size to\n"
+		"the layer.\n\n";
 	} else {
-		comment += "\n\nThe destination co-ordinates will be the same as the source ones. Both fusion and layer\n" +
-		"must be the same dimensions.";
+		comment += "The destination co-ordinates will be the same as the source ones, so both fusion and layer\n" +
+		"must be the same dimensions.\n\n";
 	}
-
-	comment += "\n\n";
 
 	for (let parameter of parameters) {
 		comment += `@param {${parameter.type}} ${parameter.name}\n`;
@@ -935,7 +939,7 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
         BYTES_PER_PIXEL = 4,
         ALPHA_BYTE_OFFSET = 3,
         
-        BLEND_MODE_NAMES = [
+        BLEND_MODE_CODENAMES = [
             "normal",
             "multiply",
             "add",
@@ -975,6 +979,11 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
     CPBlend.LM_LINEARLIGHT = 13;
     CPBlend.LM_PINLIGHT = 14;
     CPBlend.LM_PASSTHROUGH = 15;
+    
+    CPBlend.BLEND_MODE_DISPLAY_NAMES = [
+          "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
+          "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
+    ];
 
     /**
      * Blends the given image on top of the fusion.
@@ -992,7 +1001,7 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 		}
 		
 		var
-			funcName = BLEND_MODE_NAMES[imageBlendMode] + "Onto";
+			funcName = BLEND_MODE_CODENAMES[imageBlendMode] + "Onto";
 		
 		if (fusionHasTransparency) {
 			funcName += "TransparentFusion";
@@ -1018,13 +1027,21 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 	})}
 		
 	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
-		fusionHasTransparency: false,
+		layerAlpha100: true,
+		ignoresFusion: true
+	})}
+	
+	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
+		layerAlpha100: false,
+		ignoresFusion: true
+	})}
+		
+	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
 		layerAlpha100: true,
 		ignoresFusion: true
 	})}
 	
 	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
-		fusionHasTransparency: true,
 		layerAlpha100: true,
 		fusionDifferentSize: true
 	})}

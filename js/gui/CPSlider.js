@@ -59,7 +59,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
             width = canvas.width,
             height = canvas.height,
             title = typeof that.title === "string" ? that.title : that.title(that.value),
-            textX = 2 * window.devicePixelRatio,
+            textX = 3 * window.devicePixelRatio,
             textY = canvas.height * 0.75;
 
         if (centerMode) {

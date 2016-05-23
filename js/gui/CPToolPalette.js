@@ -175,7 +175,8 @@ export default function CPToolPalette(cpController) {
             (function(i) {
                 var 
                     button = buttons[i],
-                    buttonElem = document.createElement("li");
+                    buttonElem = document.createElement("li"),
+                    buttonIcon = document.createElement("div");
                 
                 buttonElem.className = "chickenpaint-toolbar-button " + button.className;
                 buttonElem.setAttribute("data-buttonIndex", i);
@@ -200,24 +201,25 @@ export default function CPToolPalette(cpController) {
                 if (button.selected) {
                     buttonElem.className = buttonElem.className + " selected";
                 }
-                
+
+                buttonIcon.className = "chickenpaint-toolbar-button-icon";
+                buttonElem.appendChild(buttonIcon);
+
                 listElem.appendChild(buttonElem);
             })(i);
         }
         
-        $(listElem).on("click", "li", buttonClicked);
-        
-        listElem.addEventListener("dblclick", function(e) {
-            if (this.nodeName == "LI") {
+        $(listElem)
+            .on("click", "li", buttonClicked)
+            .on("dblclick", "li", function(e) {
                 var
                     button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 if (button.commandDoubleClick) {
                     cpController.actionPerformed({action: button.commandDoubleClick});
                 }
-            }
-        });
-        
+            });
+
         body.appendChild(listElem);
     }
 

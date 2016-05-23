@@ -245,7 +245,14 @@ export default function ChickenPaint(options) {
 
         uiElem = options.uiElem,
 
+	    /**
+         * @type {CPCanvas}
+         */
         canvas,
+
+	    /**
+         * @type {CPMainGUI}
+         */
         mainGUI,
 
         curColor = new CPColor(0),
@@ -568,7 +575,13 @@ export default function ChickenPaint(options) {
 
             CPAddLayer: {
                 action: function() {
-                    that.artwork.addLayer();
+                    that.artwork.addLayer("layer");
+                },
+                modifies: {document: true}
+            },
+            CPAddGroup: {
+                action: function() {
+                    that.artwork.addLayer("group");
                 },
                 modifies: {document: true}
             },
@@ -577,6 +590,18 @@ export default function ChickenPaint(options) {
                     if (!that.artwork.removeLayer()) {
                         alert("Sorry, you can't remove the last remaining layer in the drawing.");
                     }
+                },
+                modifies: {document: true}
+            },
+            CPCreateClippingMask: {
+                action: function() {
+                    that.artwork.createClippingMask();
+                },
+                modifies: {document: true}
+            },
+            CPReleaseClippingMask: {
+                action: function() {
+                    that.artwork.releaseClippingMask();
                 },
                 modifies: {document: true}
             },

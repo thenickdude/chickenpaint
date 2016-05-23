@@ -21,11 +21,15 @@
 */
 
 import CPLayer from './CPLayer';
-import CPBlend from './CPBlend';
 
-export default function CPLayerGroup(width, height, name, parent, blendMode) {
-	// Super constructor
-	CPLayer.call(this, width, height, name, parent);
+/**
+ *
+ * @param {string} name
+ * @param {int} blendMode
+ * @constructor
+ */
+export default function CPLayerGroup(name, blendMode) {
+	CPLayer.call(this, name);
 
 	/**
 	 * @type {CPLayer[]}
@@ -102,6 +106,18 @@ CPLayerGroup.prototype.indexOf = function(layer) {
 	return this.layers.indexOf(layer);
 };
 
-CPLayerGroup.prototype.isImageLayer = function() {
-	return false;
+/**
+ * Get an approximation of the number of bytes of memory used by this layer.
+ *
+ * @returns {number}
+ */
+CPLayerGroup.prototype.getMemoryUsed = function() {
+	var
+		used = 0;
+
+	for (let layer in this.layers) {
+		used += layer.getMemoryUsed();
+	}
+
+	return used;
 };

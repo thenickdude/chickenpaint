@@ -35,9 +35,9 @@ function padLeft(string, padding, len) {
 function wrapWithElem(e, wrapWithName) {
     var
         parent = document.createElement(wrapWithName);
-    
+
     parent.appendChild(e);
-    
+
     return parent;
 }
 
@@ -243,6 +243,15 @@ export default function CPSwatchesPalette(controller) {
                 .off("click.bs.dropdown"); // Remove Bootstrap's left-click handler installed by toggle
         });
     }
+
+    function createIcon(iconName) {
+        var
+            icon = document.createElement("span");
+
+        icon.className = "fa fa-" + iconName;
+
+        return icon;
+    }
     
     function initButtonsPanel() {
         var
@@ -256,9 +265,11 @@ export default function CPSwatchesPalette(controller) {
         
         btnAdd.title = "Add the current brush color as a new swatch";
         btnAdd.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
-        
+        btnAdd.appendChild(createIcon("plus"));
+
         btnSettings.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";
         btnSettings.setAttribute("data-toggle", "dropdown");
+        btnSettings.appendChild(createIcon("cog"));
         $(btnSettings).dropdown();
 
         mnuSave.href = "#";

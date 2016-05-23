@@ -200,18 +200,16 @@ CPColorBmp.prototype.copyAlphaFrom = function(bmp, rect) {
     rect = this.getBounds().clipTo(rect);
 
     var 
-        w = rect.getWidth(),
-        h = rect.getHeight(),
+        w = rect.getWidth() | 0,
+        h = rect.getHeight() | 0,
         
-        pixIndex = this.offsetOfPixel(rect.left, rect.top) + CPColorBmp.ALPHA_BYTE_OFFSET /* Apply offset here so we don't have to do it per-pixel*/,
-        ySkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL;
+        pixIndex = (this.offsetOfPixel(rect.left, rect.top) + CPColorBmp.ALPHA_BYTE_OFFSET) | 0 /* Apply offset here so we don't have to do it per-pixel*/,
+        ySkip = ((this.width - w) * CPColorBmp.BYTES_PER_PIXEL) | 0;
     
-    for (var y = 0; y < h; y++) {
-        for (var x = 0; x < w; x++) {
+    for (var y = 0; y < h; y++, pixIndex += ySkip) {
+        for (var x = 0; x < w; x++, pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
             this.data[pixIndex] = bmp.data[pixIndex];
-            pixIndex += CPColorBmp.BYTES_PER_PIXEL;
         }
-        pixIndex += ySkip;
     }
 };
 
@@ -1085,11 +1083,11 @@ CPColorBmp.prototype.gradientAlpha = function(rect, fromX, fromY, toX, toY, grad
  *
  * @param {CPRect} rect
  * @param {Object[]} gradientPoints Array with gradient colors (ARGB integers)
- * @param {boolean} replace Set to true to replace the pixels in the bitmap rather than blending the gradient on top of them.
  * @param {int} fromX
  * @param {int} fromY
  * @param {int} toX
  * @param {int} toY
+ * @param {boolean} replace - True if the contents of the destination should be ignored (opaque blend)
  */
 CPColorBmp.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPoints, replace) {
     rect = this.getBounds().clipTo(rect);

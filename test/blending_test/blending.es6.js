@@ -27,8 +27,9 @@
 import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
 
 import CPChibiFile from "../../js/engine/CPChibiFile";
+import CPColorBmp from "../../js/engine/CPColorBmp";
 import CPArtwork from "../../js/engine/CPArtwork";
-import CPLayer from "../../js/engine/CPLayer";
+import CPImageLayer from "../../js/engine/CPImageLayer";
 
 import CPBlend from "../../js/engine/CPBlend";
 import CPBlend2 from "../../js/engine/CPBlend2";
@@ -105,15 +106,20 @@ function checkLayersAreSimilar(fusion1, fusion2) {
 	return true;
 }
 
-function getLayerAsCanvas(layer) {
+/**
+ *
+ * @param {CPColorBmp} image
+ * @returns {Element}
+ */
+function getImageAsCanvas(image) {
 	var
 		result = document.createElement("canvas"),
 		context = result.getContext("2d");
 
-	result.width = layer.width;
-	result.height = layer.height;
+	result.width = image.width;
+	result.height = image.height;
 
-	context.putImageData(layer.imageData, 0, 0);
+	context.putImageData(image.imageData, 0, 0);
 
 	return result;
 }
@@ -234,17 +240,17 @@ export default function BlendingTest() {
 
 	var
 		colorSphereCanvas = createColorSphereCanvas(TEST_WIDTH, TEST_HEIGHT),
-		colorSphereLayer = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "layer"),
+		colorSphereLayer = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "layer"),
 		colorSphereImageData = colorSphereCanvas.getContext("2d").getImageData(0, 0, TEST_WIDTH, TEST_HEIGHT),
 
 		lightMixCanvas = createLightMixCanvas(TEST_WIDTH, TEST_HEIGHT),
-		lightMixLayer = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "layer"),
+		lightMixLayer = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "layer"),
 
-		fusion1 = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "fusion1"),
-		fusion2 = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "fusion2");
+		fusion1 = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "fusion1"),
+		fusion2 = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "fusion2");
 
-	colorSphereLayer.setImageData(colorSphereCanvas.getContext("2d").getImageData(0, 0, TEST_WIDTH, TEST_HEIGHT));
-	lightMixLayer.setImageData(lightMixCanvas.getContext("2d").getImageData(0, 0, TEST_WIDTH, TEST_HEIGHT));
+	colorSphereLayer.image.setImageData(colorSphereCanvas.getContext("2d").getImageData(0, 0, TEST_WIDTH, TEST_HEIGHT));
+	lightMixLayer.image.setImageData(lightMixCanvas.getContext("2d").getImageData(0, 0, TEST_WIDTH, TEST_HEIGHT));
 
 	//saveTestFiles(colorSphereLayer, lightMixLayer);
 
@@ -259,22 +265,22 @@ export default function BlendingTest() {
 			func1 = CPBlend[funcName],
 			func2 = CPBlend2[funcName],
 
-			testRect = lightMixLayer.getBounds(),
+			testRect = lightMixLayer.image.getBounds(),
 
 			row = document.createElement("div"),
 			label = document.createElement("span");
 
-		fusion1.copyDataFrom(colorSphereImageData);
-		fusion2.copyDataFrom(colorSphereImageData);
+		fusion1.copyImageFrom(colorSphereImageData);
+		fusion2.copyImageFrom(colorSphereImageData);
 
-		func1(lightMixLayer, fusion1, testRect);
-		func2(lightMixLayer, fusion2, testRect);
+		func1(fusion1.image, lightMixLayer.image, 100, testRect);
+		func2(fusion2.image, lightMixLayer.image, 100, testRect);
 
-		row.appendChild(getLayerAsCanvas(colorSphereLayer));
-		row.appendChild(getLayerAsCanvas(lightMixLayer));
+		row.appendChild(getImageAsCanvas(colorSphereLayer.image));
+		row.appendChild(getImageAsCanvas(lightMixLayer.image));
 
-		row.appendChild(getLayerAsCanvas(fusion1));
-		row.appendChild(getLayerAsCanvas(fusion2));
+		row.appendChild(getImageAsCanvas(fusion1.image));
+		row.appendChild(getImageAsCanvas(fusion2.image));
 
 		label.innerHTML = blendingMode;
 

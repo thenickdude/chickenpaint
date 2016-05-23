@@ -71,35 +71,32 @@ export default function CPMiscPalette(cpController) {
         for (var i in buttons) {
             var 
                 button = buttons[i],
-                buttonElem = document.createElement("li");
+                buttonElem = document.createElement("li"),
+                buttonIcon = document.createElement("div");
             
             buttonElem.className = "chickenpaint-toolbar-button " + button.className;
             buttonElem.setAttribute("data-buttonIndex", i);
-            
+
+            buttonIcon.className = "chickenpaint-toolbar-button-icon";
+            buttonElem.appendChild(buttonIcon);
+
             listElem.appendChild(buttonElem);
         }
         
-        listElem.addEventListener("mousedown", function(e) {
-            if (e.target && e.target.nodeName == "LI") {
-                $(e.target).addClass("selected");
-            }
-        });
-
-       listElem.addEventListener("mouseup", function(e) {
-            if (e.target && e.target.nodeName == "LI") {
-                $(e.target).removeClass("selected");
-            }
-        });
-
-        listElem.addEventListener("click", function(e) {
-            if (e.target && e.target.nodeName == "LI") {
+        $(listElem)
+            .on("mousedown", "li", function(e) {
+                $(this).addClass("selected");
+            })
+            .on("mouseup", "li", function(e) {
+                $(this).removeClass("selected");
+            })
+            .on("click", "li", function(e) {
                 var
-                    button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
+                    button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 cpController.actionPerformed({action: button.command});
-            }
-        });
-        
+            });
+
         body.appendChild(listElem);
     }
     

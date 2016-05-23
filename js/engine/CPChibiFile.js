@@ -21,7 +21,7 @@
 */
 
 import CPArtwork from "./CPArtwork";
-import CPLayer from "./CPLayer";
+import CPImageLayer from "./CPImageLayer";
 import CPColorBmp from "./CPColorBmp";
 import ArrayDataStream from "../util/ArrayDataStream";
 
@@ -433,7 +433,7 @@ export default function CPChibiFile() {
                         
                         buffer = buffer.subarray(stream.pos);
                         
-                        layer = new CPLayer(header.width, header.height, layerHeader.name);
+                        layer = new CPImageLayer(header.width, header.height, layerHeader.name);
                         layer.blendMode = layerHeader.blendMode;
                         layer.alpha = layerHeader.alpha;
                         layer.visible = layerHeader.visible;

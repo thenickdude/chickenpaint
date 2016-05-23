@@ -1,6 +1,6 @@
 import CPChibiFile from "./CPChibiFile";
 import CPArtwork from "./CPArtwork";
-import CPLayer from "./CPLayer";
+import CPImageLayer from "./CPImageLayer";
 import AdobeColorTable from "../util/AdobeColorTable";
 
 /**
@@ -62,7 +62,7 @@ export default function CPResourceLoader(options) {
                         image.onload = function() {
                             var
                                 artwork = new CPArtwork(this.width, this.height),
-                                layer = new CPLayer(this.width, this.height, "Layer 1");
+                                layer = new CPImageLayer(this.width, this.height, "Layer 1");
                             
                             layer.loadFromImage(image);
                             artwork.addLayerObject(layer);

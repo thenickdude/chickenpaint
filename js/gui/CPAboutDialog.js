@@ -126,6 +126,8 @@ Copyright <a href="https://jquery.org/" target="_blank">jQuery Foundation and ot
     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
+    
+Includes Font Awesome by Dave Gandy - <a href="http://fontawesome.io" target="_blank">http://fontawesome.io</a>
                     </pre>
                 </div>
             </div>

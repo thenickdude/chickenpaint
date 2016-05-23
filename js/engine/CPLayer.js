@@ -20,43 +20,20 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPColorBmp from './CPColorBmp';
 import CPBlend from './CPBlend';
 
 /**
- * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().
- *
- * @param {int} width
- * @param {int} height
  * @param {String} name
  *
  * @constructor
  */
-export default function CPLayer(width, height, name) {
-    this.image = new CPColorBmp(width, height);
-    
+export default function CPLayer(name) {
     this.name = name || "";
-    
+    this.parent = null;
     this.alpha = 100;
     this.visible = true;
     this.blendMode = CPBlend.LM_NORMAL;
-
-    this.parent = null;
 }
-
-/**
- * Returns an independent copy of this layer.
- *
- * @returns {CPLayer}
- */
-CPLayer.prototype.clone = function() {
-    var
-        result = new CPLayer(this.image.width, this.image.height, this.name);
-
-    result.copyFrom(this);
-
-    return result;
-};
 
 CPLayer.prototype.copyFrom = function(layer) {
     this.name = layer.name;
@@ -64,33 +41,6 @@ CPLayer.prototype.copyFrom = function(layer) {
     this.alpha = layer.alpha;
     this.visible = layer.visible;
     this.parent = layer.parent;
-
-    this.image.copyDataFrom(layer.image);
-};
-
-/**
- * Do we have any non-opaque pixels in the entire layer?
- */
-CPLayer.prototype.hasAlpha = function() {
-    if (this.alpha != 100) {
-        return true;
-    }
-
-    return this.image.hasAlpha();
-};
-
-/**
- * Do we have any semi-transparent pixels in the given rectangle?
- *
- * @param {CPRect} rect
- * @returns {boolean}
- */
-CPLayer.prototype.hasAlphaInRect = function(rect) {
-    if (this.alpha != 100) {
-        return true;
-    }
-
-    return this.image.hasAlphaInRect(rect);
 };
 
 CPLayer.prototype.setAlpha = function(alpha) {
@@ -139,31 +89,6 @@ CPLayer.prototype.getVisible = function() {
 
 CPLayer.prototype.isVisible = CPLayer.prototype.getVisible;
 
-/**
- *
- * @param {CPColorBmp} that
- */
-CPLayer.prototype.copyImageFrom = function(that) {
-    this.image.copyDataFrom(that);
-};
-
-/**
- * Get a rectangle that encloses any non-transparent pixels in the layer within the given initialBounds (or an empty
- * rect if the pixels inside the given bounds are 100% transparent).
- *
- * @param {CPRect} initialBounds - The rect to search within
- *
- * @returns {CPRect}
- */
-CPLayer.prototype.getNonTransparentBounds = function(initialBounds) {
-    return this.image.getNonTransparentBounds(initialBounds);
-};
-
-// TODO we can certainly do better than this, create a CPImageLayer so CPLayerGroup doesn't inherit from an image layer
-CPLayer.prototype.isImageLayer = function() {
-    return true;
-};
-
 CPLayer.prototype.getMemoryUsed = function() {
-    return this.image ? this.image.getMemorySize() : 0;
+    return 0;
 };

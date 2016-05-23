@@ -25,12 +25,12 @@
  */
 
 import CPRect from "../../js/util/CPRect";
-import CPLayer from "../../js/engine/CPLayer";
+import CPImageLayer from "../../js/engine/CPImageLayer";
 
 import CPBlend from "../../js/engine/CPBlend";
 import CPBlend2 from "../../js/engine/CPBlend2";
 
-function checkLayersAreSimilar(fusion1, fusion2) {
+function checkImagesAreSimilar(fusion1, fusion2) {
     for (var pix = 0; pix < fusion1.width * fusion1.height * 4; pix++) {
         var
             delta = fusion1.data[pix] - fusion2.data[pix];
@@ -43,17 +43,20 @@ function checkLayersAreSimilar(fusion1, fusion2) {
     return true;
 }
 
-function getLayerAsCanvas(layer) {
+/**
+ *
+ * @param {CPColorBmp} image
+ * @returns {Element}
+ */
+function getImageAsCanvas(image) {
     var
-        result = document.createElement("canvas");
-
-    result.width = layer.width;
-    result.height = layer.height;
-
-    var
+        result = document.createElement("canvas"),
         context = result.getContext("2d");
 
-    context.putImageData(layer.imageData, 0, 0);
+    result.width = image.width;
+    result.height = image.height;
+
+    context.putImageData(image.imageData, 0, 0);
 
     return result;
 }
@@ -64,12 +67,13 @@ export default function BlendingBench() {
         TEST_HEIGHT = 768;
     
     var
-        fusion1 = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "fusion1"),
-        fusion2 = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "fusion2"),
-        layer = new CPLayer(TEST_WIDTH, TEST_HEIGHT, "layer");
+        fusion1 = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "fusion1"),
+        fusion2 = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "fusion2"),
+        layer = new CPImageLayer(TEST_WIDTH, TEST_HEIGHT, "layer");
 
     function initializeTestData() {
         var
+            layerData = layer.image.data,
             pixIndex = 0;
 
         for (var x = 0; x < TEST_WIDTH * TEST_HEIGHT; x++) {
@@ -77,22 +81,22 @@ export default function BlendingBench() {
                 r = Math.random();
 
             if (x % 128 < 64) {
-                layer.data[pixIndex++] = 255;
-                layer.data[pixIndex++] = 255;
-                layer.data[pixIndex++] = 255;
-                layer.data[pixIndex++] = 0;
+                layerData[pixIndex++] = 255;
+                layerData[pixIndex++] = 255;
+                layerData[pixIndex++] = 255;
+                layerData[pixIndex++] = 0;
             } else if (x % 128 < 96) {
                 // Quarter is fully opaque
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = 255;
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = 255;
             } else {
                 // Rest is semi-transparent
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
-                layer.data[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
+                layerData[pixIndex++] = ~~(Math.random() * 255);
             }
         }
     }
@@ -130,13 +134,13 @@ export default function BlendingBench() {
             func1 = CPBlend[funcName],
             func2 = CPBlend2[funcName],
 
-            testRect = layer.getBounds(),
+            testRect = layer.image.getBounds(),
             backgroundColor = 0x44882277,
 
             suite = new Benchmark.Suite();
 
-        fusion1.clearAll(backgroundColor);
-        fusion2.clearAll(backgroundColor);
+        fusion1.image.clearAll(backgroundColor);
+        fusion2.image.clearAll(backgroundColor);
 
         suite
             .on('cycle', function (event) {
@@ -146,16 +150,16 @@ export default function BlendingBench() {
                 statusElem.appendChild(createLogMessage('<strong>Fastest is ' + this.filter('fastest').map('name') + '</strong>'));
 
                 // We've finished profiling, but add one more test to check the results from both functions agree
-                fusion1.clearAll(backgroundColor);
-                fusion2.clearAll(backgroundColor);
+                fusion1.image.clearAll(backgroundColor);
+                fusion2.image.clearAll(backgroundColor);
 
-                func1(layer, fusion1, testRect);
-                func2(layer, fusion2, testRect);
+                func1(fusion1.image, layer.image, 100, testRect);
+                func1(fusion2.image, layer.image, 100, testRect);
 
-                if (!checkLayersAreSimilar(fusion1, fusion2)) {
+                if (!checkImagesAreSimilar(fusion1.image, fusion2.image)) {
                     statusElem.appendChild(createLogMessage("Failed to match results"));
-                    statusElem.appendChild(getLayerAsCanvas(fusion1));
-                    statusElem.appendChild(getLayerAsCanvas(fusion2));
+                    statusElem.appendChild(getImageAsCanvas(fusion1.image));
+                    statusElem.appendChild(getImageAsCanvas(fusion2.image));
                 }
 
                 runTest(funcIndex + 1);
@@ -165,10 +169,10 @@ export default function BlendingBench() {
             })
 
             .add('CPBlend#' + funcName + '-largeRect', function () {
-                func1(layer, fusion1, testRect);
+                func1(fusion1.image, layer.image, 100, testRect);
             })
             .add('CPBlend2#' + funcName + '-largeRect', function () {
-                func2(layer, fusion2, testRect);
+                func2(fusion2.image, layer.image, 100, testRect);
             })
 
             .run({

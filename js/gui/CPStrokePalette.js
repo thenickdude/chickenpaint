@@ -60,7 +60,8 @@ export default function CPStrokePalette(cpController) {
         for (var i in buttons) {
             var 
                 button = buttons[i],
-                buttonElem = document.createElement("li");
+                buttonElem = document.createElement("li"),
+                buttonIcon = document.createElement("div");
             
             buttonElem.className = "chickenpaint-toolbar-button " + button.className;
             buttonElem.setAttribute("data-buttonIndex", i);
@@ -68,22 +69,24 @@ export default function CPStrokePalette(cpController) {
             if (button.selected) {
                 buttonElem.className = buttonElem.className + " selected";
             }
-            
+
+            buttonIcon.className = "chickenpaint-toolbar-button-icon";
+            buttonElem.appendChild(buttonIcon);
+
             listElem.appendChild(buttonElem);
         }
-        
-        listElem.addEventListener("click", function(e) {
-            if (e.target && e.target.nodeName == "LI") {
+
+        $(listElem)
+            .on("click", "li", function(e) {
                 var
-                    button = buttons[parseInt(e.target.getAttribute("data-buttonIndex"), 10)];
+                    button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 $("li", listElem).removeClass("selected");
-                $(e.target).addClass("selected");
+                $(this).addClass("selected");
                 
                 cpController.actionPerformed({action: button.command});
-            }
-        });
-        
+            });
+
         body.appendChild(listElem);
     }
     

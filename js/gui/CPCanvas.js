@@ -27,6 +27,8 @@ import CPBezier from "../util/CPBezier";
 import {throttle} from "../util/throttle-debounce";
 import CPPolygon from "../util/CPPolygon";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
+import CPVector from "../util/CPVector";
+import CPSVGPathTranspiler from "../util/CPSVGPathTranspiler";
 
 import ChickenPaint from "../ChickenPaint";
 
@@ -34,7 +36,6 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
-import CPVector from "../util/CPVector";
 
 function CPModeStack() {
     this.modes = [];
