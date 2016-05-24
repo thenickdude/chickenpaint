@@ -28,10 +28,38 @@ import CPBlend from './CPBlend';
  * @constructor
  */
 export default function CPLayer(name) {
+	/**
+     *
+     * @type {String}
+     */
     this.name = name || "";
+
+	/**
+     * The parent of this layer, if this node is in a layer group.
+     *
+     * @type {?CPLayerGroup}
+     */
     this.parent = null;
+
+	/**
+     * The opacity of this layer (0 = transparent, 100 = opaque)
+     *
+     * @type {int}
+     */
     this.alpha = 100;
+
+	/**
+     * True if this layer and its children should be drawn.
+     *
+     * @type {boolean}
+     */
     this.visible = true;
+
+	/**
+     * One of the CMBlend.LM_* constants.
+     *
+     * @type {int}
+     */
     this.blendMode = CPBlend.LM_NORMAL;
 }
 
@@ -91,4 +119,25 @@ CPLayer.prototype.isVisible = CPLayer.prototype.getVisible;
 
 CPLayer.prototype.getMemoryUsed = function() {
     return 0;
+};
+
+CPLayer.prototype.getDepth = function() {
+    if (this.parent == null) {
+        return 0;
+    }
+    return this.parent.getDepth() + 1;
+};
+
+CPLayer.prototype.ancestorsAreVisible = function() {
+    return this.parent == null || this.parent.visible && this.parent.ancestorsAreVisible();
+};
+
+/**
+ * Returns true if this layer has the given group as one of its ancestors.
+ *
+ * @param {CPLayerGroup} group
+ * @returns {boolean}
+ */
+CPLayer.prototype.hasAncestor = function(group) {
+    return this.parent == group || this.parent && this.parent.hasAncestor(group);
 };

@@ -25,8 +25,51 @@ import CPBlend from "../engine/CPBlend";
 import CPSlider from "./CPSlider";
 import CPLayerGroup from "../engine/CPLayerGroup";
 import CPImageLayer from "../engine/CPImageLayer";
-import SVGPathTranspiler from "../util/CPSVGPathTranspiler";
-import CPSVGPathTranspiler from "../util/CPSVGPathTranspiler";
+
+function wrapWithElem(e, wrapWithName) {
+    var
+        parent = document.createElement(wrapWithName);
+
+    parent.appendChild(e);
+
+    return parent;
+}
+
+function createIcon(iconName) {
+    var
+        icon = document.createElement("span");
+
+    icon.className = "fa " + iconName;
+
+    return icon;
+}
+
+function fillCombobox(combo, optionNames) {
+    for (var i = 0; i < optionNames.length; i++) {
+        var
+            option = document.createElement("option");
+
+        option.appendChild(document.createTextNode(optionNames[i]));
+        option.value = i;
+
+        combo.appendChild(option);
+    }
+}
+
+function wrapCheckboxWithLabel(checkbox, title) {
+    var
+        div = document.createElement("div"),
+        label = document.createElement("label");
+
+    div.className = "checkbox";
+
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(title));
+
+    div.appendChild(label);
+
+    return div;
+}
 
 export default function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers", true);
@@ -38,90 +81,87 @@ export default function CPLayersPalette(controller) {
 
     var
         palette = this,
-        layerH = 32, eyeW = 24,
 
         artwork = controller.getArtwork(),
-    
-        // How many layers are expanded/visible right now?
-        numLayersHigh = 0,
+
+        /**
+         * An array of layers in display order, with the layers inside collapsed groups not present.
+         *
+         * @type {CPLayer[]}
+         */
+        linearizedLayers = null,
 
         body = this.getBodyElement(),
+
+        positionRoot = this.getElement(),
+        // This element will be responsible for positioning the BS dropdown
+        dropdownParent = positionRoot,
 
         layerWidget = new CPLayerWidget(),
         alphaSlider = new CPSlider(0, 100),
         blendCombo = document.createElement("select"),
     
         renameField = new CPRenameField(),
-    
+
         cbSampleAllLayers = document.createElement("input"),
         cbLockAlpha = document.createElement("input"),
         
         addLayerButton = document.createElement("li"),
         addFolderButton = document.createElement("li"),
         removeButton = document.createElement("li");
-    
-    function fillCombobox(combo, optionNames) {
-        for (var i = 0; i < optionNames.length; i++) {
-            var 
-                option = document.createElement("option");
-            
-            option.appendChild(document.createTextNode(optionNames[i]));
-            option.value = i;
-            
-            combo.appendChild(option);
-        }
-    }
-    
-    function wrapCheckboxWithLabel(checkbox, title) {
-        var
-            div = document.createElement("div"),
-            label = document.createElement("label");
 
-        div.className = "checkbox";
-        
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(title));
-        
-        div.appendChild(label);
-        
-        return div;
+    /**
+     *
+     * @param {number} displayIndex
+     * @returns {CPLayer}
+     */
+    function getLayerFromDisplayIndex(displayIndex) {
+        return linearizedLayers[displayIndex];
     }
-    
-    var
-        parentSetSize = this.setSize,
-        parentSetHeight = this.setHeight;
-    
-    this.setSize = function(w, h) {
-        parentSetSize.call(this, w, h);
-        
-        layerWidget.resize();
-        alphaSlider.resize();
-    };
 
-    this.setHeight = function(h) {
-        parentSetHeight.call(this, h);
-        
-        layerWidget.resize();
-    };
+	/**
+     *
+     * @param {CPLayer} layer
+     * @returns {int}
+     */
+    function getDisplayIndexFromLayer(layer) {
+        return linearizedLayers.indexOf(layer);
+    }
 
     function CPLayerWidget() {
         const
             NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,
-            NOTIFICATION_HIDE_DELAY_MIN = 3000;
+            NOTIFICATION_HIDE_DELAY_MIN = 3000,
+            LAYER_DRAG_START_THRESHOLD = 5, // Pixels we have to move a layer before it shows as "dragging"
+            LAYER_IN_GROUP_INDENT = 16;
 
         var 
-            isDragging = false, isDraggingReally,
-            layerDragIndex, layerDrag, layerDragY,
+            isDragging = false, isDraggingReally = false,
+            draggingLayerIndex,
+	        /**
+             * The image layer currently being dragged, or null if no drag is in progress.
+             * @type {?CPLayer}
+             */
+            draggingLayer = null,
 
-            container = document.createElement("div"),
+            /**
+             * The element of the layer being dragged
+             *
+             * @type {HTMLElement}
+             */
+            draggingLayerElem,
 
 	        /**
-             * The canvas for the entire layer widget area.
-             *
-             * @type {HTMLCanvasElement}
+             * @type {number}
              */
-            canvas = document.createElement("canvas"),
-            canvasContext = canvas.getContext("2d"),
+            draggingX, draggingY,
+
+            dropTarget,
+            dropBetweenMarkerElem = null,
+            draggingFrameElem = null,
+
+            widgetContainer = document.createElement("div"),
+            layerContainer = document.createElement("div"),
 
             oldApplyPlacement,
             notificationMessage = "",
@@ -131,179 +171,305 @@ export default function CPLayersPalette(controller) {
 
             dismissTimer = false,
 
-            layerMenu,
+            dropdownLayerMenu,
+	        /**
+             * @type {CPLayer}
+             */
             dropdownLayer = null,
-            dropdownLayerDisplayIndex = -1,
-
-            drawDownArrow = CPSVGPathTranspiler(`
-                M32 1280h704q13 0 22.5 -9.5t9.5 -23.5v-863h192q40 0 58 -37t-9 -69l-320 -384q-18 -22 -49 -22
-                t-49 22l-320 384q-26 31 -9 69q18 37 58 37h192v640h-320q-14 0 -25 11l-160 192q-13 14 -4 34
-                q9 19 29 19z`
-            ),
 
             that = this;
 
-        /**
-         * Get the size of the component on screen in CSS pixels.
+	    /**
+         * Get the element that represents the layer with the given display index.
+         *
+         * @param {number} displayIndex
+         * @returns {HTMLElement}
          */
-        this.getCSSSize = function() {
-            return {width: $(canvas).width(), height: $(canvas).height()};
-        };
-    
-        function showRenameControl(displayIndex) {
+        function getElemFromDisplayIndex(displayIndex) {
             var
-                d = that.getCSSSize(),
-                layer = getLayerFromDisplayIndex(displayIndex);
-        
-            renameField.show(
-                eyeW / window.devicePixelRatio,
-                d.height - (displayIndex + 1) * layerH / window.devicePixelRatio,
-                layer,
-                layer.name
-            );
+                elems = $(".chickenpaint-layer", layerContainer);
+
+            return elems.get(elems.length - 1 - displayIndex);
         }
 
-        function getLayerFromDisplayIndex(displayIndex) {
-            return controller.getArtwork().getLayersRoot().getLinearizedLayerList(true)[displayIndex];
-        }
-
-        function getDisplayIndexFromLayer(layer) {
-            return controller.getArtwork().getLayersRoot().getLinearizedLayerList(true).indexOf(layer);
-        }
-
-        function getDisplayIndexFromPoint(point) {
+        function getDisplayIndexFromElem(elem) {
             var
-                index = Math.floor((canvas.height - point.y / $(canvas).height() * canvas.height) / layerH);
+                layer = $(elem).closest(".chickenpaint-layer");
 
-            // We also return the index of the one-after-last layer for the sake of drag operations
-            if (index < 0 || index > numLayersHigh) {
+            if (layer.length) {
+                var
+                    elems = $(".chickenpaint-layer", layerContainer);
+
+                return elems.length - 1 - elems.index(layer);
+            } else {
                 return -1;
             }
-
-            return index;
         }
-        
+
         /**
-         * Paint the given layer above the current translate position.
+         * @typedef CPDropTarget
+         * @type Object
+         * @property {int} displayIndex - The index of the layer to insert near
+         * @property {CPLayer} layer - The layer to insert near
+         * @property {string} direction - "under", "over" or "inside", the direction to insert relative to the target
+         */
+
+	    /**
+         * Decides which drop target we should offer for the given mouse position.
+         *
+         * Returns null if no drop should be offered at the given position, otherwise returns an object with details
+         * on the drop.
+         *
+         * @param {number} clientX
+         * @param {number} clientY
+         * @returns {?CPDropTarget}
+	     */
+        function getDropTargetFromClientPos(clientX, clientY) {
+            var
+                layerElems = $(".chickenpaint-layer", layerContainer),
+                target = {layer: linearizedLayers[linearizedLayers.length - 1], displayIndex: linearizedLayers.length - 1, direction: "over"};
+
+            for (var displayIndex = 0; displayIndex < layerElems.length; displayIndex++) {
+                let
+                    targetElem = layerElems[layerElems.length - 1 - displayIndex],
+                    rect = targetElem.getBoundingClientRect();
+
+                if (displayIndex == 0 && clientY > rect.bottom) {
+                    // Special support for positioning after the last element to help us escape the bottom of a group
+                    let
+                        lastLayer = artwork.getLayersRoot().layers[0];
+
+                    target = {layer: lastLayer, displayIndex: getDisplayIndexFromLayer(lastLayer), direction: "under"};
+                    break;
+                } else if (clientY >= rect.top) {
+                    let
+                        targetLayer = getLayerFromDisplayIndex(displayIndex),
+                        targetHeight = rect.bottom - rect.top;
+
+                    target = {layer: targetLayer, displayIndex: displayIndex};
+
+                    if (targetLayer instanceof CPLayerGroup) {
+                        if (clientY >= rect.top + targetHeight * 0.75) {
+                            if (targetLayer.expanded && targetLayer.layers.length > 0) {
+                                // Show the insert marker as above the top layer in the group
+                                target.layer = targetLayer.layers[targetLayer.layers.length - 1];
+                                target.displayIndex--;
+                                target.direction = "over";
+                            } else {
+                                target.direction = "under";
+                            }
+                        } else if (clientY >= rect.top + targetHeight * 0.25) {
+                            if (targetLayer.expanded && targetLayer.layers.length > 0) {
+                                // Show the insert marker as above the top layer in the group rather than on top of the group
+                                target.layer = targetLayer.layers[targetLayer.layers.length - 1];
+                                target.displayIndex--;
+                                target.direction = "over";
+                            } else {
+                                target.direction = "inside";
+                            }
+                        } else {
+                            target.direction = "over";
+                        }
+                    } else {
+                        if (clientY >= rect.top + targetHeight * 0.5) {
+                            target.direction = "under";
+                        } else {
+                            target.direction = "over";
+                        }
+                    }
+                    break;
+                }
+            }
+
+            /*
+             * If we're dropping into the same container, make sure we don't offer to drop the layer back to the
+             * same position it was already in.
+             */
+            if (target.layer.parent == draggingLayer.parent && (target.direction == "over" || target.direction == "under")) {
+                var
+                    parentGroup = target.layer.parent,
+                    targetIndex = parentGroup.indexOf(target.layer);
+
+                if (target.direction == "over" && parentGroup.layers[targetIndex + 1] == draggingLayer
+                        || target.direction == "under" && parentGroup.layers[targetIndex - 1] == draggingLayer
+                        || target.layer == draggingLayer) {
+                    return null;
+                }
+            }
+
+            /*
+             * Make sure we don't try to drop a group as a child of itself, no group-ception!
+             */
+            if (draggingLayer instanceof CPLayerGroup && (target.layer == draggingLayer && target.direction == "inside" || target.layer.hasAncestor(draggingLayer))) {
+                return null;
+            }
+
+            return target;
+        }
+
+        function updateDropMarker() {
+            if (isDraggingReally) {
+                var
+                    positionRootBounds = positionRoot.getBoundingClientRect(),
+                    hideBetweenMarker = true,
+                    hideIntoMarker = true;
+
+                dropTarget = getDropTargetFromClientPos(draggingX, draggingY);
+
+                if (dropTarget) {
+                    var
+                        targetElem = getElemFromDisplayIndex(dropTarget.displayIndex);
+
+                    switch (dropTarget.direction) {
+                        case "over":
+                        case "under":
+                            layerContainer.appendChild(dropBetweenMarkerElem);
+
+                            let
+                                layerRect,
+                                markerDepth = dropTarget.layer.getDepth() - 1,
+                                markerLeft,
+                                layerBottom;
+
+                            // Position the marker in the correct position between the layers, and indent it to match the layer
+                            layerRect = targetElem.getBoundingClientRect();
+
+                            // Are we dropping below the layers in an expanded group? Extend the rect to enclose them
+                            if (dropTarget.direction == "under" && dropTarget.layer instanceof CPLayerGroup && dropTarget.layer.expanded) {
+                                // Find the display index after this group
+                                for (var childIndex = dropTarget.displayIndex - 1; childIndex >= 0; childIndex--) {
+                                    if (!linearizedLayers[childIndex].hasAncestor(dropTarget.layer)) {
+                                        break;
+                                    }
+                                }
+
+                                layerBottom = getElemFromDisplayIndex(childIndex + 1).getBoundingClientRect().bottom;
+                            } else {
+                                layerBottom = layerRect.bottom;
+                            }
+
+                            markerLeft = layerRect.left - positionRootBounds.left + (markerDepth > 0 ? 26 + LAYER_IN_GROUP_INDENT * markerDepth : 0);
+
+                            dropBetweenMarkerElem.style.left = markerLeft + "px";
+                            dropBetweenMarkerElem.style.width = (layerRect.right - positionRootBounds.left - markerLeft) + "px";
+                            dropBetweenMarkerElem.style.top = ((dropTarget.direction == "over" ? layerRect.top - 1 : layerBottom + 1) - positionRootBounds.top) + "px";
+
+                            $(".chickenpaint-layer-drop-target", layerContainer).removeClass("chickenpaint-layer-drop-target");
+
+                            hideBetweenMarker = false;
+                        break;
+                        case "inside":
+                            var
+                                layerElems = $(".chickenpaint-layer", layerContainer);
+
+                            layerElems.each(function(index) {
+                                $(this).toggleClass("chickenpaint-layer-drop-target", layerElems.length - 1 - index == dropTarget.displayIndex);
+                            });
+
+                            hideIntoMarker = false;
+                        break;
+                    }
+                }
+
+                if (hideIntoMarker) {
+                    $(".chickenpaint-layer-drop-target", layerContainer).removeClass("chickenpaint-layer-drop-target");
+                }
+
+                if (hideBetweenMarker) {
+                    $(dropBetweenMarkerElem).remove();
+                }
+
+                draggingFrameElem.style.top = (draggingY - positionRootBounds.top - parseInt(draggingFrameElem.style.height, 10) / 2) + "px";
+            } else {
+                $(dropBetweenMarkerElem).remove();
+                $(draggingFrameElem).remove();
+            }
+        }
+
+        /**
+         * Create a DOM element for the given layer
          *
          * @param {CPLayer} layer
          * @param {boolean} selected
          */
-        function paintLayer(layer, selected) {
-            const
-                SELECTED_LAYER_BG_COLOR = '#C0C0D0',
-                LAYER_BG_COLOR = 'white';
-
+        function buildLayer(index, layer) {
             var
-                d = {width: canvas.width, height: canvas.height},
-                textLeft = eyeW + 6 * window.devicePixelRatio;
+                layerDiv = document.createElement("div"),
+                eyeDiv = document.createElement("div"),
+                mainDiv = document.createElement("div"),
+                iconsDiv = document.createElement("div"),
+                layerNameDiv = document.createElement("div"),
+                blendDiv = document.createElement("div");
 
-            // Bring the origin of the coordinates to the top left corner of the layer
-            canvasContext.translate(0, -layerH);
+            layerDiv.className = "chickenpaint-layer list-group-item";
 
-            if (selected) {
-                canvasContext.fillStyle = SELECTED_LAYER_BG_COLOR;
-            } else {
-                canvasContext.fillStyle = LAYER_BG_COLOR;
+            if (layer == artwork.getActiveLayer()) {
+                layerDiv.className += " active";
             }
-            canvasContext.fillRect(0, 0, d.width, layerH);
 
-            canvasContext.beginPath();
+            eyeDiv.className = "chickenpaint-layer-eye";
+            if (!layer.ancestorsAreVisible()) {
+                eyeDiv.className += " chickenpaint-layer-eye-hidden-ancestors";
+            }
+            
+            if (layer.visible) {
+                eyeDiv.appendChild(createIcon("fa-eye"));
+            } else {
+                eyeDiv.appendChild(createIcon("fa-eye-slash"));
+            }
 
-            // Horizontal line on the bottom of the layer
-            canvasContext.moveTo(0, 0.5); // Half-pixel offset so we fill the whole pixel
-            canvasContext.lineTo(d.width, 0.5);
-
-            // Vertical line next to the eye
-            canvasContext.moveTo(eyeW + 0.5, 0);
-            canvasContext.lineTo(eyeW + 0.5, layerH);
-
-            canvasContext.stroke();
-
-            canvasContext.fillStyle = 'black';
+            mainDiv.className = "chickenpaint-layer-description";
 
             if (layer instanceof CPImageLayer) {
                 if (layer.clip) {
-                    canvasContext.save();
+                    layerDiv.className += " chickenpaint-layer-clipped";
+                    iconsDiv.appendChild(createIcon("fa-level-down fa-flip-horizontal"))
+                }
+            } else if (layer instanceof CPLayerGroup) {
+                layerDiv.classname += " chickenpaint-layer-group";
 
-                    canvasContext.translate(textLeft + 9 * window.devicePixelRatio, layerH * 0.67);
-                    canvasContext.scale(-0.01 * window.devicePixelRatio, -0.01 * window.devicePixelRatio);
-
-                    drawDownArrow(canvasContext);
-
-                    canvasContext.restore();
-
-                    textLeft += 13 * window.devicePixelRatio;
+                if (layer.expanded) {
+                    layerDiv.classname += " chickenpaint-layer-group-expanded";
+                    iconsDiv.appendChild(createIcon("fa-chevron-down chickenpaint-layer-group-chevron"));
+                    iconsDiv.appendChild(createIcon("fa-folder-open-o chickenpaint-layer-group-toggle"));
+                } else {
+                    layerDiv.classname += " chickenpaint-layer-group-collapsed";
+                    iconsDiv.appendChild(createIcon("fa-chevron-right chickenpaint-layer-group-chevron"));
+                    iconsDiv.appendChild(createIcon("fa-folder-o chickenpaint-layer-group-toggle"));
                 }
             }
 
-            canvasContext.fillText(layer.name, textLeft, 12 * window.devicePixelRatio);
-            canvasContext.fillText(CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%", textLeft, layerH - 5 * window.devicePixelRatio);
+            layerNameDiv.innerText = layer.name;
+            layerNameDiv.setAttribute("title", layer.name);
+            layerNameDiv.className = "chickenpaint-layer-name";
 
-            // Draw the visibility eye
-            canvasContext.beginPath();
-            canvasContext.arc(eyeW / 2, layerH / 2, 9 * window.devicePixelRatio, 0, Math.PI * 2);
-            if (layer.visible) {
-                canvasContext.fill();
-            } else {
-                canvasContext.stroke();
+            blendDiv.innerText = CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%";
+            blendDiv.className = "chickenpaint-layer-blend";
+
+            eyeDiv.style.marginRight = (2 + LAYER_IN_GROUP_INDENT * (layer.getDepth() - 1)) + "px";
+            mainDiv.appendChild(layerNameDiv);
+            mainDiv.appendChild(blendDiv);
+
+            layerDiv.appendChild(eyeDiv);
+            if (iconsDiv.childNodes.length) {
+                iconsDiv.className = "chickenpaint-layer-icons";
+                layerDiv.appendChild(iconsDiv);
             }
-        }
-        
-        function mouseUp(e) {
-            if (e.button == BUTTON_PRIMARY) {
-                var
-                    offset = $(canvas).offset(),
+            layerDiv.appendChild(mainDiv);
+            layerDiv.setAttribute("data-display-index", index);
+            layerDiv.setAttribute("data-toggle", "dropdown");
+            layerDiv.setAttribute("data-target", "#chickenpaint-layer-pop");
 
-                    mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                    displayIndex = getDisplayIndexFromPoint(mouseLoc);
-
-                if (isDraggingReally && displayIndex >= 0 && displayIndex <= numLayersHigh && displayIndex != layerDragIndex && displayIndex != layerDragIndex + 1) {
-                    // Adding to the topmost position of the document
-                    if (displayIndex == numLayersHigh) {
-                        controller.actionPerformed({
-                            action: "CPRelocateLayer",
-                            layer: layerDrag,
-                            toGroup: artwork.getLayersRoot(),
-                            toIndex: artwork.getLayersRoot().layers.length
-                        });
-                    } else {
-                        var
-                            belowThisLayer = getLayerFromDisplayIndex(displayIndex),
-                            targetGroup = belowThisLayer.parent;
-
-                        controller.actionPerformed({
-                            action: "CPRelocateLayer",
-                            layer: layerDrag,
-                            toGroup: targetGroup,
-                            toIndex: targetGroup.indexOf(belowThisLayer)
-                        });
-                    }
-                }
-
-                // Do we need to repaint to erase draglines?
-                if (isDraggingReally) {
-                    isDraggingReally = false;
-                    that.paint();
-                }
-                
-                isDragging = false;
-                
-                window.removeEventListener("mousemove", mouseDragged);
-                window.removeEventListener("mouseup", mouseUp);
-            }
+            return layerDiv;
         }
 
         function contextMenuShow(e) {
             e.preventDefault();
 
             var
-                offset = $(canvas).offset(),
-                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
+                displayIndex = getDisplayIndexFromElem(e.target);
 
-                displayIndex = getDisplayIndexFromPoint(mouseLoc);
-
-            if (displayIndex > -1 && displayIndex < numLayersHigh) {
+            if (displayIndex != -1) {
                 var
                     layer = getLayerFromDisplayIndex(displayIndex);
 
@@ -312,177 +478,197 @@ export default function CPLayersPalette(controller) {
                 }
 
                 dropdownLayer = layer;
-                dropdownLayerDisplayIndex = displayIndex;
 
-                $(".chickenpaint-action-create-clipping-mask", layerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
-                $(".chickenpaint-action-release-clipping-mask", layerMenu).toggle(layer instanceof CPImageLayer && !!layer.clip);
+                $(".chickenpaint-action-create-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
+                $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !!layer.clip);
 
-                $(this)
-                    .dropdown("toggle")
-                    .off("click.bs.dropdown"); // Remove Bootstrap's left-click handler installed by toggle
+                $(getElemFromDisplayIndex(displayIndex))
+                    .dropdown("toggle");
             }
         }
-    
+
+        function doubleClick(e) {
+            // Make sure we didn't double-click on the layer eye...
+            if ($(e.target).closest(".chickenpaint-layer-description").length > 0) {
+                var
+                    displayIndex = getDisplayIndexFromElem(e.target),
+                    layer = getLayerFromDisplayIndex(displayIndex);
+
+                renameField.show(
+                    layer,
+                    $(e.target).closest(".chickenpaint-layer")
+                );
+
+                e.preventDefault();
+            }
+        }
+
         function mouseDown(e) {
             if (e.button == BUTTON_PRIMARY) {
                 var
-                    offset = $(canvas).offset(),
-                    mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
+                    layerElem = $(e.target).closest(".chickenpaint-layer")[0],
+                    displayIndex = getDisplayIndexFromElem(layerElem);
 
-                    displayIndex = getDisplayIndexFromPoint(mouseLoc);
-
-                if (displayIndex > -1 && displayIndex < numLayersHigh) {
+                if (displayIndex != -1) {
                     var
                         layer = getLayerFromDisplayIndex(displayIndex);
 
-                    if (mouseLoc.x / $(canvas).width() * canvas.width < eyeW) {
+                    if ($(e.target).closest(".chickenpaint-layer-eye").length) {
                         controller.actionPerformed({
                             action: "CPSetLayerVisibility",
                             layer: layer,
                             visible: !layer.visible
                         });
-                    } else if (artwork.getActiveLayer() != layer) {
-                        controller.actionPerformed({action: "CPSetActiveLayer", layer: layer});
+                    } else if (layer instanceof CPLayerGroup && $(e.target).closest(".chickenpaint-layer-group-toggle").length) {
+                        controller.actionPerformed({
+                            action: "CPExpandLayerGroup",
+                            group: layer,
+                            expand: !layer.expanded
+                        });
+                    } else {
+                        if (artwork.getActiveLayer() != layer) {
+                            controller.actionPerformed({action: "CPSetActiveLayer", layer: layer});
+                        }
+                        isDragging = true;
+                        dropTarget = null;
+
+                        draggingLayer = layer;
+                        // We might have replaced the layer with a new element due to the CPSetActiveLayer, so fetch that again
+                        draggingLayerElem = getElemFromDisplayIndex(displayIndex);
+                        draggingLayerIndex = displayIndex;
+                        draggingX = e.clientX;
+                        draggingY = e.clientY;
+
+                        window.addEventListener("mousemove", mouseDragged);
+                        window.addEventListener("mouseup", mouseDragEnd);
                     }
-
-                    isDragging = true;
-                    layerDragY = mouseLoc.y;
-                    layerDrag = layer;
-                    layerDragIndex = displayIndex;
-
-                    window.addEventListener("mousemove", mouseDragged);
-                    window.addEventListener("mouseup", mouseUp);
                 }
             }
         }
 
         function mouseClick(e) {
             if (e.button != BUTTON_SECONDARY) {
-                // Don't pop up the popup menu for us
+                // Don't pop up the popup menu for us (bootstrap calls toggle)
                 e.stopPropagation();
                 e.preventDefault();
+
+                // Instead only allow the menu to *close*
+                if ($(dropdownParent).hasClass("open")) {
+                    $(dropdownParent).dropdown('toggle');
+                }
             }
+        }
+
+        function mouseDragEnd(e) {
+            if (e.button == BUTTON_PRIMARY) {
+                isDragging = false;
+
+                if (isDraggingReally) {
+                    isDraggingReally = false;
+
+                    $(draggingLayerElem).removeClass("chickenpaint-layer-dragging");
+
+                    if (dropTarget) {
+                        if (dropTarget.direction == "inside") {
+                            controller.actionPerformed({
+                                action: "CPRelocateLayer",
+                                layer: draggingLayer,
+                                toGroup: dropTarget.layer,
+                                toIndex: dropTarget.layer.layers.length
+                            });
+                        } else {
+                            controller.actionPerformed({
+                                action: "CPRelocateLayer",
+                                layer: draggingLayer,
+                                toGroup: dropTarget.layer.parent,
+                                toIndex: dropTarget.layer.parent.indexOf(dropTarget.layer) + (dropTarget.direction == "over" ? 1 : 0)
+                            });
+                        }
+                    }
+
+                    updateDropMarker();
+
+                    dropTarget = null;
+                }
+
+                window.removeEventListener("mousemove", mouseDragged);
+                window.removeEventListener("mouseup", mouseDragEnd);
+            }
+        }
+
+        function startMouseDrag() {
+            isDraggingReally = true; // We actually moved the mouse from the starting position
+
+            draggingFrameElem = document.createElement("div");
+            draggingFrameElem.className = "chickenpaint-layer-drag-frame";
+            draggingFrameElem.style.width = $(draggingLayerElem).outerWidth(false) + "px";
+            draggingFrameElem.style.height = $(draggingLayerElem).outerHeight(false) + "px";
+
+            dropBetweenMarkerElem = document.createElement("div");
+            dropBetweenMarkerElem.className = "chickenpaint-layer-drop-between-mark";
+
+            draggingLayerElem.className += " chickenpaint-layer-dragging";
+
+            layerContainer.appendChild(draggingFrameElem);
         }
 
         function mouseDragged(e) {
             if (isDragging) {
-                isDraggingReally = true; // We actually moved the mouse from the starting position
-                layerDragY = e.pageY - $(canvas).offset().top;
-                that.paint();
+                var
+                    newDragY = e.clientY;
+
+                if (!isDraggingReally && Math.abs(newDragY - draggingY) > LAYER_DRAG_START_THRESHOLD) {
+                    startMouseDrag();
+                }
+
+                if (isDraggingReally) {
+                    draggingY = newDragY;
+                    updateDropMarker();
+                }
             }
         }
 
         /**
          * Repaint just the specified layer
          */
-        this.repaintLayer = function(layer) {
-            var
-                layerBottom = canvas.height - layerH * artwork.getLayersRoot().getLinearizedLayerList(true).indexOf(layer);
-            
-            canvasContext.save();
-
-            // Skip any layers before ours to get to the right position
-            canvasContext.translate(0, layerBottom);
-
-            canvasContext.clearRect(0, -layerH, canvas.width, layerH);
-
-            canvasContext.strokeStyle = 'black';
-
-            paintLayer(layer, layer == artwork.getActiveLayer());
-            
-            canvasContext.restore();
-        };
-        
-        function paintLayerGroupContents(layerGroup) {
-            for (let layer of layerGroup.layers) {
-                // The contents of the layer display below the group marker itself
-                if (layer instanceof CPLayerGroup) {
-                    paintLayerGroupContents(layer);
-                }
-                paintLayer(layer, layer == artwork.getActiveLayer());
+        /*this.rebuildLayer = function(displayIndex, layer) {
+            if (displayIndex > -1) {
+                $(getElemFromDisplayIndex(displayIndex)).replaceWith(buildLayer(displayIndex, layer));
             }
-        }
-        
+        };*/
+
         /**
-         * Repaint the entire control
+         * Rebuild all layer elements from the cached linearizedLayers list
          */
-        this.paint = function() {
+        this.buildLayers = function() {
+            // Cache the details of the layer structure
+            linearizedLayers = artwork.getLayersRoot().getLinearizedLayerList(true);
+
             var
-                layersRoot = artwork.getLayersRoot(),
-                
-                d = {width: canvas.width, height: canvas.height},
-                
-                canvasScaleFactor = canvas.height / $(canvas).height();
+                layerElems = linearizedLayers.map(function(layer, index) {
+                    return buildLayer(index, layer);
+                }),
 
-            canvasContext.save();
-            
-            canvasContext.clearRect(0, 0, d.width, d.height - numLayersHigh * layerH);
+                layerFrag = document.createDocumentFragment();
 
-            canvasContext.strokeStyle = 'black';
+            $(layerContainer).empty();
 
-            // Draw the list of layers, with the first layer at the bottom of the control
-            canvasContext.translate(0, d.height);
-            
-            paintLayerGroupContents(layersRoot);
-
-            if (isDraggingReally) {
-                var
-                    allLayersDrawnHeight = numLayersHigh * layerH;
-
-                // Get back to the bottom of the canvas
-                canvasContext.translate(0, allLayersDrawnHeight);
-                canvasContext.strokeRect(0, layerDragY * canvasScaleFactor - d.height -layerH / 2, d.width, layerH);
-
-                var
-                    overIndex = getDisplayIndexFromPoint({x: 0, y: layerDragY});
-
-                // We offer to drop the layer below the layer the mouse is pointing at
-                if (overIndex != -1 && overIndex != layerDragIndex && overIndex != layerDragIndex + 1) {
-                    canvasContext.fillRect(0, -overIndex * layerH - 2, d.width, 4 * window.devicePixelRatio);
-                }
+            for (var i = layerElems.length - 1; i >= 0; i--) {
+                layerFrag.appendChild(layerElems[i]);
             }
 
-            canvasContext.restore();
+            layerContainer.appendChild(layerFrag);
+
+            updateDropMarker();
         };
 
         this.resize = function() {
-            var
-                // Our parent container will act as our scrollbar clip area
-                parent = $(canvas).parent(),
-                parentHeight = parent.height(),
-                parentWidth = parent.width(),
-                
-                newWidth, newHeight;
-            
-            layerH = 34 * window.devicePixelRatio;
-            eyeW = 24 * window.devicePixelRatio;
-            
-            newWidth = parentWidth * window.devicePixelRatio;
-            newHeight = Math.max(layerH * numLayersHigh, parentHeight * window.devicePixelRatio);
-            
-            // Should we trigger a scrollbar to appear?
-            if (newHeight > parentHeight * window.devicePixelRatio) {
-                // Take the scrollbar width into account in our width
-                newWidth -= 15 * window.devicePixelRatio;
-                parent[0].style.overflowY = 'scroll';
-            } else {
-                parent[0].style.overflowY = 'hidden';
-            }
-
-            canvas.width = newWidth;
-            canvas.height = newHeight;
-
-            canvas.style.width = (newWidth / window.devicePixelRatio) + "px";
-            canvas.style.height = (newHeight / window.devicePixelRatio) + "px";
-
-            canvasContext.font = (layerH * 0.25) + "pt sans-serif";
-            
-            this.paint();
+            this.buildLayers();
             this.dismissNotification();
         };
         
         this.getElement = function() {
-            return container;
+            return widgetContainer;
         };
 
         /**
@@ -491,22 +677,26 @@ export default function CPLayersPalette(controller) {
          * @param {int} displayIndex
          */
         function revealLayer(displayIndex) {
-            var
-                layerWidgetPos = canvas.getBoundingClientRect(),
+            let
+                layerRect = getElemFromDisplayIndex(displayIndex).getBoundingClientRect(),
+                containerRect = layerContainer.getBoundingClientRect();
 
-                scrollBoxPos = container.getBoundingClientRect(),
-                scrollBoxHeight = scrollBoxPos.bottom - scrollBoxPos.top,
-
-                layerHeight = layerH / window.devicePixelRatio,
-
-                layerTop = layerWidgetPos.bottom - layerHeight * (displayIndex + 1),
-                layerBottom = layerTop + layerHeight;
-
-            container.scrollTop = Math.max(Math.min(Math.max(container.scrollTop, layerBottom - layerWidgetPos.top - scrollBoxHeight), layerTop - layerWidgetPos.top), 0);
+            layerContainer.scrollTop =
+                Math.max(
+                    Math.min(
+                        Math.max(
+                            layerContainer.scrollTop,
+                            // Scroll down to reveal the bottom of the layer
+                            layerContainer.scrollTop + layerRect.bottom - containerRect.bottom
+                        ),
+                        layerContainer.scrollTop + layerRect.top - containerRect.top
+                    ),
+                    0
+                );
         }
 
         this.dismissNotification = function() {
-            $(canvas).popover('hide');
+            $(widgetContainer).popover('hide');
         };
 
         this.showNotification = function(layer, message, where) {
@@ -521,7 +711,7 @@ export default function CPLayersPalette(controller) {
                 revealLayer(notificationLayerIndex);
             }
 
-            $(canvas).popover("show");
+            $(widgetContainer).popover("show");
 
             if (dismissTimer) {
                 clearTimeout(dismissTimer);
@@ -531,23 +721,6 @@ export default function CPLayersPalette(controller) {
                 that.dismissNotification()
             }, Math.max(Math.round(notificationMessage.length * NOTIFICATION_HIDE_DELAY_MS_PER_CHAR), NOTIFICATION_HIDE_DELAY_MIN));
         };
-
-	    /**
-         * Get the {left,top} viewport-relative offset of the middle of the left edge of the specified layer (clipped to
-         * the layer widget scroll area).
-         *
-         * To get a document-relative offset, just add document.body.scrollTop to the top.
-         *
-         * @param {int} displayIndex
-         */
-        function getViewportOffsetOfLayer(displayIndex) {
-            var
-                layerWidgetPos = canvas.getBoundingClientRect(),
-                scrollBoxPos = container.getBoundingClientRect(),
-                layerMiddle = layerWidgetPos.bottom - layerH / window.devicePixelRatio * (displayIndex + 0.5);
-
-            return {left: layerWidgetPos.left, top: Math.min(Math.max(layerMiddle, scrollBoxPos.top), scrollBoxPos.bottom)};
-        }
 
         /* Reposition the popover to the layer/location that the notification applies to */
         function applyNotificationPlacement(offset, placement) {
@@ -560,11 +733,11 @@ export default function CPLayersPalette(controller) {
             switch (notificationLocation) {
                 case "layer":
                     var
-                        layerMiddle = getViewportOffsetOfLayer(notificationLayerIndex);
+                        layerPos = getElemFromDisplayIndex(notificationLayerIndex).getBoundingClientRect();
 
                     $tip.offset({
-                        top: layerMiddle + document.body.scrollTop - $tip.height() / 2,
-                        left: layerMiddle.left - $tip.outerWidth() - $arrow.outerWidth()
+                        top: document.body.scrollTop + (layerPos.top + layerPos.bottom - $tip.height()) / 2,
+                        left: document.body.scrollLeft + (layerPos.left - $tip.outerWidth() - $arrow.outerWidth())
                     });
                 break;
                 case "opacity":
@@ -581,16 +754,7 @@ export default function CPLayersPalette(controller) {
             $arrow.css("top", "50%");
         }
 
-        function wrapWithElem(e, wrapWithName) {
-            var
-                parent = document.createElement(wrapWithName);
-
-            parent.appendChild(e);
-
-            return parent;
-        }
-
-        function createLayerMenu() {
+        function createLayerDropdownMenu() {
             var
                 menu = document.createElement("ul"),
                 mnuDeleteLayer = document.createElement("a"),
@@ -640,35 +804,18 @@ export default function CPLayersPalette(controller) {
             return menu;
         }
 
-        canvas.setAttribute("data-toggle", "dropdown");
+        dropdownParent.id = "chickenpaint-layer-pop";
 
-        canvas.addEventListener("click", function(e) {
-            if (renameField.isVisible()) {
-                renameField.renameAndHide();
-            }
-        });
+        widgetContainer.className = "chickenpaint-layers-widget well";
 
-        canvas.addEventListener("dblclick", function(e) {
-            var
-                offset = $(canvas).offset(),
-                mouseLoc = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-
-                displayIndex = getDisplayIndexFromPoint(mouseLoc);
-
-            if (displayIndex > -1 && displayIndex < numLayersHigh) {
-                if (mouseLoc.x * window.devicePixelRatio > eyeW) {
-                    showRenameControl(displayIndex);
-                }
-            }
-        });
-
-        canvas.addEventListener("mousedown", mouseDown);
-        canvas.addEventListener("click", mouseClick);
-        canvas.addEventListener("contextmenu", contextMenuShow);
+        widgetContainer.addEventListener("dblclick", doubleClick);
+        widgetContainer.addEventListener("mousedown", mouseDown);
+        widgetContainer.addEventListener("click", mouseClick);
+        widgetContainer.addEventListener("contextmenu", contextMenuShow);
 
         controller.on("layerNotification", this.showNotification.bind(this));
 
-        $(canvas)
+        $(widgetContainer)
             .popover({
                 html: false,
                 content: function() {
@@ -680,56 +827,54 @@ export default function CPLayersPalette(controller) {
             });
 
         var
-            popover = $(canvas).data('bs.popover');
+            popover = $(widgetContainer).data('bs.popover');
 
         // Save the old positioning routine so we can call it later
         oldApplyPlacement = popover.applyPlacement;
 
         popover.applyPlacement = applyNotificationPlacement;
-        
-        if (!window.devicePixelRatio) {
-            window.devicePixelRatio = 1.0;
-        }
 
-        canvasContext.strokeStyle = 'black';
-        
-        container.className = "chickenpaint-layers-widget well";
-        container.appendChild(canvas);
+        layerContainer.className = "list-group";
+        widgetContainer.appendChild(layerContainer);
 
-        layerMenu = createLayerMenu();
-        container.appendChild(layerMenu);
+        dropdownLayerMenu = createLayerDropdownMenu();
+        widgetContainer.appendChild(dropdownLayerMenu);
 
-        $(container).on("show.bs.dropdown", function() {
+        $(dropdownParent).on("show.bs.dropdown", function(e) {
             /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
              * document *while the menu is open!*
              */
             $(document).one("click", function() {
-                if ($(container).hasClass("open")) {
-                    $(container).dropdown("toggle");
+                if ($(dropdownParent).hasClass("open")) {
+                    $(dropdownParent).dropdown("toggle");
                 }
             });
 
             var
-                $dropdownElem = $(this).find(".dropdown-menu"),
-                dropdownOffset = getViewportOffsetOfLayer(dropdownLayerDisplayIndex),
-                paletteOffset = $(palette.getElement()).offset();
+                layerElem = $(e.relatedTarget)[0],
+                $dropdownElem = $(dropdownParent).find(".dropdown-menu"),
 
-            dropdownOffset.top -= $dropdownElem.outerHeight(true) / 2;
+                layerPos = layerElem.getBoundingClientRect(),
+                palettePos = palette.getElement().getBoundingClientRect();
 
             // Convert the offset to palette-relative coordinates (since that's its offset parent)
             $dropdownElem.css({
-                left: (dropdownOffset.left + document.body.scrollLeft - paletteOffset.left) + "px",
-                top: (dropdownOffset.top + document.body.scrollTop - paletteOffset.top) + "px"
+                left: (layerPos.left - palettePos.left) + "px",
+                top: ((layerPos.top - $dropdownElem.outerHeight(true) / 2) - palettePos.top) + "px"
             });
         });
     }
 
 	/**
+     * Called when a layer (or all layers) have been updated and we should rebuild/repaint them.
      *
      * @param {?CPLayer} layer
      */
     function onChangeLayer(layer) {
         artwork = this;
+
+        // Fetch and rebuild all layers
+        layerWidget.resize();
 
         var
             activeLayer = artwork.getActiveLayer();
@@ -742,28 +887,29 @@ export default function CPLayersPalette(controller) {
             blendCombo.value = activeLayer.getBlendMode();
         }
 
-        if (layer) {
-            layerWidget.repaintLayer(layer);
-        } else {
-            // We may have added or removed layers, resize as appropriate
-            numLayersHigh = artwork.getLayersRoot().getLinearizedLayerList(true).length;
-
-            layerWidget.resize();
-        }
-
         layerWidget.dismissNotification();
     }
 
     function CPRenameField() {
         var
             layer = null,
+            layerElem = null,
+            origName = "",
+
             textBox = document.createElement("input"),
-            
+
             that = this;
 
         this.hide = function() {
             layer = null;
-            textBox.style.display = 'none';
+
+            var
+                parentNameElem = $(textBox).parent();
+
+            if (parentNameElem) {
+                $(textBox).remove();
+                parentNameElem.text(origName);
+            }
         };
 
         this.renameAndHide = function() {
@@ -775,30 +921,21 @@ export default function CPLayersPalette(controller) {
         };
 
         this.isVisible = function() {
-            return textBox.style.display != 'none';
+            return !!layer;
         };
         
-        this.setLocation = function(positionX, positionY) {
-            textBox.style.left = positionX + "px";
-            textBox.style.top = positionY + "px";
-        };
-        
-        this.show = function(x, y, _layer, layerName) {
+        this.show = function(_layer, _layerElem) {
             layer = _layer;
-            textBox.value = layerName;
-            this.setLocation(x, y);
-            
-            textBox.style.display = 'block';
+            origName = layer.name;
+
+            textBox.value = origName;
+
+            $(".chickenpaint-layer-name", _layerElem).empty().append(textBox);
             textBox.select();
         };
-        
-        this.getElement = function() {
-            return textBox;
-        };
-        
+
         textBox.type = "text";
-        textBox.className = "chickenpaint-layer-new-name form-control input-sm";
-        textBox.style.display = 'none';
+        textBox.className = "chickenpaint-layer-rename form-control input-sm";
 
         textBox.addEventListener("keydown", function(e) {
             // Prevent other keyhandlers (CPCanvas) from getting their grubby hands on the input
@@ -826,14 +963,22 @@ export default function CPLayersPalette(controller) {
         });
     }
 
-    function createIcon(iconName) {
-        var
-            icon = document.createElement("span");
+    var
+        parentSetSize = this.setSize,
+        parentSetHeight = this.setHeight;
 
-        icon.className = "fa fa-" + iconName;
+    this.setSize = function(w, h) {
+        parentSetSize.call(this, w, h);
 
-        return icon;
-    }
+        layerWidget.dismissNotification();
+        alphaSlider.resize();
+    };
+
+    this.setHeight = function(h) {
+        parentSetHeight.call(this, h);
+
+        layerWidget.resize();
+    };
 
     blendCombo.className = "form-control";
     blendCombo.title = "Layer blending mode";
@@ -869,8 +1014,6 @@ export default function CPLayersPalette(controller) {
         
     body.appendChild(wrapCheckboxWithLabel(cbLockAlpha, "Lock alpha"));
 
-    layerWidget.getElement().appendChild(renameField.getElement());
-
     body.appendChild(layerWidget.getElement());
 
     // Add/Remove layer buttons
@@ -881,21 +1024,21 @@ export default function CPLayersPalette(controller) {
     
     addLayerButton.className = 'chickenpaint-small-toolbar-button chickenpaint-add-layer';
     addLayerButton.title = 'Add layer';
-    addLayerButton.appendChild(createIcon("file"));
+    addLayerButton.appendChild(createIcon("fa-file"));
     addLayerButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPAddLayer"});
     });
 
     addFolderButton.className = 'chickenpaint-small-toolbar-button chickenpaint-add-layer';
     addFolderButton.title = 'Add group';
-    addFolderButton.appendChild(createIcon("folder"));
+    addFolderButton.appendChild(createIcon("fa-folder"));
     addFolderButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPAddGroup"});
     });
     
     removeButton.className = 'chickenpaint-small-toolbar-button chickenpaint-remove-layer';
     removeButton.title = "Delete layer";
-    removeButton.appendChild(createIcon("trash"));
+    removeButton.appendChild(createIcon("fa-trash"));
     removeButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPRemoveLayer"});
     });

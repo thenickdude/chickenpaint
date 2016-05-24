@@ -113,6 +113,9 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 				flattenedNode = groupNode.layers[0];
 
 			flattenedNode.alpha = Math.round(groupNode.alpha * flattenedNode.alpha / 100);
+			if (groupNode.blendMode != CPBlend.LM_PASSTHROUGH) {
+				flattenedNode.blendMode = groupNode.blendMode;
+			}
 
 			return flattenedNode;
 		}
@@ -187,11 +190,11 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 			}
 			if (child instanceof CPLayerGroup) {
 				let
-					groupNode = buildTreeInternal(child);
+					childGroupNode = buildTreeInternal(child);
 
 				// If the group ended up being non-empty...
-				if (groupNode) {
-					if (groupNode.blendMode == CPBlend.LM_PASSTHROUGH && groupNode.isGroup) {
+				if (childGroupNode) {
+					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup) {
 						/*
 						 * TODO what does PASSTHROUGH + alpha < 100 mean for the end-user? Can't figure out a meaning for
 						 * that. At the moment we'll just treat it as alpha == 100
@@ -200,11 +203,11 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 						/*
 							Eliminate the pass-through group by adding its children to us instead
 						 */
-						for (let subLayer of groupNode.layers) {
+						for (let subLayer of childGroupNode.layers) {
 							treeNode.addChild(subLayer);
 						}
 					} else {
-						treeNode.addChild(groupNode);
+						treeNode.addChild(childGroupNode);
 					}
 				}
 			} else {
@@ -298,7 +301,7 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 			groupIsEmpty = true,
 			fusionHasTransparency = true;
 
-		// Avoid using an iterator here because Chrome refuses to optimize when a "finally" clause is present
+		// Avoid using an iterator here because Chrome refuses to optimize when a "finally" clause is present (caused by Babel iterator codegen)
 		for (let i = 0; i < treeNode.layers.length; i++) {
 			let
 				child = treeNode.layers[i],

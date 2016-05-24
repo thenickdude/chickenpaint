@@ -9231,12 +9231,6 @@ body.chickenpaint-full-screen {
 .chickenpaint-tool-bezier .chickenpaint-toolbar-button-icon {
   background-position: 0 -704px;
 }
-.chickenpaint-add-layer {
-  background-position: 0 0;
-}
-.chickenpaint-remove-layer {
-  background-position: 0 -16px;
-}
 .chickenpaint-colorpicker-show {
   height: 20px;
 }
@@ -9338,24 +9332,116 @@ body.chickenpaint-full-screen {
   flex-shrink: 0;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body > .chickenpaint-layers-widget {
+  /* Have the list fill the well */
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column-reverse;
+  flex-direction: column-reverse;
   -ms-flex: 1 1 0px;
   flex-basis: 0;
   /* Required for Firefox to shrink this element properly */
   flex-grow: 1;
   flex-shrink: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-.chickenpaint-layers-widget.well {
   padding: 0;
   margin-bottom: 0;
 }
-.chickenpaint-layers-widget canvas {
-  width: 100%;
+.chickenpaint-layers-widget .list-group {
+  font-size: 88%;
+  margin-bottom: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  /* I'd love to use column-reverse but Firefox/Edge won't scroll with that one https://bugzilla.mozilla.org/show_bug.cgi?id=1042151 */
+  flex-direction: column;
+  -ms-flex: 1 1 0px;
+  flex-grow: 1;
+}
+.chickenpaint-layers-widget .chickenpaint-layer {
+  position: static;
+  /* Avoid creating a new stacking context so our drop target marker can float above us */
+  background-color: rgba(0, 0, 0, 0.05);
+  margin-top: 1px;
+  margin-bottom: 1px;
+  padding: 0;
+  border-radius: 0px !important;
+  cursor: pointer;
+  display: -ms-flexbox;
+  display: flex;
+  align-items: center;
+  -ms-flex: 0 0 auto;
+  flex-shrink: 0;
+}
+.chickenpaint-layer-icons {
+  font-size: 14px;
+  margin-right: 2px;
+  margin-left: -1px;
+  white-space: nowrap;
+}
+.chickenpaint-layer-icons span {
+  vertical-align: middle;
+}
+.chickenpaint-layer-group-toggle {
+  /* Make the "open folder" icon the same width as the closed one */
+  min-width: 15px;
+}
+.chickenpaint-layer .fa:hover {
+  text-shadow: 0 0 1px white;
+}
+.chickenpaint-layer:not(.active) .fa:hover {
+  color: #444;
+}
+.chickenpaint-layer-group-chevron {
+  display: none !important;
+}
+.chickenpaint-layer-description {
+  padding: 2px;
+  min-width: 0;
+  /* Allow description to shrink below its content-width */
+}
+.chickenpaint-layer-name,
+.chickenpaint-layer-blend {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.chickenpaint-layer-blend {
+  font-size: 83%;
+}
+.chickenpaint-palette-layers.open .dropdown-menu {
+  display: block;
+}
+.chickenpaint-layer-eye {
+  padding: 4px 5px;
+  font-size: 15px;
+}
+.chickenpaint-layer-eye-hidden-ancestors {
+  opacity: 0.4;
+}
+.chickenpaint-layer.chickenpaint-layer-dragging {
+  opacity: 0.3;
+}
+.chickenpaint-layer-drag-frame {
+  border: 1px solid black;
+  position: absolute;
+}
+.chickenpaint-layer-drop-target {
+  box-shadow: inset 0 0 1px 1px black;
+}
+.chickenpaint-layer-drop-between-mark {
+  background-color: black;
+  margin-top: -2px;
+  height: 4px;
+  z-index: 1000;
+  position: absolute;
+  -ms-flex: 0 0 auto;
+  flex-grow: 0;
+  flex-shrink: 0;
 }
 .chickenpaint .chickenpaint-layer-buttons {
   margin-bottom: 0;
-  margin-top: 2px;
+  margin-top: 3px;
   line-height: 0;
   z-index: 1;
 }

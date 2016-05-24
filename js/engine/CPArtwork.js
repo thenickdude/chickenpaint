@@ -38,19 +38,6 @@ import CPRandom from "../util/CPRandom";
 import CPTransform from "../util/CPTransform";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
 
-// Polyfill, used in duplicateLayer
-if (!String.prototype.endsWith) {
-    String.prototype.endsWith = function(searchString, position) {
-        var subjectString = this.toString();
-        if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-            position = subjectString.length;
-        }
-        position -= searchString.length;
-        var lastIndex = subjectString.indexOf(searchString, position);
-        return lastIndex !== -1 && lastIndex === position;
-    };
-}
-
 /**
  * Cap
  *
@@ -59,6 +46,20 @@ if (!String.prototype.endsWith) {
  */
 function capitalizeFirst(string) {
     return string.substring(0, 1).toUpperCase() + string.substring(1);
+}
+
+function arrayEquals(a, b) {
+    if (a.length != b.length) {
+        return false;
+    }
+
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 export default function CPArtwork(_width, _height) {
@@ -265,12 +266,12 @@ export default function CPArtwork(_width, _height) {
      * @param {string} layerType
      */
     this.addLayer = function(layerType) {
-        var
+        let
             parentGroup,
             newLayerIndex,
             newLayer;
         
-        if (curLayer instanceof CPLayerGroup) {
+        if (curLayer instanceof CPLayerGroup && curLayer.expanded) {
             parentGroup = curLayer;
             newLayerIndex = curLayer.layers.length; 
         } else {
@@ -365,17 +366,49 @@ export default function CPArtwork(_width, _height) {
      * @param {int} toIndex
      */
     this.relocateLayer = function(layer, toGroup, toIndex) {
-        var
-            fromIndex = layer.parent.indexOf(layer);
-
-        if (layer && toGroup && toIndex >= 0 && (toIndex < fromIndex || toIndex > fromIndex + 1)) {
+        if (layer && toGroup && !toGroup.hasAncestor(layer)) {
             addUndo(new CPActionRelocateLayer(layer, toGroup, toIndex));
         }
     };
 
+	/**
+     *
+     * @param {CPLayer} layer
+     * @param {boolean} visible
+     */
     this.setLayerVisibility = function(layer, visible) {
-        if (layer.visible != visible) {
+        let
+            layers = [];
+
+        if (!layer.ancestorsAreVisible()) {
+            // Assume the user wants to make this layer visible by revealing its hidden ancestors (as well as the layer)
+            for (let node = layer; node != null; node = node.parent) {
+                if (!node.visible) {
+                    layers.push(node);
+                }
+            }
+            addUndo(new CPActionChangeLayerVisible(layers, true));
+        } else if (layer.visible != visible) {
             addUndo(new CPActionChangeLayerVisible(layer, visible));
+        }
+    };
+
+	/**
+     * Expand or collapse the given layer group.
+     *
+     * @param {CPLayerGroup} group
+     * @param {boolean} expand - True to expand, false to collapse
+     */
+    this.expandLayerGroup = function(group, expand) {
+        if (group.expanded != expand) {
+            group.expanded = expand;
+
+            if (!expand && curLayer.hasAncestor(group)) {
+                // Don't allow the selected layer to get hidden in the group
+                this.setActiveLayer(group);
+            }
+
+            callListenersLayerChange();
         }
     };
 
@@ -1627,7 +1660,7 @@ export default function CPArtwork(_width, _height) {
      * Ensures that the state of the current layer has been stored in undoBuffer so it can be undone later.
      */
     function prepareForLayerUndo() {
-        if (!undoBufferInvalidRegion.isEmpty()) {
+        if (!undoBufferInvalidRegion.isEmpty() && curLayer instanceof CPImageLayer) {
             //console.log("Copying " + undoBufferInvalidRegion + " to the undo buffer");
             undoBuffer.copyBitmapRect(curLayer.image, undoBufferInvalidRegion.left, undoBufferInvalidRegion.top, undoBufferInvalidRegion);
             undoBufferInvalidRegion.makeEmpty();
@@ -2216,15 +2249,13 @@ export default function CPArtwork(_width, _height) {
             var
                 newSelectedLayer;
 
-            /* Attempt to select the layer on top of the one that was removed, otherwise the one underneath,
+            /* Attempt to select the layer underneath the one that was removed, otherwise the one on top,
              * otherwise the group that contained the layer.
              */
-            if (oldIndex < oldGroup.layers.length) {
-                newSelectedLayer = oldGroup.layers[oldIndex];
-            } else if (oldGroup.layers.length == 0) {
+            if (oldGroup.layers.length == 0) {
                 newSelectedLayer = layer.parent;
             } else {
-                newSelectedLayer = oldGroup.layers[oldIndex - 1];
+                newSelectedLayer = oldGroup.layers[Math.max(oldIndex - 1, 0)];
             }
 
             invalidateFusion();
@@ -2364,51 +2395,43 @@ export default function CPArtwork(_width, _height) {
     function CPActionRelocateLayer(layer, toGroup, toIndex) {
         var
             fromGroup = layer.parent,
-            fromIndex = fromGroup.indexOf(layer),
-            wasClipped = layer.clip;
+            fromBelowLayer = fromGroup.layers[fromGroup.indexOf(layer) + 1],
+            toBelowLayer = toGroup.layers[toIndex],
+
+            wasClipped = layer instanceof CPImageLayer && layer.clip;
 
         /**
          * Move the layer to the given index in the given group, releasing the layer clip if appropriate.
          *
-         * @param {CPLayer} layer
-         * @param {CPLayerGroup} toGroup
-         * @param {int} toIndex
+         * @param {CPLayer} layer - The layer to move
+         * @param {CPLayerGroup} toGroup - The group to move it to
+         * @param {?CPLayer} belowLayer - The layer to insert the layer underneath, or null to insert at the top of the group.
          */
-        function relocateLayerInternal(layer, toGroup, toIndex) {
+        function relocateLayerInternal(layer, toGroup, belowLayer) {
             var
-                fromIndex = layer.parent.indexOf(layer),
+                wasClippedTo;
 
-                clippedTo;
-
-            if (layer instanceof CPImageLayer && layer.clip) {
-                clippedTo = layer.getClippingBase();
+            if (layer instanceof CPImageLayer) {
+                wasClippedTo = layer.getClippingBase();
             } else {
-                clippedTo = null;
+                wasClippedTo = null;
             }
 
-            if (layer.parent.removeLayerAtIndex(fromIndex)) {
-                var
-                    adjustedTo = toIndex;
+            layer.parent.removeLayer(layer);
 
-                // If removing the layer caused the destination point to be renumbered, follow that new position
-                if (adjustedTo > fromIndex) {
-                    adjustedTo--;
-                }
+            var
+                destIndex = toGroup.indexOf(belowLayer);
 
-                toGroup.insertLayer(adjustedTo, layer);
+            toGroup.insertLayer(destIndex == -1 ? toGroup.layers.length : destIndex, layer);
 
-                // Release the layer clip if we move the layer somewhere it won't be clipped on its original base
-                if (layer instanceof CPImageLayer && clippedTo && layer.getClippingBase() != clippedTo) {
-                    layer.clip = false;
-                }
+            // Release the layer clip if we move the layer somewhere it won't be clipped on its original base
+            if (layer instanceof CPImageLayer && wasClippedTo && layer.getClippingBase() != wasClippedTo) {
+                layer.clip = false;
             }
         }
 
         this.undo = function() {
-            if (toIndex < fromIndex)
-                relocateLayerInternal(layer, fromGroup, fromIndex + 1);
-            else
-                relocateLayerInternal(layer, fromGroup, fromIndex);
+            relocateLayerInternal(layer, fromGroup, fromBelowLayer);
 
             if (wasClipped) {
                 layer.clip = true;
@@ -2421,8 +2444,9 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            relocateLayerInternal(layer, toGroup, toIndex);
+            relocateLayerInternal(layer, toGroup, toBelowLayer);
 
+            // TODO if moving to a collapsed group, select the group rather than the layer
             that.setActiveLayer(layer);
 
             invalidateFusion();
@@ -2439,9 +2463,12 @@ export default function CPArtwork(_width, _height) {
         propertyName = capitalizeFirst(propertyName);
 
         var
-            ChangeAction = function(layer, newValue) {
-                this.layer = layer;
-                this.from = layer["get" + propertyName]();
+            ChangeAction = function(layers, newValue) {
+                if (!Array.isArray(layers)) {
+                    layers = [layers];
+                }
+                this.layers = layers;
+                this.from = this.layers.map(layer => layer["get" + propertyName]());
                 this.to = newValue;
 
                 this.redo();
@@ -2451,27 +2478,27 @@ export default function CPArtwork(_width, _height) {
         ChangeAction.prototype.constructor = ChangeAction;
 
         ChangeAction.prototype.undo = function () {
-            this.layer["set" + propertyName](this.from);
+            this.layers.forEach((layer, index) => layer["set" + propertyName](this.from[index]));
 
             if (invalidatesFusion) {
                 invalidateFusion();
             }
 
-            callListenersLayerChange(this.layer);
+            this.layers.forEach(layer => callListenersLayerChange(layer));
         };
 
         ChangeAction.prototype.redo = function () {
-            this.layer["set" + propertyName](this.to);
+            this.layers.forEach(layer => layer["set" + propertyName](this.to));
 
             if (invalidatesFusion) {
                 invalidateFusion();
             }
 
-            callListenersLayerChange(this.layer);
+            this.layers.forEach(layer => callListenersLayerChange(layer));
         };
 
         ChangeAction.prototype.merge = function (u) {
-            if (u instanceof ChangeAction && this.layer == u.layer) {
+            if (u instanceof ChangeAction && arrayEquals(this.layers, u.layers)) {
                 this.to = u.to;
                 return true;
             }
@@ -2479,7 +2506,12 @@ export default function CPArtwork(_width, _height) {
         };
 
         ChangeAction.prototype.noChange = function () {
-            return this.from == this.to;
+            for (var i = 0; i < this.from.length; i++) {
+                if (this.from[i] != this.to) {
+                    return false;
+                }
+            }
+            return true;
         };
 
         return ChangeAction;

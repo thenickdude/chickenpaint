@@ -20,6 +20,12 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+// core-js Polyfills for the features we use
+import "core-js/es6/symbol";
+import "core-js/es6/promise";
+import "core-js/fn/array/iterator";
+import "core-js/fn/string/ends-with";
+
 import CPBrushInfo from "./engine/CPBrushInfo";
 import CPArtwork from "./engine/CPArtwork";
 import CPResourceLoader from "./engine/CPResourceLoader";
@@ -36,7 +42,6 @@ import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
 import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPGridDialog";
 import CPSendDialog from "./gui/CPSendDialog";
-
 
 import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported} from "./util/CPPolyfill";
 import CPColor from "./util/CPColor";
@@ -451,6 +456,12 @@ export default function ChickenPaint(options) {
             CPLayerMergeAll: {
                 action: function () {
                     that.artwork.mergeAllLayers();
+                },
+                modifies: {document: true}
+            },
+            CPExpandLayerGroup: {
+                action: function (e) {
+                    that.artwork.expandLayerGroup(e.group, e.expand);
                 },
                 modifies: {document: true}
             },

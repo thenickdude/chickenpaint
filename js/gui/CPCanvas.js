@@ -28,7 +28,6 @@ import {throttle} from "../util/throttle-debounce";
 import CPPolygon from "../util/CPPolygon";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
 import CPVector from "../util/CPVector";
-import CPSVGPathTranspiler from "../util/CPSVGPathTranspiler";
 
 import ChickenPaint from "../ChickenPaint";
 
@@ -36,6 +35,7 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
+import CPLayerGroup from "../engine/CPLayerGroup";
 
 function CPModeStack() {
     this.modes = [];
@@ -1724,7 +1724,11 @@ export default function CPCanvas(controller) {
         var
             activeLayer = artwork.getActiveLayer();
 
-        if (!activeLayer.visible) {
+        if (activeLayer instanceof CPLayerGroup) {
+            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! You can't draw on a group", "layer");
+
+            return false;
+        } else if (!(activeLayer.visible && activeLayer.ancestorsAreVisible())) {
             controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! This layer is currently hidden", "layer");
 
             return false;
