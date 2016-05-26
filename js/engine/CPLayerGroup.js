@@ -96,6 +96,16 @@ CPLayerGroup.prototype.removeLayerAtIndex = function(index) {
 	return layer;
 };
 
+CPLayerGroup.prototype.setLayerAtIndex = function(index, layer) {
+	var
+		oldLayer = this.layers[index];
+
+	layer.parent = this;
+	this.layers[index] = layer;
+
+	return oldLayer;
+};
+
 /**
  * Get the index of the given layer in this group, or -1 if the layer is not in the group.
  * 
@@ -106,18 +116,29 @@ CPLayerGroup.prototype.indexOf = function(layer) {
 	return this.layers.indexOf(layer);
 };
 
+function sum(a, b) {
+	return a + b;
+}
+
 /**
  * Get an approximation of the number of bytes of memory used by this layer.
  *
  * @returns {number}
  */
 CPLayerGroup.prototype.getMemoryUsed = function() {
-	var
-		used = 0;
-
-	for (let layer in this.layers) {
-		used += layer.getMemoryUsed();
-	}
-
-	return used;
+	return this.layers.map(layer => layer.getMemoryUsed()).reduce(sum, 0);
 };
+
+CPLayerGroup.prototype.clone = function() {
+	var
+		result = new CPLayerGroup(this.name, this.blendMode);
+
+	CPLayer.prototype.copyFrom.call(result, this);
+
+	result.expanded = this.expanded;
+	result.layers = this.layers.map(layer => layer.clone());
+	result.layers.forEach(layer => layer.parent = result);
+
+	return result;
+};
+

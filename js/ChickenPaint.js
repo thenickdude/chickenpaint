@@ -373,7 +373,10 @@ export default function ChickenPaint(options) {
                         setMode(ChickenPaint.M_TRANSFORM);
                     }
                 },
-                modifies: {mode: true}
+                modifies: {mode: true},
+                allowed: function() {
+                    //TODO
+                }
             },
             CPTransformAccept: {
                 action: function () {
@@ -451,7 +454,19 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.mergeDown();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: function() {
+                    return that.artwork.isMergeDownAllowed();
+                }
+            },
+            CPGroupMerge: {
+                action: function () {
+                    that.artwork.mergeGroup();
+                },
+                modifies: {document: true},
+                allowed: function() {
+                    return that.artwork.isMergeGroupAllowed();
+                }
             },
             CPLayerMergeAll: {
                 action: function () {
@@ -469,13 +484,15 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.fill(that.getCurColorRgb() | 0xff000000);
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPClear: {
                 action: function () {
                     that.artwork.clear();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPSelectAll: {
                 action: function () {
@@ -495,50 +512,58 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.hFlip();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true // TODO
             },
             CPVFlip: {
                 action: function () {
                     that.artwork.vFlip();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true //TODO
             },
             CPMNoise: {
                 action: function () {
                     that.artwork.monochromaticNoise();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPCNoise: {
                 action: function () {
                     that.artwork.colorNoise();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPFXBoxBlur: {
                 action: function () {
                     showBoxBlurDialog();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPFXInvert: {
                 action: function () {
                     that.artwork.invert();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
 
             CPCut: {
                 action: function () {
                     that.artwork.cutSelection();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPCopy: {
                 action: function () {
                     that.artwork.copySelection();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPCopyMerged: {
                 action: function () {
@@ -608,7 +633,8 @@ export default function ChickenPaint(options) {
                 action: function() {
                     that.artwork.createClippingMask();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                requiresDrawable: true
             },
             CPReleaseClippingMask: {
                 action: function() {
@@ -739,6 +765,8 @@ export default function ChickenPaint(options) {
     };
 
     ToolChangeAction.prototype.modifies = {mode: true, tool: true};
+
+    ToolChangeAction.prototype.requiresDrawable = true;
 
     function ModeChangeAction(modeNum) {
         this.modeNum = modeNum;
@@ -925,6 +953,9 @@ export default function ChickenPaint(options) {
     /**
      * Not all saving actions will be supported (depending on what options we're configured with). Use this function
      * to check for support for a given action.
+     *
+     * @param {string} actionName
+     * @returns {boolean}
      */
     this.isActionSupported = function(actionName) {
         if (actions[actionName]) {
@@ -942,6 +973,24 @@ export default function ChickenPaint(options) {
         }
 
         return false;
+    };
+
+	/**
+     * Check if a given action is allowed at the moment (e.g. in the current mode and with the current layer selected).
+     *
+     * @param actionName
+     */
+    this.isActionAllowed = function(actionName) {
+        var 
+            action = actions[actionName];
+        
+        if (!action) {
+            return false;
+        } else if (typeof action.allowed == "function") {
+            return action.allowed();
+        } else {
+            return !action.requiresDrawable || this.artwork.isActiveLayerDrawable();
+        }
     };
 
     this.showLayerNotification = function(layer, message, where) {

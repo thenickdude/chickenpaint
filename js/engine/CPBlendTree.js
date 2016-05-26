@@ -64,13 +64,14 @@ CPBlendNode.prototype.addChild = function(child) {
  * Analyses a stack of layers in a CPLayerGroup and optimizes a drawing scheme for them. Then you can reuse that
  * scheme to blend all the layers together.
  *
- * @param {CPLayerGroup} drawingRootGroup - The root of the layer stack. The group's alpha must be 100 and blending mode LM_NORMAL.
- * @param {numeric} width - Dimension of layers and final merge result.
- * @param {numeric} height
+ * @param {CPLayerGroup} drawingRootGroup - The root of the layer stack.
+ * @param {int} width - Dimension of layers and final merge result.
+ * @param {int} height
+ * @param {boolean} requireOpaqueFusion - Set to true if the result must have alpha 100.
  *
  * @constructor
  */
-export default function CPBlendTree(drawingRootGroup, width, height) {
+export default function CPBlendTree(drawingRootGroup, width, height, requireOpaqueFusion) {
 	const
 		DEBUG = true;
 
@@ -237,7 +238,7 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 					alpha: 100
 				});
 				drawTree.image.clearAll(0);
-			} else if (drawTree.alpha < 100) {
+			} else if (requireOpaqueFusion && drawTree.alpha < 100) {
 				/* e.g. document only contains one layer and it is transparent. Caller needs fusion to be opaque, so add
 				 * a group node to render the multiplied alpha version to. (The group node is used to hold a merge buffer
 				 * for us).
@@ -246,7 +247,8 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 					oldNode = drawTree;
 
 				drawTree = new CPBlendNode();
-				drawTree.blendMode = CPBlend.LM_NORMAL;
+				drawTree.blendMode = oldNode.blendMode;
+				drawTree.alpha = 100;
 				drawTree.image = allocateBuffer();
 				drawTree.addChild(oldNode);
 			}
@@ -364,17 +366,17 @@ export default function CPBlendTree(drawingRootGroup, width, height) {
 	}
 	
 	/**
-	 * Blend the layers in the tree within the given rectangle and return the resulting image.
+	 * Blend the layers in the tree within the given rectangle and return the result.
 	 * 
 	 * @param {CPRect} blendArea - Rectangle to blend within
-	 * @returns CPColorBmp
+	 * @returns An object with blendMode, alpha and image (CPColorBmp) properties.
 	 */
 	this.blendTree = function(blendArea) {
 		if (DEBUG) {
 			console.log("Fusing layers...");
 		}
 
-		return blendTreeInternal(drawTree, blendArea).image;
+		return blendTreeInternal(drawTree, blendArea);
 	};
 
 }

@@ -89,7 +89,7 @@ export default function CPArtwork(_width, _height) {
 	    /**
          * The currently selected layer (should never be null)
          *
-         * @type {CPLayer}
+         * @type {(CPLayer|CPLayerGroup)}
          */
         curLayer,
         
@@ -109,7 +109,7 @@ export default function CPArtwork(_width, _height) {
          *
          * @type {CPBlendTree}
          */
-        blendTree = new CPBlendTree(layersRoot, _width, _height),
+        blendTree = new CPBlendTree(layersRoot, _width, _height, true),
 
         /**
          * A copy of the current layer's data that can be used for undo operations.
@@ -338,14 +338,31 @@ export default function CPArtwork(_width, _height) {
     this.duplicateLayer = function() {
         addUndo(new CPActionDuplicateLayer(curLayer));
     };
-    
-    this.mergeDown = function() {
-        var
-            layerIndex = curLayer.parent.indexOf(curLayer),
-            underLayer;
 
-        if (layerIndex > 0 && curLayer instanceof CPImageLayer && (underLayer = curLayer.parent.layers[layerIndex - 1]) instanceof CPImageLayer) {
+    this.isMergeDownAllowed = function() {
+        var
+            layerIndex = curLayer.parent.indexOf(curLayer);
+
+        return layerIndex > 0 && curLayer instanceof CPImageLayer && curLayer.parent.layers[layerIndex - 1] instanceof CPImageLayer;
+    };
+
+    this.mergeDown = function() {
+        if (this.isMergeDownAllowed()) {
+            var
+                layerIndex = curLayer.parent.indexOf(curLayer),
+                underLayer = curLayer.parent.layers[layerIndex - 1];
+
             addUndo(new CPActionMergeDownLayer(curLayer, underLayer));
+        }
+    };
+
+    this.isMergeGroupAllowed = function() {
+        return curLayer instanceof CPLayerGroup;
+    };
+
+    this.mergeGroup = function() {
+        if (this.isMergeGroupAllowed()) {
+            addUndo(new CPActionMergeGroup(curLayer));
         }
     };
 
@@ -1496,7 +1513,7 @@ export default function CPArtwork(_width, _height) {
 
             prepareForFusion();
 
-            fusion = blendTree.blendTree(fusionArea);
+            fusion = blendTree.blendTree(fusionArea).image;
 
             //console.log("Fusion done.\n");
 
@@ -1580,6 +1597,10 @@ export default function CPArtwork(_width, _height) {
      */
     this.getActiveLayer = function() {
         return curLayer;
+    };
+
+    this.isActiveLayerDrawable = function() {
+        return curLayer instanceof CPImageLayer;
     };
 
 	/**
@@ -1880,7 +1901,7 @@ export default function CPArtwork(_width, _height) {
     }
 
     /**
-     * Move the currently selected layer data by the given offset.
+     * Move the currently selected layer by the given offset.
      *
      * @param {int} offsetX
      * @param {int} offsetY
@@ -2181,14 +2202,14 @@ export default function CPArtwork(_width, _height) {
     CPActionAddLayer.prototype.constructor = CPActionAddLayer;
 
 	/**
-     * TODO implement duplicate for layer groups.
+     * Make a copy of the currently selected layer and add the new layer on top of the current layer.
      * 
-     * @param {CPImageLayer} sourceLayer
+     * @param {CPLayer} sourceLayer
      * @constructor
      */
     function CPActionDuplicateLayer(sourceLayer) {
         var
-            newLayer = new CPImageLayer(that.width, that.height, "");
+            newLayer = sourceLayer.clone();
 
         this.undo = function() {
             newLayer.parent.removeLayer(newLayer);
@@ -2209,7 +2230,6 @@ export default function CPArtwork(_width, _height) {
                 newLayerName += COPY_SUFFIX;
             }
             
-            newLayer.copyFrom(sourceLayer);
             newLayer.name = newLayerName;
 
             sourceLayer.parent.insertLayer(sourceLayer.parent.indexOf(sourceLayer) + 1, newLayer);
@@ -2273,8 +2293,60 @@ export default function CPArtwork(_width, _height) {
     
     CPActionRemoveLayer.prototype = Object.create(CPUndo.prototype);
     CPActionRemoveLayer.prototype.constructor = CPActionRemoveLayer;
-	
-	/**
+
+    /**
+     * Merge the given group together to form an image layer.
+     *
+     * @param {CPLayerGroup} layerGroup
+     * @constructor
+     */
+    function CPActionMergeGroup(layerGroup) {
+        var
+            oldGroupIndex = layerGroup.parent.indexOf(layerGroup),
+            mergedLayer = new CPImageLayer(that.width, that.height, "");
+
+        this.undo = function() {
+            layerGroup.parent.setLayerAtIndex(oldGroupIndex, layerGroup);
+
+            invalidateFusion();
+            callListenersLayerChange();
+
+            that.setActiveLayer(layerGroup);
+        };
+
+        this.redo = function() {
+            var
+                blendTree = new CPBlendTree(layerGroup, that.width, that.height, false);
+            
+            blendTree.buildTree();
+            
+            var 
+                blended = blendTree.blendTree(that.getBounds());
+
+            mergedLayer.name = layerGroup.name;
+            mergedLayer.alpha = blended.alpha;
+            mergedLayer.copyImageFrom(blended.image); // TODO elide copy by replacing the image field instead
+            mergedLayer.blendMode = blended.blendMode;
+
+            layerGroup.parent.setLayerAtIndex(oldGroupIndex, mergedLayer);
+
+            invalidateFusion();
+            callListenersLayerChange();
+
+            that.setActiveLayer(mergedLayer);
+        };
+
+        this.getMemoryUsed = function(undone, param) {
+            return undone ? 0 : mergedLayer.getMemoryUsed() + layerGroup.getMemoryUsed();
+        };
+
+        this.redo();
+    }
+
+    CPActionMergeGroup.prototype = Object.create(CPUndo.prototype);
+    CPActionMergeGroup.prototype.constructor = CPActionMergeGroup;
+
+    /**
      * Merge the top layer onto the under layer and remove the top layer.
      *
      * @param {CPImageLayer} topLayer
@@ -2337,28 +2409,21 @@ export default function CPArtwork(_width, _height) {
         var 
             oldActiveLayer = that.getActiveLayer(),
             oldRootLayers = layersRoot.layers.slice(0), // Clone old layers array
-            flattenedLayer = null;
+            flattenedLayer = new CPImageLayer(that.width, that.height, "");
 
         this.undo = function() {
-            // Keep a reference to the flattened layer so we can restore its identity for redo
-            flattenedLayer = layersRoot.layers[0];
-
             layersRoot.layers = oldRootLayers.slice(0);
-            that.setActiveLayer(oldActiveLayer);
 
             invalidateFusion();
             callListenersLayerChange();
+            that.setActiveLayer(oldActiveLayer);
         };
 
         this.redo = function() {
-            if (!flattenedLayer) {
-                var
-                    oldFusion = that.fusionLayers();
+            var
+                oldFusion = that.fusionLayers();
 
-                flattenedLayer = new CPImageLayer(that.width, that.height, "");
-
-                flattenedLayer.copyImageFrom(oldFusion);
-            }
+            flattenedLayer.copyImageFrom(oldFusion);
 
             layersRoot.clearLayers();
 
@@ -2374,8 +2439,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.getMemoryUsed = function(undone, param) {
-            // TODO
-            return 0;
+            return oldRootLayers.map(layer => layer.getMemoryUsed()).reduce((a, b) => a + b, 0);
         };
 
         this.redo();

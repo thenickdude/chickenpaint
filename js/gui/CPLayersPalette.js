@@ -439,8 +439,11 @@ export default function CPLayersPalette(controller) {
                 }
             }
 
-            layerNameDiv.innerText = layer.name;
-            layerNameDiv.setAttribute("title", layer.name);
+            let
+                layerName = (layer.name && layer.name.length > 0) ? layer.name : "(unnamed " + (layer instanceof CPLayerGroup ? "group" : "layer") + ")";
+
+            layerNameDiv.innerText = layerName;
+            layerNameDiv.setAttribute("title", layerName);
             layerNameDiv.className = "chickenpaint-layer-name";
 
             blendDiv.innerText = CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%";

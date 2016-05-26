@@ -141,3 +141,7 @@ CPLayer.prototype.ancestorsAreVisible = function() {
 CPLayer.prototype.hasAncestor = function(group) {
     return this.parent == group || this.parent && this.parent.hasAncestor(group);
 };
+
+CPLayer.prototype.clone = function() {
+    throw "Pure virtual CPLayer.clone() call";
+};

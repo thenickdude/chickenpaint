@@ -139,6 +139,12 @@ var
                     title: "Merges the currently selected layer with the one directly below it"
                 },
                 {
+                    name: "Merge group",
+                    action: "CPGroupMerge",
+                    mnemonic: "G",
+                    title: "Merges the contents of the selected group"
+                },
+                {
                     name: "Merge all layers",
                     action: "CPLayerMergeAll",
                     mnemonic: "A",
@@ -400,6 +406,10 @@ export default function CPMainMenu(controller, mainGUI) {
             action = target.data('action'),
             checkbox = target.data('checkbox'),
             selected;
+
+        if (target.parent().hasClass("disabled")) {
+            return;
+        }
         
         if (checkbox) {
             target.toggleClass("selected");
@@ -433,6 +443,15 @@ export default function CPMainMenu(controller, mainGUI) {
         
         return shortcut;
     }
+
+    function updateDisabledStates(menuElem) {
+        $("[data-action]", menuElem).each(function() {
+            var
+                action = this.getAttribute("data-action");
+
+            $(this).parent().toggleClass("disabled", !controller.isActionAllowed(action));
+        })
+    }
     
     function recurseFillMenu(menuElem, entries) {
         menuElem.append(entries.map(function(entry) {
@@ -455,6 +474,8 @@ export default function CPMainMenu(controller, mainGUI) {
                 $(".dropdown-toggle", entryElem).dropdown();
 
                 entryElem.on("show.bs.dropdown", function() {
+                    updateDisabledStates(entryElem);
+
                     /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
                      * document *while the menu is open!*
                      */

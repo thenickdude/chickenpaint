@@ -26,7 +26,7 @@ import CPLayer from './CPLayer';
 /**
  * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().
  *
- * @param {int} width
+ * @param {int} width - Width of the bitmap, or zero to start the bitmap out empty (if you're planning to call copyFrom())
  * @param {int} height
  * @param {String} name
  *
@@ -36,8 +36,11 @@ import CPLayer from './CPLayer';
 export default function CPImageLayer(width, height, name) {
 	CPLayer.call(this, name);
 
-	this.image = new CPColorBmp(width, height);
-
+	if (width > 0 && height > 0) {
+		this.image = new CPColorBmp(width, height);
+	} else {
+		this.image = null;
+	}
 	this.clip = false;
 }
 
@@ -51,7 +54,7 @@ CPImageLayer.prototype.constructor = CPImageLayer;
  */
 CPImageLayer.prototype.clone = function() {
 	var
-		result = new CPImageLayer(this.image.width, this.image.height, this.name);
+		result = new CPImageLayer(0, 0, this.name);
 
 	result.copyFrom(this);
 
@@ -66,7 +69,11 @@ CPImageLayer.prototype.copyFrom = function(layer) {
 	CPLayer.prototype.copyFrom.call(this, layer);
 
 	this.clip = layer.clip;
-	this.image.copyDataFrom(layer.image);
+	if (!this.image) {
+		this.image = layer.image.clone();
+	} else {
+		this.image.copyDataFrom(layer.image);
+	}
 };
 
 /**
