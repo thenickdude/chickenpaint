@@ -133,7 +133,14 @@ export default function CPLayersPalette(controller) {
             NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,
             NOTIFICATION_HIDE_DELAY_MIN = 3000,
             LAYER_DRAG_START_THRESHOLD = 5, // Pixels we have to move a layer before it shows as "dragging"
-            LAYER_IN_GROUP_INDENT = 16;
+            LAYER_IN_GROUP_INDENT = 16,
+
+            CLASSNAME_LAYER_ACTIVE = "active",
+            CLASSNAME_LAYER_VISIBLE = "chickenpaint-layer-visible",
+            CLASSNAME_LAYER_HIDDEN = "chickenpaint-layer-hidden",
+            CLASSNAME_LAYER_GROUP_EXPANDED = "chickenpaint-layer-group-expanded",
+            CLASSNAME_LAYER_GROUP_COLLAPSED = "chickenpaint-layer-group-collapsed",
+            CLASSNAME_LAYER_GROUP_TOGGLE = "chickenpaint-layer-group-toggle";
 
         var 
             isDragging = false, isDraggingReally = false,
@@ -404,7 +411,7 @@ export default function CPLayersPalette(controller) {
             layerDiv.className = "chickenpaint-layer list-group-item";
 
             if (layer == artwork.getActiveLayer()) {
-                layerDiv.className += " active";
+                layerDiv.className += " " + CLASSNAME_LAYER_ACTIVE;
             }
 
             eyeDiv.className = "chickenpaint-layer-eye";
@@ -413,8 +420,10 @@ export default function CPLayersPalette(controller) {
             }
             
             if (layer.visible) {
+                layerDiv.className += " " + CLASSNAME_LAYER_VISIBLE;
                 eyeDiv.appendChild(createIcon("fa-eye"));
             } else {
+                layerDiv.className += " " + CLASSNAME_LAYER_HIDDEN;
                 eyeDiv.appendChild(createIcon("fa-eye-slash"));
             }
 
@@ -426,15 +435,13 @@ export default function CPLayersPalette(controller) {
                     iconsDiv.appendChild(createIcon("fa-level-down fa-flip-horizontal"))
                 }
             } else if (layer instanceof CPLayerGroup) {
-                layerDiv.classname += " chickenpaint-layer-group";
+                layerDiv.className += " chickenpaint-layer-group";
 
                 if (layer.expanded) {
-                    layerDiv.classname += " chickenpaint-layer-group-expanded";
-                    iconsDiv.appendChild(createIcon("fa-chevron-down chickenpaint-layer-group-chevron"));
+                    layerDiv.className += " " + CLASSNAME_LAYER_GROUP_EXPANDED;
                     iconsDiv.appendChild(createIcon("fa-folder-open-o chickenpaint-layer-group-toggle"));
                 } else {
-                    layerDiv.classname += " chickenpaint-layer-group-collapsed";
-                    iconsDiv.appendChild(createIcon("fa-chevron-right chickenpaint-layer-group-chevron"));
+                    layerDiv.className += " " + CLASSNAME_LAYER_GROUP_COLLAPSED;
                     iconsDiv.appendChild(createIcon("fa-folder-o chickenpaint-layer-group-toggle"));
                 }
             }
@@ -522,7 +529,7 @@ export default function CPLayersPalette(controller) {
                             layer: layer,
                             visible: !layer.visible
                         });
-                    } else if (layer instanceof CPLayerGroup && $(e.target).closest(".chickenpaint-layer-group-toggle").length) {
+                    } else if (layer instanceof CPLayerGroup && $(e.target).closest("." + CLASSNAME_LAYER_GROUP_TOGGLE).length) {
                         controller.actionPerformed({
                             action: "CPExpandLayerGroup",
                             group: layer,
@@ -632,15 +639,6 @@ export default function CPLayersPalette(controller) {
         }
 
         /**
-         * Repaint just the specified layer
-         */
-        /*this.rebuildLayer = function(displayIndex, layer) {
-            if (displayIndex > -1) {
-                $(getElemFromDisplayIndex(displayIndex)).replaceWith(buildLayer(displayIndex, layer));
-            }
-        };*/
-
-        /**
          * Rebuild all layer elements from the cached linearizedLayers list
          */
         this.buildLayers = function() {
@@ -648,9 +646,7 @@ export default function CPLayersPalette(controller) {
             linearizedLayers = artwork.getLayersRoot().getLinearizedLayerList(true);
 
             var
-                layerElems = linearizedLayers.map(function(layer, index) {
-                    return buildLayer(index, layer);
-                }),
+                layerElems = linearizedLayers.map((layer, index) => buildLayer(index, layer)),
 
                 layerFrag = document.createDocumentFragment();
 
@@ -663,6 +659,34 @@ export default function CPLayersPalette(controller) {
             layerContainer.appendChild(layerFrag);
 
             updateDropMarker();
+        };
+
+	    /**
+         * The properties of the given layer have changed, rebuild it.
+         *
+         * @param {CPLayer} layer
+         */
+        this.layerChanged = function(layer) {
+            var
+                index = getDisplayIndexFromLayer(layer),
+                layerElem = $(getElemFromDisplayIndex(index));
+
+            if (layer instanceof CPLayerGroup && (layer.expanded != $(layerElem).hasClass(CLASSNAME_LAYER_GROUP_EXPANDED) || layer.visible != $(layerElem).hasClass(CLASSNAME_LAYER_VISIBLE))) {
+                // When these properties change, we might have to rebuild the group's children too, so just rebuild everything
+                this.buildLayers();
+            } else {
+                layerElem.replaceWith(buildLayer(index, layer));
+            }
+        };
+
+	    /**
+         * Call when the selected layer changes.
+         * 
+         * @param {CPLayer} newLayer
+         */
+        this.activeLayerChanged = function(newLayer) {
+            $(".chickenpaint-layer", layerContainer).removeClass(CLASSNAME_LAYER_ACTIVE);
+            $(getElemFromDisplayIndex(getDisplayIndexFromLayer(newLayer))).addClass(CLASSNAME_LAYER_ACTIVE);
         };
 
         this.resize = function() {
@@ -868,17 +892,7 @@ export default function CPLayersPalette(controller) {
         });
     }
 
-	/**
-     * Called when a layer (or all layers) have been updated and we should rebuild/repaint them.
-     *
-     * @param {?CPLayer} layer
-     */
-    function onChangeLayer(layer) {
-        artwork = this;
-
-        // Fetch and rebuild all layers
-        layerWidget.resize();
-
+    function updateActiveLayerControls() {
         var
             activeLayer = artwork.getActiveLayer();
 
@@ -889,14 +903,48 @@ export default function CPLayersPalette(controller) {
         if (activeLayer.getBlendMode() != parseInt(blendCombo.value, 10)) {
             blendCombo.value = activeLayer.getBlendMode();
         }
+    }
 
+    /**
+     * Called when a layer has been added/removed.
+     */
+    function onChangeStructure() {
+        artwork = this;
+
+        // Fetch and rebuild all layers
+        layerWidget.resize();
+
+        updateActiveLayerControls();
+    }
+
+	/**
+     * Called when the properties of one layer has been updated and we should rebuild/repaint it.
+     *
+     * @param {CPLayer} layer
+     */
+    function onChangeLayer(layer) {
+        artwork = this;
+
+        layerWidget.layerChanged(layer);
         layerWidget.dismissNotification();
+
+        updateActiveLayerControls();
+    }
+
+	/**
+     * Called when the selected layer changes.
+     *
+     * @param {CPLayer} oldLayer
+     * @param {CPLayer} newLayer
+     */
+    function onChangeActiveLayer(oldLayer, newLayer) {
+        layerWidget.activeLayerChanged(newLayer);
+        updateActiveLayerControls();
     }
 
     function CPRenameField() {
         var
             layer = null,
-            layerElem = null,
             origName = "",
 
             textBox = document.createElement("input"),
@@ -921,10 +969,6 @@ export default function CPLayersPalette(controller) {
             }
 
             this.hide();
-        };
-
-        this.isVisible = function() {
-            return !!layer;
         };
         
         this.show = function(_layer, _layerElem) {
@@ -1052,10 +1096,12 @@ export default function CPLayersPalette(controller) {
 
     body.appendChild(addRemoveContainer);
 
+    artwork.on("changeActiveLayer", onChangeActiveLayer);
     artwork.on("changeLayer", onChangeLayer);
+    artwork.on("changeStructure", onChangeStructure);
 
     // Set initial values
-    onChangeLayer.call(artwork, null);
+    onChangeStructure.call(artwork);
 }
 
 CPLayersPalette.prototype = Object.create(CPPalette.prototype);

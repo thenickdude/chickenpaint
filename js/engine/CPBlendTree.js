@@ -25,13 +25,16 @@ import CPLayer from './CPLayer';
 import CPLayerGroup from './CPLayerGroup';
 import CPColorBmp from "./CPColorBmp";
 import CPImageLayer from "./CPImageLayer";
+import CPRect from "../util/CPRect";
 
 /**
  *
+ * @param {int} width
+ * @param {int} height
  * @param {(CPLayer|CPLayerGroup)} layer
  * @constructor
  */
-function CPBlendNode(layer) {
+function CPBlendNode(width, height, layer) {
 	if (layer) {
 		this.isGroup = layer instanceof CPLayerGroup;
 		this.image = layer.image;
@@ -44,7 +47,13 @@ function CPBlendNode(layer) {
 		this.alpha = 100;
 	}
 
+	/**
+	 * For group nodes, this is the rectangle of data which is dirty (due to changes in child nodes) and needs to be re-merged
+	 * @type {CPRect}
+	 */
+	this.dirtyRect = new CPRect(0, 0, width, height);
 	this.layers = [];
+	this.parent = null;
 
 	// When true, we should clip the layers in this group to the bottom layer of the stack
 	this.clip = false;
@@ -56,6 +65,7 @@ function CPBlendNode(layer) {
  */
 CPBlendNode.prototype.addChild = function(child) {
 	if (child) {
+		child.parent = this;
 		this.layers.push(child);
 	}
 };
@@ -86,7 +96,12 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		 *
  		 * @type {CPColorBmp[]}
 		 */
-		spareBuffers = [];
+		spareBuffers = [],
+
+		/**
+		 * @type {Map}
+		 */
+		nodeForLayer = new Map();
 
 	function allocateBuffer() {
 		if (spareBuffers.length > 0) {
@@ -128,6 +143,20 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	}
 
 	/**
+	 *
+	 * @param {CPImageLayer} layer
+	 * @returns {CPBlendNode}
+	 */
+	function createNodeForLayer(layer) {
+		var
+			node = new CPBlendNode(width, height, layer);
+
+		nodeForLayer.set(layer, node);
+
+		return node;
+	}
+
+	/**
 	 * Build a CPBlendNode for this CPLayerGroup and return it, or null if this group doesn't draw anything.
 	 *
 	 * This is achieved by the following algorithm:
@@ -148,36 +177,36 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	 */
 	function buildTreeInternal(layerGroup) {
 		var
-			treeNode = new CPBlendNode(layerGroup);
+			treeNode = new CPBlendNode(width, height, layerGroup);
 
 		for (let i = 0; i < layerGroup.layers.length; i++) {
 			let
-				child = layerGroup.layers[i],
+				childLayer = layerGroup.layers[i],
 				nextChild = layerGroup.layers[i + 1];
 
 			// Do we need to create a clipping group?
-			if (child instanceof CPImageLayer && nextChild && nextChild.clip) {
+			if (childLayer instanceof CPImageLayer && nextChild && nextChild.clip) {
 				let
-					clippingGroupNode = new CPBlendNode(),
+					clippingGroupNode = new CPBlendNode(width, height),
 					j;
 
-				clippingGroupNode.blendMode = child.blendMode;
+				clippingGroupNode.blendMode = childLayer.blendMode;
 				clippingGroupNode.alpha = 100;
 				clippingGroupNode.clip = true;
 
-				clippingGroupNode.addChild(new CPBlendNode(child));
+				clippingGroupNode.addChild(createNodeForLayer(childLayer));
 
 				for (j = i + 1; j < layerGroup.layers.length; j++) {
 					if (layerGroup.layers[j].clip) {
 						if (layerGroup.layers[j].getEffectiveAlpha() > 0) {
-							clippingGroupNode.addChild(new CPBlendNode(layerGroup.layers[j]));
+							clippingGroupNode.addChild(createNodeForLayer(layerGroup.layers[j]));
 						}
 					} else {
 						break;
 					}
 				}
 
-				if (child.getEffectiveAlpha() > 0) {
+				if (childLayer.getEffectiveAlpha() > 0) {
 					treeNode.addChild(optimizeGroupNode(clippingGroupNode));
 				}
 
@@ -186,12 +215,12 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				continue;
 			}
 
-			if (child.getEffectiveAlpha() == 0) {
+			if (childLayer.getEffectiveAlpha() == 0) {
 				continue;
 			}
-			if (child instanceof CPLayerGroup) {
+			if (childLayer instanceof CPLayerGroup) {
 				let
-					childGroupNode = buildTreeInternal(child);
+					childGroupNode = buildTreeInternal(childLayer);
 
 				// If the group ended up being non-empty...
 				if (childGroupNode) {
@@ -213,12 +242,38 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				}
 			} else {
 				// It's a layer, so we'll add it to our tree node
-				treeNode.addChild(new CPBlendNode(child));
+				treeNode.addChild(createNodeForLayer(childLayer));
 			}
 		}
 
 		return optimizeGroupNode(treeNode);
 	}
+
+	/**
+	 * @param {CPBlendNode} node
+	 * @param {CPRect} rect
+	 */
+	function invalidateNodeRect(node, rect) {
+		if (node) {
+			node.dirtyRect.union(rect);
+
+			invalidateNodeRect(node.parent, rect);
+		}
+	}
+
+	/**
+	 * Mark an area of a layer as updated (so next time fusion is called, it must be redrawn).
+	 *
+	 * @param {CPLayer} layer
+	 * @param {CPRect} rect
+	 */
+	this.invalidateLayerRect = function(layer, rect) {
+		var
+			node = nodeForLayer.get(layer);
+
+		// Don't bother invalidating the layer itself because its node will not be a blend group
+		invalidateNodeRect(node.parent, rect);
+	};
 
 	/**
 	 * Build and optimize the blend tree if it was not already built.
@@ -232,7 +287,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				 * No layers in the image to draw, so clear a buffer to transparent and use that.
 				 * This doesn't need to be fast because documents with no visible layers are not useful at all.
 				 */
-				drawTree = new CPBlendNode({
+				drawTree = new CPBlendNode(width, height, {
 					image: allocateBuffer(),
 					blendMode: CPBlend.LM_NORMAL,
 					alpha: 100
@@ -246,7 +301,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				var
 					oldNode = drawTree;
 
-				drawTree = new CPBlendNode();
+				drawTree = new CPBlendNode(width, height);
 				drawTree.blendMode = oldNode.blendMode;
 				drawTree.alpha = 100;
 				drawTree.image = allocateBuffer();
@@ -284,6 +339,28 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		if (drawTree) {
 			resetTreeInternal(drawTree);
 			drawTree = null;
+			nodeForLayer.clear();
+		}
+	};
+
+	/**
+	 * Call when a property of the layer has changed (opacity, blendMode, visibility)
+	 *
+	 * @param {CPLayer} layer
+	 */
+	this.layerPropertyChanged = function(layer) {
+		var
+			layerNode = nodeForLayer.get(layer);
+
+		/*
+		 * If only the blendMode changed, we won't have to reconstruct our blend tree, since none of our
+		 * tree structure depends on this (as long as it isn't "passthrough").
+		 */
+		if (!layerNode
+				|| layerNode.visible != layer.visible || layerNode.alpha != layer.alpha || (layerNode.blendMode == CPBlend.LM_PASSTHROUGH) != (layer.blendMode == CPBlend.LM_PASSTHROUGH)) {
+			this.resetTree();
+		} else {
+			layerNode.blendMode = layer.blendMode;
 		}
 	};
 
@@ -293,21 +370,27 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	 * @param {?CPBlendNode} treeNode
 	 * @param blendArea
 	 */
-	function blendTreeInternal(treeNode, blendArea) {
+	function blendTreeInternal(treeNode) {
 		if (!treeNode || !treeNode.isGroup) {
 			// Tree is empty, or it's just a layer and doesn't need further blending
 			return treeNode;
 		}
-		
+
 		let
+			blendArea = treeNode.dirtyRect,
 			groupIsEmpty = true,
 			fusionHasTransparency = true;
+
+		if (blendArea.isEmpty()) {
+			// Nothing to draw!
+			return treeNode;
+		}
 
 		// Avoid using an iterator here because Chrome refuses to optimize when a "finally" clause is present (caused by Babel iterator codegen)
 		for (let i = 0; i < treeNode.layers.length; i++) {
 			let
 				child = treeNode.layers[i],
-				childNode = blendTreeInternal(child, blendArea);
+				childNode = blendTreeInternal(child);
 			
 			if (groupIsEmpty) {
 				if (childNode.alpha == 100) {
@@ -322,13 +405,13 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 					} else {
 						// Otherwise use the CPBlend version which only blends the specified rectangle
 						if (DEBUG) {
-							console.log("CPBlend.replaceOntoFusionWithOpaqueLayer(treeNode.image, childNode.image, 100, blendArea);");
+							console.log(`CPBlend.replaceOntoFusionWithOpaqueLayer(treeNode.image, childNode.image, 100, ${blendArea});`);
 						}
 						CPBlend.replaceOntoFusionWithOpaqueLayer(treeNode.image, childNode.image, 100, blendArea);
 					}
 				} else {
 					if (DEBUG) {
-						console.log(`CPBlend.replaceOntoFusionWithTransparentLayer(treeNode.image, childNode.image, childNode.alpha == ${childNode.alpha}, blendArea);`);
+						console.log(`CPBlend.replaceOntoFusionWithTransparentLayer(treeNode.image, childNode.image, childNode.alpha == ${childNode.alpha}, ${blendArea});`);
 					}
 					CPBlend.replaceOntoFusionWithTransparentLayer(treeNode.image, childNode.image, childNode.alpha, blendArea);
 				}
@@ -337,7 +420,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				fusionHasTransparency = fusionHasTransparency && treeNode.image.hasAlphaInRect(blendArea);
 
 				if (DEBUG) {
-					console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, blendArea);`);
+					console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, ${blendArea});`);
 				}
 
 				CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency, childNode.image, childNode.alpha, childNode.blendMode, blendArea);
@@ -349,12 +432,12 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 
 					if (baseLayer.alpha < 100) {
 						if (DEBUG) {
-							console.log(`CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, treeNode.layers[0].alpha == ${treeNode.layers[0].alpha}, blendArea);`);
+							console.log(`CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, treeNode.layers[0].alpha == ${treeNode.layers[0].alpha}, ${blendArea});`);
 						}
 						CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, baseLayer.alpha, blendArea);
 					} else {
 						if (DEBUG) {
-							console.log(`CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, blendArea);`);
+							console.log(`CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, ${blendArea});`);
 						}
 						CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, blendArea);
 					}
@@ -362,21 +445,22 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			}
 		}
 
+		treeNode.dirtyRect.makeEmpty();
+
 		return treeNode;
 	}
 	
 	/**
-	 * Blend the layers in the tree within the given rectangle and return the result.
+	 * Blend the layers in the tree and return the resulting image.
 	 * 
-	 * @param {CPRect} blendArea - Rectangle to blend within
 	 * @returns An object with blendMode, alpha and image (CPColorBmp) properties.
 	 */
-	this.blendTree = function(blendArea) {
+	this.blendTree = function() {
 		if (DEBUG) {
 			console.log("Fusing layers...");
 		}
 
-		return blendTreeInternal(drawTree, blendArea);
+		return blendTreeInternal(drawTree);
 	};
 
 }

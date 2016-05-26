@@ -1040,7 +1040,7 @@ export default function CPCanvas(controller) {
             firstMove = false;
 
         this.mouseDown = function(e, button, pressure) {
-            if (!this.capture && button == BUTTON_PRIMARY && !key.isPressed("space") && shouldDrawToThisLayer()) {
+            if (!this.capture && button == BUTTON_PRIMARY && !key.isPressed("space") && checkCurrentLayerIsVisible()) {
                 lastPoint = coordToDocument({x: mouseX, y: mouseY});
 
                 copyMode = e.altKey;
@@ -1714,6 +1714,23 @@ export default function CPCanvas(controller) {
         }
     }
 
+    function checkCurrentLayerIsVisible() {
+        var
+            activeLayer = artwork.getActiveLayer();
+
+        if (!(activeLayer.visible && activeLayer.ancestorsAreVisible())) {
+            controller.showLayerNotification(activeLayer, "Whoops! This layer is currently hidden", "layer");
+
+            return false;
+        } else if (activeLayer.alpha == 0) {
+            controller.showLayerNotification(activeLayer, "Whoops! This layer's opacity is currently 0%", "opacity");
+
+            return false;
+        }
+
+        return true;
+    }
+
 	/**
      * Check that we should be drawing to the current layer, and let the user know if they are being blocked by the
      * layer settings.
@@ -1725,20 +1742,12 @@ export default function CPCanvas(controller) {
             activeLayer = artwork.getActiveLayer();
 
         if (activeLayer instanceof CPLayerGroup) {
-            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! You can't draw on a group", "layer");
-
-            return false;
-        } else if (!(activeLayer.visible && activeLayer.ancestorsAreVisible())) {
-            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! This layer is currently hidden", "layer");
-
-            return false;
-        } else if (activeLayer.alpha == 0) {
-            controller.showLayerNotification(artwork.getActiveLayer(), "Whoops! This layer's opacity is currently 0%", "opacity");
+            controller.showLayerNotification(activeLayer, "Whoops! You can't draw on a group", "layer");
 
             return false;
         }
 
-        return true;
+        return checkCurrentLayerIsVisible();
     }
 
     /**
@@ -2304,7 +2313,7 @@ export default function CPCanvas(controller) {
         /* Copy pixels that changed in the document into our local fused image cache */
         if (!artworkUpdateRegion.isEmpty()) {
             var
-                imageData = artwork.fusionLayers();
+                imageData = artwork.fusionLayers().getImageData();
             
             artworkCanvasContext.putImageData(
                 imageData, 0, 0, artworkUpdateRegion.left, artworkUpdateRegion.top, artworkUpdateRegion.getWidth(), artworkUpdateRegion.getHeight()

@@ -21,6 +21,7 @@
 */
 
 import CPLayer from './CPLayer';
+import CPRect from "../util/CPRect";
 
 /**
  *
@@ -142,3 +143,19 @@ CPLayerGroup.prototype.clone = function() {
 	return result;
 };
 
+/**
+ * Get a rectangle that encloses any non-transparent pixels in the layer within the given initialBounds (or an empty
+ * rect if the pixels inside the given bounds are 100% transparent).
+ *
+ * @param {CPRect} initialBounds - The rect to search within
+ *
+ * @returns {CPRect}
+ */
+CPLayerGroup.prototype.getNonTransparentBounds = function(initialBounds) {
+	var
+		nonTransparentRect = new CPRect(0, 0, 0, 0);
+	
+	this.layers.forEach(layer => nonTransparentRect.union(layer.getNonTransparentBounds(initialBounds)));
+
+	return nonTransparentRect;
+};

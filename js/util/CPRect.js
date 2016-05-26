@@ -195,6 +195,15 @@ CPRect.prototype.translate = function(x, y) {
     return this;
 };
 
+CPRect.prototype.getTranslated = function(x, y) {
+    var
+        result = this.clone();
+
+    result.translate(x, y);
+
+    return result;
+}
+
 CPRect.prototype.moveTo = function(x, y) {
     this.translate(x - this.left, y - this.top);
 };
@@ -309,14 +318,15 @@ CPRect.subtract = function(rectsA, rectsB) {
     let
         result = rectsA.slice(0);
 
-    for (let rectB of rectsB) {
+    for (let i = 0; i < rectsB.length; i++) {
         // Don't re-examine any new rectangles we push onto the result, since we know they don't intersect this rectB:
         let
+            rectB = rectsB[i],
             resultLength = result.length;
 
-        for (var i = 0; i < resultLength; i++) {
+        for (var j = 0; j < resultLength; j++) {
             let
-                rectA = result[i];
+                rectA = result[j];
 
             if (!rectA) {
                 continue;
@@ -346,13 +356,13 @@ CPRect.subtract = function(rectsA, rectsB) {
 
                 // Replace the original rectangle in the array with the new fragments
                 if (newRects.length > 0) {
-                    result[i] = newRects[0];
+                    result[j] = newRects[0];
 
                     for (var j = 1; j < newRects.length; j++) {
                         result.push(newRects[j]);
                     }
                 } else {
-                    result[i] = null;
+                    result[j] = null;
                 }
             }
         }

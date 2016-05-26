@@ -32,16 +32,24 @@ function createImageData(width, height) {
     return context.createImageData(width, height);
 }
 
-//
-// A 32bpp bitmap class (one byte per channel in RGBA order)
-//
-
+/**
+ * A 32bpp bitmap class (one byte per channel in RGBA order)
+ *
+ * @param {(ImageData|int)} width - The width of the bitmap, or the ImageData object to use by reference
+ * @param {int} height - The height of the bitmap
+ */
 export default function CPColorBmp(width, height) {
-    CPBitmap.call(this, width, height);
+    if (width instanceof ImageData) {
+        CPBitmap.call(this, width.width, width.height);
 
-    // The ImageData object that holds the image data
-    this.imageData = createImageData(this.width, this.height);
-    
+        this.imageData = width;
+    } else {
+        CPBitmap.call(this, width, height);
+
+        // The ImageData object that holds the image data
+        this.imageData = createImageData(this.width, this.height);
+    }
+
     // The bitmap data array (one byte per channel in RGBA order)
     this.data = this.imageData.data;
 }
@@ -98,7 +106,7 @@ CPColorBmp.prototype.getPixel = function(x, y) {
 /**
  * Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
  *
- * @param {CPColorBmp} bmp
+ * @param {CPColorBmp|ImageData} bmp
  * @param {CPRect} rect
  *
  * @returns {Uint8Array}
@@ -154,6 +162,11 @@ CPColorBmp.prototype.setRectXOR = function(buffer, rect) {
 
 /** 
  * Copy the rectangle at srcRect from bmp onto this image at (dstX, dstY).
+ *
+ * @param {CPColorBmp} bmp
+ * @param {int} dstX
+ * @param {int} dstY
+ * @param {CPRect} srcRect
  */ 
 CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
     var
@@ -173,22 +186,18 @@ CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
     } else {
         var
             dstIndex = this.offsetOfPixel(dstRect.left, dstRect.top),
-            srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
-
             dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
+
+            srcIndex = bmp.offsetOfPixel.call(bmp, srcRect.left, srcRect.top),
             srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL;
 
-        for (var y = 0; y < h; y++) {
-            for (var x = 0; x < w; x++) {
+        for (var y = 0; y < h; y++, srcIndex += srcYSkip, dstIndex += dstYSkip) {
+            for (var x = 0; x < w; x++, srcIndex += CPColorBmp.BYTES_PER_PIXEL, dstIndex += CPColorBmp.BYTES_PER_PIXEL) {
                 this.data[dstIndex] = bmp.data[srcIndex];
                 this.data[dstIndex + 1] = bmp.data[srcIndex + 1];
                 this.data[dstIndex + 2] = bmp.data[srcIndex + 2];
                 this.data[dstIndex + 3] = bmp.data[srcIndex + 3];
-                dstIndex += 4;
-                srcIndex += 4;
             }
-            srcIndex += srcYSkip;
-            dstIndex += dstYSkip;
         }
     }
 };
@@ -213,6 +222,10 @@ CPColorBmp.prototype.copyAlphaFrom = function(bmp, rect) {
     }
 };
 
+/**
+ *
+ * @param {CPColorBmp} bmp
+ */
 CPColorBmp.prototype.copyDataFrom = function(bmp) {
     if (bmp.width != this.width || bmp.height != this.height) {
         this.width = bmp.width;
@@ -632,7 +645,7 @@ CPColorBmp.prototype.boxBlur = function(rect, radiusX, radiusY) {
 };
 
 CPColorBmp.prototype.offsetOfPixel = function(x, y) {
-    return ((y * this.width + x) * CPColorBmp.BYTES_PER_PIXEL) | 0;
+    return ((y * this.width + x) * 4) | 0;
 };
 
 CPColorBmp.prototype.getMemorySize = function() {
@@ -650,7 +663,7 @@ CPColorBmp.prototype.loadFromImage = function(image) {
     
     imageContext.globalCompositeOperation = "copy";
     imageContext.drawImage(image, 0, 0);
-    
+
     this.imageData = imageContext.getImageData(0, 0, this.width, this.height);
     this.data = this.imageData.data;
 };
@@ -686,6 +699,11 @@ CPColorBmp.prototype.clearAll = function(color) {
     }
 };
 
+/**
+ *
+ * @param {CPRect} rect
+ * @param {int} color
+ */
 CPColorBmp.prototype.clearRect = function(rect, color) {
     rect = this.getBounds().clipTo(rect);
 
@@ -1304,24 +1322,38 @@ function decodeBase64PNGDataURL(url) {
 }
 
 /**
- * Get the image as a PNG image.
+ * Get the image as Canvas.
  *
  * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied, or 0 to leave
  * unrotated.
+ *
+ * @returns {HTMLCanvasElement}
  */
-CPColorBmp.prototype.getAsPNG = function(rotation) {
+CPColorBmp.prototype.getAsCanvas = function(rotation) {
     var
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d");
 
-    // First draw our image data onto a canvas...
     canvas.width = this.imageData.width;
     canvas.height = this.imageData.height;
 
     canvasContext.putImageData(this.imageData, 0, 0);
 
     // Rotate it if needed
-    canvas = getRotatedCanvas(canvas, rotation || 0);
+    return getRotatedCanvas(canvas, rotation || 0);
+}
+
+/**
+ * Get the image as a PNG image.
+ *
+ * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied, or 0 to leave
+ * unrotated.
+ *
+ * @returns {string}
+ */
+CPColorBmp.prototype.getAsPNG = function(rotation) {
+    var
+        canvas = this.getAsCanvas(rotation);
 
     return decodeBase64PNGDataURL(canvas.toDataURL('image/png'));
 };
@@ -1363,4 +1395,21 @@ CPColorBmp.prototype.hasAlphaInRect = function(rect) {
  */
 CPColorBmp.prototype.hasAlpha = function() {
     return this.hasAlphaInRect(this.getBounds());
+};
+
+window.debugImage = function(image) {
+    if (image instanceof CPColorBmp) {
+        image = image.getAsCanvas();
+    } else if (image instanceof CanvasRenderingContext2D) {
+        image = image.canvas;
+    } else if (!(image instanceof HTMLCanvasElement)) {
+        console.error("Bad image type");
+    }
+
+    var
+        imgTag = document.createElement("img");
+
+    imgTag.src = image.toDataURL('image/png');
+
+    document.body.appendChild(imgTag);
 };

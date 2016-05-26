@@ -407,22 +407,20 @@ export default function CPMainMenu(controller, mainGUI) {
             checkbox = target.data('checkbox'),
             selected;
 
-        if (target.parent().hasClass("disabled")) {
-            return;
+        if (controller.isActionAllowed(action)) {
+            if (checkbox) {
+                target.toggleClass("selected");
+                selected = target.hasClass("selected");
+            } else {
+                selected = false;
+            }
+
+            controller.actionPerformed({
+                action: action,
+                checkbox: checkbox,
+                selected: selected
+            });
         }
-        
-        if (checkbox) {
-            target.toggleClass("selected");
-            selected = target.hasClass("selected");
-        } else {
-            selected = false;
-        }
-        
-        controller.actionPerformed({
-            action: action,
-            checkbox: checkbox,
-            selected: selected
-        });
     }
     
     function presentShortcutText(shortcut) {

@@ -48,6 +48,10 @@ function capitalizeFirst(string) {
     return string.substring(0, 1).toUpperCase() + string.substring(1);
 }
 
+function sum(a, b) {
+    return a + b;
+}
+
 function arrayEquals(a, b) {
     if (a.length != b.length) {
         return false;
@@ -98,7 +102,8 @@ export default function CPArtwork(_width, _height) {
         curSelection = new CPRect(0, 0, 0, 0),
 
         /**
-         * Points to a scratch buffer which represents all the layers merged together.
+         * Points to a buffer which represents all the layers merged together. Since this buffer might be an actual
+         * layer from the image stack, you must not write to it through here (you'll damage the image).
          *
          * @type {CPColorBmp}
          */
@@ -142,14 +147,7 @@ export default function CPArtwork(_width, _height) {
          * @type {CPRect}
          */
         opacityArea = new CPRect(0, 0, 0, 0),
-
-        /**
-         * The area of dirty layer data that should be merged into the fusion by fusionLayers().
-         *
-         * @type {CPRect}
-         */
-        fusionArea = new CPRect(0, 0, _width, _height),
-
+        
         /**
          * Used by CPUndoPaint to keep track of the area that has been dirtied by layer operations and should be
          * saved for undo.
@@ -177,21 +175,6 @@ export default function CPArtwork(_width, _height) {
         transformInterpolation = "smooth",
 
         that = this;
-    
-    function callListenersUpdateRegion(region) {
-        that.emitEvent("updateRegion", [region]);
-    }
-
-	/**
-     * Notify listeners that the properties of one or all layers have changed.
-     *
-     * @param {?CPLayer} layer
-     */
-    function callListenersLayerChange(layer) {
-        that.emitEvent("changeLayer", [layer]);
-        // Invalidate our drawing stategy
-        blendTree.resetTree();
-    }
 
     // When the selected rectangle changes
     function callListenersSelectionChange() {
@@ -229,15 +212,64 @@ export default function CPArtwork(_width, _height) {
         return curSelection.clone();
     };
 
+    function callListenersUpdateRegion(region) {
+        that.emitEvent("updateRegion", [region]);
+    }
+
     /**
-     * Mark the given rectangle on the canvas as needing to be re-fused (i.e. we've drawn in this region).
+     * Notify listeners that the structure of the document has changed (layers added or removed).
+     */
+    function artworkStructureChanged() {
+        that.emitEvent("changeStructure");
+
+        blendTree.resetTree();
+
+        var
+            rect = that.getBounds();
+
+        undoBufferInvalidRegion.set(rect);
+
+        callListenersUpdateRegion(rect);
+    }
+
+    /**
+     * Notify listeners that the properties of the given layer has changed (opacity, blendmode, etc).
+     *
+     * @param {CPLayer} layer
+     * @param {boolean} noVisibleEffect - If true, notify listeners that the layer has changed but don't redraw anything.
+     *                                    This is useful for properties like "expanded" and "name".
+     */
+    function layerPropertyChanged(layer, noVisibleEffect) {
+        that.emitEvent("changeLayer", [layer]);
+
+        if (!noVisibleEffect) {
+            blendTree.layerPropertyChanged(layer);
+
+            var
+                rect = that.getBounds();
+
+            undoBufferInvalidRegion.set(rect);
+
+            callListenersUpdateRegion(rect);
+        }
+    }
+
+    /**
+     * Mark the given rectangle on the layer as needing to be re-fused (i.e. we've drawn in this region).
      * Listeners are notified about our updated canvas region.
      *
-     * @param {CPRect} rect Rect to invalidate. Must have all integer co-ordinates, and the rectangle must be contained
-     * within the artwork bounds (elsewise the 
+     * @param {(CPLayer|CPLayer[])} layer - Layer or layers to invalidate
+     * @param {CPRect} rect - Rect to invalidate. Must have all integer co-ordinates, and the rectangle must be contained
+     * within the artwork bounds.
      */
-    function invalidateFusionRect(rect) {
-        fusionArea.union(rect);
+    function invalidateLayerRect(layer, rect) {
+        if (blendTree) {
+            if (Array.isArray(layer)) {
+                layer.forEach(l => blendTree.invalidateLayerRect(l, rect));
+            } else {
+                blendTree.invalidateLayerRect(layer, rect);
+            }
+        }
 
         // This updated area will need to be updated in our undo buffer later
         undoBufferInvalidRegion.union(rect);
@@ -245,13 +277,15 @@ export default function CPArtwork(_width, _height) {
         callListenersUpdateRegion(rect);
     }
 
-    /**
-     * Mark the entire canvas as needing to be re-fused (we've drawn to the whole canvas)
+	/**
+     * Call when the entire layer's pixels have been updated, to mark it to be redrawn.
+     *
+     * @param {CPLayer} layer
      */
-    function invalidateFusion() {
-        invalidateFusionRect(new CPRect(0, 0, that.width, that.height));
+    function invalidateLayer(layer) {
+        invalidateLayerRect(layer, that.getBounds());
     }
-    
+
     this.setHasUnsavedChanges = function(value) {
         hasUnsavedChanges = value;
     };
@@ -303,8 +337,7 @@ export default function CPArtwork(_width, _height) {
             curLayer = layer;
         }
         
-        invalidateFusion();
-        callListenersLayerChange();
+        artworkStructureChanged();
     };
     
     /**
@@ -425,7 +458,7 @@ export default function CPArtwork(_width, _height) {
                 this.setActiveLayer(group);
             }
 
-            callListenersLayerChange();
+            layerPropertyChanged(group, true);
         }
     };
 
@@ -547,7 +580,7 @@ export default function CPArtwork(_width, _height) {
 
         this.paintDabImplementation(srcRect, dstRect, dab);
         
-        invalidateFusionRect(dstRect);
+        invalidateLayerRect(curLayer, dstRect);
     };
 
     function CPBrushToolSimpleBrush() {
@@ -1499,28 +1532,21 @@ export default function CPArtwork(_width, _height) {
     };
 
     /**
-     * Merge together the visible layers and return the resulting ImageData for display to the screen.
+     * Merge together the visible layers and return the resulting image for display to the screen.
      * 
      * The image is cached, so repeat calls are cheap.
+     *
+     * @returns {CPColorBmp}
      */
     this.fusionLayers = function() {
-        // Is there anything to update from last call?
-        if (!fusionArea.isEmpty()) {
-            // The current brush renders out its buffers to the layer stack for us
-            mergeOpacityBuffer(curColor, false);
+        // The current brush renders out its buffers to the layer stack for us
+        mergeOpacityBuffer(curColor, false);
 
-            //console.log("Fusion start...");
+        prepareForFusion();
 
-            prepareForFusion();
-
-            fusion = blendTree.blendTree(fusionArea).image;
-
-            //console.log("Fusion done.\n");
-
-            fusionArea.makeEmpty();
-        }
+        fusion = blendTree.blendTree().image;
         
-        return fusion.getImageData();
+        return fusion;
     };
 
 	/**
@@ -1555,11 +1581,10 @@ export default function CPArtwork(_width, _height) {
                 oldLayer = curLayer;
             
             curLayer = newLayer;
-            
-            callListenersLayerChange(oldLayer); // Old layer has now been deselected
-            callListenersLayerChange(newLayer); // New layer has now been selected
 
             invalidateLayerUndo();
+
+            this.emitEvent("changeActiveLayer", [oldLayer, newLayer]);
         }
     };
     
@@ -1759,7 +1784,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.floodFill(~~x, ~~y, curColor | 0xff000000);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
 
     this.gradientFill = function(fromX, fromY, toX, toY, gradientPoints) {
@@ -1776,7 +1801,7 @@ export default function CPArtwork(_width, _height) {
         }
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
 
     this.fill = function(color) {
@@ -1784,12 +1809,12 @@ export default function CPArtwork(_width, _height) {
             r = this.getSelectionAutoSelect();
 
         prepareForLayerUndo();
-        undoArea = r;
+        undoArea = r.clone();
 
         curLayer.image.clearRect(r, color);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayerRect(curLayer, r);
     };
 
     this.clear = function() {
@@ -1806,7 +1831,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.copyRegionHFlip(r, undoBuffer);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
 
     this.vFlip = function() {
@@ -1819,7 +1844,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.copyRegionVFlip(r, undoBuffer);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
 
     this.monochromaticNoise = function() {
@@ -1832,7 +1857,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.fillWithNoise(r);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
 
     this.colorNoise = function() {
@@ -1845,7 +1870,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.fillWithColorNoise(r);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
     
     this.invert = function() {
@@ -1858,7 +1883,7 @@ export default function CPArtwork(_width, _height) {
         curLayer.image.invert(r);
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
     
     this.boxBlur = function(radiusX, radiusY, iterations) {
@@ -1873,7 +1898,7 @@ export default function CPArtwork(_width, _height) {
         }
 
         addUndo(new CPUndoPaint());
-        invalidateFusion();
+        invalidateLayer(curLayer);
     };
     
     this.rectangleSelection = function(r) {
@@ -2148,12 +2173,12 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             this.layer.image.setRectXOR(data, rect);
-            invalidateFusionRect(rect);
+            invalidateLayerRect(this.layer, rect);
         };
 
         this.redo = function() {
             this.layer.image.setRectXOR(data, rect);
-            invalidateFusionRect(rect);
+            invalidateLayerRect(this.layer, rect);
         };
 
         this.getMemoryUsed = function(undone, param) {
@@ -2180,19 +2205,15 @@ export default function CPArtwork(_width, _height) {
             var
                 newSelection = parentGroup.layers[newLayerIndex - 1] || parentGroup.layers[0] || parentGroup;
 
+            artworkStructureChanged();
             that.setActiveLayer(newSelection);
-
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo = function() {
             parentGroup.insertLayer(newLayerIndex, newLayer);
             
+            artworkStructureChanged();
             that.setActiveLayer(newLayer);
-            
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo();
@@ -2213,10 +2234,9 @@ export default function CPArtwork(_width, _height) {
 
         this.undo = function() {
             newLayer.parent.removeLayer(newLayer);
+
+            artworkStructureChanged();
             that.setActiveLayer(sourceLayer);
-            
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo = function() {
@@ -2234,10 +2254,8 @@ export default function CPArtwork(_width, _height) {
 
             sourceLayer.parent.insertLayer(sourceLayer.parent.indexOf(sourceLayer) + 1, newLayer);
 
+            artworkStructureChanged();
             that.setActiveLayer(newLayer);
-            
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo();
@@ -2257,9 +2275,7 @@ export default function CPArtwork(_width, _height) {
         this.undo = function() {
             oldGroup.insertLayer(oldIndex, layer);
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(layer);
         };
 
@@ -2278,9 +2294,7 @@ export default function CPArtwork(_width, _height) {
                 newSelectedLayer = oldGroup.layers[Math.max(oldIndex - 1, 0)];
             }
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(newSelectedLayer);
         };
 
@@ -2308,9 +2322,7 @@ export default function CPArtwork(_width, _height) {
         this.undo = function() {
             layerGroup.parent.setLayerAtIndex(oldGroupIndex, layerGroup);
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(layerGroup);
         };
 
@@ -2330,9 +2342,7 @@ export default function CPArtwork(_width, _height) {
 
             layerGroup.parent.setLayerAtIndex(oldGroupIndex, mergedLayer);
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(mergedLayer);
         };
 
@@ -2367,10 +2377,8 @@ export default function CPArtwork(_width, _height) {
             group.insertLayer(mergedIndex, topLayer);
             group.insertLayer(mergedIndex, underLayer);
 
+            artworkStructureChanged();
             that.setActiveLayer(topLayer);
-
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo = function() {
@@ -2389,9 +2397,7 @@ export default function CPArtwork(_width, _height) {
             // And put our new one in its place
             group.insertLayer(underIndex, mergedLayer);
 
-            invalidateFusion();
-            callListenersLayerChange();
-    
+            artworkStructureChanged();
             that.setActiveLayer(mergedLayer);
         };
 
@@ -2414,8 +2420,7 @@ export default function CPArtwork(_width, _height) {
         this.undo = function() {
             layersRoot.layers = oldRootLayers.slice(0);
 
-            invalidateFusion();
-            callListenersLayerChange();
+            artworkStructureChanged();
             that.setActiveLayer(oldActiveLayer);
         };
 
@@ -2432,10 +2437,8 @@ export default function CPArtwork(_width, _height) {
 
             layersRoot.addLayer(flattenedLayer);
 
+            artworkStructureChanged();
             that.setActiveLayer(flattenedLayer);
-
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.getMemoryUsed = function(undone, param) {
@@ -2501,20 +2504,16 @@ export default function CPArtwork(_width, _height) {
                 layer.clip = true;
             }
 
+            artworkStructureChanged();
             that.setActiveLayer(layer);
-
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo = function() {
             relocateLayerInternal(layer, toGroup, toBelowLayer);
 
             // TODO if moving to a collapsed group, select the group rather than the layer
+            artworkStructureChanged();
             that.setActiveLayer(layer);
-
-            invalidateFusion();
-            callListenersLayerChange();
         };
 
         this.redo();
@@ -2523,7 +2522,7 @@ export default function CPArtwork(_width, _height) {
     CPActionRelocateLayer.prototype = Object.create(CPUndo.prototype);
     CPActionRelocateLayer.prototype.constructor = CPActionRelocateLayer;
 
-    function generateLayerPropertyChangeAction(propertyName, invalidatesFusion) {
+    function generateLayerPropertyChangeAction(propertyName, invalidatesLayer) {
         propertyName = capitalizeFirst(propertyName);
 
         var
@@ -2544,21 +2543,13 @@ export default function CPArtwork(_width, _height) {
         ChangeAction.prototype.undo = function () {
             this.layers.forEach((layer, index) => layer["set" + propertyName](this.from[index]));
 
-            if (invalidatesFusion) {
-                invalidateFusion();
-            }
-
-            this.layers.forEach(layer => callListenersLayerChange(layer));
+            this.layers.forEach(layer => layerPropertyChanged(layer, !invalidatesLayer));
         };
 
         ChangeAction.prototype.redo = function () {
             this.layers.forEach(layer => layer["set" + propertyName](this.to));
 
-            if (invalidatesFusion) {
-                invalidateFusion();
-            }
-
-            this.layers.forEach(layer => callListenersLayerChange(layer));
+            this.layers.forEach(layer => layerPropertyChanged(layer, !invalidatesLayer));
         };
 
         ChangeAction.prototype.merge = function (u) {
@@ -2624,44 +2615,115 @@ export default function CPArtwork(_width, _height) {
      */
     function CPActionTransformSelection(srcRect, affineTransform, interpolation) {
         var
-            fromSelection = that.getSelection(),
-            dstRect = null,
+            thisAction = this,
 
-            tempCanvas = document.createElement("canvas"),
-            tempCanvasContext = tempCanvas.getContext("2d"),
+	        /**
+             * @type {CPRect}
+             */
+            fromSelection = that.getSelection(),
+
+            /**
+             * The rectangle we transformed onto in a previous iteration.
+             *
+             * @type {CPRect}
+             */
+            dstRect = new CPRect(0, 0, 0, 0),
+
+	        /**
+             * A copy of the source rectangles from the original layers to use for Canvas drawing operations.
+             *
+             * @type {HTMLCanvasElement[]}
+             */
+            sourceRectCanvas = null,
+	        /**
+             * @type {CanvasRenderingContext2D[]}
+             */
+            sourceRectCanvasContext = null,
 
 	        /**
              * A copy of the original layer within the undoDataRect
              *
-             * @type {CPColorBmp}
+             * @type {CPColorBmp[]}
              */
             undoData,
+
+	        /**
+             * The rectangle of the image that undoData represents
+             * @type {CPRect}
+             */
             undoDataRect,
 
-            // A canvas for composing the transform onto
-            fullUndoCanvas = document.createElement("canvas"),
-            fullUndoCanvasContext = fullUndoCanvas.getContext("2d");
+	        /**
+             * A canvas for composing the transform onto
+             * @type {HTMLCanvasElement}
+             */
+            composeCanvas = null,
+
+	        /**
+             * @type {CanvasRenderingContext2D}
+             */
+            composeCanvasContext = null;
 
         affineTransform = affineTransform.clone();
         interpolation = interpolation || "smooth";
 
+        function expand() {
+            if (undoDataRect.getWidth() < that.width || undoDataRect.getHeight() < that.height) {
+                /*
+                 * We need a complete copy of the layer in undoData to support further redo(). (As we probably previously
+                 * only made a backup copy of the areas we erased using the old transform).
+                 */
+                thisAction.undo();
+
+                undoData = thisAction.imageLayers.map(layer => layer.image.clone());
+                undoDataRect = that.getBounds();
+            }
+        }
+
+        function buildTempCanvasesForRedo() {
+            expand();
+
+            if (!composeCanvas) {
+                composeCanvas = document.createElement("canvas");
+
+                composeCanvas.width = that.width;
+                composeCanvas.height = that.height;
+
+                composeCanvasContext = composeCanvas.getContext("2d");
+                setCanvasInterpolation(composeCanvasContext, interpolation == "smooth");
+
+                sourceRectCanvas = [];
+                sourceRectCanvasContext = [];
+
+                // Make a copy of just the source rectangles in their own canvases so we can transform them layer with Canvas APIs
+                thisAction.imageLayers.forEach(function (layer) {
+                    let
+                        canvas = document.createElement("canvas"),
+                        context = canvas.getContext("2d");
+
+                    canvas.width = srcRect.getWidth();
+                    canvas.height = srcRect.getHeight();
+                    context.putImageData(layer.image.getImageData(), -srcRect.left, -srcRect.top, srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+
+                    sourceRectCanvas.push(canvas);
+                    sourceRectCanvasContext.push(context);
+                });
+            }
+        }
+
         this.undo = function() {
             var
-                layerImage = this.layer.image,
-                invalidateRegion = dstRect.clone(),
-                undoSrcRegion;
+                invalidateRegion = dstRect.getUnion(srcRect),
+                undoSrcRegion = invalidateRegion.getTranslated(-undoDataRect.left, -undoDataRect.top);
 
-            invalidateRegion.union(srcRect);
-            
-            undoSrcRegion = invalidateRegion.clone();
-            undoSrcRegion.translate(-undoDataRect.left, -undoDataRect.top);
+            this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(undoData[index], invalidateRegion.left, invalidateRegion.top, undoSrcRegion));
 
-            layerImage.copyBitmapRect(undoData, invalidateRegion.left, invalidateRegion.top, undoSrcRegion);
+            dstRect.makeEmpty();
 
             that.setSelection(fromSelection);
             that.setActiveLayer(this.layer);
 
-            invalidateFusionRect(invalidateRegion);
+            invalidateLayerRect(this.layer, invalidateRegion);
 
             /*
              * Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
@@ -2671,44 +2733,77 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
+            buildTempCanvasesForRedo();
+
             var
-                layerImage = this.layer.image;
-
-            // Make a fresh copy of the layer into a Canvas to compose onto
-            fullUndoCanvasContext.putImageData(layerImage.getImageData(), 0, 0);
-
-            // Erase the region we moved from
-            fullUndoCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
-
-            setCanvasInterpolation(fullUndoCanvasContext, interpolation == "smooth");
-
-            fullUndoCanvasContext.save();
-
-            // Apply the transform when drawing the transformed fragment
-            fullUndoCanvasContext.setTransform(
-                affineTransform.m[0], affineTransform.m[1], affineTransform.m[2],
-                affineTransform.m[3], affineTransform.m[4], affineTransform.m[5]
-            );
-            fullUndoCanvasContext.drawImage(tempCanvas, srcRect.left, srcRect.top);
-
-            fullUndoCanvasContext.restore();
-
-            // Copy back to the layer data
-            layerImage.setImageData(fullUndoCanvasContext.getImageData(0, 0, layerImage.width, layerImage.height));
-
-            // Invalidate the source and destination regions we touched
-            var
-                invalidateRegion = srcRect.clone(),
+                oldDstRect = dstRect.clone(),
                 dstCorners = srcRect.toPoints();
 
             affineTransform.transformPoints(dstCorners);
 
             dstRect = CPRect.createBoundingBox(dstCorners);
-            dstRect.roundContain().clipTo(layerImage.getBounds());
-            
-            invalidateRegion.union(dstRect);
+            dstRect.roundContain().clipTo(that.getBounds());
 
-            invalidateFusionRect(invalidateRegion);
+            let
+            // The region that'll be different from the undo state after this redo is applied.
+                redoRect = srcRect.getUnion(dstRect),
+            // The region which needs repainting (from the previous redo() and after our redo())
+                invalidateRect = redoRect.getUnion(oldDstRect);
+
+            this.imageLayers.forEach(function(layer, layerIndex) {
+                /*
+                 * Make a fresh copy of the undo into a Canvas to compose the transformed data onto, except the source
+                 * region since we'll just be erasing that.
+                 */
+                let
+                    undoImageData = undoData[layerIndex].getImageData();
+
+                CPRect.subtract(dstRect, srcRect).forEach(rect => {
+                    // The region inside undoData[] that the dstRect corresponds to
+                    let
+                        undoSrcRegion = rect.getTranslated(-undoDataRect.left, -undoDataRect.top);
+
+                    composeCanvasContext.putImageData(undoImageData, undoDataRect.left, undoDataRect.top, undoSrcRegion.left, undoSrcRegion.top, undoSrcRegion.getWidth(), undoSrcRegion.getHeight());
+                });
+
+                // Erase the region we moved from
+                composeCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+
+                composeCanvasContext.save();
+
+                // Apply the transform when drawing the transformed fragment
+                composeCanvasContext.setTransform(
+                    affineTransform.m[0], affineTransform.m[1], affineTransform.m[2],
+                    affineTransform.m[3], affineTransform.m[4], affineTransform.m[5]
+                );
+                composeCanvasContext.drawImage(sourceRectCanvas[layerIndex], srcRect.left, srcRect.top);
+
+                composeCanvasContext.restore();
+
+                // Now apply this to the actual layer data
+
+                // First erase the source area that won't be covered by the dest
+                CPRect.subtract(srcRect, dstRect).forEach(rect => layer.image.clearRect(rect, EMPTY_LAYER_COLOR));
+
+                // Now copy the transformed dest area from the canvas.
+                layer.image.copyBitmapRect(
+                    new CPColorBmp(composeCanvasContext.getImageData(dstRect.left, dstRect.top, dstRect.getWidth(), dstRect.getHeight())),
+                    dstRect.left,
+                    dstRect.top,
+                    new CPRect(0, 0, dstRect.getWidth(), dstRect.getHeight())
+                );
+
+                /* Use the CPColorBmp undo data to erase any leftovers from the previous redo(). We do this
+                 * instead of just copying from the canvas, since Canvas' getImageData/setImageData doesn't round-trip
+                 * (due to premultiplied alpha on some browsers/systems) and we want to avoid damaging areas we don't
+                 * need to touch.
+                 */
+                CPRect.subtract(oldDstRect, [dstRect, srcRect]).forEach(
+                    rect => layer.image.copyBitmapRect(undoData[layerIndex], rect.left, rect.top, rect.getTranslated(-undoDataRect.left, -undoDataRect.top))
+                );
+            });
+
+            invalidateLayerRect(this.imageLayers, invalidateRect);
 
             // Transform the selection rect to enclose the transformed selection
             if (!fromSelection.isEmpty()) {
@@ -2734,19 +2829,7 @@ export default function CPArtwork(_width, _height) {
          * @param {CPTransform} _affineTransform
          */
         this.amend = function(_affineTransform) {
-            var
-                layerImage = this.layer.image;
-
-            this.undo();
-
-            if (undoDataRect.getWidth() < layerImage.width || undoDataRect.getHeight() < layerImage.height) {
-                /*
-                 * We need a complete copy of the layer in undoData to support further redo(). (As we probably previously
-                 * only made a backup copy of the areas we erased using the old transform).
-                 */
-                undoData = layerImage.clone();
-                undoDataRect = layerImage.getBounds();
-            }
+            expand();
 
             affineTransform = _affineTransform.clone();
             this.redo();
@@ -2755,6 +2838,10 @@ export default function CPArtwork(_width, _height) {
         this.setInterpolation = function(newInterpolation) {
             if (newInterpolation != interpolation) {
                 interpolation = newInterpolation;
+
+                if (composeCanvasContext) {
+                    setCanvasInterpolation(composeCanvasContext, interpolation == "smooth");
+                }
 
                 this.undo();
                 this.redo();
@@ -2766,23 +2853,36 @@ export default function CPArtwork(_width, _height) {
          * usage instead of faster revision speed
          */
         this.compact = function() {
-            var
-                layerImage = this.layer.image;
-            
             // If we have a full undo, and we don't need very much area for undo, trim it to just the area we need
-            if (undoDataRect.getWidth() == layerImage.width && undoDataRect.getHeight() == layerImage.height) {
+            if (undoDataRect.getWidth() == that.width && undoDataRect.getHeight() == that.height) {
                 var
                     dirtyRect = srcRect.getUnion(dstRect);
 
-                if (dirtyRect.getArea() * 2 < layerImage.width * layerImage.height) {
+                if (dirtyRect.getArea() * 2 < that.width * that.height) {
                     undoDataRect = dirtyRect;
-                    undoData = undoData.cloneRect(undoDataRect);
+                    undoData = undoData.map(image => image.cloneRect(undoDataRect));
                 }
             }
+
+            // Discard our temporary drawing canvases
+            composeCanvas = null;
+            composeCanvasContext = null;
+            sourceRectCanvas = null;
+            sourceRectCanvasContext = null;
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return undoData.getMemorySize();
+            var
+                result = undoData.map(image => image.getMemorySize()).reduce(sum, 0);
+
+            if (composeCanvas) {
+                result += composeCanvas.width * composeCanvas.height * 4;
+            }
+            if (sourceRectCanvas) {
+                result += sourceRectCanvas.map(canvas => (canvas.width * canvas.height * 4)).reduce(sum, 0);
+            }
+
+            return result;
         };
 
 	    /**
@@ -2813,18 +2913,17 @@ export default function CPArtwork(_width, _height) {
 
         this.layer = that.getActiveLayer();
 
-        let
-            layerImage = this.layer.image;
+        // Only transform image layers
+        if (this.layer instanceof CPImageLayer) {
+            this.imageLayers = [this.layer];
+        } else if (this.layer instanceof CPLayerGroup) {
+            this.imageLayers = this.layer.getLinearizedLayerList(false).filter(layer => layer instanceof CPImageLayer);
+        } else {
+            throw "Unsupported layer type in CPActionTransform command";
+        }
 
-        undoData = layerImage.clone();
-        undoDataRect = layerImage.getBounds();
-        fullUndoCanvas.width = layerImage.width;
-        fullUndoCanvas.height = layerImage.height;
-
-        // Make a copy of just the source rectangle in its own canvas so we have it as an image to be drawn later
-        tempCanvas.width = srcRect.getWidth();
-        tempCanvas.height = srcRect.getHeight();
-        tempCanvasContext.putImageData(undoData.getImageData(), -srcRect.left, -srcRect.top, srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+        undoData = this.imageLayers.map(layer => layer.image.clone());
+        undoDataRect = that.getBounds();
 
         this.redo();
     }
@@ -2847,18 +2946,36 @@ export default function CPArtwork(_width, _height) {
             dstRect = new CPRect(0, 0, 0, 0),
 
 	        /**
-             * A copy of the entire layer
+             * Copy of entire layer contents
              *
-             * @type {CPColorBmp}
+             * @type {CPColorBmp[]}
              */
             fullUndo,
-            srcData = null, // A copy of the original pixels at the srcRect, or null if we use a fullUndo instead
-            dstData = null // A copy of the original pixels at the dstRect, or null
-        ;
+
+	        /**
+             * A copy of the original pixels at the source and destinations for each layer, or null if we use a
+             * fullUndo instead.
+             *
+             * @type {CPColorBmp[]}
+             */
+            srcData = null, dstData = null;
+
+	    /**
+         * All of the image layers we're moving (including those within the selected group).
+         *
+         * @type {CPImageLayer[]}
+         */
+        this.imageLayers = [];
+
+	    /**
+         * The layer we're moving (which might be an image layer or a whole group of layers).
+         *
+         * @type {CPLayer}
+         */
+        this.layer = that.getActiveLayer();
 
         this.undo = function() {
             var
-                layerImage = this.layer.image,
                 invalidateRegion = dstRect.clone();
 
             if (!copy) {
@@ -2866,19 +2983,19 @@ export default function CPArtwork(_width, _height) {
             }
 
             if (fullUndo) {
-                layerImage.copyBitmapRect(fullUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
+                this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(fullUndo[index], invalidateRegion.left, invalidateRegion.top, invalidateRegion));
             } else {
-                layerImage.copyBitmapRect(srcData, srcRect.left, srcRect.top, srcData.getBounds());
+                this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(srcData[index], srcRect.left, srcRect.top, srcData[index].getBounds()));
 
                 if (dstData) {
-                    layerImage.copyBitmapRect(dstData, dstRect.left, dstRect.top, dstData.getBounds());
+                    this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(dstData[index], dstRect.left, dstRect.top, dstData[index].getBounds()));
                 }
             }
 
             that.setSelection(fromSelection);
             that.setActiveLayer(this.layer);
 
-            invalidateFusionRect(invalidateRegion);
+            invalidateLayerRect(this.layer, invalidateRegion);
 
             /*
              * Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
@@ -2889,11 +3006,10 @@ export default function CPArtwork(_width, _height) {
 
         this.redo = function() {
             var
-                layerImage = this.layer.image,
                 invalidateRegion = new CPRect(0, 0, 0, 0);
 
             if (!copy) {
-                layerImage.clearRect(srcRect, EMPTY_LAYER_COLOR);
+                this.imageLayers.forEach(layer => layer.image.clearRect(srcRect, EMPTY_LAYER_COLOR));
                 invalidateRegion.set(srcRect);
             }
 
@@ -2906,17 +3022,17 @@ export default function CPArtwork(_width, _height) {
              */
             if (fullUndo) {
                 // This function clamps the rectangles to the bounds for us
-                CPBlend.normalFuseImageOntoImageAtPosition(layerImage, fullUndo, srcRect, dstRect.left, dstRect.top);
+                this.imageLayers.forEach((layer, index) => CPBlend.normalFuseImageOntoImageAtPosition(layer.image, fullUndo[index], srcRect, dstRect.left, dstRect.top));
             } else {
-                CPBlend.normalFuseImageOntoImageAtPosition(layerImage, srcData, srcData.getBounds(), dstRect.left, dstRect.top);
+                this.imageLayers.forEach((layer, index) => CPBlend.normalFuseImageOntoImageAtPosition(layer.image, srcData[index], srcData[index].getBounds(), dstRect.left, dstRect.top));
             }
 
             // Clip dest rectangle to the bounds so we can update the invalidateRegion accurately
-            dstRect.clipTo(layerImage.getBounds());
+            dstRect.clipTo(that.getBounds());
 
             invalidateRegion.union(dstRect);
 
-            invalidateFusionRect(invalidateRegion);
+            invalidateLayerRect(this.imageLayers, invalidateRegion);
 
             if (!fromSelection.isEmpty()) {
                 var
@@ -2934,9 +3050,6 @@ export default function CPArtwork(_width, _height) {
          * @param _offsetY {int}
          */
         this.amend = function(_offsetX, _offsetY) {
-            var
-                layerImage = this.layer.image;
-
             if (fullUndo) {
                 if (copy) {
                     this.undo();
@@ -2945,8 +3058,9 @@ export default function CPArtwork(_width, _height) {
                      * We don't need to restore the image at the *source* location as a full undo would do, since
                      * we'll only erase that area again once we redo(). So just restore the data at the dest.
                      */
-                    layerImage.copyBitmapRect(fullUndo, dstRect.left, dstRect.top, dstRect);
-                    invalidateFusionRect(dstRect);
+                    this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(fullUndo[index], dstRect.left, dstRect.top, dstRect));
+
+                    invalidateLayerRect(this.imageLayers, dstRect);
                 }
             } else {
                 /*
@@ -2954,7 +3068,7 @@ export default function CPArtwork(_width, _height) {
                  */
                 this.undo();
 
-                fullUndo = layerImage.clone();
+                fullUndo = this.imageLayers.map(layer => layer.image.clone());
                 srcData = null;
                 dstData = null;
             }
@@ -2972,12 +3086,12 @@ export default function CPArtwork(_width, _height) {
             if (fullUndo && srcRect.getArea() * 2 < that.width * that.height) {
                 // Replace our copy of the entire layer with just a copy of the areas we damaged
 
-                srcData = fullUndo.cloneRect(srcRect);
+                srcData = fullUndo.map(image => image.cloneRect(srcRect));
 
                 if (dstRect.isInside(srcRect)) { // Likely if we're moving the whole layer
                     dstData = null;
                 } else {
-                    dstData = fullUndo.cloneRect(dstRect);
+                    dstData = fullUndo.map(image => image.cloneRect(dstRect));
                 }
 
                 fullUndo = null;
@@ -2989,22 +3103,30 @@ export default function CPArtwork(_width, _height) {
                 size = 0;
 
             if (fullUndo) {
-                size += fullUndo.getMemorySize();
+                size += fullUndo.map(image => image.getMemorySize()).reduce(sum, 0);
             }
             if (srcData) {
-                size += srcData.getMemorySize();
+                size += srcData.map(image => image.getMemorySize()).reduce(sum, 0);
             }
             if (dstData) {
-                size += dstData.getMemorySize();
+                size += dstData.map(image => image.getMemorySize()).reduce(sum, 0);
             }
 
             return size;
         };
 
         srcRect = srcRect.clone(); // Don't damage the caller's srcRect
-        this.layer = that.getActiveLayer();
 
-        fullUndo = this.layer.image.clone();
+        // Only move the image layers of the selected layer/group
+        if (this.layer instanceof CPImageLayer) {
+            this.imageLayers = [this.layer];
+        } else if (this.layer instanceof CPLayerGroup) {
+            this.imageLayers = this.layer.getLinearizedLayerList(false).filter(layer => layer instanceof CPImageLayer);
+        } else {
+            throw "Unsupported layer type in CPActionMove command";
+        }
+
+        fullUndo = this.imageLayers.map(layer => layer.image.clone());
 
         this.redo();
     }
@@ -3029,7 +3151,7 @@ export default function CPArtwork(_width, _height) {
 
             that.setActiveLayer(layer);
             that.setSelection(selection);
-            invalidateFusionRect(selection);
+            invalidateLayerRect(layer, selection);
         };
 
         this.redo = function() {
@@ -3039,7 +3161,7 @@ export default function CPArtwork(_width, _height) {
 
             that.setActiveLayer(layer);
             that.emptySelection();
-            invalidateFusionRect(selection);
+            invalidateLayerRect(layer, selection);
         };
 
         this.getMemoryUsed = function(undone, param) {
@@ -3069,9 +3191,7 @@ export default function CPArtwork(_width, _height) {
 
             that.setSelection(oldSelection);
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(oldLayer);
         };
 
@@ -3094,9 +3214,7 @@ export default function CPArtwork(_width, _height) {
             newLayer.image.copyBitmapRect(clip.bmp, x, y, sourceRect);
             that.emptySelection();
 
-            invalidateFusion();
-            callListenersLayerChange();
-
+            artworkStructureChanged();
             that.setActiveLayer(newLayer);
         };
 

@@ -1043,7 +1043,8 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 	
 	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
 		layerAlpha100: true,
-		fusionDifferentSize: true
+		fusionDifferentSize: true,
+		fusionHasTransparency: true
 	})}
 	
 	CPBlend.normalFuseImageOntoImageAtPosition = ` + Function.prototype.toString.call(function(fusion, image, sourceRect, destX, destY) {
