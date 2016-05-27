@@ -65,6 +65,21 @@ CPRect.prototype.getUnion = function(that) {
 };
 
 /**
+ * Get the intersection (possibly empty) of this rectangle and that.
+ *
+ * @param {CPRect} that
+ * @returns {CPRect}
+ */
+CPRect.prototype.getIntersection = function(that) {
+    return new CPRect(
+        Math.max(this.left, that.left),
+        Math.max(this.top, that.top),
+        Math.min(this.right, that.right),
+        Math.min(this.bottom, that.bottom)
+    );
+};
+
+/**
  * Clip this rectangle to fit within `that`.
  * 
  * @returns {CPRect} A reference to this rectangle for chaining
@@ -264,6 +279,88 @@ CPRect.createBoundingBox = function(points) {
     return result;
 };
 
+/**
+ * Subtract that rectangle from this one and return an array of CPRects to represent the resulting area (possibly
+ * empty).
+ *
+ * @param {CPRect} that
+ * @returns {CPRect[]}
+ */
+CPRect.prototype.subtract = function(that) {
+    return CPRect.subtract(this, that);
+};
+
+/**
+ * Subtract the second rectangle or array of rectangles from the first one, and return an array of CPRects to represent
+ * the resulting area (possibly empty).
+ *
+ * @param {(CPRect|CPRect[])} rectsA
+ * @param {(CPRect|CPRect[])} rectsB
+ * @returns {CPRect[]}
+ */
+CPRect.subtract = function(rectsA, rectsB) {
+    if (rectsA instanceof CPRect) {
+        rectsA = [rectsA];
+    }
+    if (rectsB instanceof CPRect) {
+        rectsB = [rectsB];
+    }
+
+    let
+        result = rectsA.slice(0);
+
+    for (let rectB of rectsB) {
+        // Don't re-examine any new rectangles we push onto the result, since we know they don't intersect this rectB:
+        let
+            resultLength = result.length;
+
+        for (var i = 0; i < resultLength; i++) {
+            let
+                rectA = result[i];
+
+            if (!rectA) {
+                continue;
+            }
+
+            let
+                intersection = rectA.getIntersection(rectB);
+
+            if (!intersection.isEmpty()) {
+                let
+                    newRects = [];
+
+                if (rectA.top < rectB.top) {
+                    newRects.push(new CPRect(rectA.left, rectA.top, rectA.right, intersection.top));
+                }
+                if (rectA.bottom > rectB.bottom) {
+                    newRects.push(new CPRect(rectA.left, intersection.bottom, rectA.right, rectA.bottom));
+                }
+                if (rectA.left < rectB.left) {
+                    newRects.push(new CPRect(rectA.left, intersection.top, intersection.left, intersection.bottom));
+                }
+                if (rectA.right > rectB.right) {
+                    newRects.push(new CPRect(intersection.right, intersection.top, rectA.right, intersection.bottom));
+                }
+
+                newRects = newRects.filter(rect => !rect.isEmpty());
+
+                // Replace the original rectangle in the array with the new fragments
+                if (newRects.length > 0) {
+                    result[i] = newRects[0];
+
+                    for (var j = 1; j < newRects.length; j++) {
+                        result.push(newRects[j]);
+                    }
+                } else {
+                    result[i] = null;
+                }
+            }
+        }
+    }
+
+    return result.filter(rect => rect != null);
+};
+
 /* 
  * Chrome is initially eager to optimize CPRect and users assuming that all the fields are SMIs, then later on decides
  * that they should be tagged numbers after all. This causes all the blending operation functions to be reoptimized
@@ -271,4 +368,6 @@ CPRect.createBoundingBox = function(points) {
  * 
  * Avoid that mess by starting things off with floats in the members.  
  */
-window.cpRectGarbage = new CPRect(1.5, 2.5, 3.5, 4.5);
+if (typeof window == "object") {
+    window.cpRectGarbage = new CPRect(1.5, 2.5, 3.5, 4.5);
+}

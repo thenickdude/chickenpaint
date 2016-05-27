@@ -15,7 +15,8 @@ resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
 
 .PHONY: test blending-bench blending-test
 
-test: blending-bench blending-test
+test: blending-bench blending-test test/CPRect/test.js
+	node test/CPRect/test.js
 
 blending-bench: test/blending_bench/blending.js
 blending-test: test/blending_test/blending.js
@@ -26,11 +27,11 @@ test/blending_test/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test
 test/blending_bench/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test/blending_bench/blending.es6.js
 	node_modules/.bin/browserify --standalone BlendingBench --outfile $@ -d -e test/blending_bench/blending.es6.js -t babelify
 
+js/engine/CPBlend2.js :
+	touch js/engine/CPBlend2.js
+
 js/engine/CPBlend.js : codegenerator/BlendGenerator.js
 	node codegenerator/BlendGenerator.js > js/engine/CPBlend.js
-
-js/engine/CPBlend2.js : codegenerator/BlendGenerator.js
-	node codegenerator/BlendGenerator.js > js/engine/CPBlend2.js
 
 clean :
 	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map test/blending_bench/blending_test.js test/blending_bench/blending.js js/engine/CPBlend2.js
