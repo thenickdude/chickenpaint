@@ -49,8 +49,26 @@ import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
 
-function isBrowserSupported() {
-    return isCanvasSupported() && "Uint8Array" in window;
+function checkBrowserSupport() {
+    var
+        supportsAPIs = isCanvasSupported() && "Uint8Array" in window;
+
+    if (!supportsAPIs) {
+        throw new ChickenPaint.UnsupportedBrowserException();
+    }
+
+    // iOS 8.0.0 Safari can't upload files
+    var
+        isIOS8_0_0 = (navigator.userAgent.indexOf("iPad") != -1 || navigator.userAgent.indexOf("iPod") != -1 || navigator.userAgent.indexOf("iPhone") != -1)
+            && navigator.userAgent.indexOf(" OS 8_0 ") != -1,
+        isSafari = navigator.userAgent.indexOf("CriOS") == -1 && navigator.userAgent.indexOf("Safari") != -1;
+
+    if (isIOS8_0_0 && isSafari) {
+        throw new ChickenPaint.UnsupportedBrowserException("You are using Safari 8.0.0, which is unable to upload drawings. That bug was fixed in the iOS 8.0.2 update, or in Chrome for iOS.");
+    }
+
+
+    return true;
 }
 
 function createDrawingTools() {
@@ -1077,9 +1095,7 @@ export default function ChickenPaint(options) {
         return options.resourcesRoot;
     };
 
-    if (!isBrowserSupported()) {
-        throw new ChickenPaint.UnsupportedBrowserException();
-    }
+    checkBrowserSupport();
 
     if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string" || /Presto/.test(navigator.userAgent)) {
         uiElem.className += " no-flexbox";
@@ -1117,11 +1133,21 @@ export default function ChickenPaint(options) {
 ChickenPaint.prototype = Object.create(EventEmitter.prototype);
 ChickenPaint.prototype.constructor = ChickenPaint;
 
-ChickenPaint.UnsupportedBrowserException = function() {
+ChickenPaint.UnsupportedBrowserException = function(message) {
+    this.message = message;
 };
 
 ChickenPaint.UnsupportedBrowserException.prototype.toString = function() {
-    return "Sorry, your web browser does not support ChickenPaint. Please try a modern browser like Chrome, Safari, Firefox, or Edge";
+    var
+        msg = "Sorry, your web browser does not support ChickenPaint.";
+
+    if (this.message) {
+        msg += " " + this.message;
+    } else {
+        msg += " Please try a modern browser like Chrome, Safari, Firefox, or Edge.";
+    }
+    
+    return msg;
 };
 
 //
