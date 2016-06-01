@@ -196,6 +196,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 
 				clippingGroupNode.addChild(createNodeForLayer(childLayer));
 
+				// All the contiguous layers above us with "clip" set will become the children of the new group
 				for (j = i + 1; j < layerGroup.layers.length; j++) {
 					if (layerGroup.layers[j].clip) {
 						if (layerGroup.layers[j].getEffectiveAlpha() > 0) {
@@ -206,6 +207,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 					}
 				}
 
+				// If the clipping base is invisible, so will the children be (so drop them here by not adding them anywhere)
 				if (childLayer.getEffectiveAlpha() > 0) {
 					treeNode.addChild(optimizeGroupNode(clippingGroupNode));
 				}

@@ -116,7 +116,7 @@ CPImageLayer.prototype.copyImageFrom = function(that) {
  */
 CPImageLayer.prototype.getClippingBase = function() {
 	if (this.clip && this.parent) {
-		for (var i = this.parent.indexOf(this) + 1; i < this.parent.layers.length; i++) {
+		for (var i = this.parent.indexOf(this) - 1; i >= 0; i--) {
 			if (this.parent.layers[i] instanceof CPImageLayer) {
 				if (!this.parent.layers[i].clip) {
 					return this.parent.layers[i];
