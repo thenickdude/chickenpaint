@@ -178,7 +178,8 @@ export default function CPLayersPalette(controller) {
 
             dismissTimer = false,
 
-            dropdownLayerMenu,
+            dropdownLayerMenu = createLayerDropdownMenu(),
+            dropdownMousePos,
 	        /**
              * @type {CPLayer}
              */
@@ -488,12 +489,19 @@ export default function CPLayersPalette(controller) {
                 }
 
                 dropdownLayer = layer;
+                dropdownMousePos = {x : e.clientX, y: e.clientY};
+
+                $(".chickenpaint-action-require-image-layer", dropdownLayerMenu).toggle(layer instanceof CPImageLayer);
+                $(".chickenpaint-action-require-layer-group", dropdownLayerMenu).toggle(layer instanceof CPLayerGroup);
 
                 $(".chickenpaint-action-create-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
                 $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !!layer.clip);
 
                 $(getElemFromDisplayIndex(displayIndex))
-                    .dropdown("toggle");
+                    .dropdown("toggle")
+                    .off("click.bs.dropdown");
+
+                $(document).off("click.bs.dropdown.data-api");
             }
         }
 
@@ -557,15 +565,10 @@ export default function CPLayersPalette(controller) {
         }
 
         function mouseClick(e) {
-            if (e.button != BUTTON_SECONDARY) {
+            if (e.button != BUTTON_SECONDARY && !$(dropdownParent).hasClass("open")) {
                 // Don't pop up the popup menu for us (bootstrap calls toggle)
                 e.stopPropagation();
                 e.preventDefault();
-
-                // Instead only allow the menu to *close*
-                if ($(dropdownParent).hasClass("open")) {
-                    $(dropdownParent).dropdown('toggle');
-                }
             }
         }
 
@@ -786,8 +789,11 @@ export default function CPLayersPalette(controller) {
                 menu = document.createElement("ul"),
                 mnuDeleteLayer = document.createElement("a"),
                 mnuCreateClippingMask  = document.createElement("a"),
-                mnuReleaseClippingMask  = document.createElement("a");
+                mnuReleaseClippingMask  = document.createElement("a"),
+                mnuDeleteGroup = document.createElement("a"),
+                mnuMergeGroup = document.createElement("a");
 
+            mnuDeleteLayer.className = "chickenpaint-action-require-image-layer";
             mnuDeleteLayer.href = "#";
             mnuDeleteLayer.innerHTML = "Delete layer";
             mnuDeleteLayer.addEventListener("click", function(e) {
@@ -799,7 +805,19 @@ export default function CPLayersPalette(controller) {
                 }
             });
 
-            mnuCreateClippingMask.className = "chickenpaint-action-create-clipping-mask";
+            mnuDeleteGroup.className = "chickenpaint-action-require-layer-group";
+            mnuDeleteGroup.href = "#";
+            mnuDeleteGroup.innerHTML = "Delete group";
+            mnuDeleteGroup.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                if (dropdownLayer) {
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPRemoveLayer"});
+                }
+            });
+
+            mnuCreateClippingMask.className = "chickenpaint-action-create-clipping-mask chickenpaint-action-require-image-layer";
             mnuCreateClippingMask.href = "#";
             mnuCreateClippingMask.innerHTML = "Clip to the layer below";
             mnuCreateClippingMask.addEventListener("click", function(e) {
@@ -811,7 +829,7 @@ export default function CPLayersPalette(controller) {
                 }
             });
 
-            mnuReleaseClippingMask.className = "chickenpaint-action-release-clipping-mask";
+            mnuReleaseClippingMask.className = "chickenpaint-action-release-clipping-mask chickenpaint-action-require-image-layer";
             mnuReleaseClippingMask.href = "#";
             mnuReleaseClippingMask.innerHTML = "Release the clipping mask";
             mnuReleaseClippingMask.addEventListener("click", function(e) {
@@ -823,10 +841,21 @@ export default function CPLayersPalette(controller) {
                 }
             });
 
+            mnuMergeGroup.className = "chickenpaint-action-require-layer-group";
+            mnuMergeGroup.href = "#";
+            mnuMergeGroup.innerHTML = "Merge group";
+            mnuMergeGroup.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                if (dropdownLayer) {
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPGroupMerge"});
+                }
+            });
+
             menu.className = "dropdown-menu";
-            menu.appendChild(wrapWithElem(mnuDeleteLayer, "li"));
-            menu.appendChild(wrapWithElem(mnuCreateClippingMask, "li"));
-            menu.appendChild(wrapWithElem(mnuReleaseClippingMask, "li"));
+
+            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuMergeGroup].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
 
             return menu;
         }
@@ -837,7 +866,7 @@ export default function CPLayersPalette(controller) {
 
         widgetContainer.addEventListener("dblclick", doubleClick);
         widgetContainer.addEventListener("mousedown", mouseDown);
-        widgetContainer.addEventListener("click", mouseClick);
+        dropdownParent.addEventListener("click", mouseClick);
         widgetContainer.addEventListener("contextmenu", contextMenuShow);
 
         controller.on("layerNotification", this.showNotification.bind(this));
@@ -864,7 +893,6 @@ export default function CPLayersPalette(controller) {
         layerContainer.className = "list-group";
         widgetContainer.appendChild(layerContainer);
 
-        dropdownLayerMenu = createLayerDropdownMenu();
         widgetContainer.appendChild(dropdownLayerMenu);
 
         $(dropdownParent).on("show.bs.dropdown", function(e) {
@@ -882,12 +910,12 @@ export default function CPLayersPalette(controller) {
                 $dropdownElem = $(dropdownParent).find(".dropdown-menu"),
 
                 layerPos = layerElem.getBoundingClientRect(),
-                palettePos = palette.getElement().getBoundingClientRect();
+                positionRootPos = dropdownParent.getBoundingClientRect();
 
             // Convert the offset to palette-relative coordinates (since that's its offset parent)
             $dropdownElem.css({
-                left: (layerPos.left - palettePos.left) + "px",
-                top: ((layerPos.top - $dropdownElem.outerHeight(true) / 2) - palettePos.top) + "px"
+                left: (dropdownMousePos.x - $dropdownElem.outerWidth(true) - positionRootPos.left + 1) + "px",
+                top: ((layerPos.top - $dropdownElem.outerHeight(true) / 2) - positionRootPos.top) + "px"
             });
         });
     }
