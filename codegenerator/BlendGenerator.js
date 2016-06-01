@@ -528,6 +528,32 @@ const
 		}
 	},
 
+	PASSTHROUGH_OPERATION = {
+		displayName: "passthrough",
+		customAlphaMix: true,
+
+		/**
+		 * A symmetrical blending function (B <- L gives the same result as L <- B) that interpolates between the
+		 * contents of two layers based on the layer alpha parameter.
+		 */
+		ontoOpaque: function(color1, color2, alpha1, alphaMix, invAlphaMix) {
+			var
+				realAlpha = alpha1 * alphaMix + 255 * invAlphaMix;
+
+			destColor = (color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix) / realAlpha;
+			destAlpha = realAlpha;
+		},
+
+		ontoTransparent: function(color1, color2, alpha1, alpha2, alphaMix, invAlphaMix) {
+			var
+				realAlpha = alpha1 * alphaMix + alpha2 * invAlphaMix;
+
+			// Effectively use pre-multiplied alpha so that fully transparent colors have no effect on the result
+			destColor = (color1 * alpha1 * alphaMix + color2 * alpha2 * invAlphaMix) / realAlpha;
+			destAlpha = realAlpha;
+		}
+	},
+
 	REPLACE_OPERATION = {
 		displayName: "replace",
 		ignoresFusion: true,
@@ -545,24 +571,41 @@ const
 		}
 	};
 
-function getLayerAlphaExpressionForVariant(alphaExpression, variant) {
+function getAlphaMixExpressionForVariant(variant) {
+	if (variant.masked && !variant.layerAlpha100) {
+		return `(mask.data[maskIndex] * layerAlpha / 25500)`;
+	} else if (variant.masked) {
+		return `(mask.data[maskIndex] / 255)`;
+	} else {
+		return `(layerAlpha / 100)`;
+	}
+}
+
+function getLayerAlphaExpressionForVariant(alphaExpression, operation, variant) {
 	var
 		rounding = variant.unroundedAlpha ? "" : " | 0";
-	
-	if (variant.masked && !variant.layerAlpha100) {
-		return `(((${alphaExpression}) * mask.data[maskIndex] * layerAlpha / 25500) ${rounding})`;
-	} else if (variant.masked) {
-		return `(((${alphaExpression}) * mask.data[maskIndex] / 255) ${rounding})`;
-	} else if (!variant.layerAlpha100) {
-		//return `(((${alphaExpression}) * layerAlphaScale) ${rounding})`;
-		return `(((${alphaExpression}) * layerAlpha / 100) ${rounding})`;
-	} else {
+
+	if (operation.customAlphaMix) {
 		return alphaExpression;
+	} else {
+		if (variant.masked && !variant.layerAlpha100) {
+			return `(((${alphaExpression}) * mask.data[maskIndex] * layerAlpha / 25500) ${rounding})`;
+		} else if (variant.masked) {
+			return `(((${alphaExpression}) * mask.data[maskIndex] / 255) ${rounding})`;
+		} else if (!variant.layerAlpha100) {
+			return `(((${alphaExpression}) * layerAlpha / 100) ${rounding})`;
+		} else {
+			return alphaExpression;
+		}
 	}
 }
 
 function getFusionAlphaExpressionForVariant(alphaExpression, variant) {
-	return alphaExpression;
+	if (variant.fusionHasTransparency) {
+		return alphaExpression;
+	} else {
+		return 255;
+	}
 }
 
 function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar) {
@@ -678,15 +721,15 @@ function formatBlockComment(comment) {
 	return result;
 }
 
-function docCommentForVariant(operationDisplayName, variant, parameters) {
+function docCommentForVariant(operation, variant, parameters) {
 	var
-		comment = `Blend the given layer onto the fusion using the ${operationDisplayName} blending operator.\n\n`;
+		comment = `Blend the given layer onto the fusion using the ${operation.displayName} blending operator.\n\n`;
 	
 	if (variant.layerAlpha100) {
 		comment += "The layer must have its layer alpha set to 100\n\n";
 	}
 
-	if (!variant.ignoresFusion) {
+	if (!operation.ignoresFusion) {
 		if (variant.fusionHasTransparency) {
 			comment += "Fusion can contain transparent pixels, ";
 		} else {
@@ -783,10 +826,18 @@ function makeBlendOperation(functionName, operation, variant) {
 	}
 
 	innerVars = {
-		alpha1: null
+		alpha1: getLayerAlphaExpressionForVariant("layer.data[pixIndex + ALPHA_BYTE_OFFSET]", operation, variant)
 	};
 
-	if (variant.ignoresFusion) {
+	if (operation.customAlphaMix) {
+		innerVars.alpha2 = getFusionAlphaExpressionForVariant(`fusion.data[${destPixIndexVar} + ALPHA_BYTE_OFFSET]`, variant);
+		innerVars.alphaMix = getAlphaMixExpressionForVariant(variant);
+		innerVars.invAlphaMix = "1.0 - alphaMix";
+
+		kernelPre = "";
+		kernel = getFunctionBody(operation.ontoTransparent);
+		kernelPost = "";
+	} else if (operation.ignoresFusion) {
 		kernelPre = "";
 		kernel = getFunctionBody(operation.ontoTransparent);
 		kernelPost = "";
@@ -850,7 +901,7 @@ function makeBlendOperation(functionName, operation, variant) {
 	}
 
 	return `
-        ${docCommentForVariant(operation.displayName, variant, parameters)}
+        ${docCommentForVariant(operation, variant, parameters)}
         CPBlend.${functionName} = function(${parameters.map(p => p.name).join(", ")}) {
             var
                 ${presentVarList(outerVars)};
@@ -859,8 +910,6 @@ function makeBlendOperation(functionName, operation, variant) {
                 for (var x = 0; x < w; ${xIncrements.join(", ")}) {
                     var
                         ${presentVarList(innerVars)};
-                    
-                    alpha1 = ${getLayerAlphaExpressionForVariant("layer.data[pixIndex + ALPHA_BYTE_OFFSET]", variant)};
                     
                     ${kernelPre}
                         ${kernel}
@@ -1020,25 +1069,37 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 		this[funcName](fusion, image, imageAlpha, rect);
 	}) + `;
 	
+	// Blending operations with non-standard variants 
+	
+	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: false,
+		layerAlpha100: false
+	})}
+	
+	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayer = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayer;
+		
+	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: true,
+		layerAlpha100: false
+	})}
+	
+	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayer = CPBlend.passthroughOntoTransparentFusionWithTransparentLayer;
+
 	${makeBlendOperation("replaceOntoFusionWithTransparentLayer", REPLACE_OPERATION, {
 		fusionHasTransparency: false,
-		layerAlpha100: false,
-		ignoresFusion: true
+		layerAlpha100: false
 	})}
 		
 	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
-		layerAlpha100: true,
-		ignoresFusion: true
+		layerAlpha100: true
 	})}
 	
 	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: false,
-		ignoresFusion: true
+		layerAlpha100: false
 	})}
 		
 	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: true,
-		ignoresFusion: true
+		layerAlpha100: true
 	})}
 	
 	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
@@ -1046,7 +1107,7 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 		fusionDifferentSize: true,
 		fusionHasTransparency: true
 	})}
-	
+		
 	CPBlend.normalFuseImageOntoImageAtPosition = ` + Function.prototype.toString.call(function(fusion, image, sourceRect, destX, destY) {
 		var
 			sourceRectCopy = sourceRect.clone(),

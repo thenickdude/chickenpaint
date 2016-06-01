@@ -83,7 +83,7 @@ CPBlendNode.prototype.addChild = function(child) {
  */
 export default function CPBlendTree(drawingRootGroup, width, height, requireOpaqueFusion) {
 	const
-		DEBUG = true;
+		DEBUG = false;
 
 	var
 		/**
@@ -218,20 +218,16 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			if (childLayer.getEffectiveAlpha() == 0) {
 				continue;
 			}
+
 			if (childLayer instanceof CPLayerGroup) {
 				let
 					childGroupNode = buildTreeInternal(childLayer);
 
 				// If the group ended up being non-empty...
 				if (childGroupNode) {
-					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup) {
+					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup && childGroupNode.alpha == 100) {
 						/*
-						 * TODO what does PASSTHROUGH + alpha < 100 mean for the end-user? Can't figure out a meaning for
-						 * that. At the moment we'll just treat it as alpha == 100
-						 */
-
-						/*
-							Eliminate the pass-through group by adding its children to us instead
+						 Eliminate the pass-through group by adding its children to us instead
 						 */
 						for (let subLayer of childGroupNode.layers) {
 							treeNode.addChild(subLayer);
@@ -242,7 +238,10 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				}
 			} else {
 				// It's a layer, so we'll add it to our tree node
-				treeNode.addChild(createNodeForLayer(childLayer));
+				let
+					childNode = createNodeForLayer(childLayer);
+
+				treeNode.addChild(childNode);
 			}
 		}
 
@@ -365,6 +364,42 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	};
 
 	/**
+	 *
+	 * @param {CPColorBmp} dest
+	 * @param {CPColorBmp} source
+	 * @param {CPRect} rect
+	 */
+	function copyOpaqueImageRect(dest, source, rect) {
+		if (rect.getWidth() == dest.width && rect.getHeight() == dest.height) {
+			/*
+			 * If we're copying the whole image at alpha 100, we're just doing a linear byte copy.
+			 * We have a fast version for that!
+			 */
+			if (DEBUG) {
+				console.log("CPColorBmp.copyDataFrom(source);");
+			}
+			dest.copyDataFrom(source);
+		} else {
+			// Otherwise use the CPBlend version which only blends the specified rectangle
+			if (DEBUG) {
+				console.log(`CPBlend.replaceOntoFusionWithOpaqueLayer(dest, source, 100, ${rect});`);
+			}
+			CPBlend.replaceOntoFusionWithOpaqueLayer(dest, source, 100, rect);
+		}
+	}
+
+	function copyImageRect(dest, source, sourceAlpha, rect) {
+		if (sourceAlpha == 100) {
+			copyOpaqueImageRect(dest, source, rect);
+		} else {
+			if (DEBUG) {
+				console.log(`CPBlend.replaceOntoFusionWithTransparentLayer(dest, source, sourceAlpha = ${sourceAlpha}, rect = ${rect});`);
+			}
+			CPBlend.replaceOntoFusionWithTransparentLayer(dest, source, sourceAlpha, rect);
+		}
+	}
+
+	/**
 	 * Blend the given tree node and return the tree node that contains the resulting blend, or null if the tree is empty.
 	 * 
 	 * @param {?CPBlendNode} treeNode
@@ -381,9 +416,25 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			groupIsEmpty = true,
 			fusionHasTransparency = true;
 
+		if (treeNode.blendMode == CPBlend.LM_PASSTHROUGH && treeNode.parent) {
+			/* With passthrough blending, the contents of the group are also dependent on the fusion it sits on top of,
+			 * so invalidating the parent must invalidate the passthrough child.
+			 */
+			blendArea.union(treeNode.parent.dirtyRect);
+		}
+
 		if (blendArea.isEmpty()) {
 			// Nothing to draw!
 			return treeNode;
+		}
+		
+		if (treeNode.blendMode == CPBlend.LM_PASSTHROUGH) {
+			// Passthrough group with alpha < 100
+			
+			// We need to fuse our children layers onto a copy of our parents fusion, so make that copy now
+			groupIsEmpty = false;
+
+			copyOpaqueImageRect(treeNode.image, treeNode.parent.image, blendArea);
 		}
 
 		// Avoid using an iterator here because Chrome refuses to optimize when a "finally" clause is present (caused by Babel iterator codegen)
@@ -393,28 +444,9 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				childNode = blendTreeInternal(child);
 			
 			if (groupIsEmpty) {
-				if (childNode.alpha == 100) {
-					if (blendArea.getWidth() == treeNode.image.width && blendArea.getHeight() == treeNode.image.height) {
-						/* If we're copying the whole image at alpha 100, we're just doing a linear byte copy.
-						 * We have a fast version for that!
-						 */
-						if (DEBUG) {
-							console.log("CPColorBmp.copyDataFrom(childNode.image);");
-						}
-						treeNode.image.copyDataFrom(childNode.image);
-					} else {
-						// Otherwise use the CPBlend version which only blends the specified rectangle
-						if (DEBUG) {
-							console.log(`CPBlend.replaceOntoFusionWithOpaqueLayer(treeNode.image, childNode.image, 100, ${blendArea});`);
-						}
-						CPBlend.replaceOntoFusionWithOpaqueLayer(treeNode.image, childNode.image, 100, blendArea);
-					}
-				} else {
-					if (DEBUG) {
-						console.log(`CPBlend.replaceOntoFusionWithTransparentLayer(treeNode.image, childNode.image, childNode.alpha == ${childNode.alpha}, ${blendArea});`);
-					}
-					CPBlend.replaceOntoFusionWithTransparentLayer(treeNode.image, childNode.image, childNode.alpha, blendArea);
-				}
+				// If the fusion is currently empty then there's nothing to blend, copy the contents of the bottom layer instead
+
+				copyImageRect(treeNode.image, childNode.image, childNode.alpha, blendArea);
 				groupIsEmpty = false;
 			} else {
 				fusionHasTransparency = fusionHasTransparency && treeNode.image.hasAlphaInRect(blendArea);
