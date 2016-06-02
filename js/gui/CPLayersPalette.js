@@ -674,7 +674,8 @@ export default function CPLayersPalette(controller) {
                 index = getDisplayIndexFromLayer(layer),
                 layerElem = $(getElemFromDisplayIndex(index));
 
-            if (layer instanceof CPLayerGroup && (layer.expanded != $(layerElem).hasClass(CLASSNAME_LAYER_GROUP_EXPANDED) || layer.visible != $(layerElem).hasClass(CLASSNAME_LAYER_VISIBLE))) {
+            if (layerElem.length == 0 ||
+                    layer instanceof CPLayerGroup && (layer.expanded != $(layerElem).hasClass(CLASSNAME_LAYER_GROUP_EXPANDED) || layer.visible != $(layerElem).hasClass(CLASSNAME_LAYER_VISIBLE))) {
                 // When these properties change, we might have to rebuild the group's children too, so just rebuild everything
                 this.buildLayers();
             } else {
