@@ -24,6 +24,7 @@
 import "core-js/es6/symbol";
 import "core-js/es6/promise";
 import "core-js/es6/map";
+import "core-js/es6/set";
 import "core-js/fn/array/iterator";
 import "core-js/fn/string/ends-with";
 
@@ -394,7 +395,7 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {mode: true},
                 allowed: function() {
-                    //TODO
+                    return that.artwork.getActiveLayer().getEffectiveAlpha() != 0;
                 }
             },
             CPTransformAccept: {

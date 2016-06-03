@@ -419,7 +419,9 @@ export default function CPLayersPalette(controller) {
             if (!layer.ancestorsAreVisible()) {
                 eyeDiv.className += " chickenpaint-layer-eye-hidden-ancestors";
             }
-            
+
+            eyeDiv.style.marginRight = (2 + LAYER_IN_GROUP_INDENT * (layer.getDepth() - 1)) + "px";
+
             if (layer.visible) {
                 layerDiv.className += " " + CLASSNAME_LAYER_VISIBLE;
                 eyeDiv.appendChild(createIcon("fa-eye"));
@@ -427,6 +429,8 @@ export default function CPLayersPalette(controller) {
                 layerDiv.className += " " + CLASSNAME_LAYER_HIDDEN;
                 eyeDiv.appendChild(createIcon("fa-eye-slash"));
             }
+
+            layerDiv.appendChild(eyeDiv);
 
             mainDiv.className = "chickenpaint-layer-description";
 
@@ -447,6 +451,20 @@ export default function CPLayersPalette(controller) {
                 }
             }
 
+            if (iconsDiv.childNodes.length) {
+                iconsDiv.className = "chickenpaint-layer-icons";
+                layerDiv.appendChild(iconsDiv);
+            }
+
+            if (layer instanceof CPImageLayer) {
+                let 
+                    thumbnail = layer.getThumbnail(),
+                    thumbCanvas = thumbnail.getAsCanvas(0);
+
+                thumbCanvas.className = "chickenpaint-layer-thumbnail";
+                layerDiv.appendChild(thumbCanvas);
+            }
+
             let
                 layerName = (layer.name && layer.name.length > 0) ? layer.name : "(unnamed " + (layer instanceof CPLayerGroup ? "group" : "layer") + ")";
 
@@ -457,16 +475,11 @@ export default function CPLayersPalette(controller) {
             blendDiv.innerText = CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%";
             blendDiv.className = "chickenpaint-layer-blend";
 
-            eyeDiv.style.marginRight = (2 + LAYER_IN_GROUP_INDENT * (layer.getDepth() - 1)) + "px";
             mainDiv.appendChild(layerNameDiv);
             mainDiv.appendChild(blendDiv);
 
-            layerDiv.appendChild(eyeDiv);
-            if (iconsDiv.childNodes.length) {
-                iconsDiv.className = "chickenpaint-layer-icons";
-                layerDiv.appendChild(iconsDiv);
-            }
             layerDiv.appendChild(mainDiv);
+            
             layerDiv.setAttribute("data-display-index", index);
             layerDiv.setAttribute("data-toggle", "dropdown");
             layerDiv.setAttribute("data-target", "#chickenpaint-layer-pop");
@@ -680,6 +693,24 @@ export default function CPLayersPalette(controller) {
                 this.buildLayers();
             } else {
                 layerElem.replaceWith(buildLayer(index, layer));
+            }
+        };
+
+        /**
+         * The thumbnail of the given layer has been updated.
+         *
+         * @param {CPImageLayer} layer
+         */
+        this.layerThumbChanged = function(layer) {
+            var
+                index = getDisplayIndexFromLayer(layer),
+                layerElem = $(getElemFromDisplayIndex(index));
+
+            if (layerElem.length > 0) {
+                var
+                    newThumb = layer.thumbnail.getAsCanvas();
+                newThumb.className = "chickenpaint-layer-thumbnail";
+                $(".chickenpaint-layer-thumbnail", layerElem).replaceWith(newThumb);
             }
         };
 
@@ -960,6 +991,17 @@ export default function CPLayersPalette(controller) {
         updateActiveLayerControls();
     }
 
+    /**
+     * Called when the thumbnail of one layer has been updated.
+     *
+     * @param {CPLayer} layer
+     */
+    function onChangeLayerThumb(layer) {
+        artwork = this;
+
+        layerWidget.layerThumbChanged(layer);
+    }
+
 	/**
      * Called when the selected layer changes.
      *
@@ -1128,6 +1170,7 @@ export default function CPLayersPalette(controller) {
     artwork.on("changeActiveLayer", onChangeActiveLayer);
     artwork.on("changeLayer", onChangeLayer);
     artwork.on("changeStructure", onChangeStructure);
+    artwork.on("changeLayerThumb", onChangeLayerThumb);
 
     // Set initial values
     onChangeStructure.call(artwork);

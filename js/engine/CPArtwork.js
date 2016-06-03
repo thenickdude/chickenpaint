@@ -78,7 +78,9 @@ export default function CPArtwork(_width, _height) {
         
         BURN_CONSTANT = 260,
         BLUR_MIN = 64,
-        BLUR_MAX = 1;
+        BLUR_MAX = 1,
+
+        THUMBNAIL_REBUILD_DELAY_MSEC = 1000;
     
     var
 	    /**
@@ -170,11 +172,33 @@ export default function CPArtwork(_width, _height) {
         
         sampleAllLayers = false,
         lockAlpha = false,
-        
+
+	    /**
+         * Set to true when the user is in the middle of a painting operation (so redrawing the thumbnail would be
+         * a waste of time).
+         *
+         * @type {boolean}
+         */
+        drawingInProgress = false,
+        thumbnailsToRebuild = new Set(),
+        thumbnailRebuildTimer = null,
+
         curColor = 0x000000, // Black
         transformInterpolation = "smooth",
 
         that = this;
+
+    function beginPaintingInteraction() {
+        drawingInProgress = true;
+    }
+
+    function endPaintingInteraction() {
+        drawingInProgress = false;
+
+        if (thumbnailsToRebuild.size > 0 && !thumbnailRebuildTimer) {
+            setTimeout(buildThumbnails, THUMBNAIL_REBUILD_DELAY_MSEC);
+        }
+    }
 
     // When the selected rectangle changes
     function callListenersSelectionChange() {
@@ -254,6 +278,20 @@ export default function CPArtwork(_width, _height) {
         }
     }
 
+    function buildThumbnails() {
+        for (let layer of thumbnailsToRebuild) {
+            layer.rebuildThumbnail();
+
+            that.emitEvent("changeLayerThumb", [layer]);
+        }
+        thumbnailsToRebuild.clear();
+
+        if (thumbnailRebuildTimer) {
+            clearTimeout(thumbnailRebuildTimer);
+            thumbnailRebuildTimer = null;
+        }
+    }
+
     /**
      * Mark the given rectangle on the layer as needing to be re-fused (i.e. we've drawn in this region).
      * Listeners are notified about our updated canvas region.
@@ -273,6 +311,27 @@ export default function CPArtwork(_width, _height) {
 
         // This updated area will need to be updated in our undo buffer later
         undoBufferInvalidRegion.union(rect);
+
+        var
+            newThumbToRebuild = false;
+
+        if (layer instanceof CPImageLayer) {
+            thumbnailsToRebuild.add(layer);
+            newThumbToRebuild = true;
+        } else if (Array.isArray(layer)) {
+            layer.forEach(l => l instanceof CPImageLayer && thumbnailsToRebuild.add(l));
+            newThumbToRebuild = true;
+        }
+
+        if (newThumbToRebuild) {
+            if (thumbnailRebuildTimer) {
+                clearTimeout(thumbnailRebuildTimer);
+                thumbnailRebuildTimer = null;
+            }
+            if (!drawingInProgress) {
+                thumbnailRebuildTimer = setTimeout(buildThumbnails, THUMBNAIL_REBUILD_DELAY_MSEC);
+            }
+        }
 
         callListenersUpdateRegion(rect);
     }
@@ -498,6 +557,8 @@ export default function CPArtwork(_width, _height) {
         lastX = x;
         lastY = y;
         lastPressure = pressure;
+
+        beginPaintingInteraction();
         
         this.createAndPaintDab(x, y, pressure);
     };
@@ -537,7 +598,10 @@ export default function CPArtwork(_width, _height) {
              */
             prepareForLayerUndo(); 
         }
+
         brushBuffer = null;
+
+        endPaintingInteraction();
     };
 
     /**
@@ -1986,6 +2050,7 @@ export default function CPArtwork(_width, _height) {
         if (previewOperation instanceof CPActionTransformSelection) {
             previewOperation.undo();
             previewOperation = null;
+            endPaintingInteraction();
         }
     };
 
@@ -2021,7 +2086,9 @@ export default function CPArtwork(_width, _height) {
         previewOperation = new CPActionTransformSelection(initialRect, initialTransform, transformInterpolation);
     
         opacityArea.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
-    
+
+        beginPaintingInteraction();
+
         return {transform: initialTransform, rect: initialRect, selection: selection};
     };
 
@@ -2032,6 +2099,7 @@ export default function CPArtwork(_width, _height) {
         if (previewOperation instanceof CPActionTransformSelection) {
             addUndo(previewOperation);
             previewOperation = null;
+            endPaintingInteraction();
         }
     };
 

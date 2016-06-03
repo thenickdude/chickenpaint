@@ -246,15 +246,6 @@ body.chickenpaint-full-screen {
     background-repeat:no-repeat;
 }
 
-@media only screen and (-webkit-min-device-pixel-ratio: 1.3),
-        only screen and (-o-min-device-pixel-ratio: 13/10),
-        only screen and (min-resolution: 120dpi) {
-    .chickenpaint-toolbar-button-icon {
-        background-image:url(../gfx/icons-2x.png);
-        background-size:32px 1024px;
-    }
-}
-
 .chickenpaint-small-toolbar-button {
     display:inline-block;
     margin:0px;
@@ -553,6 +544,13 @@ body.chickenpaint-full-screen {
 .chickenpaint-layer-blend {
     font-size:83%;
 }
+.chickenpaint-layer-thumbnail {
+    max-height: 25px;
+    border: 1px solid rgba(0,0,0,0.5);
+    margin: 2px 4px 2px 2px;
+    background: url(../gfx/trans-grid-2px.png) repeat;
+}
+
 .chickenpaint-palette-layers.open .dropdown-menu {
     display: block;
 }
@@ -885,6 +883,21 @@ body.chickenpaint-full-screen {
     .chickenpaint .checkbox label {
         padding:0;
         padding-left:12px;
+    }
+}
+
+/* High resolution alternatives */
+@media only screen and (-webkit-min-device-pixel-ratio: 1.3),
+only screen and (-o-min-device-pixel-ratio: 13/10),
+only screen and (min-resolution: 120dpi) {
+    .chickenpaint-toolbar-button-icon {
+        background-image:url(../gfx/icons-2x.png);
+        background-size:32px 1024px;
+    }
+
+    .chickenpaint-layer-thumbnail {
+        background-image: url(../gfx/trans-grid-4px.png);
+        background-size: 4px 4px;
     }
 }
 

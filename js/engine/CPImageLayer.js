@@ -23,6 +23,10 @@
 import CPColorBmp from './CPColorBmp';
 import CPLayer from './CPLayer';
 
+const
+	LAYER_THUMBNAIL_WIDTH = 80,
+	LAYER_THUMBNAIL_HEIGHT = 50;
+
 /**
  * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().
  *
@@ -41,7 +45,19 @@ export default function CPImageLayer(width, height, name) {
 	} else {
 		this.image = null;
 	}
+
+	/**
+	 * True if this layer should be clipped onto the CPImageLayer beneath it.
+	 *
+	 * @type {boolean}
+	 */
 	this.clip = false;
+
+	/**
+	 *
+	 * @type {?CPColorBmp}
+	 */
+	this.thumbnail = null;
 }
 
 CPImageLayer.prototype = Object.create(CPLayer.prototype);
@@ -131,10 +147,18 @@ CPImageLayer.prototype.getClippingBase = function() {
 
 };
 
+/**
+ *
+ * @returns {boolean}
+ */
 CPImageLayer.prototype.getClip = function() {
 	return this.clip;
 };
 
+/**
+ *
+ * @param {boolean} clip
+ */
 CPImageLayer.prototype.setClip = function(clip) {
 	this.clip = clip;
 };
@@ -142,6 +166,8 @@ CPImageLayer.prototype.setClip = function(clip) {
 /**
  * Get a rectangle that encloses any non-transparent pixels in the layer within the given initialBounds (or an empty
  * rect if the pixels inside the given bounds are 100% transparent).
+ *
+ * Ignores the layer alpha and visibility properties, you may want to check .getEffectiveAlpha() > 0 before calling.
  *
  * @param {CPRect} initialBounds - The rect to search within
  *
@@ -158,4 +184,31 @@ CPImageLayer.prototype.getNonTransparentBounds = function(initialBounds) {
  */
 CPImageLayer.prototype.getMemoryUsed = function() {
 	return this.image ? this.image.getMemorySize() : 0;
+};
+
+/**
+ * Recreate the thumbnail for this layer.
+ */
+CPImageLayer.prototype.rebuildThumbnail = function() {
+	if (!this.thumbnail) {
+		var
+			scaleDivider = Math.ceil(Math.min(this.image.width / LAYER_THUMBNAIL_WIDTH, this.image.height / LAYER_THUMBNAIL_HEIGHT));
+
+		this.thumbnail = new CPColorBmp(Math.floor(this.image.width / scaleDivider), Math.floor(this.image.height / scaleDivider));
+	}
+
+	this.thumbnail.createThumbnailFrom(this.image, this.alpha);
+};
+
+/**
+ * Get the thumbnail for this layer (or build one if one was not already built)
+ *
+ * @returns {CPColorBmp}
+ */
+CPImageLayer.prototype.getThumbnail = function() {
+	if (!this.thumbnail) {
+		this.rebuildThumbnail();
+	}
+
+	return this.thumbnail;
 };

@@ -36,13 +36,16 @@ function createImageData(width, height) {
  * A 32bpp bitmap class (one byte per channel in RGBA order)
  *
  * @param {(ImageData|int)} width - The width of the bitmap, or the ImageData object to use by reference
- * @param {int} height - The height of the bitmap
+ * @param {?int} height - The height of the bitmap
  */
 export default function CPColorBmp(width, height) {
     if (width instanceof ImageData) {
-        CPBitmap.call(this, width.width, width.height);
+        var
+            imageData = width;
 
-        this.imageData = width;
+        CPBitmap.call(this, imageData.width, imageData.height);
+
+        this.imageData = imageData;
     } else {
         CPBitmap.call(this, width, height);
 
@@ -241,6 +244,128 @@ CPColorBmp.prototype.copyDataFrom = function(bmp) {
         // IE doesn't use Uint8ClampedArray for ImageData, so set() isn't available
         for (var i = 0; i < this.data.length; i++) {
             this.data[i] = bmp.data[i];
+        }
+    }
+};
+
+/**
+ * Use nearest-neighbor (subsampling) to scale that bitmap to replace the pixels of this one.
+ *
+ * @param {CPColorBmp} that
+ */
+CPColorBmp.prototype.copyScaledNearestNeighbor = function(that) {
+    var
+        destPixIndex = 0,
+
+        xSkip = that.width / this.width,
+        ySkip = that.height / this.height,
+        srcRowStart;
+
+    for (var y = 0, srcRow = 0; y < this.height; y++, srcRow += ySkip) {
+        srcRowStart = that.offsetOfPixel(0, Math.round(srcRow));
+
+        for (var x = 0, srcCol = 0; x < this.width; x++, destPixIndex += CPColorBmp.BYTES_PER_PIXEL, srcCol += xSkip) {
+            var
+                srcPixIndex = srcRowStart + Math.round(srcCol) * CPColorBmp.BYTES_PER_PIXEL;
+
+            this.data[destPixIndex] = that.data[srcPixIndex];
+            this.data[destPixIndex + 1] = that.data[srcPixIndex + 1];
+            this.data[destPixIndex + 2] = that.data[srcPixIndex + 2];
+            this.data[destPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = that.data[srcPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
+        }
+    }
+};
+
+/**
+ * Replace the pixels in this image with a scaled down thumbnail of that image.
+ *
+ * The thumbnail will attempt to exaggerate the contribution of thin opaque strokes on a transparent background, in order
+ * to make lineart layers more visible.
+ *
+ * @param {CPColorBmp} that
+ */
+CPColorBmp.prototype.createThumbnailFrom = function(that) {
+    const
+        MAX_SAMPLES_PER_OUTPUT_PIXEL = 3,
+
+        numSamples = Math.min(Math.floor(that.width / this.width), MAX_SAMPLES_PER_OUTPUT_PIXEL);
+
+    if (numSamples < 2) {
+        // If we only take one sample per output pixel, there's no need for our filtering strategy
+        this.copyScaledNearestNeighbor(that);
+        return;
+    }
+
+    const
+        rowBuffer = new Uint16Array(this.width * 5 /* 4 bytes of RGBA plus one to record the max alpha of the samples */),
+        srcRowByteLength = that.width * CPColorBmp.BYTES_PER_PIXEL,
+
+        sourceBytesBetweenOutputCols = Math.floor(that.width / this.width) * CPColorBmp.BYTES_PER_PIXEL,
+        intersampleXByteSpacing = Math.floor(that.width / this.width / numSamples) * CPColorBmp.BYTES_PER_PIXEL,
+
+    /* Due to the floor() in intersampleXByteSkip, it's likely that the gap between the last sample for an output pixel
+     * and the start of the sample for the next pixel will be higher than the intersample gap. So we'll add this between
+     * pixels if needed.
+     */
+        interpixelXByteSkip = sourceBytesBetweenOutputCols - intersampleXByteSpacing * numSamples,
+
+    // Now we do the same for rows...
+        sourceRowsBetweenOutputRows = Math.floor(that.height / this.height),
+        intersampleYRowsSpacing = Math.floor(that.height / this.height / numSamples),
+
+        intersampleYByteSkip = intersampleYRowsSpacing * srcRowByteLength - sourceBytesBetweenOutputCols * this.width,
+        interpixelYByteSkip = (sourceRowsBetweenOutputRows - intersampleYRowsSpacing * numSamples) * srcRowByteLength;
+
+    var
+        srcPixIndex = 0, dstPixIndex = 0;
+
+    // For each output thumbnail row...
+    for (var y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
+        var
+            bufferIndex = 0;
+
+        rowBuffer.fill(0);
+
+        // Sum the contributions of the input rows that correspond to this output row
+        for (var y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
+            bufferIndex = 0;
+            for (var x = 0; x < this.width; x++, bufferIndex += 5, srcPixIndex += interpixelXByteSkip) {
+                for (var x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
+                    var
+                        sourceAlpha = that.data[srcPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET],
+                        sourceAlphaScale = sourceAlpha / 255;
+
+                    // Accumulate the pre-multiplied pixels in the sample area
+                    rowBuffer[bufferIndex]     += that.data[srcPixIndex] * sourceAlphaScale;
+                    rowBuffer[bufferIndex + 1] += that.data[srcPixIndex + 1] * sourceAlphaScale;
+                    rowBuffer[bufferIndex + 2] += that.data[srcPixIndex + 2] * sourceAlphaScale;
+                    rowBuffer[bufferIndex + CPColorBmp.ALPHA_BYTE_OFFSET] += sourceAlpha;
+
+                    // And keep track of the highest alpha we see
+                    rowBuffer[bufferIndex + 4] = Math.max(rowBuffer[bufferIndex + 4], sourceAlpha);
+                }
+            }
+        }
+
+        // Now this thumbnail row is complete and we can write the buffer to the output
+        bufferIndex = 0;
+        for (var x = 0; x < this.width; x++, bufferIndex += 5, dstPixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            var
+                maxAlphaForSample = rowBuffer[bufferIndex + 4];
+
+            if (maxAlphaForSample == 0) {
+                this.data[dstPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0;
+            } else {
+                // Undo the premultiplication of the pixel data, scaling it to the max() alpha we want
+                var
+                    sampleAlphaScale = maxAlphaForSample / rowBuffer[bufferIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
+
+                this.data[dstPixIndex]     = rowBuffer[bufferIndex]     * sampleAlphaScale;
+                this.data[dstPixIndex + 1] = rowBuffer[bufferIndex + 1] * sampleAlphaScale;
+                this.data[dstPixIndex + 2] = rowBuffer[bufferIndex + 2] * sampleAlphaScale;
+
+                this.data[dstPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = maxAlphaForSample;
+            }
         }
     }
 };
@@ -652,22 +777,6 @@ CPColorBmp.prototype.getMemorySize = function() {
     return this.data.length;
 };
 
-// Load from a loaded HTML Image object
-CPColorBmp.prototype.loadFromImage = function(image) {
-    var
-        imageCanvas = document.createElement("canvas"),
-        imageContext = imageCanvas.getContext("2d");
-
-    imageCanvas.width = image.width;
-    imageCanvas.height = image.height;
-    
-    imageContext.globalCompositeOperation = "copy";
-    imageContext.drawImage(image, 0, 0);
-
-    this.imageData = imageContext.getImageData(0, 0, this.width, this.height);
-    this.data = this.imageData.data;
-};
-
 CPColorBmp.prototype.getImageData = function() {
     return this.imageData;
 };
@@ -685,17 +794,21 @@ CPColorBmp.prototype.setImageData = function(imageData) {
 };
 
 CPColorBmp.prototype.clearAll = function(color) {
-    var
-        a = (color >> 24) & 0xFF,
-        r = (color >> 16) & 0xFF,
-        g = (color >> 8) & 0xFF,
-        b = color & 0xFF;
+    if (color == 0 && "fill" in this.data) {
+        this.data.fill(0);
+    } else {
+        var
+            a = (color >> 24) & 0xFF,
+            r = (color >> 16) & 0xFF,
+            g = (color >> 8) & 0xFF,
+            b = color & 0xFF;
 
-    for (var i = 0; i < this.width * this.height * CPColorBmp.BYTES_PER_PIXEL; ) {
-        this.data[i++] = r;
-        this.data[i++] = g;
-        this.data[i++] = b;
-        this.data[i++] = a;
+        for (var i = 0; i < this.width * this.height * CPColorBmp.BYTES_PER_PIXEL;) {
+            this.data[i++] = r;
+            this.data[i++] = g;
+            this.data[i++] = b;
+            this.data[i++] = a;
+        }
     }
 };
 
@@ -1395,6 +1508,25 @@ CPColorBmp.prototype.hasAlphaInRect = function(rect) {
  */
 CPColorBmp.prototype.hasAlpha = function() {
     return this.hasAlphaInRect(this.getBounds());
+};
+
+/**
+ * Create from a loaded HTML Image object
+ *
+ * @param {HTMLImageElement} image
+ */
+CPColorBmp.createFromImage = function(image) {
+    var
+        imageCanvas = document.createElement("canvas"),
+        imageContext = imageCanvas.getContext("2d");
+
+    imageCanvas.width = image.width;
+    imageCanvas.height = image.height;
+
+    imageContext.globalCompositeOperation = "copy";
+    imageContext.drawImage(image, 0, 0);
+
+    return new CPColorBmp(imageContext.getImageData(0, 0, image.width, image.height));
 };
 
 window.debugImage = function(image) {

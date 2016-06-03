@@ -59,8 +59,12 @@ export default function CPGreyBmp(width, height, bitDepth) {
     };
     
     this.clearAll = function(value) {
-        for (var i = 0; i < this.data.length; i++) {
-            this.data[i] = value;
+        if ("fill" in this.data) {
+            this.data.fill(value);
+        } else {
+            for (var i = 0; i < this.data.length; i++) {
+                this.data[i] = value;
+            }
         }
     };
     
