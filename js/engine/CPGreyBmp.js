@@ -23,121 +23,151 @@
 import CPBitmap from "./CPBitmap";
 
 /**
+ * Create a new greyscale bitmap with the given parameters.
  *
- * @param width
- * @param height
- * @param bitDepth
+ * @param {int} width
+ * @param {int} height
+ * @param {int} bitDepth
  *
  * @constructor
  * @extends CPBitmap
  */
 export default function CPGreyBmp(width, height, bitDepth) {
-
     CPBitmap.call(this, width, height);
 
+    this.createBitmap(width, height, bitDepth);
+}
+
+CPGreyBmp.prototype.createBitmap = function(width, height, bitDepth) {
     this.bitDepth = bitDepth;
     
     switch (bitDepth) {
         case 32:
             this.data = new Uint32Array(width * height);
-        break;
+            break;
         case 16:
             this.data = new Uint16Array(width * height);
-        break;
+            break;
         case 8:
         default:
             this.data = new Uint8Array(width * height);
     }
+};
 
-    this.clone = function() {
-        var
-            result = new CPGreyBmp(this.width, this.height, this.bitDepth);
-        
-        result.data.set(this.data);
-        
-        return result;
-    };
-    
-    this.clearAll = function(value) {
-        if ("fill" in this.data) {
-            this.data.fill(value);
-        } else {
-            for (var i = 0; i < this.data.length; i++) {
-                this.data[i] = value;
-            }
-        }
-    };
-    
-    this.clearRect = function(rect, value) {
-        rect = this.getBounds().clipTo(rect);
-        
-        var
-            yStride = this.width - rect.getWidth(),
-            pixIndex = this.offsetOfPixel(rect.left, rect.top);
-        
-        for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-            for (var x = rect.left; x < rect.right; x++, pixIndex++) {
-                this.data[pixIndex] = value;
-            }
-        }
-    };
+CPGreyBmp.prototype.clone = function() {
+    var
+        result = new CPGreyBmp(this.width, this.height, this.bitDepth);
 
-    this.mirrorHorizontally = function() {
-        var
-            newData = new Uint8Array(width * height);
+    result.copyDataFrom(this);
 
-        for (var y = 0; y < height; y++) {
-            for (var x = 0; x < width; x++) {
-                newData[y * width + x] = this.data[y * width + width - x - 1];
-            }
-        }
+    return result;
+};
 
-        this.data = newData;
-    };
-
-    this.applyLUT = function(lut) {
+CPGreyBmp.prototype.clearAll = function(value) {
+    if ("fill" in this.data) {
+        this.data.fill(value);
+    } else {
         for (var i = 0; i < this.data.length; i++) {
-            this.data[i] = lut.table[this.data[i]];
+            this.data[i] = value;
         }
-    };
-    
-    this.toCanvas = function() {
-        var
-            imageData = this.toImageData(),
-            
-            canvas = document.createElement("canvas"),
-            context = canvas.getContext("2d");
-        
-        canvas.width = this.width;
-        canvas.height = this.height;
-        
-        context.putImageData(imageData, 0, 0);
-        
-        return canvas;
-    };
-    
-    this.toImageData = function() {
-        var
-            canvas = document.createElement("canvas"),
-            context = canvas.getContext("2d"),
-            imageData = context.createImageData(this.width, this.height),
-            
-            srcIndex = 0,
-            dstIndex = 0;
-        
-        for (var y = 0; y < this.height; y++) {
-            for (var x = 0; x < this.width; x++) {
-                imageData.data[dstIndex++] = this.data[srcIndex];
-                imageData.data[dstIndex++] = this.data[srcIndex];
-                imageData.data[dstIndex++] = this.data[srcIndex];
-                imageData.data[dstIndex++] = 0xFF;
-                srcIndex++;
+    }
+};
+
+CPGreyBmp.prototype.clearRect = function(rect, value) {
+    rect = this.getBounds().clipTo(rect);
+
+    var
+        yStride = this.width - rect.getWidth(),
+        pixIndex = this.offsetOfPixel(rect.left, rect.top);
+
+    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
+        for (var x = rect.left; x < rect.right; x++, pixIndex++) {
+            this.data[pixIndex] = value;
+        }
+    }
+};
+
+CPGreyBmp.prototype.mirrorHorizontally = function() {
+    var
+        newData = new Uint8Array(width * height);
+
+    for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+            newData[y * width + x] = this.data[y * width + width - x - 1];
+        }
+    }
+
+    this.data = newData;
+};
+
+CPGreyBmp.prototype.applyLUT = function(lut) {
+    for (var i = 0; i < this.data.length; i++) {
+        this.data[i] = lut.table[this.data[i]];
+    }
+};
+
+CPGreyBmp.prototype.toCanvas = function() {
+    var
+        imageData = this.toImageData(),
+
+        canvas = document.createElement("canvas"),
+        context = canvas.getContext("2d");
+
+    canvas.width = this.width;
+    canvas.height = this.height;
+
+    context.putImageData(imageData, 0, 0);
+
+    return canvas;
+};
+
+CPGreyBmp.prototype.toImageData = function() {
+    var
+        canvas = document.createElement("canvas"),
+        context = canvas.getContext("2d"),
+        imageData = context.createImageData(this.width, this.height),
+
+        srcIndex = 0,
+        dstIndex = 0;
+
+    for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this.width; x++) {
+            imageData.data[dstIndex++] = this.data[srcIndex];
+            imageData.data[dstIndex++] = this.data[srcIndex];
+            imageData.data[dstIndex++] = this.data[srcIndex];
+            imageData.data[dstIndex++] = 0xFF;
+            srcIndex++;
+        }
+    }
+
+    return imageData;
+};
+
+/**
+ * Copy pixels from that bitmap.
+ *
+ * @param {CPGreyBmp} bmp
+ */
+CPGreyBmp.prototype.copyDataFrom = function(bmp) {
+    if (bmp.width != this.width || bmp.height != this.height || bmp.bitDepth != this.bitDepth) {
+        if ("slice" in bmp.data) {
+            this.data = bmp.data.slice(0);
+
+            this.width = bmp.width;
+            this.height = bmp.height;
+            this.bitDepth = bmp.bitDepth;
+        } else {
+            // IE doesn't have slice()
+            this.createBitmap(bmp.width, bmp.height, bmp.bitDepth);
+
+            for (let i = 0; i < this.data.length; i++) {
+                this.data[i] = bmp.data[i];
             }
         }
-        
-        return imageData;
-    };
-}
+    } else {
+        this.data.set(bmp.data);
+    }
+};
 
 CPGreyBmp.prototype.offsetOfPixel = function(x, y) {
     return y * this.width + x;

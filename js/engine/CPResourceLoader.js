@@ -66,7 +66,7 @@ export default function CPResourceLoader(options) {
                                 layer = new CPImageLayer(0, 0, "Layer 1");
                             
                             layer.image = CPColorBmp.createFromImage(image);
-                            artwork.addLayerObject(layer);
+                            artwork.addLayerObject(artwork.getLayersRoot(), layer);
                             
                             image = null;
                             window.URL.revokeObjectURL(imageUrl);

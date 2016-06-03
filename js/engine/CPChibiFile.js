@@ -24,156 +24,643 @@ import CPArtwork from "./CPArtwork";
 import CPImageLayer from "./CPImageLayer";
 import CPColorBmp from "./CPColorBmp";
 import ArrayDataStream from "../util/ArrayDataStream";
+import CPLayerGroup from "./CPLayerGroup";
+import CPGreyBmp from "./CPGreyBmp";
+
+/**
+ * Concat two Uint8Arrays to make a new one and return it.
+ *
+ * Either one may be set to null. If either one is null, the other is returned. If both are null, null is
+ * returned.
+ */
+function concatBuffers(one, two) {
+    if (one == null || one.length == 0) {
+        return two;
+    }
+    if (two == null || two.length == 0) {
+        return one;
+    }
+
+    var
+        result = new Uint8Array(one.length + two.length);
+
+    result.set(one, 0);
+    result.set(two, one.length);
+
+    return result;
+}
+
+function CPChibiFileHeader(stream) {
+    this.version = stream.readU32BE();
+    this.width = stream.readU32BE();
+    this.height = stream.readU32BE();
+    this.layersNb = stream.readU32BE();
+}
+
+CPChibiFileHeader.FIXED_HEADER_LENGTH = 4 * 4;
+
+function ChibiChunkHeader(stream) {
+    var
+        chunkType = new Array(4);
+
+    for (var i = 0; i < chunkType.length; i++) {
+        chunkType[i] = String.fromCharCode(stream.readByte());
+    }
+
+    this.chunkType = chunkType.join("");
+    this.chunkSize = stream.readU32BE();
+
+    if (stream.eof) {
+        throw "Truncated chunk";
+    }
+}
+
+ChibiChunkHeader.HEADER_LENGTH = 8;
+
+const
+    LAYER_FLAG_VISIBLE = 1,
+    LAYER_FLAG_CLIP = 2,
+    LAYER_FLAG_HAS_MASK = 4,
+    LAYER_FLAG_EXPANDED = 8,
+
+    LAYER_DECODE_STATE_FIXED_HEADER    = 0,
+    LAYER_DECODE_STATE_VARIABLE_HEADER = 1,
+    LAYER_DECODE_STATE_IMAGE_DATA      = 3,
+    LAYER_DECODE_STATE_MASK_DATA       = 4,
+    LAYER_DECODE_STATE_SKIP_TRAILING   = 5,
+    LAYER_DECODE_STATE_COMPLETE        = 6;
+
+/**
+ *
+ * @param {ChibiChunkHeader} chunkHeader - The header for the layer chunk to decode
+ * @param {int} width - The width of the document
+ * @param {int} height - The height of the document
+ * @constructor
+ */
+function ChibiLayerDecoder(chunkHeader, width, height) {
+    this.chunkHeader = chunkHeader;
+    this.width = width;
+    this.height = height;
+
+    this.state = LAYER_DECODE_STATE_FIXED_HEADER;
+    this.payloadOffset = 0;
+    this.skipBytes = 0;
+    this.nameLength = 0;
+    this.done = false;
+
+    this.colorDecoder = null;
+    this.maskDecoder = null;
+}
+
+ChibiLayerDecoder.prototype.readFixedHeader = function(stream) {
+    this.payloadOffset = stream.readU32BE();
+
+    this.blendMode = stream.readU32BE();
+    this.alpha = stream.readU32BE();
+
+    var
+        layerFlags = stream.readU32BE();
+
+    this.visible = (layerFlags & LAYER_FLAG_VISIBLE) != 0;
+    this.clip = (layerFlags & LAYER_FLAG_CLIP) != 0;
+    this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
+    this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
+
+    this.nameLength = stream.readU32BE();
+};
+
+ChibiLayerDecoder.prototype.getFixedHeaderLen = function() {
+    return 5 * 4;
+};
+
+ChibiLayerDecoder.prototype.getVariableHeaderLen = function() {
+    return this.nameLength;
+};
+
+ChibiLayerDecoder.prototype.readVariableSizeHeader = function(stream) {
+    this.name = stream.readString(this.nameLength);
+};
+
+/**
+ * Decode some layer data from the beginning of the given block. Returns any non-layer data
+ * that was left over from that block, or null if the block was read completely.
+ *
+ * Keep calling with more data until the .done property is set to true.
+ *
+ * @param {Uint8Array} block
+ * @returns {?Uint8Array}
+ */
+ChibiLayerDecoder.prototype.decode = function(block) {
+    var
+        stream;
+
+    // Dummy loop so we can re-enter the switch statement with "continue"
+    while (true) {
+        if (this.skipBytes > 0) {
+            if (this.skipBytes >= block.length) {
+                this.skipBytes -= block.length;
+                return null;
+            } else {
+                block = block.subarray(this.skipBytes);
+                this.skipBytes = 0;
+            }
+        }
+
+        switch (this.state) {
+            case LAYER_DECODE_STATE_FIXED_HEADER:
+                // Wait for first part of header to arrive
+                if (block.length < this.getFixedHeaderLen()) {
+                    break;
+                }
+
+                stream = new ArrayDataStream(block);
+                this.readFixedHeader(stream);
+
+                block = block.subarray(stream.pos);
+
+                this.state = LAYER_DECODE_STATE_VARIABLE_HEADER;
+                continue;
+
+            case LAYER_DECODE_STATE_VARIABLE_HEADER:
+                // Wait for variable part of header to arrive
+                if (block.length < this.getVariableHeaderLen()) {
+                    break;
+                }
+
+                stream = new ArrayDataStream(block);
+                this.readVariableSizeHeader(stream);
+
+                this.layer = this.createLayer();
+
+                if (this.hasMask) {
+                    this.layer.setMask(new CPGreyBmp(this.width, this.height, 8));
+                    this.maskDecoder = new CPMaskDecoder(this.layer.mask);
+                }
+
+                if (this.layer instanceof CPImageLayer) {
+                    this.colorDecoder = new CPColorPixelsDecoder(this.layer.image);
+                }
+
+                this.skipBytes = this.payloadOffset - this.getFixedHeaderLen();
+
+                if (this.colorDecoder) {
+                    this.state = LAYER_DECODE_STATE_IMAGE_DATA;
+                } else if (this.maskDecoder) {
+                    this.state = LAYER_DECODE_STATE_MASK_DATA;
+                } else {
+                    this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                }
+
+                continue;
+
+            case LAYER_DECODE_STATE_IMAGE_DATA:
+                block = this.colorDecoder.decode(block);
+
+                if (this.colorDecoder.done) {
+                    if (this.maskDecoder) {
+                        this.state = LAYER_DECODE_STATE_MASK_DATA;
+                    } else {
+                        this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                    }
+                    continue;
+                }
+                break;
+
+            case LAYER_DECODE_STATE_MASK_DATA:
+                block = this.maskDecoder.decode(block);
+
+                if (this.maskDecoder.done) {
+                    this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                    continue;
+                }
+                break;
+
+            case LAYER_DECODE_STATE_SKIP_TRAILING:
+                var
+                    bytesRead = this.payloadOffset;
+
+                if (this.colorDecoder) {
+                    bytesRead += this.colorDecoder.bytesTotal;
+                }
+
+                if (this.maskDecoder) {
+                    bytesRead += this.maskDecoder.bytesTotal;
+                }
+
+                this.state = LAYER_DECODE_STATE_COMPLETE;
+                this.skipBytes = this.chunkHeader.chunkSize - bytesRead;
+                continue;
+
+            case LAYER_DECODE_STATE_COMPLETE:
+                this.done = true;
+        }
+        break;
+    }
+
+    return block;
+};
+
+/**
+ *
+ * @param chunkHeader
+ * @param width
+ * @param height
+ * @constructor
+ */
+function ChibiImageLayerDecoder(chunkHeader, width, height) {
+    ChibiLayerDecoder.call(this, chunkHeader, width, height);
+}
+
+ChibiImageLayerDecoder.prototype = Object.create(ChibiLayerDecoder.prototype);
+ChibiImageLayerDecoder.prototype.constructor = ChibiImageLayerDecoder;
+
+/**
+ * Create a layer using the properties previously read into this decoder.
+ *
+ * @returns {CPImageLayer}
+ */
+ChibiImageLayerDecoder.prototype.createLayer = function() {
+    var
+        layer = new CPImageLayer(this.width, this.height, this.name);
+
+    layer.blendMode = this.blendMode;
+    layer.alpha = this.alpha;
+
+    layer.visible = this.visible;
+    layer.clip = this.clip;
+
+    return layer;
+};
+
+function ChibiLayerGroupDecoder(chunkHeader, width, height) {
+    ChibiLayerDecoder.call(this, chunkHeader, width, height);
+
+    this.childLayers = 0;
+}
+
+ChibiLayerGroupDecoder.prototype = Object.create(ChibiLayerDecoder.prototype);
+ChibiLayerGroupDecoder.prototype.constructor = ChibiLayerGroupDecoder;
+
+ChibiLayerGroupDecoder.prototype.readFixedHeader = function(stream) {
+    ChibiLayerDecoder.prototype.readFixedHeader.call(this, stream);
+
+    this.childLayers = stream.readU32BE();
+};
+
+ChibiLayerGroupDecoder.prototype.getFixedHeaderLen = function() {
+    return ChibiLayerDecoder.prototype.getFixedHeaderLen.call(this) + 4;
+};
+
+/**
+ * Create a group using the properties previously read into this decoder.
+ *
+ * @returns {CPLayerGroup}
+ */
+ChibiLayerGroupDecoder.prototype.createLayer = function() {
+    var
+        group = new CPLayerGroup(this.name, this.blendMode);
+
+    group.alpha = this.alpha;
+
+    group.visible = this.visible;
+    group.expanded = this.expanded;
+
+    return group;
+};
+
+/**
+ * Write the RGBA pixels of the given bitmap to the stream in ARGB order to match the Chibi specs.
+ *
+ * @param {ArrayDataStream} stream
+ * @param {CPColorBmp} bitmap
+ */
+function writeColorBitmapToStream(stream, bitmap) {
+    var
+        pos = stream.pos,
+        buffer = stream.data,
+        bitmapData = bitmap.data;
+    
+    for (var i = 0; i < bitmapData.length; i += CPColorBmp.BYTES_PER_PIXEL) {
+        buffer[pos++] = bitmapData[i + CPColorBmp.ALPHA_BYTE_OFFSET];
+        buffer[pos++] = bitmapData[i + CPColorBmp.RED_BYTE_OFFSET];
+        buffer[pos++] = bitmapData[i + CPColorBmp.GREEN_BYTE_OFFSET];
+        buffer[pos++] = bitmapData[i + CPColorBmp.BLUE_BYTE_OFFSET];
+    }
+    
+    stream.pos = pos;
+}
+
+/**
+ * Write the 8-bit greyscale pixels of the given bitmap to the stream.
+ *
+ * @param {ArrayDataStream} stream
+ * @param {CPGreyBmp} bitmap
+ */
+function writeMaskToStream(stream, bitmap) {
+    stream.data.set(stream.pos, bitmap.data.length);
+    stream.pos += bitmap.data.length;
+}
+
+/**
+ *
+ * @param {CPColorBmp} destImage - Image to decode into.
+ * @constructor
+ */
+function CPColorPixelsDecoder(destImage) {
+    this.bytesRead = 0;
+    this.bytesTotal = destImage.width * destImage.height * CPColorBmp.BYTES_PER_PIXEL;
+    this.output = destImage.data;
+    this.done = false;
+}
+
+/**
+ * Decode A,R,G,B pixels from the given buffer into the R,G,B,A destination image.
+ *
+ * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
+ *
+ * @param {Uint8Array} buffer
+ */
+CPColorPixelsDecoder.prototype.decode = function(buffer) {
+    if (buffer == null) {
+        return null;
+    }
+
+    var
+        subpixel = this.bytesRead % CPColorBmp.BYTES_PER_PIXEL,
+        dstPixelStartOffset = this.bytesRead - subpixel,
+        bufferPos = 0,
+
+    // Map from source channel order to CPLayer's dest order
+        channelMap = [
+            CPColorBmp.ALPHA_BYTE_OFFSET,
+            CPColorBmp.RED_BYTE_OFFSET,
+            CPColorBmp.GREEN_BYTE_OFFSET,
+            CPColorBmp.BLUE_BYTE_OFFSET
+        ];
+
+    // The first pixel might be a partial one, since we might be continuing a pixel split over buffers
+    for (; subpixel < CPColorBmp.BYTES_PER_PIXEL && bufferPos < buffer.length; subpixel++) {
+        this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+        bufferPos++;
+    }
+
+    this.bytesRead += bufferPos;
+
+    // How many more pixels are we to read in this buffer?
+    var
+        bytesRemain = Math.min(buffer.length - bufferPos, this.bytesTotal - this.bytesRead) | 0,
+        fullPixelsRemain = (bytesRemain / CPColorBmp.BYTES_PER_PIXEL) | 0,
+        subpixelsRemain = bytesRemain % CPColorBmp.BYTES_PER_PIXEL;
+
+    for (var i = 0; i < fullPixelsRemain; i++) {
+        this.output[this.bytesRead + CPColorBmp.ALPHA_BYTE_OFFSET] = buffer[bufferPos];
+        this.output[this.bytesRead + CPColorBmp.RED_BYTE_OFFSET] = buffer[bufferPos + 1];
+        this.output[this.bytesRead + CPColorBmp.GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
+        this.output[this.bytesRead + CPColorBmp.BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
+        this.bytesRead += CPColorBmp.BYTES_PER_PIXEL;
+        bufferPos += CPColorBmp.BYTES_PER_PIXEL;
+    }
+
+    // Read a fractional pixel at the end of the buffer
+    dstPixelStartOffset = this.bytesRead;
+    for (subpixel = 0; subpixel < subpixelsRemain; subpixel++) {
+        this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+        bufferPos++;
+    }
+
+    this.bytesRead += subpixelsRemain;
+
+    if (this.bytesRead >= this.bytesTotal) {
+        this.done = true;
+    }
+
+    if (bufferPos < buffer.length) {
+        // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
+        return buffer.subarray(bufferPos);
+    } else {
+        // Buffer exhausted
+        return null;
+    }
+};
+
+/**
+ *
+ * @param {CPGreyBmp} mask - The destination to decode pixels into, must already be the correct size.
+ * @constructor
+ */
+function CPMaskDecoder(mask) {
+    this.bytesRead = 0;
+    this.bytesTotal = mask.width * mask.height;
+    this.output = mask.data;
+    this.done = true;
+}
+
+/**
+ * Read 8-bit greyscale pixels from the given buffer into destination pixel array.
+ *
+ * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
+ *
+ * @param {Uint8Array} buffer
+ */
+CPMaskDecoder.prototype.decode = function(buffer) {
+    if (buffer == null) {
+        return null;
+    }
+
+    var
+    // How many more pixels are we to read in this buffer?
+        bytesRemain = Math.min(buffer.length, this.bytesTotal - this.bytesRead) | 0,
+        dstIndex = this.bytesRead;
+
+    for (var srcIndex = 0; srcIndex < bytesRemain; srcIndex++, dstIndex++) {
+        this.output[dstIndex] = buffer[srcIndex];
+    }
+
+    this.bytesRead = dstIndex;
+
+    if (this.bytesRead >= this.bytesTotal) {
+        this.done = true;
+    }
+
+    if (dstIndex < buffer.length) {
+        // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
+        return buffer.subarray(dstIndex);
+    } else {
+        // Buffer exhausted
+        return null;
+    }
+};
 
 export default function CPChibiFile() {
-
-    function CPChibiHeader(stream, chunk) {
-        this.version = stream.readU32BE();
-        this.width = stream.readU32BE();
-        this.height = stream.readU32BE();
-        this.layersNb = stream.readU32BE();
-    }
-    
-    CPChibiHeader.FIXED_HEADER_LENGTH = 4 * 4;
-
-    function CPChibiChunkHeader(stream) {
-        var
-            chunkType = new Array(4);
-
-        for (var i = 0; i < chunkType.length; i++) {
-            chunkType[i] = String.fromCharCode(stream.readByte());
-        }
-        
-        this.chunkType = chunkType.join("");
-        this.chunkSize = stream.readU32BE();
-
-        if (stream.eof) {
-            throw "Truncated chunk";
-        }
-    }
-    
-    function CPChibiLayerChunkHeader() {
-        var
-            payloadOffset,
-            titleLength;
-        
-        this.readFixedHeader = function(stream) {
-            payloadOffset = stream.readU32BE();
-    
-            this.blendMode = stream.readU32BE();
-            this.alpha = stream.readU32BE();
-            this.visible = (stream.readU32BE() & 1) != 0;
-    
-            titleLength = stream.readU32BE();
-        };
-        
-        /* 
-         * After reading the fixed header, use this function to find out how many more bytes of header
-         * need to be read.
-         */
-        this.getVariableHeaderLen = function() {
-            return payloadOffset - CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH;
-        };
-        
-        this.getTotalHeaderLen = function() {
-            return CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH + this.getVariableHeaderLen();
-        };
-        
-        this.readVariableHeader = function(stream) {
-            this.name = stream.readString(titleLength);
-            
-            // Skip to the pixel data (allows additional header fields to be added that we don't yet support)
-            stream.skip(payloadOffset - titleLength - CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH);
-        };
-    }
-    
-    // The size of the initial, fixed-length portion of the header
-    CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH = 4 * 5;
+    const
+        MAX_SUPPORTED_MAJOR_VERSION = 1,
+        MAX_SUPPORTED_MINOR_VERSION = 1,
+        CURRENT_VERSION_NUMBER = (MAX_SUPPORTED_MAJOR_VERSION << 16) | MAX_SUPPORTED_MINOR_VERSION;
 
     const
         CHI_MAGIC = "CHIBIOEK",
 
         CHUNK_TAG_HEAD = "HEAD",
         CHUNK_TAG_LAYER = "LAYR",
-        CHUNK_TAG_END = "ZEND",
-        
-        BYTES_PER_PIXEL = CPColorBmp.BYTES_PER_PIXEL,
-        ALPHA_BYTE_OFFSET = CPColorBmp.ALPHA_BYTE_OFFSET,
-        RED_BYTE_OFFSET = CPColorBmp.RED_BYTE_OFFSET,
-        GREEN_BYTE_OFFSET = CPColorBmp.GREEN_BYTE_OFFSET,
-        BLUE_BYTE_OFFSET = CPColorBmp.BLUE_BYTE_OFFSET;
+        CHUNK_TAG_GROUP = "GRUP",
+        CHUNK_TAG_END = "ZEND";
 
-    function serializeEndChunk() {
-        var
-            buffer = new Uint8Array(CHUNK_TAG_END.length + 4),
-            stream = new ArrayDataStream(buffer);
-
-        stream.writeString(CHUNK_TAG_END);
-        stream.writeU32BE(0);
-
-        return stream.getAsDataArray();
+    function writeChunkHeader(stream, tag, chunkSize) {
+        stream.writeString(tag);
+        stream.writeU32BE(chunkSize);
     }
 
-    function serializeHeaderChunk(artwork) {
+	/**
+     * Allocate a fixed-size buffer to represent the chunk with the given tag and size, and return a stream which
+     * points to the body of the chunk (with the chunk header already written).
+     *
+     * @param {string} chunkTag
+     * @param {int} chunkBodySize
+     * @returns {ArrayDataStream}
+     */
+    function allocateChunkStream(chunkTag, chunkBodySize) {
         var
-            buffer = new Uint8Array(CHUNK_TAG_HEAD.length + 4 * 5),
+            buffer = new Uint8Array(ChibiChunkHeader.HEADER_LENGTH + chunkBodySize),
             stream = new ArrayDataStream(buffer);
 
-        stream.writeString(CHUNK_TAG_HEAD);
-        stream.writeU32BE(16); // ChunkSize
+        writeChunkHeader(stream, chunkTag, chunkBodySize);
 
-        stream.writeU32BE(16); // Current Version: Major: 1 Minor: 0
+        return stream;
+    }
+
+	/**
+     *
+     * @param {CPArtwork} artwork
+     * @param {int} numLayers
+     *
+     * @returns Uint8Array
+     */
+    function serializeFileHeaderChunk(artwork, numLayers) {
+        var
+            stream = allocateChunkStream(CHUNK_TAG_HEAD, CPChibiFileHeader.FIXED_HEADER_LENGTH);
+
+        // Current Version, with Major in the top word and Minor in the lower
+        stream.writeU32BE(CURRENT_VERSION_NUMBER);
         stream.writeU32BE(artwork.width);
         stream.writeU32BE(artwork.height);
-        stream.writeU32BE(artwork.getLayerCount());
+        stream.writeU32BE(numLayers);
 
         return stream.getAsDataArray();
     }
 
-    function serializeLayerChunk(layer) {
+    /**
+     * @returns Uint8Array
+     */
+    function serializeEndChunk() {
+        return allocateChunkStream(CHUNK_TAG_END, 0).getAsDataArray();
+    }
+    
+	/**
+     * Serialize an image layer's header and image data into a byte array buffer, and return it.
+     *
+     * @param {CPImageLayer} layer
+     * @returns {Uint8Array}
+     */
+    function serializeImageLayerChunk(layer) {
         var
-            layerData = layer.image.data,
-            chunkSize = 20 + layer.name.length + layerData.length,
+            FIXED_HEADER_LENGTH = 4 * 5,
+            stream = allocateChunkStream(CHUNK_TAG_LAYER, FIXED_HEADER_LENGTH + layer.name.length + layer.image.data.length + (layer.mask ? layer.mask.data.length : 0));
 
-            buffer = new Uint8Array(CHUNK_TAG_LAYER.length + 4 + chunkSize),
-            stream = new ArrayDataStream(buffer),
-            pos;
-
-        stream.writeString(CHUNK_TAG_LAYER); // Chunk ID
-        stream.writeU32BE(chunkSize); // ChunkSize
-
-        stream.writeU32BE(20 + layer.name.length); // Offset to layer data from start of header
+        // Fixed length header portion
+        stream.writeU32BE(FIXED_HEADER_LENGTH + layer.name.length); // Offset to layer data from start of header
 
         stream.writeU32BE(layer.blendMode);
         stream.writeU32BE(layer.alpha);
-        stream.writeU32BE(layer.visible ? 1 : 0); // layer visibility and future flags
-
+        
+        var layerFlags = 0;
+        
+        if (layer.visible) {
+            layerFlags |= LAYER_FLAG_VISIBLE;
+        }
+        if (layer.clip) {
+            layerFlags |= LAYER_FLAG_CLIP;
+        }
+        if (layer.mask) {
+            layerFlags |= LAYER_FLAG_HAS_MASK;
+        }
+        
+        stream.writeU32BE(layerFlags);
         stream.writeU32BE(layer.name.length);
+
+        // Variable length header portion
         stream.writeString(layer.name);
 
-        // Convert layer bytes from RGBA to ARGB order to match the Chibi specs
-        pos = stream.pos;
-        for (var i = 0; i < layerData.length; i += BYTES_PER_PIXEL) {
-            buffer[pos++] = layerData[i + ALPHA_BYTE_OFFSET];
-            buffer[pos++] = layerData[i + RED_BYTE_OFFSET];
-            buffer[pos++] = layerData[i + GREEN_BYTE_OFFSET];
-            buffer[pos++] = layerData[i + BLUE_BYTE_OFFSET];
+        // Payload data
+        writeColorBitmapToStream(stream, layer.image);
+
+        if (layer.mask) {
+            writeMaskToStream(stream, layer.mask);
         }
 
-        return buffer;
+        return stream.getAsDataArray();
+    }
+
+    /**
+     * Serialize a layer group into a byte array buffer, and return it.
+     *
+     * @param {CPLayerGroup} group
+     * @returns {Uint8Array}
+     */
+    function serializeLayerGroupChunk(group) {
+        const
+            FIXED_HEADER_LENGTH = 4 * 6,
+            stream = allocateChunkStream(CHUNK_TAG_GROUP, FIXED_HEADER_LENGTH + group.name.length + (group.mask ? group.mask.data.length : 0));
+
+        // Fixed-length header portion
+
+        // Offset to payload data from start of chunk
+        stream.writeU32BE(FIXED_HEADER_LENGTH + group.name.length);
+
+        stream.writeU32BE(group.blendMode);
+        stream.writeU32BE(group.alpha);
+
+        var groupFlags = 0;
+
+        if (group.visible) {
+            groupFlags |= LAYER_FLAG_VISIBLE;
+        }
+        if (group.mask) {
+            groupFlags |= LAYER_FLAG_HAS_MASK;
+        }
+        if (group.expanded) {
+            groupFlags |= LAYER_FLAG_EXPANDED;
+        }
+
+        stream.writeU32BE(groupFlags);
+        stream.writeU32BE(group.name.length);
+        stream.writeU32BE(group.layers.length);
+
+        // Variable-length header portion
+        stream.writeString(group.name);
+
+        // Payload data
+        if (group.mask) {
+            writeMaskToStream(stream, group.mask);
+        }
+
+        return stream.getAsDataArray();
     }
 
     /**
      * Serialize the given artwork to Chibifile format. Returns a promise which resolves to the serialized Blob.
+     *
+     * @param {CPArtwork} artwork
      */
     this.serialize = function(artwork) {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function(resolve) {
             var
                 deflator = new window.pako.Deflate({
                     level: 7
                 }),
                 blobParts = [],
-                magic = new Uint8Array(CHI_MAGIC.length);
+                magic = new Uint8Array(CHI_MAGIC.length),
+                layers = artwork.getLayersRoot().getLinearizedLayerList(false),
+                layerWritePromise = Promise.resolve();
     
             // The magic file signature is not ZLIB compressed:
             for (let i = 0; i < CHI_MAGIC.length; i++) {
@@ -182,29 +669,28 @@ export default function CPChibiFile() {
             blobParts.push(magic);
     
             // The rest gets compressed
-            deflator.push(serializeHeaderChunk(artwork), false);
+            deflator.push(serializeFileHeaderChunk(artwork, layers.length), false);
     
-            let
-                layers = artwork.getLayers(),
-                i = 0;
-            
-            // Insert a settimeout between each serialized layer, so we can maintain browser responsiveness
-            
-            function serializeLayer() {
-                if (i == layers.length) {
-                    deflator.push(serializeEndChunk(artwork), true);
-                    
-                    blobParts.push(deflator.result);
-                    
-                    resolve(new Blob(blobParts, {type: "application/octet-stream"}));
-                } else {
-                    deflator.push(serializeLayerChunk(layers[i++]), false);
-                    
-                    setTimeout(serializeLayer, 10);
-                }
+            for (let layer of layers) {
+                layerWritePromise = layerWritePromise.then(() => new Promise(function(resolve) {
+                    if (layer instanceof CPImageLayer) {
+                        deflator.push(serializeImageLayerChunk(layer), false);
+                    } else if (layer instanceof CPLayerGroup) {
+                        deflator.push(serializeLayerGroupChunk(layer), false);
+                    }
+
+                    // Insert a setTimeout between each serialized layer, so we can maintain browser responsiveness
+                    setTimeout(resolve, 10);
+                }));
             }
-            
-            setTimeout(serializeLayer, 10);
+
+            layerWritePromise.then(function() {
+                deflator.push(serializeEndChunk(), true);
+
+                blobParts.push(deflator.result);
+
+                resolve(new Blob(blobParts, {type: "application/octet-stream"}));
+            });
         });
     };
 
@@ -217,29 +703,6 @@ export default function CPChibiFile() {
 
         return true;
     }
-
-    /**
-     * Concat two Uint8Arrays to make a new one and return it.
-     * 
-     * Either one may be set to null. If either one is null, the other is returned. If both are null, null is
-     * returned.
-     */
-    function concatBuffers(one, two) {
-        if (one == null || one.length == 0) {
-            return two;
-        }
-        if (two == null || two.length == 0) {
-            return one;
-        }
-        
-        var
-            result = new Uint8Array(one.length + two.length);
-        
-        result.set(one, 0);
-        result.set(two, one.length);
-        
-        return result;
-    }
     
     /**
      * Attempt to load a chibifile from the given arraybuffer.
@@ -249,243 +712,178 @@ export default function CPChibiFile() {
     this.read = function(arrayBuffer) {
         const
             STATE_WAIT_FOR_CHUNK               = 0,
-            STATE_DECODE_IMAGE_HEADER          = 1,
-            STATE_DECODE_LAYER_HEADER_FIXED    = 2,
-            STATE_DECODE_LAYER_HEADER_VARIABLE = 3,
-            STATE_DECODE_LAYER                 = 4,
-            STATE_SKIP_TRAILING_CHUNK_BYTES    = 5,
-            STATE_SUCCESS                      = 6,
-            STATE_FATAL                        = 10;
+
+            STATE_DECODE_FILE_HEADER           = 1,
+
+            STATE_DECODE_LAYER                 = 2,
+            STATE_DECODE_GROUP                 = 3,
+
+            STATE_SUCCESS                      = 45,
+            STATE_FATAL                        = 5;
         
         var
             pako = new window.pako.Inflate({}),
             state = STATE_WAIT_FOR_CHUNK,
+
+	        /**
+             * Destination artwork
+             *
+             * @type {CPArtwork}
+             */
             artwork = null,
-            layerHeader, layer, 
-            layerBytesRead, layerBytesTotal, skipCount,
-            headerChunk = null, header = null,
-            chunk = null,
-            buffer = null;
-        
-        /**
-         * Decode A,R,G,B pixels from the given buffer into the R,G,B,A pixel array given by layerPix.
-         * 
-         * The layerBytesRead and layerBytesTotal variables are used to keep track of the decode process and to 
-         * limit the number of bytes read, respectively.
-         * 
-         * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
+
+	        /**
+             * Group we're currently loading layers into
+             *
+             * @type {CPLayerGroup}
+             */
+            destGroup = null,
+
+            /**
+             * Decoder we're currently using to read a layer.
+             *
+             * @type {ChibiLayerDecoder}
+             */
+            layerDecoder,
+
+	        /**
+             * Number of bytes we should skip in the stream before resuming decoding.
+             *
+	         * @type {int}
+             */
+            skipCount = 0,
+
+	        /**
+	         * The overall file descriptor
+             *
+             * @type {CPChibiFileHeader}
+             */
+            fileHeader = null,
+
+	        /**
+             *
+             * @type {ChibiChunkHeader}
+             */
+            curChunkHeader = null,
+
+	        /**
+             * Here we store data that we weren't able to process in previous iterations due to not enough
+             * data being available at once.
+             *
+             * @type {Uint8Array}
+             */
+            accumulator = null;
+
+	    /**
+         * Called by the Pako Zlib decompressor each time a block of data is ready for processing.
+         *
+         * @param {Uint8Array} block
          */
-        function decodePixels(buffer, imagePix) {
-            var
-                subpixel = layerBytesRead % BYTES_PER_PIXEL,
-                dstPixelStartOffset = layerBytesRead - subpixel,
-                bufferPos = 0,
-                
-                // Map from source channel order to CPLayer's dest order
-                channelMap = [
-                    ALPHA_BYTE_OFFSET, RED_BYTE_OFFSET, GREEN_BYTE_OFFSET, BLUE_BYTE_OFFSET
-                ];
-            
-            // The first pixel might be a partial one since we might be continuing a pixel split over buffers
-            for (; subpixel < BYTES_PER_PIXEL && bufferPos < buffer.length; subpixel++) {
-                imagePix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
-                layerBytesRead++;
-                bufferPos++;
-            }
-            
-            // How many more pixels are we to read in this buffer?
-            var
-                bytesRemain = Math.min(buffer.length - bufferPos, layerBytesTotal - layerBytesRead) | 0,
-                fullPixelsRemain = (bytesRemain / BYTES_PER_PIXEL) | 0,
-                subpixelsRemain = bytesRemain % BYTES_PER_PIXEL;
-            
-            for (var i = 0; i < fullPixelsRemain; i++) {
-                imagePix[layerBytesRead + ALPHA_BYTE_OFFSET] = buffer[bufferPos];
-                imagePix[layerBytesRead + RED_BYTE_OFFSET] = buffer[bufferPos + 1];
-                imagePix[layerBytesRead + GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
-                imagePix[layerBytesRead + BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
-                layerBytesRead += BYTES_PER_PIXEL;
-                bufferPos += BYTES_PER_PIXEL;
-            }
-            
-            // Read a fractional pixel at the end of the buffer
-            dstPixelStartOffset = layerBytesRead;
-            for (subpixel = 0; subpixel < subpixelsRemain; subpixel++) {
-                imagePix[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
-                layerBytesRead++;
-                bufferPos++;
-            }
-            
-            if (bufferPos < buffer.length) {
-                // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
-                return buffer.subarray(bufferPos);
-            } else {
-                // Buffer exhausted
-                return null;
-            }
-        }
-        
         function processBlock(block) {
             var 
                 stream;
-            
+
+            accumulator = concatBuffers(accumulator, block);
+            block = null;
+
             // Add a loop here so we can re-enter the switch with 'continue'
             while (true) {
+                if (accumulator) {
+                    if (skipCount < accumulator.length) {
+                        accumulator = accumulator.subarray(skipCount);
+                        skipCount = 0;
+                    } else {
+                        skipCount -= accumulator.length;
+                        accumulator = null;
+                        break;
+                    }
+                } else {
+                    break;
+                }
+
+                // Decode some data from the accumulator
                 switch (state) {
                     case STATE_WAIT_FOR_CHUNK:
-                        buffer = concatBuffers(buffer, block);
-                        block = null;
-                        
                         // Wait for whole chunk header to become available
-                        if (buffer.length < 8) {
+                        if (accumulator.length < ChibiChunkHeader.HEADER_LENGTH) {
                             break;
                         }
                         
                         // Decode chunk header
-                        stream = new ArrayDataStream(buffer);
-                        chunk = new CPChibiChunkHeader(stream);
+                        stream = new ArrayDataStream(accumulator);
+                        curChunkHeader = new ChibiChunkHeader(stream);
                         
-                        // Remove the chunk header from the start of the buffer
-                        buffer = buffer.subarray(stream.pos);
+                        // Remove the chunk header from the start of the accumulator
+                        accumulator = accumulator.subarray(stream.pos);
                         
-                        if (headerChunk) {
-                            if (chunk.chunkType == CHUNK_TAG_END) {
+                        if (fileHeader) {
+                            if (curChunkHeader.chunkType == CHUNK_TAG_END) {
                                 state = STATE_SUCCESS;
-                                break;
-                            } else if (chunk.chunkType == CHUNK_TAG_LAYER) {
-                                state = STATE_DECODE_LAYER_HEADER_FIXED;
+                            } else if (curChunkHeader.chunkType == CHUNK_TAG_LAYER) {
+                                state = STATE_DECODE_LAYER;
+                                layerDecoder = new ChibiImageLayerDecoder(curChunkHeader, fileHeader.width, fileHeader.height);
+                                continue;
+                            } else if (curChunkHeader.chunkType == CHUNK_TAG_GROUP) {
+                                state = STATE_DECODE_GROUP;
+                                layerDecoder = new ChibiLayerGroupDecoder(curChunkHeader, fileHeader.width, fileHeader.height);
+                                continue;
                             } else {
-                                console.log("Unknown chunk type '" + chunk.chunkType + "', attempting to skip...");
-                                
-                                block = buffer;
-                                buffer = null;
-                                
-                                skipCount = chunk.chunkSize;
-                                state = STATE_SKIP_TRAILING_CHUNK_BYTES;
+                                console.log("Unknown chunk type '" + curChunkHeader.chunkType + "', attempting to skip...");
+
+                                skipCount = curChunkHeader.chunkSize;
+                                continue;
                             }
-                        } else if (chunk.chunkType == CHUNK_TAG_HEAD) {
-                            headerChunk = chunk;
-                            
-                            // Try to decode the header
-                            state = STATE_DECODE_IMAGE_HEADER;
+                        } else if (curChunkHeader.chunkType == CHUNK_TAG_HEAD) {
+                            state = STATE_DECODE_FILE_HEADER;
                             continue;
                         } else {
                             // File didn't start with image header chunk
                             state = STATE_FATAL;
                         }
-                    break;
-                    case STATE_DECODE_IMAGE_HEADER:
-                        buffer = concatBuffers(buffer, block);
-                        block = null;
-                        
+                        break;
+
+                    case STATE_DECODE_FILE_HEADER:
                         // Wait for whole chunk to be available
-                        if (buffer.length < headerChunk.chunkSize) {
+                        if (accumulator.length < curChunkHeader.chunkSize) {
                             break;
                         }
                         
-                        stream = new ArrayDataStream(buffer);
-                        header = new CPChibiHeader(stream, headerChunk);
+                        stream = new ArrayDataStream(accumulator);
+                        fileHeader = new CPChibiFileHeader(stream);
                         
-                        if ((header.version >>> 16) > 0) {
+                        if ((fileHeader.version >>> 16) > MAX_SUPPORTED_MAJOR_VERSION) {
                             state = STATE_FATAL; // the file version is higher than what we can deal with, bail out
                             break;
                         }
                         
-                        artwork = new CPArtwork(header.width, header.height);
-                        
-                        block = buffer;
-                        buffer = null;
-                        
-                        skipCount = headerChunk.chunkSize; // Skip the header chunk along with any trailing bytes
-                        state = STATE_SKIP_TRAILING_CHUNK_BYTES;
+                        artwork = new CPArtwork(fileHeader.width, fileHeader.height);
+                        destGroup = artwork.getLayersRoot();
+
+                        // Skip the header chunk along with any trailing bytes
+                        skipCount = curChunkHeader.chunkSize;
+                        state = STATE_WAIT_FOR_CHUNK;
                         continue;
-                    break;
-                    case STATE_DECODE_LAYER_HEADER_FIXED:
-                        buffer = concatBuffers(buffer, block);
-                        block = null;
-                        
-                        // Wait for first part of header to arrive
-                        if (buffer.length < CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH) {
-                            break;
-                        }
-                        
-                        layerHeader = new CPChibiLayerChunkHeader();
-                        
-                        stream = new ArrayDataStream(buffer);
-                        layerHeader.readFixedHeader(stream);
-                        
-                        buffer = buffer.subarray(stream.pos);
-                        
-                        state = STATE_DECODE_LAYER_HEADER_VARIABLE;
-                        continue;
-                    break;
-                    case STATE_DECODE_LAYER_HEADER_VARIABLE:
-                        buffer = concatBuffers(buffer, block);
-                        block = null;
-                        
-                        // Wait for variable part of header to arrive
-                        if (buffer.length < layerHeader.getVariableHeaderLen()) {
-                            break;
-                        }
-                        
-                        stream = new ArrayDataStream(buffer);
-                        layerHeader.readVariableHeader(stream);
-                        
-                        buffer = buffer.subarray(stream.pos);
-                        
-                        layer = new CPImageLayer(header.width, header.height, layerHeader.name);
-                        layer.blendMode = layerHeader.blendMode;
-                        layer.alpha = layerHeader.alpha;
-                        layer.visible = layerHeader.visible;
-                        
-                        layerBytesRead = 0;
-                        layerBytesTotal = header.width * header.height * BYTES_PER_PIXEL;
-                        
-                        /* 
-                         * While decoding layers, we won't keep a persistent buffer around, so if we have any
-                         * bytes left over, provide them to the next state as if they were a newly inflated block.
-                         */
-                        block = buffer;
-                        buffer = null;
-                        
-                        state = STATE_DECODE_LAYER;
-                        continue;
-                    break;
+
                     case STATE_DECODE_LAYER:
-                        /* 
-                         * When decoding layer data, we never concat blocks together, we are capable of decoding
-                         * partial pixels that get split over block boundaries. So we don't use 'buffer' to accumulate
-                         * data, and only read from incoming 'block's.
-                         */ 
-                        if (block != null) {
-                            block = decodePixels(block, layer.image.data);
-                            
-                            if (layerBytesRead >= layerBytesTotal) {
-                                artwork.addLayerObject(layer);
-                                
-                                // Skip any trailing bytes in the layer chunk
-                                skipCount = chunk.chunkSize - layerHeader.getTotalHeaderLen() - layerBytesTotal;
-                                state = STATE_SKIP_TRAILING_CHUNK_BYTES;
-                                continue;
-                            }
-                        }
-                    break;
-                    case STATE_SKIP_TRAILING_CHUNK_BYTES:
-                        if (block) {
-                            if (skipCount < block.length) {
-                                block = block.subarray(skipCount);
-                                skipCount = 0;
-                            } else {
-                                skipCount -= block.length;
-                                block = null;
-                            }
-                        }
-                        
-                        if (skipCount == 0) {
+                        accumulator = layerDecoder.decode(accumulator);
+
+                        if (layerDecoder.done) {
+                            artwork.addLayerObject(destGroup, layerDecoder.layer);
                             state = STATE_WAIT_FOR_CHUNK;
                             continue;
                         }
-                    break;
+                        break;
+
+                    case STATE_DECODE_GROUP:
+                        accumulator = layerDecoder.decode(accumulator);
+
+                        if (layerDecoder.done) {
+                            artwork.addLayerGroupObject(destGroup, layerDecoder.layer, layerDecoder.childLayers);
+
+                            state = STATE_WAIT_FOR_CHUNK;
+                            continue;
+                        }
+                        break;
                 }
                 
                 break;

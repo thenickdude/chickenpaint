@@ -19,10 +19,10 @@ function signExtend8Bit(byte) {
 /**
  * Create a stream on existing array of unsigned byte data (i.e. hopefully Uint8Array).
  * 
- * @param data Uint8Array to stream data from
- * @param start The index of the byte in the array that will be read first, or leave undefined to begin at the
+ * @param {Uint8Array} data - Array to stream data from
+ * @param {int=} start - The index of the byte in the array that will be read first, or leave undefined to begin at the
  *              beginning of the array
- * @param end The index of the end of the stream, or leave undefined to use the end of the array as the end of
+ * @param {int=} end - The index of the end of the stream, or leave undefined to use the end of the array as the end of
  *            the stream.
  */
 export default function ArrayDataStream(data, start, end) {

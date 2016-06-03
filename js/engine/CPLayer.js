@@ -61,14 +61,37 @@ export default function CPLayer(name) {
      * @type {int}
      */
     this.blendMode = CPBlend.LM_NORMAL;
+	
+	/**
+     * The layer mask (if present)
+     * 
+     * @type {?CPGreyBmp}
+     */
+    this.mask = null;
 }
 
+/**
+ *
+ * @param {CPLayer} layer
+ */
 CPLayer.prototype.copyFrom = function(layer) {
     this.name = layer.name;
     this.blendMode = layer.blendMode;
     this.alpha = layer.alpha;
     this.visible = layer.visible;
     this.parent = layer.parent;
+
+    if (!layer.mask) {
+        this.mask = null;
+    } else if (this.mask) {
+        this.mask.copyDataFrom(layer.mask);
+    } else {
+        this.mask = layer.mask.clone();
+    }
+};
+
+CPLayer.prototype.setMask = function(mask) {
+    this.mask = mask;
 };
 
 CPLayer.prototype.setAlpha = function(alpha) {

@@ -392,16 +392,39 @@ export default function CPArtwork(_width, _height) {
 	/**
      * Effectively an internal method to be called by CPChibiFile to populate the layer stack.
      *
+     * @param {CPLayerGroup} parent
      * @param {CPLayer} layer
      */
-    this.addLayerObject = function(layer) {
-        layersRoot.addLayer(layer);
+    this.addLayerObject = function(parent, layer) {
+        parent.addLayer(layer);
         
         if (layersRoot.layers.length == 1) {
             curLayer = layer;
         }
         
         artworkStructureChanged();
+    };
+
+	/**
+     * Internal method for CPChibiFile to call to wrap a group around the given number of children on
+     * the top of the layer stack.
+     *
+     * @param {CPLayerGroup} parent
+     * @param {CPLayerGroup} group
+     * @param {int} numChildren - Number of layers from the parent group to wrap
+     */
+    this.addLayerGroupObject = function(parent, group, numChildren) {
+        var
+            children = [];
+
+        // Grab our child layers off the stack and add them to us.
+        for (var i = 0; i < numChildren; i++) {
+            children.unshift(parent.layers.pop());
+        }
+
+        children.forEach(child => group.addLayer(child));
+
+        this.addLayerObject(parent, group);
     };
     
     /**
