@@ -5,6 +5,11 @@ ChickenPaint is an HTML5 port of Marc Schefer's excellent multi-layer drawing Oe
 has been dropping continuously, while JavaScript support continues to strengthen. Like the original, it is licensed
 under GPLv3.
 
+![ChickenPaint screenshot](help/screenshot.png)
+
+The artwork being edited here is ["Woof Woof"](http://www.chickensmoothie.com/Forum/viewtopic.php?t=3079211) by [Swiftalu](http://www.chickensmoothie.com/Forum/memberlist.php?mode=viewprofile&u=91654).
+You can color-in to create your own version of this drawing using ChickenPaint [on Chicken Smoothie](http://www.chickensmoothie.com/Forum/viewtopic.php?t=3079211)!
+
 ## Features
 
 - A wide variety of brushes
