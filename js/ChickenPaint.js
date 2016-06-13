@@ -641,6 +641,24 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {document: true}
             },
+            CPAddLayerMask: {
+                action: function() {
+                    that.artwork.addLayerMask();
+                },
+                modifies: {document: true}
+            },
+            CPApplyLayerMask: {
+                action: function() {
+                    that.artwork.removeLayerMask(true);
+                },
+                modifies: {document: true}
+            },
+            CPRemoveLayerMask: {
+                action: function() {
+                    that.artwork.removeLayerMask(false);
+                },
+                modifies: {document: true}
+            },
             CPRemoveLayer: {
                 action: function() {
                     if (!that.artwork.removeLayer()) {

@@ -23,10 +23,6 @@
 import CPColorBmp from './CPColorBmp';
 import CPLayer from './CPLayer';
 
-const
-	LAYER_THUMBNAIL_WIDTH = 80,
-	LAYER_THUMBNAIL_HEIGHT = 50;
-
 /**
  * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().
  *
@@ -57,7 +53,7 @@ export default function CPImageLayer(width, height, name) {
 	 *
 	 * @type {?CPColorBmp}
 	 */
-	this.thumbnail = null;
+	this.imageThumbnail = null;
 }
 
 CPImageLayer.prototype = Object.create(CPLayer.prototype);
@@ -187,28 +183,28 @@ CPImageLayer.prototype.getMemoryUsed = function() {
 };
 
 /**
- * Recreate the thumbnail for this layer.
+ * Recreate the image thumbnail for this layer.
  */
-CPImageLayer.prototype.rebuildThumbnail = function() {
-	if (!this.thumbnail) {
+CPImageLayer.prototype.rebuildImageThumbnail = function() {
+	if (!this.imageThumbnail) {
 		var
-			scaleDivider = Math.ceil(Math.min(this.image.width / LAYER_THUMBNAIL_WIDTH, this.image.height / LAYER_THUMBNAIL_HEIGHT));
+			scaleDivider = Math.ceil(Math.max(this.image.width / CPLayer.LAYER_THUMBNAIL_WIDTH, this.image.height / CPLayer.LAYER_THUMBNAIL_HEIGHT));
 
-		this.thumbnail = new CPColorBmp(Math.floor(this.image.width / scaleDivider), Math.floor(this.image.height / scaleDivider));
+		this.imageThumbnail = new CPColorBmp(Math.floor(this.image.width / scaleDivider), Math.floor(this.image.height / scaleDivider));
 	}
 
-	this.thumbnail.createThumbnailFrom(this.image, this.alpha);
+	this.imageThumbnail.createThumbnailFrom(this.image);
 };
 
 /**
- * Get the thumbnail for this layer (or build one if one was not already built)
+ * Get the image thumbnail for this layer (or build one if one was not already built)
  *
  * @returns {CPColorBmp}
  */
-CPImageLayer.prototype.getThumbnail = function() {
-	if (!this.thumbnail) {
-		this.rebuildThumbnail();
+CPImageLayer.prototype.getImageThumbnail = function() {
+	if (!this.imageThumbnail) {
+		this.rebuildImageThumbnail();
 	}
 
-	return this.thumbnail;
+	return this.imageThumbnail;
 };

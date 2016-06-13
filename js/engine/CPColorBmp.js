@@ -1454,7 +1454,7 @@ CPColorBmp.prototype.getAsCanvas = function(rotation) {
 
     // Rotate it if needed
     return getRotatedCanvas(canvas, rotation || 0);
-}
+};
 
 /**
  * Get the image as a PNG image.

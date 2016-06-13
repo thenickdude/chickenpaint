@@ -39,7 +39,7 @@ import CPTransform from "../util/CPTransform";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
 
 /**
- * Cap
+ * Capitalize the first letter of the string.
  *
  * @param {string} string
  * @returns {string}
@@ -98,6 +98,13 @@ export default function CPArtwork(_width, _height) {
          * @type {(CPLayer|CPLayerGroup)}
          */
         curLayer,
+
+	    /**
+         * True if we're editing the mask of the currently selected layer, false otherwise.
+         *
+         * @type {boolean}
+         */
+        maskEditingMode = false,
         
         hasUnsavedChanges = false,
         
@@ -180,7 +187,9 @@ export default function CPArtwork(_width, _height) {
          * @type {boolean}
          */
         drawingInProgress = false,
-        thumbnailsToRebuild = new Set(),
+
+        rebuildMaskThumbnail = new Set(),
+        rebuildImageThumbnail = new Set(),
         thumbnailRebuildTimer = null,
 
         curColor = 0x000000, // Black
@@ -195,7 +204,7 @@ export default function CPArtwork(_width, _height) {
     function endPaintingInteraction() {
         drawingInProgress = false;
 
-        if (thumbnailsToRebuild.size > 0 && !thumbnailRebuildTimer) {
+        if ((rebuildImageThumbnail.size > 0 || rebuildMaskThumbnail.size > 0) && !thumbnailRebuildTimer) {
             setTimeout(buildThumbnails, THUMBNAIL_REBUILD_DELAY_MSEC);
         }
     }
@@ -279,12 +288,19 @@ export default function CPArtwork(_width, _height) {
     }
 
     function buildThumbnails() {
-        for (let layer of thumbnailsToRebuild) {
-            layer.rebuildThumbnail();
+        for (let layer of rebuildImageThumbnail) {
+            layer.rebuildImageThumbnail();
 
-            that.emitEvent("changeLayerThumb", [layer]);
+            that.emitEvent("changeLayerImageThumb", [layer]);
         }
-        thumbnailsToRebuild.clear();
+
+        for (let layer of rebuildMaskThumbnail) {
+            layer.rebuildMaskThumbnail();
+
+            that.emitEvent("changeLayerMaskThumb", [layer]);
+        }
+
+        rebuildImageThumbnail.clear();
 
         if (thumbnailRebuildTimer) {
             clearTimeout(thumbnailRebuildTimer);
@@ -312,15 +328,30 @@ export default function CPArtwork(_width, _height) {
         // This updated area will need to be updated in our undo buffer later
         undoBufferInvalidRegion.union(rect);
 
+        // Update layer thumbnails
         var
             newThumbToRebuild = false;
 
-        if (layer instanceof CPImageLayer) {
-            thumbnailsToRebuild.add(layer);
+        if (maskEditingMode) {
+            if (Array.isArray(layer)) {
+                layer.forEach(l => rebuildMaskThumbnail.add(l));
+            } else {
+                rebuildMaskThumbnail.add(layer);
+            }
             newThumbToRebuild = true;
-        } else if (Array.isArray(layer)) {
-            layer.forEach(l => l instanceof CPImageLayer && thumbnailsToRebuild.add(l));
-            newThumbToRebuild = true;
+        } else {
+            if (Array.isArray(layer)) {
+                for (let l of layer) {
+                    if (l instanceof CPImageLayer) {
+                        rebuildImageThumbnail.add(l);
+                        newThumbToRebuild = true;
+                    }
+                }
+                newThumbToRebuild = true;
+            } else if (layer instanceof CPImageLayer) {
+                rebuildImageThumbnail.add(layer);
+                newThumbToRebuild = true;
+            }
         }
 
         if (newThumbToRebuild) {
@@ -332,6 +363,7 @@ export default function CPArtwork(_width, _height) {
                 thumbnailRebuildTimer = setTimeout(buildThumbnails, THUMBNAIL_REBUILD_DELAY_MSEC);
             }
         }
+
 
         callListenersUpdateRegion(rect);
     }
@@ -352,6 +384,21 @@ export default function CPArtwork(_width, _height) {
     this.getHasUnsavedChanges = function() {
         return hasUnsavedChanges;
     };
+
+    /**
+     * Add a layer mask to the current layer.
+     */
+    this.addLayerMask = function() {
+        if (!curLayer.mask) {
+            addUndo(new CPActionAddLayerMask(curLayer));
+        }
+    };
+
+    this.removeLayerMask = function(apply) {
+        if (curLayer.mask) {
+            addUndo(new CPActionRemoveLayerMask(curLayer, apply));
+        }
+    }
 
 	/**
      * Add a layer of the specified type (layer, group) on top of the selected layer.
@@ -693,7 +740,12 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
-    CPBrushToolSimpleBrush.prototype.mergeOpacityBuf = function(dstRect, color /* int */) {
+	/**
+     *
+     * @param {CPRect} dstRect
+     * @param {int} color
+     */
+    CPBrushToolSimpleBrush.prototype.mergeOpacityBuf = function(dstRect, color) {
         var 
             opacityData = opacityBuffer.data,
             undoData = undoBuffer.data,
@@ -738,11 +790,11 @@ export default function CPArtwork(_width, _height) {
 
     /**
      *
-     * @param srcRect CPRect
-     * @param dstRect CPRect
-     * @param brush int[]
-     * @param brushWidth int
-     * @param alpha float
+     * @param {CPRect} srcRect
+     * @param {CPRect} dstRect
+     * @param {int[]} brush
+     * @param {int} brushWidth
+     * @param {float} alpha
      */
     CPBrushToolSimpleBrush.prototype.paintOpacity = function(srcRect, dstRect, brush, brushWidth, alpha) {
         var 
@@ -2286,7 +2338,93 @@ export default function CPArtwork(_width, _height) {
     CPUndoPaint.prototype = Object.create(CPUndo.prototype);
     CPUndoPaint.prototype.constructor = CPUndoPaint;
 
-	/**
+    /**
+     * Upon creation, adds a layer mask to the given layer.
+     *
+     * @param {CPLayer} layer
+     *
+     * @constructor
+     */
+    function CPActionAddLayerMask(layer) {
+        this.undo = function() {
+            layer.setMask(null);
+
+            artworkStructureChanged();
+        };
+
+        this.redo = function() {
+            var
+                newMask = new CPGreyBmp(that.width, that.height, 8);
+            newMask.clearAll(255);
+
+            layer.setMask(newMask);
+
+            artworkStructureChanged();
+        };
+
+        this.redo();
+    }
+
+    CPActionAddLayerMask.prototype = Object.create(CPUndo.prototype);
+    CPActionAddLayerMask.prototype.constructor = CPActionAddLayerMask;
+
+    /**
+     * Upon creation, removes, or applies and removes, the layer mask on the given layer.
+     *
+     * @param {CPLayer} layer
+     * @param {boolean} apply
+     *
+     * @constructor
+     */
+    function CPActionRemoveLayerMask(layer, apply) {
+        var
+            oldMask = layer.mask,
+            oldLayerImage,
+            maskWasSelected = false;
+
+        if (apply && layer instanceof CPImageLayer) {
+            oldLayerImage = layer.image.clone();
+        } else {
+            oldLayerImage = null;
+        }
+
+        maskWasSelected = curLayer == layer && maskEditingMode;
+
+        this.undo = function() {
+            layer.setMask(oldMask);
+
+            if (oldLayerImage) {
+                layer.image.copyDataFrom(oldLayerImage);
+            }
+
+            if (maskWasSelected) {
+                that.setActiveLayer(layer, true);
+            }
+
+            artworkStructureChanged();
+        };
+
+        this.redo = function() {
+            if (apply && layer instanceof CPImageLayer) {
+                CPBlend.replaceAlphaOntoFusionWithOpaqueLayerMasked(layer.image, layer.image, 100, layer.getBounds(), layer.mask);
+            }
+
+            if (maskWasSelected) {
+                that.setActiveLayer(layer, false);
+            }
+
+            layer.setMask(null);
+
+            artworkStructureChanged();
+        };
+
+        this.redo();
+    }
+
+    CPActionRemoveLayerMask.prototype = Object.create(CPUndo.prototype);
+    CPActionRemoveLayerMask.prototype.constructor = CPActionRemoveLayerMask;
+
+    /**
      * Upon creation, adds a layer at the given index in the given layer group.
      *
      * @param {CPLayerGroup} parentGroup

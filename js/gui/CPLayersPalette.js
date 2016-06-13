@@ -35,12 +35,21 @@ function wrapWithElem(e, wrapWithName) {
     return parent;
 }
 
-function createIcon(iconName) {
+function createFontAwesomeIcon(iconName) {
     var
         icon = document.createElement("span");
 
     icon.className = "fa " + iconName;
 
+    return icon;
+}
+
+function createChickenPaintIcon(iconName) {
+    var
+        icon = document.createElement("span");
+    
+    icon.className = "cpif " + iconName;
+    
     return icon;
 }
 
@@ -108,6 +117,7 @@ export default function CPLayersPalette(controller) {
         
         addLayerButton = document.createElement("li"),
         addFolderButton = document.createElement("li"),
+        addMaskButton = document.createElement("li"),
         removeButton = document.createElement("li");
 
     /**
@@ -424,10 +434,10 @@ export default function CPLayersPalette(controller) {
 
             if (layer.visible) {
                 layerDiv.className += " " + CLASSNAME_LAYER_VISIBLE;
-                eyeDiv.appendChild(createIcon("fa-eye"));
+                eyeDiv.appendChild(createFontAwesomeIcon("fa-eye"));
             } else {
                 layerDiv.className += " " + CLASSNAME_LAYER_HIDDEN;
-                eyeDiv.appendChild(createIcon("fa-eye-slash"));
+                eyeDiv.appendChild(createFontAwesomeIcon("fa-eye-slash"));
             }
 
             layerDiv.appendChild(eyeDiv);
@@ -437,17 +447,17 @@ export default function CPLayersPalette(controller) {
             if (layer instanceof CPImageLayer) {
                 if (layer.clip) {
                     layerDiv.className += " chickenpaint-layer-clipped";
-                    iconsDiv.appendChild(createIcon("fa-level-down fa-flip-horizontal"))
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-level-down fa-flip-horizontal"))
                 }
             } else if (layer instanceof CPLayerGroup) {
                 layerDiv.className += " chickenpaint-layer-group";
 
                 if (layer.expanded) {
                     layerDiv.className += " " + CLASSNAME_LAYER_GROUP_EXPANDED;
-                    iconsDiv.appendChild(createIcon("fa-folder-open-o chickenpaint-layer-group-toggle"));
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder-open-o chickenpaint-layer-group-toggle"));
                 } else {
                     layerDiv.className += " " + CLASSNAME_LAYER_GROUP_COLLAPSED;
-                    iconsDiv.appendChild(createIcon("fa-folder-o chickenpaint-layer-group-toggle"));
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder-o chickenpaint-layer-group-toggle"));
                 }
             }
 
@@ -458,10 +468,19 @@ export default function CPLayersPalette(controller) {
 
             if (layer instanceof CPImageLayer) {
                 let 
-                    thumbnail = layer.getThumbnail(),
+                    thumbnail = layer.getImageThumbnail(),
                     thumbCanvas = thumbnail.getAsCanvas(0);
 
-                thumbCanvas.className = "chickenpaint-layer-thumbnail";
+                thumbCanvas.className = "chickenpaint-layer-thumbnail chickenpaint-layer-image-thumbnail";
+                layerDiv.appendChild(thumbCanvas);
+            }
+
+            if (layer.mask) {
+                let
+                    thumbnail = layer.getMaskThumbnail(),
+                    thumbCanvas = thumbnail.getAsCanvas(0);
+
+                thumbCanvas.className = "chickenpaint-layer-thumbnail chickenpaint-layer-mask-thumbnail";
                 layerDiv.appendChild(thumbCanvas);
             }
 
@@ -701,20 +720,38 @@ export default function CPLayersPalette(controller) {
          *
          * @param {CPImageLayer} layer
          */
-        this.layerThumbChanged = function(layer) {
+        this.layerImageThumbChanged = function(layer) {
             var
                 index = getDisplayIndexFromLayer(layer),
                 layerElem = $(getElemFromDisplayIndex(index));
 
             if (layerElem.length > 0) {
                 var
-                    newThumb = layer.thumbnail.getAsCanvas();
-                newThumb.className = "chickenpaint-layer-thumbnail";
-                $(".chickenpaint-layer-thumbnail", layerElem).replaceWith(newThumb);
+                    newThumb = layer.imageThumbnail.getAsCanvas();
+                newThumb.className = "chickenpaint-layer-image-thumbnail";
+                $(".chickenpaint-layer-image-thumbnail", layerElem).replaceWith(newThumb);
             }
         };
 
-	    /**
+        /**
+         * The thumbnail of the given layer has been updated.
+         *
+         * @param {CPImageLayer} layer
+         */
+        this.layerMaskThumbChanged = function(layer) {
+            var
+                index = getDisplayIndexFromLayer(layer),
+                layerElem = $(getElemFromDisplayIndex(index));
+
+            if (layerElem.length > 0) {
+                var
+                    newThumb = layer.maskThumbnail.getAsCanvas();
+                newThumb.className = "chickenpaint-layer-mask-thumbnail";
+                $(".chickenpaint-layer-mask-thumbnail", layerElem).replaceWith(newThumb);
+            }
+        };
+
+        /**
          * Call when the selected layer changes.
          * 
          * @param {CPLayer} newLayer
@@ -996,13 +1033,24 @@ export default function CPLayersPalette(controller) {
      *
      * @param {CPLayer} layer
      */
-    function onChangeLayerThumb(layer) {
+    function onChangeLayerImageThumb(layer) {
         artwork = this;
 
-        layerWidget.layerThumbChanged(layer);
+        layerWidget.layerImageThumbChanged(layer);
     }
 
-	/**
+    /**
+     * Called when the thumbnail of one layer has been updated.
+     *
+     * @param {CPLayer} layer
+     */
+    function onChangeLayerMaskThumb(layer) {
+        artwork = this;
+
+        layerWidget.layerMaskThumbChanged(layer);
+    }
+
+    /**
      * Called when the selected layer changes.
      *
      * @param {CPLayer} oldLayer
@@ -1140,29 +1188,37 @@ export default function CPLayersPalette(controller) {
     
     addRemoveContainer.className = 'chickenpaint-layer-buttons list-unstyled';
     
-    addLayerButton.className = 'chickenpaint-small-toolbar-button chickenpaint-add-layer';
+    addLayerButton.className = 'chickenpaint-small-toolbar-button';
     addLayerButton.title = 'Add layer';
-    addLayerButton.appendChild(createIcon("fa-file"));
+    addLayerButton.appendChild(createFontAwesomeIcon("fa-file"));
     addLayerButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPAddLayer"});
     });
 
-    addFolderButton.className = 'chickenpaint-small-toolbar-button chickenpaint-add-layer';
+    addFolderButton.className = 'chickenpaint-small-toolbar-button';
     addFolderButton.title = 'Add group';
-    addFolderButton.appendChild(createIcon("fa-folder"));
+    addFolderButton.appendChild(createFontAwesomeIcon("fa-folder"));
     addFolderButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPAddGroup"});
     });
+
+    addMaskButton.className = 'chickenpaint-small-toolbar-button';
+    addMaskButton.title = 'Add layer mask';
+    addMaskButton.appendChild(createChickenPaintIcon("cpif-mask"));
+    addMaskButton.addEventListener("click", function() {
+        controller.actionPerformed({action: "CPAddLayerMask"});
+    });
     
-    removeButton.className = 'chickenpaint-small-toolbar-button chickenpaint-remove-layer';
+    removeButton.className = 'chickenpaint-small-toolbar-button';
     removeButton.title = "Delete layer";
-    removeButton.appendChild(createIcon("fa-trash"));
+    removeButton.appendChild(createFontAwesomeIcon("fa-trash"));
     removeButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPRemoveLayer"});
     });
     
     addRemoveContainer.appendChild(addLayerButton);
     addRemoveContainer.appendChild(addFolderButton);
+    addRemoveContainer.appendChild(addMaskButton);
     addRemoveContainer.appendChild(removeButton);
 
     body.appendChild(addRemoveContainer);
@@ -1170,7 +1226,8 @@ export default function CPLayersPalette(controller) {
     artwork.on("changeActiveLayer", onChangeActiveLayer);
     artwork.on("changeLayer", onChangeLayer);
     artwork.on("changeStructure", onChangeStructure);
-    artwork.on("changeLayerThumb", onChangeLayerThumb);
+    artwork.on("changeLayerMaskThumb", onChangeLayerMaskThumb);
+    artwork.on("changeLayerImageThumb", onChangeLayerImageThumb);
 
     // Set initial values
     onChangeStructure.call(artwork);

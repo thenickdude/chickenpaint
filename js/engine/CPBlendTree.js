@@ -21,6 +21,7 @@
 */
 
 import CPBlend from './CPBlend';
+import './CPBlendAdditional';
 import CPLayer from './CPLayer';
 import CPLayerGroup from './CPLayerGroup';
 import CPColorBmp from "./CPColorBmp";

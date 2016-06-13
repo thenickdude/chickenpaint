@@ -837,6 +837,27 @@ body.chickenpaint-full-screen {
     font-weight:normal;
 }
 
+@font-face {
+    font-family: 'ChickenPaint Symbols';
+    src: url('../fonts/chickenpaint.eot');
+    src: url('../fonts/chickenpaint.eot?#iefix') format('embedded-opentype'),
+    url('../fonts/chickenpaint.woff') format('woff'),
+    url('../fonts/chickenpaint.ttf') format('truetype'),
+    url('../fonts/chickenpaint.svg') format('svg');
+}
+
+.chickenpaint .cpif {
+    display: inline-block;
+    font: normal normal normal 14px/1 "ChickenPaint Symbols";
+    font-size: inherit;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.chickenpaint .cpif-mask:before {
+    content: "\e900";
+}
+
 /* More compact styles for small screens */
 @media (max-height: 768px) {
     .chickenpaint .navbar {

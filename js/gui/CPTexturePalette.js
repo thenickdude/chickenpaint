@@ -420,7 +420,7 @@ export default function CPTexturePalette(controller) {
         
         this.paint = function()  {
             if (this.texture != null) {
-                canvasContext.fillStyle = canvasContext.createPattern(this.texture.toCanvas(), "repeat");
+                canvasContext.fillStyle = canvasContext.createPattern(this.texture.getAsCanvas(), "repeat");
             } else {
                 canvasContext.fillStyle = 'white';
             }

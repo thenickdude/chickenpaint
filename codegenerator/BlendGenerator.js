@@ -822,7 +822,7 @@ function makeBlendOperation(functionName, operation, variant) {
 
 	if (variant.masked) {
 		outerVars.yStrideMask = "(mask.width - w) | 0";
-		outerVars.maskIndex = "mask.offsetOfPixel(rect.left, rect.top) | 0";
+		outerVars.maskIndex = "mask.offsetOfPixel(srcRect.left, srcRect.top) | 0";
 	}
 
 	innerVars = {
@@ -938,7 +938,7 @@ function makeBlendOperations() {
 				fusionHasTransparency: false,
 				layerAlpha100: false,
 
-				masked: false,
+				masked: false
 			},
 			{
 				name: "transparentFusionWithOpaqueLayer",
@@ -953,6 +953,35 @@ function makeBlendOperations() {
 				layerAlpha100: false,
 
 				masked: false
+			},
+
+			{
+				name: "opaqueFusionWithOpaqueLayerMasked",
+				fusionHasTransparency: false,
+				layerAlpha100: true,
+
+				masked: true
+			},
+			{
+				name: "opaqueFusionWithTransparentLayerMasked",
+				fusionHasTransparency: false,
+				layerAlpha100: false,
+
+				masked: true
+			},
+			{
+				name: "transparentFusionWithOpaqueLayerMasked",
+				fusionHasTransparency: true,
+				layerAlpha100: true,
+
+				masked: true
+			},
+			{
+				name: "transparentFusionWithTransparentLayerMasked",
+				fusionHasTransparency: true,
+				layerAlpha100: false,
+
+				masked: true
 			}
 		];
 
@@ -988,25 +1017,6 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
         BYTES_PER_PIXEL = 4,
         ALPHA_BYTE_OFFSET = 3,
         
-        BLEND_MODE_CODENAMES = [
-            "normal",
-            "multiply",
-            "add",
-            "screen",
-            "lighten",
-            "darken",
-            "subtract",
-            "dodge",
-            "burn",
-            "overlay",
-            "hardLight",
-            "softLight",
-            "vividLight",
-            "linearLight",
-            "pinLight",
-            "passthrough"
-        ],
-        
         softLightLUTSquare = new Array(256),
         softLightLUTSquareRoot = new Array(256);
     
@@ -1029,45 +1039,29 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
     CPBlend.LM_PINLIGHT = 14;
     CPBlend.LM_PASSTHROUGH = 15;
     
+    CPBlend.BLEND_MODE_CODENAMES = [
+        "normal",
+        "multiply",
+        "add",
+        "screen",
+        "lighten",
+        "darken",
+        "subtract",
+        "dodge",
+        "burn",
+        "overlay",
+        "hardLight",
+        "softLight",
+        "vividLight",
+        "linearLight",
+        "pinLight",
+        "passthrough"
+    ];
+    
     CPBlend.BLEND_MODE_DISPLAY_NAMES = [
           "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
           "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
     ];
-
-    /**
-     * Blends the given image on top of the fusion.
-     *
-     * @param {CPColorBmp} fusion - Image to fuse on top of
-     * @param {boolean} fusionHasTransparency - True if the fusion layer has alpha < 100, or any transparent pixels.
-     * @param {CPColorBmp} image - Image that should be drawn on top of the fusion
-     * @param {int} imageAlpha - Alpha [0...100] to apply to the image
-     * @param {int} imageBlendMode - Blending mode (CPBlend.LM_*) to apply to the image
-     * @param {CPRect} rect - The rectangle of pixels that should be fused.
-     */
-    CPBlend.fuseImageOntoImage = ` + Function.prototype.toString.call(function (fusion, fusionHasTransparency, image, imageAlpha, imageBlendMode, rect) {
-		if (imageAlpha <= 0) {
-			return;
-		}
-		
-		var
-			funcName = BLEND_MODE_CODENAMES[imageBlendMode] + "Onto";
-		
-		if (fusionHasTransparency) {
-			funcName += "TransparentFusion";
-		} else {
-			funcName += "OpaqueFusion";
-		}
-		
-		if (imageAlpha == 100) {
-			funcName += "WithOpaqueLayer";
-		} else {
-			funcName += "WithTransparentLayer";
-		}
-		
-		rect = fusion.getBounds().clipTo(rect);
-		
-		this[funcName](fusion, image, imageAlpha, rect);
-	}) + `;
 	
 	// Blending operations with non-standard variants 
 	
@@ -1093,7 +1087,7 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
 		layerAlpha100: true
 	})}
-	
+
 	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
 		layerAlpha100: false
 	})}
@@ -1101,105 +1095,32 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
 		layerAlpha100: true
 	})}
-	
+
+	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPHA_OPERATION, {
+		layerAlpha100: true,
+		masked: true
+	})}
+
 	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
 		layerAlpha100: true,
 		fusionDifferentSize: true,
 		fusionHasTransparency: true
 	})}
-		
-	CPBlend.normalFuseImageOntoImageAtPosition = ` + Function.prototype.toString.call(function(fusion, image, sourceRect, destX, destY) {
-		var
-			sourceRectCopy = sourceRect.clone(),
-			destRect = new CPRect(destX, destY, 0, 0);
-
-		fusion.getBounds().clipSourceDest(sourceRectCopy, destRect);
-
-		this._normalFuseImageOntoImageAtPosition(fusion, image, 100, sourceRectCopy, destRect.left, destRect.top);
-	}) + `;
-    
-    /**
-     * Multiplies the given alpha into the alpha of the individual pixels of the image.
-     *
-     * @param {CPColorBmp} image
-     * @param {int} alpha - [0...100] alpha to apply
-     */
-    CPBlend.multiplyAlphaBy = ` + Function.prototype.toString.call(function (image, alpha) {
-		if (alpha < 100) {
-			if (alpha == 0) {
-				image.clearAll(0);
-			} else {
-				var
-					imageData = image.data;
-				
-				for (var pixIndex = ALPHA_BYTE_OFFSET; pixIndex < imageData.length; pixIndex += BYTES_PER_PIXEL) {
-					imageData[pixIndex] = Math.round(imageData[pixIndex] * alpha / 100);
-				}
-			}
-		}
-	}) + `;
-    
-    /**
-     * Multiplies the given alpha into the alpha of the individual pixels of the image and stores the
-     * resulting pixels into the specified image.
-     *
-     * @param {CPColorBmp} dest
-     * @param {CPColorBmp} image
-     * @param {int} alpha - [0...100] alpha to apply
-     * @param {CPRect} rect
-     */
-    CPBlend.copyAndMultiplyAlphaBy = ` + Function.prototype.toString.call(function (dest, image, alpha, rect) {
-		if (alpha == 100) {
-			dest.copyBitmapRect(image, rect.left, rect.top, rect);
-		} else if (alpha == 0) {
-			dest.clearRect(rect, 0);
-		} else {
-			var
-				imageData = image.data;
-			
-			for (var pixIndex = 0; pixIndex < imageData.length; pixIndex += BYTES_PER_PIXEL) {
-				imageData[pixIndex] = imageData[pixIndex];
-				imageData[pixIndex + 1] = imageData[pixIndex + 1];
-				imageData[pixIndex + 2] = imageData[pixIndex + 2];
-				
-				imageData[pixIndex + ALPHA_BYTE_OFFSET] = Math.round(imageData[pixIndex + ALPHA_BYTE_OFFSET] * alpha / 100);
-			}
-		}
-	}) + `;
 	
-    /**
-     * Fuse the given layer on top of the given fusion layer, using the blending operation defined in the layer.
-     *
-     * @param {CPLayer} fusion - Layer to fuse on top of
-     * @param {boolean} fusionHasTransparency - True if the fusion layer has alpha < 100, or any transparent pixels.
-     * @param {CPLayer} layer - Layer that should be drawn on top of the fusion
-     * @param {CPRect} rect - The rectangle of pixels that should be fused.
-     */
-    CPBlend.fuseLayerOntoLayer = ` + Function.prototype.toString.call(function (fusion, fusionHasTransparency, layer, rect) {
-		if (layer.getEffectiveAlpha() == 0) {
-			return;
-		}
-		
-		// Our blending operators don't support fusion with alpha < 100, so ensure that first
-		this.multiplyAlphaBy(fusion.image, fusion.alpha);
-		
-		this.fuseImageOntoImage(fusion.image, fusionHasTransparency, layer.image, layer.alpha, layer.blendMode, rect);
-	}) + `;
-    
-    ` + Function.prototype.toString.call(function makeLookupTables() {
+` + Function.prototype.toString.call(function makeLookupTables() {
 		// V - V^2 table
 		for (let i = 0; i < 256; i++) {
 			let
 				v = i / 255;
-			
+
 			softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
 		}
-		
+
 		// sqrt(V) - V table
 		for (let i = 0; i < 256; i++) {
 			let
 				v = i / 255;
-			
+
 			softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
 		}
 	}) + `

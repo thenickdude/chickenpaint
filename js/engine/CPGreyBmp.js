@@ -23,7 +23,7 @@
 import CPBitmap from "./CPBitmap";
 
 /**
- * Create a new greyscale bitmap with the given parameters.
+ * Create a new greyscale bitmap with the given parameters. The bitmap will be filled with black upon creation.
  *
  * @param {int} width
  * @param {int} height
@@ -87,6 +87,96 @@ CPGreyBmp.prototype.clearRect = function(rect, value) {
     }
 };
 
+/**
+ * Use nearest-neighbor (subsampling) to scale that bitmap to replace the pixels of this one.
+ *
+ * @param {CPGreyBmp} that
+ */
+CPGreyBmp.prototype.copyScaledNearestNeighbor = function(that) {
+    var
+        destPixIndex = 0,
+
+        xSkip = that.width / this.width,
+        ySkip = that.height / this.height,
+        srcRowStart;
+
+    for (var y = 0, srcRow = 0; y < this.height; y++, srcRow += ySkip) {
+        srcRowStart = that.offsetOfPixel(0, Math.round(srcRow));
+
+        for (var x = 0, srcCol = 0; x < this.width; x++, destPixIndex++, srcCol += xSkip) {
+            var
+                srcPixIndex = srcRowStart + Math.round(srcCol);
+
+            this.data[destPixIndex] = that.data[srcPixIndex];
+        }
+    }
+};
+
+/**
+ * Replace the pixels in this image with a scaled down thumbnail of that image.
+ *
+ * @param {CPGreyBmp} that
+ */
+CPGreyBmp.prototype.createThumbnailFrom = function(that) {
+    const
+        MAX_SAMPLES_PER_OUTPUT_PIXEL = 3,
+
+        numSamples = Math.min(Math.floor(that.width / this.width), MAX_SAMPLES_PER_OUTPUT_PIXEL);
+
+    if (numSamples < 2) {
+        // If we only take one sample per output pixel, there's no need for our filtering strategy
+        this.copyScaledNearestNeighbor(that);
+        return;
+    }
+
+    const
+        rowBuffer = new Uint16Array(this.width),
+        srcRowByteLength = that.width,
+
+        sourceBytesBetweenOutputCols = Math.floor(that.width / this.width),
+        intersampleXByteSpacing = Math.floor(that.width / this.width / numSamples),
+
+    /* Due to the floor() in intersampleXByteSkip, it's likely that the gap between the last sample for an output pixel
+     * and the start of the sample for the next pixel will be higher than the intersample gap. So we'll add this between
+     * pixels if needed.
+     */
+        interpixelXByteSkip = sourceBytesBetweenOutputCols - intersampleXByteSpacing * numSamples,
+
+    // Now we do the same for rows...
+        sourceRowsBetweenOutputRows = Math.floor(that.height / this.height),
+        intersampleYRowsSpacing = Math.floor(that.height / this.height / numSamples),
+
+        intersampleYByteSkip = intersampleYRowsSpacing * srcRowByteLength - sourceBytesBetweenOutputCols * this.width,
+        interpixelYByteSkip = (sourceRowsBetweenOutputRows - intersampleYRowsSpacing * numSamples) * srcRowByteLength;
+
+    var
+        srcPixIndex = 0, dstPixIndex = 0;
+
+    // For each output thumbnail row...
+    for (var y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
+        var
+            bufferIndex = 0;
+
+        rowBuffer.fill(0);
+
+        // Sum the contributions of the input rows that correspond to this output row
+        for (var y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
+            bufferIndex = 0;
+            for (var x = 0; x < this.width; x++, bufferIndex++, srcPixIndex += interpixelXByteSkip) {
+                for (var x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
+                    rowBuffer[bufferIndex] += that.data[srcPixIndex];
+                }
+            }
+        }
+
+        // Now this thumbnail row is complete and we can write the buffer to the output
+        bufferIndex = 0;
+        for (var x = 0; x < this.width; x++, bufferIndex++, dstPixIndex++) {
+            this.data[dstPixIndex] = rowBuffer[bufferIndex] / (numSamples * numSamples);
+        }
+    }
+};
+
 CPGreyBmp.prototype.mirrorHorizontally = function() {
     var
         newData = new Uint8Array(width * height);
@@ -106,9 +196,14 @@ CPGreyBmp.prototype.applyLUT = function(lut) {
     }
 };
 
-CPGreyBmp.prototype.toCanvas = function() {
+/**
+ * Get the image as Canvas.
+ *
+ * @returns {HTMLCanvasElement}
+ */
+CPGreyBmp.prototype.getAsCanvas = function() {
     var
-        imageData = this.toImageData(),
+        imageData = this.getImageData(),
 
         canvas = document.createElement("canvas"),
         context = canvas.getContext("2d");
@@ -121,7 +216,11 @@ CPGreyBmp.prototype.toCanvas = function() {
     return canvas;
 };
 
-CPGreyBmp.prototype.toImageData = function() {
+/**
+ * Get the image as an opaque RGBA ImageData object.
+ * @returns {ImageData}
+ */
+CPGreyBmp.prototype.getImageData = function() {
     var
         canvas = document.createElement("canvas"),
         context = canvas.getContext("2d"),

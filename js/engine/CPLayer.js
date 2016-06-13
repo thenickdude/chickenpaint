@@ -20,7 +20,9 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import CPLayerGroup from "./CPLayerGroup";
 import CPBlend from './CPBlend';
+import CPGreyBmp from "./CPGreyBmp";
 
 /**
  * @param {String} name
@@ -68,6 +70,12 @@ export default function CPLayer(name) {
      * @type {?CPGreyBmp}
      */
     this.mask = null;
+
+    /**
+     * The thumbnail of the mask (if a mask is present and the thumb has been built)
+     * @type {?CPGreyBmp}
+     */
+    this.maskThumbnail = null;
 }
 
 /**
@@ -88,10 +96,21 @@ CPLayer.prototype.copyFrom = function(layer) {
     } else {
         this.mask = layer.mask.clone();
     }
+
+    if (!layer.maskThumbnail) {
+        this.maskThumbnail = null;
+    } else if (this.maskThumbnail) {
+        this.maskThumbnail.copyDataFrom(layer.maskThumbnail);
+    } else {
+        this.maskThumbnail = layer.maskThumbnail.clone();
+    }
 };
 
 CPLayer.prototype.setMask = function(mask) {
     this.mask = mask;
+    if (!mask) {
+        this.maskThumbnail = null;
+    }
 };
 
 CPLayer.prototype.setAlpha = function(alpha) {
@@ -180,3 +199,34 @@ CPLayer.prototype.clone = function() {
 CPLayer.prototype.getNonTransparentBounds = function(initialBounds) {
     return new CPRect(0, 0, 0, 0);
 };
+
+/**
+ * Recreate the image thumbnail for this layer.
+ */
+CPLayer.prototype.rebuildMaskThumbnail = function() {
+    if (!this.maskThumbnail) {
+        var
+            scaleDivider = Math.ceil(Math.max(this.image.width / CPLayer.LAYER_THUMBNAIL_WIDTH, this.image.height / CPLayer.LAYER_THUMBNAIL_HEIGHT));
+
+        this.maskThumbnail = new CPGreyBmp(Math.floor(this.image.width / scaleDivider), Math.floor(this.image.height / scaleDivider), 8);
+    }
+
+    this.maskThumbnail.createThumbnailFrom(this.mask);
+};
+
+/**
+ * Get the mask thumbnail for this layer (or build one if one was not already built). If the layer has no mask, null
+ * is returned.
+ *
+ * @returns {?CPGreyBmp}
+ */
+CPLayer.prototype.getMaskThumbnail = function() {
+    if (!this.maskThumbnail && this.mask) {
+        this.rebuildMaskThumbnail();
+    }
+
+    return this.maskThumbnail;
+};
+
+CPLayer.LAYER_THUMBNAIL_WIDTH = 80;
+CPLayer.LAYER_THUMBNAIL_HEIGHT = 50;
