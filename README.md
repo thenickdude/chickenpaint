@@ -2,7 +2,7 @@
 
 ChickenPaint is an HTML5 port of Marc Schefer's excellent multi-layer drawing Oekaki Java applet
 [ChibiPaint](http://www.chibipaint.com/). I decided to port it to JavaScript because Java applet support in browsers 
-has been dropping continously, while JavaScript support continues to strengthen. Like the original, it is licensed
+has been dropping continuously, while JavaScript support continues to strengthen. Like the original, it is licensed
 under GPLv3.
 
 ## Features
@@ -24,6 +24,17 @@ Firefox 32-bit, Safari and Opera).
 Native pen pressure support via Pointer Events is available for IE and Edge on Windows 8 and 10 (Windows 7 does not 
 support it). Firefox and Chrome will be adding support shortly, with Firefox already offering it as an experimental
 option which you can enable in [about:config](https://hacks.mozilla.org/2015/08/pointer-events-now-in-firefox-nightly/).
+
+## Try it out
+ChickenPaint is used as the default painting tool on [Chicken Smoothie's Oekaki forum](http://www.chickensmoothie.com/Forum/viewforum.php?f=29)
+if you're using the Google Chrome or Microsoft Edge web browsers (a free account is required).
+
+## Building
+Building ChickenPaint requires [Node](https://nodejs.org/en/) to be installed (I'm using v4.4 LTS) along with GNU Make.
+
+In the root of ChickenPaint, run `npm install` to install required dependencies. Then run `make all` to build ChickenPaint.
+The resulting `chickenpaint.js` file will be written to `resources/js`, and `chickenpaint.css` will be written to `resources/css`.
+You can use `make min` to build a minified version.
 
 ## Usage
 
@@ -82,6 +93,10 @@ Your `saveUrl` will receive the uploaded .chi layer file (if the drawing had mul
 and .aco color palette (if the user edited it), which would arrive in PHP as `$_FILES["picture"]`, `$_FILES["chibifile"]`
 and `$_FILES["swatches"]`. For an example of an upload script, see `/test/save.php`.
 
-ChickenPaint has been customised for use on Chicken Smoothie, which has a particular saving workflow (the user is
-allowed to either  proceed to publish  their completed drawing to the forum, or to exit drawing to come back and finish 
-it later) so you may want to do some tweaking to that flow in `/js/gui/CPSendDialog.js` for your own forum.
+ChickenPaint's saving workflow has been customised for use on Chicken Smoothie. The user can save their drawing, and
+then either continue editing the drawing, publish their completed drawing to the forum, or exit their drawing session
+and come back and finish it later. The ability to create a new drawing and then save it multiple times before
+publishing it to the forum effectively requires that the saveUrl contains a unique session ID in it. This way each
+`POST` to the saveUrl can be associated with the same drawing session..
+
+You might want to tweak that saving flow in `/js/gui/CPSendDialog.js` for your own forum.

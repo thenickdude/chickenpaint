@@ -37,4 +37,4 @@ clean :
 	rm -rf dist/*
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.less
-	lessc $< > $@
+	node_modules/.bin/lessc $< > $@
