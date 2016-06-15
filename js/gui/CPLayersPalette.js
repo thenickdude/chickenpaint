@@ -728,7 +728,7 @@ export default function CPLayersPalette(controller) {
             if (layerElem.length > 0) {
                 var
                     newThumb = layer.imageThumbnail.getAsCanvas();
-                newThumb.className = "chickenpaint-layer-image-thumbnail";
+                newThumb.className = "chickenpaint-layer-thumbnail chickenpaint-layer-image-thumbnail";
                 $(".chickenpaint-layer-image-thumbnail", layerElem).replaceWith(newThumb);
             }
         };
@@ -935,7 +935,7 @@ export default function CPLayersPalette(controller) {
 
         widgetContainer.addEventListener("dblclick", doubleClick);
         widgetContainer.addEventListener("mousedown", mouseDown);
-        dropdownParent.addEventListener("click", mouseClick);
+        widgetContainer.addEventListener("click", mouseClick);
         widgetContainer.addEventListener("contextmenu", contextMenuShow);
 
         controller.on("layerNotification", this.showNotification.bind(this));
