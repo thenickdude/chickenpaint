@@ -552,6 +552,9 @@ export default function CPLayersPalette(controller) {
                 $(".chickenpaint-action-create-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
                 $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !!layer.clip);
 
+                $(".chickenpaint-action-require-mask", dropdownLayerMenu).toggle(!!layer.mask);
+                $(".chickenpaint-action-require-no-mask", dropdownLayerMenu).toggle(!layer.mask);
+
                 $(getElemFromDisplayIndex(displayIndex))
                     .dropdown("toggle")
                     .off("click.bs.dropdown");
@@ -600,9 +603,11 @@ export default function CPLayersPalette(controller) {
                         });
                     } else {
                         var
-                            selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0 || (layer instanceof CPLayerGroup && layer.mask != null),
-
                             layerChanged = artwork.getActiveLayer() != layer,
+
+                            selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
+                                || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged),
+
                             maskChanged = artwork.isEditingMask() != selectMask;
 
                         if (layerChanged || maskChanged) {
@@ -790,7 +795,7 @@ export default function CPLayersPalette(controller) {
          * @param {boolean} maskSelected
          */
         this.activeLayerChanged = function(newLayer, maskSelected) {
-            $(".chickenpaint-layer", layerContainer).removeClass(CLASSNAME_LAYER_ACTIVE);
+            $("." + CLASSNAME_LAYER_ACTIVE, layerContainer).removeClass(CLASSNAME_LAYER_ACTIVE);
 
             var
                 layerElem = $(getElemFromDisplayIndex(getDisplayIndexFromLayer(newLayer)));
@@ -900,7 +905,10 @@ export default function CPLayersPalette(controller) {
                 mnuCreateClippingMask  = document.createElement("a"),
                 mnuReleaseClippingMask  = document.createElement("a"),
                 mnuDeleteGroup = document.createElement("a"),
-                mnuMergeGroup = document.createElement("a");
+                mnuMergeGroup = document.createElement("a"),
+                mnuCreateMask = document.createElement("a"),
+                mnuDeleteMask = document.createElement("a"),
+                mnuApplyMask = document.createElement("a");
 
             mnuDeleteLayer.className = "chickenpaint-action-require-image-layer";
             mnuDeleteLayer.href = "#";
@@ -959,6 +967,42 @@ export default function CPLayersPalette(controller) {
                 if (dropdownLayer) {
                     controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPGroupMerge"});
+                }
+            });
+
+            mnuCreateMask.className = "chickenpaint-action-create-mask chickenpaint-action-require-no-mask";
+            mnuCreateMask.href = "#";
+            mnuCreateMask.innerHTML = "Add mask";
+            mnuCreateMask.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                if (dropdownLayer) {
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: false});
+                    controller.actionPerformed({action: "CPAddLayerMask"});
+                }
+            });
+
+            mnuDeleteMask.className = "chickenpaint-action-delete-mask chickenpaint-action-require-mask";
+            mnuDeleteMask.href = "#";
+            mnuDeleteMask.innerHTML = "Delete mask";
+            mnuDeleteMask.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                if (dropdownLayer) {
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: true});
+                    controller.actionPerformed({action: "CPRemoveLayerMask"});
+                }
+            });
+
+            mnuApplyMask.className = "chickenpaint-action-apply-mask chickenpaint-action-require-mask";
+            mnuApplyMask.href = "#";
+            mnuApplyMask.innerHTML = "Delete mask";
+            mnuApplyMask.addEventListener("click", function(e) {
+                e.preventDefault();
+
+                if (dropdownLayer) {
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: true});
+                    controller.actionPerformed({action: "CPApplyLayerMask"});
                 }
             });
 
