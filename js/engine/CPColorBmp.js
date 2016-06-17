@@ -37,6 +37,14 @@ function createImageData(width, height) {
  *
  * @param {(ImageData|int)} width - The width of the bitmap, or the ImageData object to use by reference
  * @param {?int} height - The height of the bitmap
+ *
+ * @constructor
+ *
+ * @property {int} width
+ * @property {int} height
+ * @property {CanvasPixelArray} data - The bitmap data array (one byte per channel in RGBA order). We'd prefer this to
+ *                                     be Uint8ClampedArray, but IE 10 doesn't support it
+ * @property {ImageData} imageData
  */
 export default function CPColorBmp(width, height) {
     if (width instanceof ImageData) {
@@ -49,11 +57,9 @@ export default function CPColorBmp(width, height) {
     } else {
         CPBitmap.call(this, width, height);
 
-        // The ImageData object that holds the image data
         this.imageData = createImageData(this.width, this.height);
     }
 
-    // The bitmap data array (one byte per channel in RGBA order)
     this.data = this.imageData.data;
 }
 
@@ -90,9 +96,11 @@ CPColorBmp.prototype.cloneRect = function(rect) {
     return result;
 };
 
-//
-// Pixel access with friendly clipping. Pixel will be 32-bit integer in ARGB format
-//
+/**
+ * Pixel access with friendly clipping.
+ *
+ * @returns {int} 32-bit integer in ARGB format
+ */
 CPColorBmp.prototype.getPixel = function(x, y) {
     x = Math.max(0, Math.min(this.width - 1, x));
     y = Math.max(0, Math.min(this.height - 1, y));
@@ -109,7 +117,7 @@ CPColorBmp.prototype.getPixel = function(x, y) {
 /**
  * Get an r,g,b,a array of the xor of this bitmap and the given one, within the given rectangle
  *
- * @param {CPColorBmp|ImageData} bmp
+ * @param {CPColorBmp} bmp
  * @param {CPRect} rect
  *
  * @returns {Uint8Array}
@@ -185,13 +193,13 @@ CPColorBmp.prototype.copyBitmapRect = function(bmp, dstX, dstY, srcRect) {
 
     // Are we just trying to duplicate the bitmap?
     if (dstRect.left == 0 && dstRect.top == 0 && w == this.width && h == this.height && w == bmp.width && h == bmp.height) {
-        this.copyDataFrom(bmp);
+        this.copyPixelsFrom(bmp);
     } else {
         var
             dstIndex = this.offsetOfPixel(dstRect.left, dstRect.top),
             dstYSkip = (this.width - w) * CPColorBmp.BYTES_PER_PIXEL,
 
-            srcIndex = bmp.offsetOfPixel.call(bmp, srcRect.left, srcRect.top),
+            srcIndex = bmp.offsetOfPixel(srcRect.left, srcRect.top),
             srcYSkip = (bmp.width - w) * CPColorBmp.BYTES_PER_PIXEL;
 
         for (var y = 0; y < h; y++, srcIndex += srcYSkip, dstIndex += dstYSkip) {
@@ -226,17 +234,26 @@ CPColorBmp.prototype.copyAlphaFrom = function(bmp, rect) {
 };
 
 /**
+ * Resize this bitmap to be the same size as that one
  *
- * @param {CPColorBmp} bmp
+ * @param {CPBitmap} bmp
  */
-CPColorBmp.prototype.copyDataFrom = function(bmp) {
+CPColorBmp.prototype.setToSize = function(bmp) {
     if (bmp.width != this.width || bmp.height != this.height) {
         this.width = bmp.width;
         this.height = bmp.height;
-        
+
         this.imageData = createImageData(this.width, this.height);
         this.data = this.imageData.data;
     }
+};
+
+/**
+ *
+ * @param {CPColorBmp} bmp
+ */
+CPColorBmp.prototype.copyPixelsFrom = function(bmp) {
+    this.setToSize(bmp);
 
     if ("set" in this.data) {
         this.data.set(bmp.data);
@@ -245,6 +262,22 @@ CPColorBmp.prototype.copyDataFrom = function(bmp) {
         for (var i = 0; i < this.data.length; i++) {
             this.data[i] = bmp.data[i];
         }
+    }
+};
+
+CPColorBmp.prototype.copyPixelsFromGreyscale = function(bmp) {
+    var
+        srcIndex,
+        dstIndex = 0,
+        pixels = bmp.width * bmp.height;
+
+    this.setToSize(bmp);
+
+    for (srcIndex = 0; srcIndex < pixels; srcIndex++, dstIndex += CPColorBmp.BYTES_PER_PIXEL) {
+        this.data[dstIndex + CPColorBmp.RED_BYTE_OFFSET] = bmp.data[srcIndex];
+        this.data[dstIndex + CPColorBmp.GREEN_BYTE_OFFSET] = bmp.data[srcIndex];
+        this.data[dstIndex + CPColorBmp.BLUE_BYTE_OFFSET] = bmp.data[srcIndex];
+        this.data[dstIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
     }
 };
 
@@ -316,22 +349,22 @@ CPColorBmp.prototype.createThumbnailFrom = function(that) {
         intersampleYByteSkip = intersampleYRowsSpacing * srcRowByteLength - sourceBytesBetweenOutputCols * this.width,
         interpixelYByteSkip = (sourceRowsBetweenOutputRows - intersampleYRowsSpacing * numSamples) * srcRowByteLength;
 
-    var
+    let
         srcPixIndex = 0, dstPixIndex = 0;
 
     // For each output thumbnail row...
-    for (var y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
-        var
+    for (let y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
+        let
             bufferIndex = 0;
 
         rowBuffer.fill(0);
 
         // Sum the contributions of the input rows that correspond to this output row
-        for (var y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
+        for (let y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
             bufferIndex = 0;
-            for (var x = 0; x < this.width; x++, bufferIndex += 5, srcPixIndex += interpixelXByteSkip) {
-                for (var x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
-                    var
+            for (let x = 0; x < this.width; x++, bufferIndex += 5, srcPixIndex += interpixelXByteSkip) {
+                for (let x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
+                    let
                         sourceAlpha = that.data[srcPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET],
                         sourceAlphaScale = sourceAlpha / 255;
 
@@ -349,15 +382,15 @@ CPColorBmp.prototype.createThumbnailFrom = function(that) {
 
         // Now this thumbnail row is complete and we can write the buffer to the output
         bufferIndex = 0;
-        for (var x = 0; x < this.width; x++, bufferIndex += 5, dstPixIndex += CPColorBmp.BYTES_PER_PIXEL) {
-            var
+        for (let x = 0; x < this.width; x++, bufferIndex += 5, dstPixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+            let
                 maxAlphaForSample = rowBuffer[bufferIndex + 4];
 
             if (maxAlphaForSample == 0) {
                 this.data[dstPixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0;
             } else {
                 // Undo the premultiplication of the pixel data, scaling it to the max() alpha we want
-                var
+                let
                     sampleAlphaScale = maxAlphaForSample / rowBuffer[bufferIndex + CPColorBmp.ALPHA_BYTE_OFFSET];
 
                 this.data[dstPixIndex]     = rowBuffer[bufferIndex]     * sampleAlphaScale;
@@ -732,7 +765,7 @@ CPColorBmp.prototype.copyArrayToPixelColumn = function(x, y, len, buffer) {
 CPColorBmp.prototype.boxBlur = function(rect, radiusX, radiusY) {
     rect = this.getBounds().clipTo(rect);
 
-    var
+    let
         rectWidth = rect.getWidth(),
         rectWidthBytes = rectWidth * CPColorBmp.BYTES_PER_PIXEL,
         rectHeight = rect.getHeight(),
@@ -741,11 +774,11 @@ CPColorBmp.prototype.boxBlur = function(rect, radiusX, radiusY) {
         src = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL),
         dst = new Uint8Array(rectLength * CPColorBmp.BYTES_PER_PIXEL);
 
-    for (var y = rect.top; y < rect.bottom; y++) {
+    for (let y = rect.top; y < rect.bottom; y++) {
         var
             pixOffset = this.offsetOfPixel(rect.left, y);
         
-        for (var x = 0; x < rectWidthBytes; x++) {
+        for (let x = 0; x < rectWidthBytes; x++) {
             src[x] = this.data[pixOffset++];
         }
         
@@ -754,12 +787,12 @@ CPColorBmp.prototype.boxBlur = function(rect, radiusX, radiusY) {
         
         pixOffset = this.offsetOfPixel(rect.left, y);
         
-        for (var x = 0; x < rectWidthBytes; x++) {
+        for (let x = 0; x < rectWidthBytes; x++) {
             this.data[pixOffset++] = dst[x];
         }
     }
     
-    for (var x = rect.left; x < rect.right; x++) {
+    for (let x = rect.left; x < rect.right; x++) {
         this.copyPixelColumnToArray(x, rect.top, rectHeight, src);
         
         boxBlurLine(src, dst, rectHeight, radiusY);
@@ -1399,7 +1432,9 @@ function getRotatedCanvas(canvas, rotation) {
         rotatedCanvas.width = canvas.width;
         rotatedCanvas.height = canvas.height;
     } else {
+        //noinspection JSSuspiciousNameCombination
         rotatedCanvas.width = canvas.height;
+        //noinspection JSSuspiciousNameCombination
         rotatedCanvas.height = canvas.width;
     }
 

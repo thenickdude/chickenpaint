@@ -22,20 +22,24 @@
 
 import CPBrushInfo from "./CPBrushInfo";
 
+/**
+ * A brush spot
+ *
+ * @typedef {Object} CPBrushDab
+ *
+ * @property {Uint8Array} brush - The brush image mask
+ * @property {int} width - The size of the brush image
+ * @property {int} height
+ * @property {int} x - Position in the document where the brush will be applied
+ * @property {int} y
+ * @property {int} alpha
+ */
+
 export default function CPBrushManager() {
     const
         MAX_SQUEEZE = 10,
         BRUSH_MAX_DIM = 201,
         BRUSH_AA_MAX_DIM = 202;
-    
-    /*CPBrushDab {
-        // the brush
-        Uint8Array brush;
-        int width, height;
-        
-        // and where and how to apply it
-        int x, y, alpha;
-    }*/
     
     var
         brush = new Uint8Array(BRUSH_MAX_DIM * BRUSH_MAX_DIM),
@@ -51,6 +55,8 @@ export default function CPBrushManager() {
      * Shift a brush by a positive sub-pixel amount (dx, dy) [0..1), and return the new brush. 
      * 
      * The resulting brush array is 1 pixel larger than the original one in both dimensions.
+     *
+     * @returns {Uint8Array}
      */
     function getBrushWithAA(brushInfo, dx, dy) {
         let
@@ -95,6 +101,12 @@ export default function CPBrushManager() {
         return brushAA;
     }
 
+	/**
+     *
+     * @param brush
+     * @param brushInfo
+     * @returns {Uint8Array}
+     */
     function buildBrush(brush, brushInfo) {
         var
             intSize = Math.ceil(brushInfo.curSize),
@@ -129,6 +141,12 @@ export default function CPBrushManager() {
         return brush;
     }
 
+	/**
+     *
+     * @param brush
+     * @param brushInfo
+     * @returns {Uint8Array}
+     */
     function buildBrushAA(brush, brushInfo) {
         var
             intSize = Math.ceil(brushInfo.curSize),
@@ -183,6 +201,12 @@ export default function CPBrushManager() {
         return brush;
     }
 
+	/**
+     *
+     * @param brush
+     * @param brushInfo
+     * @returns {Uint8Array}
+     */
     function buildBrushSquare(brush, brushInfo) {
         var
             intSize = Math.ceil(brushInfo.curSize),
@@ -216,6 +240,12 @@ export default function CPBrushManager() {
         return brush;
     }
 
+	/**
+     *
+     * @param brush
+     * @param brushInfo
+     * @returns {Uint8Array}
+     */
     function buildBrushSquareAA(brush, brushInfo) {
         var
             intSize = Math.ceil(brushInfo.curSize),
@@ -272,6 +302,12 @@ export default function CPBrushManager() {
         return brush;
     }
 
+	/**
+     *
+     * @param brush
+     * @param brushInfo
+     * @returns {Uint8Array}
+     */
     function buildBrushSoft(brush, brushInfo) {
         var
             intSize = Math.ceil(brushInfo.curSize),
@@ -342,7 +378,12 @@ export default function CPBrushManager() {
 
         return brush;
     }
-    
+
+	/**
+     *
+     * @param {CPBrushDab} dab
+     * @param {float} textureAmount
+     */
     function applyTexture(dab, textureAmount) {
         var 
             amount = Math.floor(textureAmount * 255),
@@ -390,9 +431,11 @@ export default function CPBrushManager() {
     }
     
     /**
-     * @param {numeric} x
-     * @param {numeric} y
+     * @param {float} x
+     * @param {float} y
      * @param brushInfo - a CPBrushInfo object
+     *
+     * @returns {CPBrushDab}
      */
     this.getDab = function(x, y, brushInfo) {
         var 

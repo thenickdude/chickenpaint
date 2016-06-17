@@ -39,11 +39,15 @@ function CPBlendNode(width, height, layer) {
 	if (layer) {
 		this.isGroup = layer instanceof CPLayerGroup;
 		this.image = layer.image;
+		this.mask = layer.mask;
+		this.layer = layer;
 		this.blendMode = layer.blendMode;
 		this.alpha = layer.alpha;
 	} else {
 		this.isGroup = true;
 		this.image = null;
+		this.mask = null;
+		this.layer = null;
 		this.blendMode = CPBlend.LM_PASSTHROUGH;
 		this.alpha = 100;
 	}
@@ -124,8 +128,11 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			return null;
 		}
 
-		if (groupNode.layers.length == 1) {
-			// Replace this group with the layer it contains (combine the alpha of the two layers)
+		if (groupNode.layers.length == 1 && (groupNode.mask == null || groupNode.layers[0].mask == null)) {
+			/*
+			 * Replace this group with the layer it contains (combine the alpha of the two layers)
+			 * At most one of the two layers may have a mask, so we can use that mask for both of them.
+			 */
 			var
 				flattenedNode = groupNode.layers[0];
 
@@ -134,10 +141,19 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				flattenedNode.blendMode = groupNode.blendMode;
 			}
 
+			flattenedNode.mask = groupNode.mask || flattenedNode.mask;
+
+			/* However, make sure that if someone invalidates the group node (i.e. draws on its mask) we invalidate this
+			 * new merged node too.
+			 */
+			if (groupNode.layer) {
+				nodeForLayer.set(groupNode.layer, flattenedNode);
+			}
+
 			return flattenedNode;
 		}
 
-		// Since our group has more than one child, our group needs a temporary buffer to merge its children into
+		// Since we didn't fall into any of the optimized cases, our group must need a temporary buffer to merge its children into
 		groupNode.image = allocateBuffer();
 
 		return groupNode;
@@ -145,7 +161,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 
 	/**
 	 *
-	 * @param {CPImageLayer} layer
+	 * @param {CPLayer} layer
 	 * @returns {CPBlendNode}
 	 */
 	function createNodeForLayer(layer) {
@@ -178,7 +194,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	 */
 	function buildTreeInternal(layerGroup) {
 		var
-			treeNode = new CPBlendNode(width, height, layerGroup);
+			treeNode = createNodeForLayer(layerGroup);
 
 		for (let i = 0; i < layerGroup.layers.length; i++) {
 			let
@@ -228,7 +244,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 
 				// If the group ended up being non-empty...
 				if (childGroupNode) {
-					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup && childGroupNode.alpha == 100) {
+					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup && childGroupNode.alpha == 100 && childGroupNode.mask == null) {
 						/*
 						 Eliminate the pass-through group by adding its children to us instead
 						 */
@@ -273,8 +289,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		var
 			node = nodeForLayer.get(layer);
 
-		// Don't bother invalidating the layer itself because its node will not be a blend group
-		invalidateNodeRect(node.parent, rect);
+		invalidateNodeRect(node, rect);
 	};
 
 	/**
@@ -295,7 +310,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 					alpha: 100
 				});
 				drawTree.image.clearAll(0);
-			} else if (requireOpaqueFusion && drawTree.alpha < 100) {
+			} else if (requireOpaqueFusion && (drawTree.alpha < 100 || drawTree.mask)) {
 				/* e.g. document only contains one layer and it is transparent. Caller needs fusion to be opaque, so add
 				 * a group node to render the multiplied alpha version to. (The group node is used to hold a merge buffer
 				 * for us).
@@ -381,7 +396,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			if (DEBUG) {
 				console.log("CPColorBmp.copyDataFrom(source);");
 			}
-			dest.copyDataFrom(source);
+			dest.copyPixelsFrom(source);
 		} else {
 			// Otherwise use the CPBlend version which only blends the specified rectangle
 			if (DEBUG) {
@@ -391,14 +406,41 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		}
 	}
 
-	function copyImageRect(dest, source, sourceAlpha, rect) {
-		if (sourceAlpha == 100) {
-			copyOpaqueImageRect(dest, source, rect);
-		} else {
+	/**
+	 *
+	 * @param {CPColorBmp} dest
+	 * @param {CPColorBmp} source
+	 * @param {int} sourceAlpha
+	 * @param {CPRect} rect
+	 * @param {?CPGreyBmp} mask
+	 */
+	function copyImageRect(dest, source, sourceAlpha, rect, mask) {
+		// Use a plain copy if possible
+		if (sourceAlpha == 100 && !mask && rect.getWidth() == dest.width && rect.getHeight() == dest.height) {
 			if (DEBUG) {
-				console.log(`CPBlend.replaceOntoFusionWithTransparentLayer(dest, source, sourceAlpha = ${sourceAlpha}, rect = ${rect});`);
+				console.log("CPColorBmp.copyDataFrom(source);");
 			}
-			CPBlend.replaceOntoFusionWithTransparentLayer(dest, source, sourceAlpha, rect);
+			dest.copyPixelsFrom(source);
+		} else {
+			// Otherwise do some blending
+			var
+				routineName = "replaceOntoFusionWith";
+
+			if (sourceAlpha == 100) {
+				routineName += "OpaqueLayer";
+			} else {
+				routineName += "TransparentLayer";
+			}
+
+			if (mask) {
+				routineName += "Masked";
+			}
+
+			if (DEBUG) {
+				console.log(`CPBlend.${routineName}(dest, source, sourceAlpha = ${sourceAlpha}, rect = ${rect}, mask = ${mask});`);
+			}
+
+			CPBlend[routineName](dest, source, sourceAlpha, rect, mask);
 		}
 	}
 
@@ -432,8 +474,10 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		}
 		
 		if (treeNode.blendMode == CPBlend.LM_PASSTHROUGH) {
-			// Passthrough group with alpha < 100
-			
+			/* Since it wasn't eliminated by optimization, this must be a passthrough group which modifies the layers
+			 * it contains (by alpha < 100 or a mask)
+			 */
+
 			// We need to fuse our children layers onto a copy of our parents fusion, so make that copy now
 			groupIsEmpty = false;
 
@@ -447,18 +491,18 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				childNode = blendTreeInternal(child);
 			
 			if (groupIsEmpty) {
-				// If the fusion is currently empty then there's nothing to blend, copy the contents of the bottom layer instead
+				// If the fusion is currently empty then there's nothing to blend, replace the fusion with the contents of the bottom layer instead
 
-				copyImageRect(treeNode.image, childNode.image, childNode.alpha, blendArea);
+				copyImageRect(treeNode.image, childNode.image, childNode.alpha, blendArea, childNode.mask);
 				groupIsEmpty = false;
 			} else {
 				fusionHasTransparency = fusionHasTransparency && treeNode.image.hasAlphaInRect(blendArea);
 
 				if (DEBUG) {
-					console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, ${blendArea});`);
+					console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, ${blendArea}, ${childNode.mask});`);
 				}
 
-				CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency, childNode.image, childNode.alpha, childNode.blendMode, blendArea);
+				CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency, childNode.image, childNode.alpha, childNode.blendMode, blendArea, childNode.mask);
 				
 				if (treeNode.clip) {
 					// Need to restore the original alpha from the base layer we're clipping onto

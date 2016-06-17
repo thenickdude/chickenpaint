@@ -25,6 +25,7 @@ import "core-js/es6/symbol";
 import "core-js/es6/promise";
 import "core-js/es6/map";
 import "core-js/es6/set";
+import "core-js/es6/typed"; // For TypedArray.slice
 import "core-js/fn/array/iterator";
 import "core-js/fn/string/ends-with";
 
@@ -554,7 +555,9 @@ export default function ChickenPaint(options) {
                     that.artwork.colorNoise();
                 },
                 modifies: {document: true},
-                requiresDrawable: true
+                allowed: function() {
+                    return that.artwork.isColorNoiseAllowed();
+                }
             },
             CPFXBoxBlur: {
                 action: function () {
@@ -595,7 +598,10 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.pasteClipboard();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: function() {
+                    return !that.artwork.isClipboardEmpty();
+                }
             },
 
             CPToggleGrid: {
@@ -672,7 +678,9 @@ export default function ChickenPaint(options) {
                     that.artwork.createClippingMask();
                 },
                 modifies: {document: true},
-                requiresDrawable: true
+                allowed: function() {
+                    return that.artwork.isCreateClippingMaskAllowed();
+                }
             },
             CPReleaseClippingMask: {
                 action: function() {
@@ -688,7 +696,7 @@ export default function ChickenPaint(options) {
             },
             CPSetActiveLayer: {
                 action: function(e) {
-                    that.artwork.setActiveLayer(e.layer);
+                    that.artwork.setActiveLayer(e.layer, e.mask);
 
                     // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
                     that.artwork.performIdleTasks();
@@ -978,6 +986,10 @@ export default function ChickenPaint(options) {
         
         saver.on("savingComplete", function() {
             that.artwork.setHasUnsavedChanges(false);
+        });
+
+        saver.on("savingFailure", function() {
+            alert("An error occurred while trying to save your drawing! Please try again!");
         });
 
         // Allow the dialog to show before we begin serialization

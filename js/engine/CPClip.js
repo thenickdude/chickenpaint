@@ -22,7 +22,7 @@
 
 /**
  *
- * @param {CPColorBmp} bmp
+ * @param {(CPColorBmp|CPGreyBmp)} bmp
  * @param x
  * @param y
  * @constructor

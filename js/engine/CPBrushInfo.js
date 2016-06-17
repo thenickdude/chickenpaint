@@ -20,6 +20,17 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+ * @param {Object} properties - Non-default properties to set on the brush
+ *
+ * @property {int} alpha - The user-chosen alpha of this brush
+ * @property {int} curAlpha - The current alpha after pen pressure has been applied
+ * @property {int} size - The user-chosen size of this brush
+ * @property {int} curSize - The current size of the brush after pen pressure has been applied
+ * @property {float} angle
+ *
+ * @constructor
+ */
 export default function CPBrushInfo(properties) {
     var
         propName;

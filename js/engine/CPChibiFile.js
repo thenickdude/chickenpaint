@@ -78,10 +78,11 @@ function ChibiChunkHeader(stream) {
 ChibiChunkHeader.HEADER_LENGTH = 8;
 
 const
-    LAYER_FLAG_VISIBLE = 1,
-    LAYER_FLAG_CLIP = 2,
-    LAYER_FLAG_HAS_MASK = 4,
-    LAYER_FLAG_EXPANDED = 8,
+    LAYER_FLAG_VISIBLE     = 1,
+    LAYER_FLAG_CLIP        = 2,
+    LAYER_FLAG_HAS_MASK    = 4,
+    LAYER_FLAG_MASK_LINKED = 8,
+    LAYER_FLAG_EXPANDED    = 16,
 
     LAYER_DECODE_STATE_FIXED_HEADER    = 0,
     LAYER_DECODE_STATE_VARIABLE_HEADER = 1,
@@ -124,6 +125,7 @@ ChibiLayerDecoder.prototype.readFixedHeader = function(stream) {
     this.visible = (layerFlags & LAYER_FLAG_VISIBLE) != 0;
     this.clip = (layerFlags & LAYER_FLAG_CLIP) != 0;
     this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
+    this.maskLinked = (layerFlags & LAYER_FLAG_MASK_LINKED) != 0;
     this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
 
     this.nameLength = stream.readU32BE();
@@ -289,6 +291,8 @@ ChibiImageLayerDecoder.prototype.createLayer = function() {
     layer.visible = this.visible;
     layer.clip = this.clip;
 
+    layer.maskLinked = this.maskLinked;
+
     return layer;
 };
 
@@ -325,6 +329,8 @@ ChibiLayerGroupDecoder.prototype.createLayer = function() {
     group.visible = this.visible;
     group.expanded = this.expanded;
 
+    group.maskLinked = this.maskLinked;
+
     return group;
 };
 
@@ -357,7 +363,7 @@ function writeColorBitmapToStream(stream, bitmap) {
  * @param {CPGreyBmp} bitmap
  */
 function writeMaskToStream(stream, bitmap) {
-    stream.data.set(stream.pos, bitmap.data.length);
+    stream.data.set(bitmap.data, stream.pos);
     stream.pos += bitmap.data.length;
 }
 
@@ -452,7 +458,7 @@ function CPMaskDecoder(mask) {
     this.bytesRead = 0;
     this.bytesTotal = mask.width * mask.height;
     this.output = mask.data;
-    this.done = true;
+    this.done = false;
 }
 
 /**
@@ -468,7 +474,7 @@ CPMaskDecoder.prototype.decode = function(buffer) {
     }
 
     var
-    // How many more pixels are we to read in this buffer?
+    // How many more pixels are we to read from this buffer?
         bytesRemain = Math.min(buffer.length, this.bytesTotal - this.bytesRead) | 0,
         dstIndex = this.bytesRead;
 
@@ -482,9 +488,9 @@ CPMaskDecoder.prototype.decode = function(buffer) {
         this.done = true;
     }
 
-    if (dstIndex < buffer.length) {
+    if (srcIndex < buffer.length) {
         // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
-        return buffer.subarray(dstIndex);
+        return buffer.subarray(srcIndex);
     } else {
         // Buffer exhausted
         return null;
@@ -583,7 +589,10 @@ export default function CPChibiFile() {
         if (layer.mask) {
             layerFlags |= LAYER_FLAG_HAS_MASK;
         }
-        
+        if (layer.maskLinked) {
+            layerFlags |= LAYER_FLAG_MASK_LINKED;
+        }
+
         stream.writeU32BE(layerFlags);
         stream.writeU32BE(layer.name.length);
 
@@ -627,6 +636,9 @@ export default function CPChibiFile() {
         if (group.mask) {
             groupFlags |= LAYER_FLAG_HAS_MASK;
         }
+        if (group.maskLinked) {
+            groupFlags |= LAYER_FLAG_MASK_LINKED;
+        }
         if (group.expanded) {
             groupFlags |= LAYER_FLAG_EXPANDED;
         }
@@ -652,7 +664,7 @@ export default function CPChibiFile() {
      * @param {CPArtwork} artwork
      */
     this.serialize = function(artwork) {
-        return new Promise(function(resolve) {
+        return new Promise(function(resolve, reject) {
             var
                 deflator = new window.pako.Deflate({
                     level: 7
@@ -684,13 +696,17 @@ export default function CPChibiFile() {
                 }));
             }
 
-            layerWritePromise.then(function() {
-                deflator.push(serializeEndChunk(), true);
+            layerWritePromise
+                .then(function() {
+                    deflator.push(serializeEndChunk(), true);
 
-                blobParts.push(deflator.result);
+                    blobParts.push(deflator.result);
 
-                resolve(new Blob(blobParts, {type: "application/octet-stream"}));
-            });
+                    resolve(new Blob(blobParts, {type: "application/octet-stream"}));
+                })
+                .catch(function(e) {
+                    reject(e);
+                });
         });
     };
 

@@ -114,64 +114,69 @@ export default function CPResourceSaver(options) {
             serializeLayers = (new CPChibiFile()).serialize(options.artwork);
         }
         
-        serializeLayers.then(function(chibiBlob) {
-            if (cancelled) {
-                that.emitEvent("savingFailure");
-                return;
-            }
-            
-            if (options.swatches) {
-                var
-                    aco = new AdobeColorTable();
-                
-                swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octet-stream"});
-            } else {
-                swatchesBlob = null;
-            }
-             
-            if (options.url) {
-                var
-                    marker = "This marker ensures the upload wasn't truncated",
-                    formData = new FormData();
-
-                formData.append("beginMarker", marker);
-                
-                formData.append("picture", flatBlob);
-                flatBlob = null;
-                
-                if (chibiBlob) {
-                    formData.append("chibifile", chibiBlob);
-                    chibiBlob = null;
-
-                    // Layers will need to be rotated upon opening
-                    formData.append("rotation", "" + options.rotation);
-                } else {
-                    /*
-                     * Because the image is a flat PNG, we rotate it before we saved it and it doesn't need further
-                     * rotation upon opening.
-                     */
-                    formData.append("rotation", "0");
+        serializeLayers
+            .then(function(chibiBlob) {
+                if (cancelled) {
+                    that.emitEvent("savingFailure");
+                    return;
                 }
-                
-                if (swatchesBlob) {
-                    formData.append("swatches", swatchesBlob);
+
+                if (options.swatches) {
+                    var
+                        aco = new AdobeColorTable();
+
+                    swatchesBlob = new Blob([aco.write(options.swatches)], {type: "application/octet-stream"});
+                } else {
                     swatchesBlob = null;
                 }
 
-                formData.append("endMarker", marker);
+                if (options.url) {
+                    var
+                        marker = "This marker ensures the upload wasn't truncated",
+                        formData = new FormData();
 
-                postDrawing(formData);
-            } else {
-                window.saveAs(flatBlob, "oekaki.png");
-                
-                if (chibiBlob) {
-                    window.saveAs(chibiBlob, "oekaki.chi");
+                    formData.append("beginMarker", marker);
+
+                    formData.append("picture", flatBlob);
+                    flatBlob = null;
+
+                    if (chibiBlob) {
+                        formData.append("chibifile", chibiBlob);
+                        chibiBlob = null;
+
+                        // Layers will need to be rotated upon opening
+                        formData.append("rotation", "" + options.rotation);
+                    } else {
+                        /*
+                         * Because the image is a flat PNG, we rotate it before we saved it and it doesn't need further
+                         * rotation upon opening.
+                         */
+                        formData.append("rotation", "0");
+                    }
+
+                    if (swatchesBlob) {
+                        formData.append("swatches", swatchesBlob);
+                        swatchesBlob = null;
+                    }
+
+                    formData.append("endMarker", marker);
+
+                    postDrawing(formData);
+                } else {
+                    window.saveAs(flatBlob, "oekaki.png");
+
+                    if (chibiBlob) {
+                        window.saveAs(chibiBlob, "oekaki.chi");
+                    }
+                    if (swatchesBlob) {
+                        window.saveAs(swatchesBlob, "oekaki.aco");
+                    }
                 }
-                if (swatchesBlob) {
-                    window.saveAs(swatchesBlob, "oekaki.aco");
-                }
-            }
-        });
+            })
+            .catch(function(e) {
+                that.emitEvent("savingFailure");
+                return;
+            });
     };
     
     this.cancel = function() {

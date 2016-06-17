@@ -71,6 +71,13 @@ export default function CPLayer(name) {
      */
     this.mask = null;
 
+	/**
+     * True if transformations applied to the layer should also be applied to the mask (and vice versa)
+     *
+     * @type {boolean}
+     */
+    this.maskLinked = true;
+
     /**
      * The thumbnail of the mask (if a mask is present and the thumb has been built)
      * @type {?CPGreyBmp}
@@ -92,15 +99,16 @@ CPLayer.prototype.copyFrom = function(layer) {
     if (!layer.mask) {
         this.mask = null;
     } else if (this.mask) {
-        this.mask.copyDataFrom(layer.mask);
+        this.mask.copyPixelsFrom(layer.mask);
     } else {
         this.mask = layer.mask.clone();
     }
+    this.maskLinked = layer.maskLinked;
 
     if (!layer.maskThumbnail) {
         this.maskThumbnail = null;
     } else if (this.maskThumbnail) {
-        this.maskThumbnail.copyDataFrom(layer.maskThumbnail);
+        this.maskThumbnail.copyPixelsFrom(layer.maskThumbnail);
     } else {
         this.maskThumbnail = layer.maskThumbnail.clone();
     }
@@ -159,6 +167,14 @@ CPLayer.prototype.getVisible = function() {
 
 CPLayer.prototype.isVisible = CPLayer.prototype.getVisible;
 
+CPLayer.prototype.setMaskLinked = function(linked) {
+    this.maskLinked = linked;
+};
+
+CPLayer.prototype.getMaskLinked = function() {
+    return this.maskLinked;
+};
+
 CPLayer.prototype.getMemoryUsed = function() {
     return 0;
 };
@@ -204,14 +220,18 @@ CPLayer.prototype.getNonTransparentBounds = function(initialBounds) {
  * Recreate the image thumbnail for this layer.
  */
 CPLayer.prototype.rebuildMaskThumbnail = function() {
-    if (!this.maskThumbnail) {
-        var
-            scaleDivider = Math.ceil(Math.max(this.image.width / CPLayer.LAYER_THUMBNAIL_WIDTH, this.image.height / CPLayer.LAYER_THUMBNAIL_HEIGHT));
+    if (this.mask) {
+        if (!this.maskThumbnail) {
+            var
+                scaleDivider = Math.ceil(Math.max(this.mask.width / CPLayer.LAYER_THUMBNAIL_WIDTH, this.mask.height / CPLayer.LAYER_THUMBNAIL_HEIGHT));
 
-        this.maskThumbnail = new CPGreyBmp(Math.floor(this.image.width / scaleDivider), Math.floor(this.image.height / scaleDivider), 8);
+            this.maskThumbnail = new CPGreyBmp(Math.floor(this.mask.width / scaleDivider), Math.floor(this.mask.height / scaleDivider), 8);
+        }
+
+        this.maskThumbnail.createThumbnailFrom(this.mask);
+    } else {
+        this.maskThumbnail = null;
     }
-
-    this.maskThumbnail.createThumbnailFrom(this.mask);
 };
 
 /**

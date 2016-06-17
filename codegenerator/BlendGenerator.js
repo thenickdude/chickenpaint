@@ -1022,7 +1022,98 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
     
     ${makeBlendOperations()}
     
-    CPBlend.LM_NORMAL = 0;
+	// Blending operations with non-standard variants 
+	
+	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: false,
+		layerAlpha100: false
+	})}
+	
+	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayer = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayer;
+		
+	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: true,
+		layerAlpha100: false
+	})}
+	
+	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayer = CPBlend.passthroughOntoTransparentFusionWithTransparentLayer;
+
+	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: false,
+		layerAlpha100: false,
+		masked:true
+	})}
+	
+	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayerMasked;
+		
+	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
+		fusionHasTransparency: true,
+		layerAlpha100: false,
+		masked: true
+	})}
+	
+	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoTransparentFusionWithTransparentLayerMasked;
+
+	// These "replace" routines disregard the original contents of the fusion, so we need not make both an opaque and transparent fusion variant
+
+	${makeBlendOperation("replaceOntoFusionWithTransparentLayer", REPLACE_OPERATION, {
+		fusionHasTransparency: false,
+		layerAlpha100: false
+	})}
+
+	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
+		layerAlpha100: true
+	})}
+
+	${makeBlendOperation("replaceOntoFusionWithTransparentLayerMasked", REPLACE_OPERATION, {
+		fusionHasTransparency: false,
+		layerAlpha100: false,
+		masked: true
+	})}
+
+	${makeBlendOperation("replaceOntoFusionWithOpaqueLayerMasked", REPLACE_OPERATION, {
+		layerAlpha100: true,
+		masked: true
+	})}
+
+	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
+		layerAlpha100: false
+	})}
+		
+	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
+		layerAlpha100: true
+	})}
+
+	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPHA_OPERATION, {
+		layerAlpha100: true,
+		masked: true
+	})}
+
+	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
+		layerAlpha100: true,
+		fusionDifferentSize: true,
+		fusionHasTransparency: true
+	})}
+	
+	` + Function.prototype.toString.call(function makeLookupTables() {
+		// V - V^2 table
+		for (let i = 0; i < 256; i++) {
+			let
+				v = i / 255;
+
+			softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
+		}
+
+		// sqrt(V) - V table
+		for (let i = 0; i < 256; i++) {
+			let
+				v = i / 255;
+
+			softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
+		}
+	}) + `
+	
+	CPBlend.LM_NORMAL = 0;
     CPBlend.LM_MULTIPLY = 1;
     CPBlend.LM_ADD = 2;
     CPBlend.LM_SCREEN = 3;
@@ -1062,68 +1153,6 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
           "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
           "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
     ];
-	
-	// Blending operations with non-standard variants 
-	
-	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false
-	})}
-	
-	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayer = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayer;
-		
-	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: true,
-		layerAlpha100: false
-	})}
-	
-	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayer = CPBlend.passthroughOntoTransparentFusionWithTransparentLayer;
-
-	${makeBlendOperation("replaceOntoFusionWithTransparentLayer", REPLACE_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false
-	})}
-		
-	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
-		layerAlpha100: true
-	})}
-
-	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: false
-	})}
-		
-	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: true
-	})}
-
-	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: true,
-		masked: true
-	})}
-
-	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
-		layerAlpha100: true,
-		fusionDifferentSize: true,
-		fusionHasTransparency: true
-	})}
-	
-` + Function.prototype.toString.call(function makeLookupTables() {
-		// V - V^2 table
-		for (let i = 0; i < 256; i++) {
-			let
-				v = i / 255;
-
-			softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
-		}
-
-		// sqrt(V) - V table
-		for (let i = 0; i < 256; i++) {
-			let
-				v = i / 255;
-
-			softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
-		}
-	}) + `
     
     makeLookupTables();
 `);

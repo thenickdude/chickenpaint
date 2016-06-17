@@ -150,7 +150,10 @@ export default function CPLayersPalette(controller) {
             CLASSNAME_LAYER_HIDDEN = "chickenpaint-layer-hidden",
             CLASSNAME_LAYER_GROUP_EXPANDED = "chickenpaint-layer-group-expanded",
             CLASSNAME_LAYER_GROUP_COLLAPSED = "chickenpaint-layer-group-collapsed",
-            CLASSNAME_LAYER_GROUP_TOGGLE = "chickenpaint-layer-group-toggle";
+            CLASSNAME_LAYER_GROUP_TOGGLE = "chickenpaint-layer-group-toggle",
+            CLASSNAME_LAYER_IMAGE_THUMBNAIL = "chickenpaint-layer-image-thumbnail",
+            CLASSNAME_LAYER_MASK_THUMBNAIL = "chickenpaint-layer-mask-thumbnail",
+            CLASSNAME_LAYER_THUMBNAIL = "chickenpaint-layer-thumbnail";
 
         var 
             isDragging = false, isDraggingReally = false,
@@ -404,6 +407,36 @@ export default function CPLayersPalette(controller) {
             }
         }
 
+        function createImageThumb(layer) {
+            let
+                thumbnail = layer.getImageThumbnail(),
+                thumbCanvas = thumbnail.getAsCanvas(0);
+
+            thumbCanvas.title = "Image";
+            thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_IMAGE_THUMBNAIL;
+
+            if (layer == artwork.getActiveLayer() && !artwork.isEditingMask()) {
+                thumbCanvas.className += " active";
+            }
+
+            return thumbCanvas;
+        }
+
+        function createMaskThumb(layer) {
+            let
+                thumbnail = layer.getMaskThumbnail(),
+                thumbCanvas = thumbnail.getAsCanvas();
+
+            thumbCanvas.title = "Layer mask";
+            thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_MASK_THUMBNAIL;
+
+            if (layer == artwork.getActiveLayer() && artwork.isEditingMask()) {
+                thumbCanvas.className += " active";
+            }
+
+            return thumbCanvas;
+        }
+
         /**
          * Create a DOM element for the given layer
          *
@@ -467,21 +500,11 @@ export default function CPLayersPalette(controller) {
             }
 
             if (layer instanceof CPImageLayer) {
-                let 
-                    thumbnail = layer.getImageThumbnail(),
-                    thumbCanvas = thumbnail.getAsCanvas(0);
-
-                thumbCanvas.className = "chickenpaint-layer-thumbnail chickenpaint-layer-image-thumbnail";
-                layerDiv.appendChild(thumbCanvas);
+                layerDiv.appendChild(createImageThumb(layer));
             }
 
             if (layer.mask) {
-                let
-                    thumbnail = layer.getMaskThumbnail(),
-                    thumbCanvas = thumbnail.getAsCanvas(0);
-
-                thumbCanvas.className = "chickenpaint-layer-thumbnail chickenpaint-layer-mask-thumbnail";
-                layerDiv.appendChild(thumbCanvas);
+                layerDiv.appendChild(createMaskThumb(layer));
             }
 
             let
@@ -517,7 +540,7 @@ export default function CPLayersPalette(controller) {
                     layer = getLayerFromDisplayIndex(displayIndex);
 
                 if (artwork.getActiveLayer() != layer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: layer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: layer, mask: artwork.isEditingMask()});
                 }
 
                 dropdownLayer = layer;
@@ -576,9 +599,20 @@ export default function CPLayersPalette(controller) {
                             expand: !layer.expanded
                         });
                     } else {
-                        if (artwork.getActiveLayer() != layer) {
-                            controller.actionPerformed({action: "CPSetActiveLayer", layer: layer});
+                        var
+                            selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0 || (layer instanceof CPLayerGroup && layer.mask != null),
+
+                            layerChanged = artwork.getActiveLayer() != layer,
+                            maskChanged = artwork.isEditingMask() != selectMask;
+
+                        if (layerChanged || maskChanged) {
+                            controller.actionPerformed({
+                                action: "CPSetActiveLayer",
+                                layer: layer,
+                                mask: selectMask
+                            });
                         }
+
                         isDragging = true;
                         dropTarget = null;
 
@@ -726,10 +760,7 @@ export default function CPLayersPalette(controller) {
                 layerElem = $(getElemFromDisplayIndex(index));
 
             if (layerElem.length > 0) {
-                var
-                    newThumb = layer.imageThumbnail.getAsCanvas();
-                newThumb.className = "chickenpaint-layer-thumbnail chickenpaint-layer-image-thumbnail";
-                $(".chickenpaint-layer-image-thumbnail", layerElem).replaceWith(newThumb);
+                $("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).replaceWith(createImageThumb(layer));
             }
         };
 
@@ -744,10 +775,11 @@ export default function CPLayersPalette(controller) {
                 layerElem = $(getElemFromDisplayIndex(index));
 
             if (layerElem.length > 0) {
-                var
-                    newThumb = layer.maskThumbnail.getAsCanvas();
-                newThumb.className = "chickenpaint-layer-mask-thumbnail";
-                $(".chickenpaint-layer-mask-thumbnail", layerElem).replaceWith(newThumb);
+                if (layer.mask) {
+                    $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).replaceWith(createMaskThumb(layer));
+                } else {
+                    $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).remove();
+                }
             }
         };
 
@@ -755,10 +787,18 @@ export default function CPLayersPalette(controller) {
          * Call when the selected layer changes.
          * 
          * @param {CPLayer} newLayer
+         * @param {boolean} maskSelected
          */
-        this.activeLayerChanged = function(newLayer) {
+        this.activeLayerChanged = function(newLayer, maskSelected) {
             $(".chickenpaint-layer", layerContainer).removeClass(CLASSNAME_LAYER_ACTIVE);
-            $(getElemFromDisplayIndex(getDisplayIndexFromLayer(newLayer))).addClass(CLASSNAME_LAYER_ACTIVE);
+
+            var
+                layerElem = $(getElemFromDisplayIndex(getDisplayIndexFromLayer(newLayer)));
+
+            layerElem.addClass(CLASSNAME_LAYER_ACTIVE);
+
+            $("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).toggleClass("active", !maskSelected);
+            $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).toggleClass("active", maskSelected);
         };
 
         this.resize = function() {
@@ -869,7 +909,7 @@ export default function CPLayersPalette(controller) {
                 e.preventDefault();
 
                 if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPRemoveLayer"});
                 }
             });
@@ -881,7 +921,7 @@ export default function CPLayersPalette(controller) {
                 e.preventDefault();
 
                 if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPRemoveLayer"});
                 }
             });
@@ -893,7 +933,7 @@ export default function CPLayersPalette(controller) {
                 e.preventDefault();
 
                 if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPCreateClippingMask"});
                 }
             });
@@ -905,7 +945,7 @@ export default function CPLayersPalette(controller) {
                 e.preventDefault();
 
                 if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPReleaseClippingMask"});
                 }
             });
@@ -917,7 +957,7 @@ export default function CPLayersPalette(controller) {
                 e.preventDefault();
 
                 if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer});
+                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
                     controller.actionPerformed({action: "CPGroupMerge"});
                 }
             });
@@ -1055,9 +1095,11 @@ export default function CPLayersPalette(controller) {
      *
      * @param {CPLayer} oldLayer
      * @param {CPLayer} newLayer
+     * @param {boolean} maskSelected
      */
-    function onChangeActiveLayer(oldLayer, newLayer) {
-        layerWidget.activeLayerChanged(newLayer);
+    function onChangeActiveLayer(oldLayer, newLayer, maskSelected) {
+        layerWidget.activeLayerChanged(newLayer, maskSelected);
+
         updateActiveLayerControls();
     }
 

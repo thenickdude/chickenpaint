@@ -84,7 +84,7 @@ CPImageLayer.prototype.copyFrom = function(layer) {
 	if (!this.image) {
 		this.image = layer.image.clone();
 	} else {
-		this.image.copyDataFrom(layer.image);
+		this.image.copyPixelsFrom(layer.image);
 	}
 };
 
@@ -118,7 +118,7 @@ CPImageLayer.prototype.hasAlphaInRect = function(rect) {
  * @param {CPColorBmp} that
  */
 CPImageLayer.prototype.copyImageFrom = function(that) {
-	this.image.copyDataFrom(that);
+	this.image.copyPixelsFrom(that);
 };
 
 /**

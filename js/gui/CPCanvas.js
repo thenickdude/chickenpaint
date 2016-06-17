@@ -1741,7 +1741,7 @@ export default function CPCanvas(controller) {
         var
             activeLayer = artwork.getActiveLayer();
 
-        if (activeLayer instanceof CPLayerGroup) {
+        if (activeLayer instanceof CPLayerGroup && !artwork.isEditingMask()) {
             controller.showLayerNotification(activeLayer, "Whoops! You can't draw on a group", "layer");
 
             return false;

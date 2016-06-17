@@ -42,8 +42,9 @@ const
  * @param {int} imageAlpha - Alpha [0...100] to apply to the image
  * @param {int} imageBlendMode - Blending mode (CPBlend.LM_*) to apply to the image
  * @param {CPRect} rect - The rectangle of pixels that should be fused.
+ * @param {?CPGreyBmp} mask - An optional mask to apply to the image
  */
-CPBlend.fuseImageOntoImage = function (fusion, fusionHasTransparency, image, imageAlpha, imageBlendMode, rect) {
+CPBlend.fuseImageOntoImage = function (fusion, fusionHasTransparency, image, imageAlpha, imageBlendMode, rect, mask) {
 	if (imageAlpha <= 0) {
 		return;
 	}
@@ -63,12 +64,16 @@ CPBlend.fuseImageOntoImage = function (fusion, fusionHasTransparency, image, ima
 		funcName += "WithTransparentLayer";
 	}
 
+	if (mask) {
+		funcName += "Masked";
+	}
+
 	rect = fusion.getBounds().clipTo(rect);
 
-	this[funcName](fusion, image, imageAlpha, rect);
+	this[funcName](fusion, image, imageAlpha, rect, mask);
 };
 
-CPBlend.normalFuseImageOntoImageAtPosition = function(fusion, image, sourceRect, destX, destY) {
+CPBlend.normalFuseImageOntoImageAtPosition = function(fusion, image, destX, destY, sourceRect) {
 	var
 		sourceRectCopy = sourceRect.clone(),
 		destRect = new CPRect(destX, destY, 0, 0);
