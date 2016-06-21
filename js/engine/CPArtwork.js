@@ -32,6 +32,7 @@ import CPBrushInfo from "./CPBrushInfo";
 import CPUndo from "./CPUndo";
 import CPClip from "./CPClip";
 
+import CPColor from "../util/CPColor";
 import CPColorFloat from "../util/CPColorFloat";
 import CPRect from "../util/CPRect";
 import CPRandom from "../util/CPRandom";
@@ -82,15 +83,30 @@ export default function CPArtwork(_width, _height) {
         BLUR_MAX = 1,
 
         THUMBNAIL_REBUILD_DELAY_MSEC = 1000;
-    
-    var
-	    /**
+
+    const
+        /**
          * The root of the document's hierarchy of layers and layer groups.
          *
          * @type {CPLayerGroup}
          */
         layersRoot = new CPLayerGroup("Root", CPBlend.LM_NORMAL),
 
+        /**
+         * Our cached strategy for merging the layers together into one for display.
+         *
+         * @type {CPBlendTree}
+         */
+        blendTree = new CPBlendTree(layersRoot, _width, _height, true),
+
+        /**
+         * A copy of the current layer's image data that can be used for undo operations.
+         *
+         * @type {CPColorBmp}
+         */
+        undoImage = new CPColorBmp(_width, _height);
+
+    var
         paintingModes = [],
 
 	    /**
@@ -118,20 +134,6 @@ export default function CPArtwork(_width, _height) {
          * @type {CPColorBmp}
          */
         fusion = null,
-
-	    /**
-         * Our cached strategy for merging the layers together into one for display.
-         *
-         * @type {CPBlendTree}
-         */
-        blendTree = new CPBlendTree(layersRoot, _width, _height, true),
-
-        /**
-         * A copy of the current layer's image data that can be used for undo operations.
-         * 
-         * @type {CPColorBmp}
-         */
-        undoImage = new CPColorBmp(_width, _height),
 
         /**
          * The region of the undoImage which is out of date with respect to the content of the layer, and needs updated
@@ -334,7 +336,7 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} invalidateImage - True if drawing happened on the layer's image data
      * @param {boolean} invalidateMask - True if drawing happened on the layer's mask
      */
-``    function invalidateLayer(layer, rect, invalidateImage, invalidateMask) {
+    function invalidateLayer(layer, rect, invalidateImage, invalidateMask) {
         if (blendTree) {
             if (Array.isArray(layer)) {
                 layer.forEach(l => blendTree.invalidateLayerRect(l, rect));
@@ -433,16 +435,31 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
-    this.removeLayerMask = function(apply) {
-        if (curLayer.mask) {
-            addUndo(new CPActionRemoveLayerMask(curLayer, apply));
+    this.isRemoveLayerMaskAllowed = function() {
+        return curLayer.mask != null;
+    };
+
+    this.removeLayerMask = function() {
+        if (this.isRemoveLayerMaskAllowed()) {
+            addUndo(new CPActionRemoveLayerMask(curLayer, false));
         }
     };
 
-	/**
+    this.isApplyLayerMaskAllowed = function() {
+        return curLayer.mask != null && curLayer instanceof CPImageLayer;
+    };
+
+    this.applyLayerMask = function(apply) {
+        if (this.isApplyLayerMaskAllowed()) {
+            addUndo(new CPActionRemoveLayerMask(curLayer, true));
+        }
+    };
+
+    /**
      * Add a layer of the specified type (layer, group) on top of the selected layer.
      *
      * @param {string} layerType
+     * @returns {CPLayer}
      */
     this.addLayer = function(layerType) {
         let
@@ -473,6 +490,8 @@ export default function CPArtwork(_width, _height) {
         }
 
         addUndo(new CPActionAddLayer(parentGroup, newLayerIndex, newLayer));
+
+        return newLayer;
     };
 
 	/**
@@ -554,16 +573,12 @@ export default function CPArtwork(_width, _height) {
 
     this.mergeDown = function() {
         if (this.isMergeDownAllowed()) {
-            var
-                layerIndex = curLayer.parent.indexOf(curLayer),
-                underLayer = curLayer.parent.layers[layerIndex - 1];
-
-            addUndo(new CPActionMergeDownLayer(curLayer, underLayer));
+            addUndo(new CPActionMergeDownLayer(curLayer));
         }
     };
 
     this.isMergeGroupAllowed = function() {
-        return curLayer instanceof CPLayerGroup;
+        return curLayer instanceof CPLayerGroup && curLayer.getEffectiveAlpha() > 0;
     };
 
     this.mergeGroup = function() {
@@ -653,6 +668,10 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
+	/**
+     * @param {CPLayer} layer
+     * @param {string} name
+     */
     this.setLayerName = function(layer, name) {
         if (layer.getName() != name) {
             addUndo(new CPActionChangeLayerName(layer, name));
@@ -2027,13 +2046,20 @@ export default function CPArtwork(_width, _height) {
         undoList = [];
         redoList = [];
     };
-    
-    this.colorPicker = function(x, y) {
-        // not really necessary and could potentially the repaint
-        // of the canvas to miss that area
-        // this.fusionLayers();
 
-        return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
+	/**
+     * Sample the color at the given coordinates.
+     *
+     * @param {int} x
+     * @param {int} y
+     * @returns {int}
+     */
+    this.colorPicker = function(x, y) {
+        if (maskEditingMode && curLayer.mask) {
+            return CPColor.greyToRGB(curLayer.mask.getPixel(~~x, ~~y));
+        } else {
+            return fusion.getPixel(~~x, ~~y) & 0xFFFFFF;
+        }
     };
 
     this.setSelection = function(rect) {
@@ -2563,6 +2589,7 @@ export default function CPArtwork(_width, _height) {
 
             if (oldLayerImage) {
                 layer.image.copyPixelsFrom(oldLayerImage);
+                invalidateLayer(layer, layer.image.getBounds(), true, false);
             }
 
             if (maskWasSelected) {
@@ -2573,8 +2600,11 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            if (apply && layer instanceof CPImageLayer) {
-                CPBlend.replaceAlphaOntoFusionWithOpaqueLayerMasked(layer.image, layer.image, 100, layer.getBounds(), layer.mask);
+            if (oldLayerImage) {
+                CPBlend.multiplyAlphaByMask(layer.image, 100, layer.mask);
+
+                // Ensure thumbnail is repainted (artworkStructureChanged() doesn't repaint thumbs)
+                invalidateLayer(layer, that.getBounds(), true, false);
             }
 
             if (maskWasSelected) {
@@ -2756,8 +2786,8 @@ export default function CPArtwork(_width, _height) {
     function CPActionMergeGroup(layerGroup) {
         var
             oldGroupIndex = layerGroup.parent.indexOf(layerGroup),
-            mergedLayer = new CPImageLayer(that.width, that.height, ""),
-            fromMask = maskEditingMode;
+            fromMask = maskEditingMode,
+            mergedLayer = new CPImageLayer(that.width, that.height, "");
 
         this.undo = function() {
             layerGroup.parent.setLayerAtIndex(oldGroupIndex, layerGroup);
@@ -2767,19 +2797,6 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            var
-                blendTree = new CPBlendTree(layerGroup, that.width, that.height, false);
-            
-            blendTree.buildTree();
-            
-            var 
-                blended = blendTree.blendTree();
-
-            mergedLayer.name = layerGroup.name;
-            mergedLayer.alpha = blended.alpha;
-            mergedLayer.copyImageFrom(blended.image); // TODO elide copy by replacing the image field instead
-            mergedLayer.blendMode = blended.blendMode;
-
             layerGroup.parent.setLayerAtIndex(oldGroupIndex, mergedLayer);
 
             artworkStructureChanged();
@@ -2787,8 +2804,28 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return undone ? 0 : mergedLayer.getMemoryUsed() + layerGroup.getMemoryUsed();
+            return undone ? 0 : layerGroup.getMemoryUsed();
         };
+
+        var
+            blendTree = new CPBlendTree(layerGroup, that.width, that.height, false),
+            blended;
+
+        blendTree.buildTree();
+
+        blended = blendTree.blendTree();
+
+        mergedLayer.name = layerGroup.name;
+
+        mergedLayer.alpha = blended.alpha;
+        mergedLayer.image = blended.image;
+        mergedLayer.blendMode = blended.blendMode;
+        mergedLayer.mask = blended.mask;
+
+        if (mergedLayer.blendMode == CPBlend.LM_PASSTHROUGH) {
+            // Passthrough is not a meaningful blend mode for a single layer
+            mergedLayer.blendMode = CPBlend.LM_NORMAL;
+        }
 
         this.redo();
     }
@@ -2800,17 +2837,19 @@ export default function CPArtwork(_width, _height) {
      * Merge the top layer onto the under layer and remove the top layer.
      *
      * @param {CPImageLayer} topLayer
-     * @param {CPImageLayer} underLayer
      * @constructor
      */
-    function CPActionMergeDownLayer(topLayer, underLayer) {
+    function CPActionMergeDownLayer(topLayer) {
         var
+            group = topLayer.parent,
+
+            underLayer = group.layers[group.indexOf(topLayer) - 1],
             mergedLayer = new CPImageLayer(that.width, that.height, ""),
+
             fromMask = maskEditingMode;
 
         this.undo = function() {
             var
-                group = mergedLayer.parent,
                 mergedIndex = group.indexOf(mergedLayer);
 
             group.removeLayerAtIndex(mergedIndex);
@@ -2825,10 +2864,20 @@ export default function CPArtwork(_width, _height) {
         this.redo = function() {
             mergedLayer.copyFrom(underLayer);
     
-            CPBlend.fuseLayerOntoLayer(mergedLayer, true, topLayer, mergedLayer.image.getBounds());
+            if (topLayer.getEffectiveAlpha() > 0) {
+                // Ensure base layer has alpha 100, and apply its mask, ready for blending
+                if (mergedLayer.mask) {
+                    CPBlend.multiplyAlphaByMask(mergedLayer.image, mergedLayer.alpha, mergedLayer.mask);
+                    mergedLayer.mask = null;
+                } else {
+                    CPBlend.multiplyAlphaBy(mergedLayer.image, mergedLayer.alpha);
+                }
+                mergedLayer.alpha = 100;
+    
+                CPBlend.fuseImageOntoImage(mergedLayer.image, true, topLayer.image, topLayer.alpha, topLayer.blendMode, topLayer.getBounds(), topLayer.mask);
+            }
             
             var
-                group = underLayer.parent,
                 underIndex = group.indexOf(underLayer);
 
             // Remove both of the layers to be merged
@@ -2883,7 +2932,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.getMemoryUsed = function(undone, param) {
-            return oldRootLayers.map(layer => layer.getMemoryUsed()).reduce((a, b) => a + b, 0);
+            return oldRootLayers.map(layer => layer.getMemoryUsed()).reduce(sum, 0);
         };
 
         this.redo();

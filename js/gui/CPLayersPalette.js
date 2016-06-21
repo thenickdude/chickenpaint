@@ -193,10 +193,18 @@ export default function CPLayersPalette(controller) {
 
             dropdownLayerMenu = createLayerDropdownMenu(),
             dropdownMousePos,
+
 	        /**
+             * The layer we right-clicked on to open the dropdown
+             *
              * @type {CPLayer}
              */
             dropdownLayer = null,
+	        /**
+             * True if we right-clicked on the mask of the layer for the dropdown.
+             * @type {boolean}
+             */
+            dropdownOnMask = false,
 
             that = this;
 
@@ -228,8 +236,8 @@ export default function CPLayersPalette(controller) {
         }
 
         /**
-         * @typedef CPDropTarget
-         * @type Object
+         * @typedef {Object} CPDropTarget
+         *
          * @property {int} displayIndex - The index of the layer to insert near
          * @property {CPLayer} layer - The layer to insert near
          * @property {string} direction - "under", "over" or "inside", the direction to insert relative to the target
@@ -533,27 +541,26 @@ export default function CPLayersPalette(controller) {
             e.preventDefault();
 
             var
-                displayIndex = getDisplayIndexFromElem(e.target);
+                displayIndex = getDisplayIndexFromElem(e.target),
+                layer = artwork.getActiveLayer();
 
             if (displayIndex != -1) {
-                var
-                    layer = getLayerFromDisplayIndex(displayIndex);
-
-                if (artwork.getActiveLayer() != layer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: layer, mask: artwork.isEditingMask()});
-                }
-
                 dropdownLayer = layer;
+
                 dropdownMousePos = {x : e.clientX, y: e.clientY};
 
                 $(".chickenpaint-action-require-image-layer", dropdownLayerMenu).toggle(layer instanceof CPImageLayer);
                 $(".chickenpaint-action-require-layer-group", dropdownLayerMenu).toggle(layer instanceof CPLayerGroup);
 
                 $(".chickenpaint-action-create-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
-                $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !!layer.clip);
+                $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && layer.clip);
 
-                $(".chickenpaint-action-require-mask", dropdownLayerMenu).toggle(!!layer.mask);
-                $(".chickenpaint-action-require-no-mask", dropdownLayerMenu).toggle(!layer.mask);
+                $(".chickenpaint-action-require-mask", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null);
+                $(".chickenpaint-action-require-no-mask", dropdownLayerMenu).toggle(!dropdownOnMask || layer.mask == null);
+
+                $("[data-action]", dropdownLayerMenu).each(function() {
+                    $(this).parent().toggleClass("disabled", !controller.isActionAllowed(this.getAttribute("data-action")));
+                });
 
                 $(getElemFromDisplayIndex(displayIndex))
                     .dropdown("toggle")
@@ -563,7 +570,7 @@ export default function CPLayersPalette(controller) {
             }
         }
 
-        function doubleClick(e) {
+        function onDoubleClick(e) {
             // Make sure we didn't double-click on the layer eye...
             if ($(e.target).closest(".chickenpaint-layer-description").length > 0) {
                 var
@@ -579,45 +586,57 @@ export default function CPLayersPalette(controller) {
             }
         }
 
-        function mouseDown(e) {
-            if (e.button == BUTTON_PRIMARY) {
+        function onMouseDown(e) {
+            var
+                layerElem = $(e.target).closest(".chickenpaint-layer")[0],
+                displayIndex = getDisplayIndexFromElem(layerElem);
+
+            if (displayIndex != -1) {
                 var
-                    layerElem = $(e.target).closest(".chickenpaint-layer")[0],
-                    displayIndex = getDisplayIndexFromElem(layerElem);
+                    layer = getLayerFromDisplayIndex(displayIndex);
 
-                if (displayIndex != -1) {
+                if (e.button == BUTTON_PRIMARY && $(e.target).closest(".chickenpaint-layer-eye").length) {
+                    controller.actionPerformed({
+                        action: "CPSetLayerVisibility",
+                        layer: layer,
+                        visible: !layer.visible
+                    });
+                } else if (e.button == BUTTON_PRIMARY && layer instanceof CPLayerGroup && $(e.target).closest("." + CLASSNAME_LAYER_GROUP_TOGGLE).length) {
+                    controller.actionPerformed({
+                        action: "CPExpandLayerGroup",
+                        group: layer,
+                        expand: !layer.expanded
+                    });
+                } else {
                     var
-                        layer = getLayerFromDisplayIndex(displayIndex);
+                        layerChanged = artwork.getActiveLayer() != layer,
 
-                    if ($(e.target).closest(".chickenpaint-layer-eye").length) {
+                        selectMask, maskChanged;
+
+                    selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
+                        || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged);
+
+                    dropdownOnMask = selectMask;
+
+                    if (e.button != BUTTON_PRIMARY && !layerChanged) {
+                        /*
+                         * Right clicking within the currently selected layer does not result in the mask/image selection
+                         * moving (but it does change the type of dropdown menu we receive)
+                         */
+                        selectMask = artwork.isEditingMask();
+                    }
+
+                    maskChanged = artwork.isEditingMask() != selectMask;
+
+                    if (layerChanged || maskChanged) {
                         controller.actionPerformed({
-                            action: "CPSetLayerVisibility",
+                            action: "CPSetActiveLayer",
                             layer: layer,
-                            visible: !layer.visible
+                            mask: selectMask
                         });
-                    } else if (layer instanceof CPLayerGroup && $(e.target).closest("." + CLASSNAME_LAYER_GROUP_TOGGLE).length) {
-                        controller.actionPerformed({
-                            action: "CPExpandLayerGroup",
-                            group: layer,
-                            expand: !layer.expanded
-                        });
-                    } else {
-                        var
-                            layerChanged = artwork.getActiveLayer() != layer,
+                    }
 
-                            selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
-                                || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged),
-
-                            maskChanged = artwork.isEditingMask() != selectMask;
-
-                        if (layerChanged || maskChanged) {
-                            controller.actionPerformed({
-                                action: "CPSetActiveLayer",
-                                layer: layer,
-                                mask: selectMask
-                            });
-                        }
-
+                    if (e.button == BUTTON_PRIMARY) {
                         isDragging = true;
                         dropTarget = null;
 
@@ -635,7 +654,7 @@ export default function CPLayersPalette(controller) {
             }
         }
 
-        function mouseClick(e) {
+        function onMouseClick(e) {
             if (e.button != BUTTON_SECONDARY && !$(dropdownParent).hasClass("open")) {
                 // Don't pop up the popup menu for us (bootstrap calls toggle)
                 e.stopPropagation();
@@ -913,114 +932,77 @@ export default function CPLayersPalette(controller) {
             mnuDeleteLayer.className = "chickenpaint-action-require-image-layer";
             mnuDeleteLayer.href = "#";
             mnuDeleteLayer.innerHTML = "Delete layer";
-            mnuDeleteLayer.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
-                    controller.actionPerformed({action: "CPRemoveLayer"});
-                }
-            });
+            mnuDeleteLayer.setAttribute("data-action", "CPRemoveLayer");
 
             mnuDeleteGroup.className = "chickenpaint-action-require-layer-group";
             mnuDeleteGroup.href = "#";
             mnuDeleteGroup.innerHTML = "Delete group";
-            mnuDeleteGroup.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
-                    controller.actionPerformed({action: "CPRemoveLayer"});
-                }
-            });
+            mnuDeleteGroup.setAttribute("data-action", "CPRemoveLayer");
 
             mnuCreateClippingMask.className = "chickenpaint-action-create-clipping-mask chickenpaint-action-require-image-layer";
             mnuCreateClippingMask.href = "#";
             mnuCreateClippingMask.innerHTML = "Clip to the layer below";
-            mnuCreateClippingMask.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
-                    controller.actionPerformed({action: "CPCreateClippingMask"});
-                }
-            });
+            mnuCreateClippingMask.setAttribute("data-action", "CPCreateClippingMask");
 
             mnuReleaseClippingMask.className = "chickenpaint-action-release-clipping-mask chickenpaint-action-require-image-layer";
             mnuReleaseClippingMask.href = "#";
             mnuReleaseClippingMask.innerHTML = "Release the clipping mask";
-            mnuReleaseClippingMask.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
-                    controller.actionPerformed({action: "CPReleaseClippingMask"});
-                }
-            });
+            mnuReleaseClippingMask.setAttribute("data-action", "CPReleaseClippingMask");
 
             mnuMergeGroup.className = "chickenpaint-action-require-layer-group";
             mnuMergeGroup.href = "#";
             mnuMergeGroup.innerHTML = "Merge group";
-            mnuMergeGroup.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: artwork.isEditingMask()});
-                    controller.actionPerformed({action: "CPGroupMerge"});
-                }
-            });
+            mnuMergeGroup.setAttribute("data-action", "CPGroupMerge");
 
             mnuCreateMask.className = "chickenpaint-action-create-mask chickenpaint-action-require-no-mask";
             mnuCreateMask.href = "#";
             mnuCreateMask.innerHTML = "Add mask";
-            mnuCreateMask.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: false});
-                    controller.actionPerformed({action: "CPAddLayerMask"});
-                }
-            });
+            mnuCreateMask.setAttribute("data-action", "CPAddLayerMask");
 
             mnuDeleteMask.className = "chickenpaint-action-delete-mask chickenpaint-action-require-mask";
             mnuDeleteMask.href = "#";
             mnuDeleteMask.innerHTML = "Delete mask";
-            mnuDeleteMask.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: true});
-                    controller.actionPerformed({action: "CPRemoveLayerMask"});
-                }
-            });
+            mnuDeleteMask.setAttribute("data-action", "CPRemoveLayerMask");
 
             mnuApplyMask.className = "chickenpaint-action-apply-mask chickenpaint-action-require-mask";
             mnuApplyMask.href = "#";
-            mnuApplyMask.innerHTML = "Delete mask";
-            mnuApplyMask.addEventListener("click", function(e) {
-                e.preventDefault();
-
-                if (dropdownLayer) {
-                    controller.actionPerformed({action: "CPSetActiveLayer", layer: dropdownLayer, mask: true});
-                    controller.actionPerformed({action: "CPApplyLayerMask"});
-                }
-            });
+            mnuApplyMask.innerHTML = "Apply mask";
+            mnuApplyMask.setAttribute("data-action", "CPApplyLayerMask");
 
             menu.className = "dropdown-menu";
 
-            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuMergeGroup].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
+            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuDeleteMask, mnuApplyMask, mnuMergeGroup].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
 
             return menu;
+        }
+
+        function onDropdownActionClick(e) {
+            var
+                action = e.target.getAttribute("data-action");
+
+            if (action) {
+                e.preventDefault();
+
+                controller.actionPerformed({
+                    action: "CPSetActiveLayer",
+                    layer: dropdownLayer,
+                    mask: artwork.isEditingMask()
+                });
+
+                controller.actionPerformed({action: action});
+            }
         }
 
         dropdownParent.id = "chickenpaint-layer-pop";
 
         widgetContainer.className = "chickenpaint-layers-widget well";
 
-        widgetContainer.addEventListener("dblclick", doubleClick);
-        widgetContainer.addEventListener("mousedown", mouseDown);
-        widgetContainer.addEventListener("click", mouseClick);
+        widgetContainer.addEventListener("dblclick", onDoubleClick);
+        widgetContainer.addEventListener("mousedown", onMouseDown);
+        widgetContainer.addEventListener("click", onMouseClick);
         widgetContainer.addEventListener("contextmenu", contextMenuShow);
+
+        dropdownLayerMenu.addEventListener("click", onDropdownActionClick);
 
         controller.on("layerNotification", this.showNotification.bind(this));
 

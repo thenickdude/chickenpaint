@@ -105,6 +105,22 @@ CPBlend.multiplyAlphaBy = function (image, alpha) {
 };
 
 /**
+ * Multiplies the values from the mask, and the given overall alpha, into the alpha channel of the image.
+ *
+ * @param {CPColorBmp} image
+ * @param {number} alpha
+ * @param {CPGreyBmp} mask
+ */
+CPBlend.multiplyAlphaByMask = function(image, alpha, mask) {
+	var
+		scale = alpha / (100 * 255);
+	
+	for (var dstIndex = CPColorBmp.ALPHA_BYTE_OFFSET, srcIndex = 0; dstIndex < image.data.length; dstIndex += CPColorBmp.BYTES_PER_PIXEL, srcIndex++) {
+		image.data[dstIndex] = Math.round(image.data[dstIndex] * mask.data[srcIndex] * scale);
+	}
+};
+
+/**
  * Multiplies the given alpha into the alpha of the individual pixels of the image and stores the
  * resulting pixels into the specified image.
  *
@@ -130,23 +146,4 @@ CPBlend.copyAndMultiplyAlphaBy = function (dest, image, alpha, rect) {
 			imageData[pixIndex + ALPHA_BYTE_OFFSET] = Math.round(imageData[pixIndex + ALPHA_BYTE_OFFSET] * alpha / 100);
 		}
 	}
-};
-
-/**
- * Fuse the given layer on top of the given fusion layer, using the blending operation defined in the layer.
- *
- * @param {CPLayer} fusion - Layer to fuse on top of
- * @param {boolean} fusionHasTransparency - True if the fusion layer has alpha < 100, or any transparent pixels.
- * @param {CPLayer} layer - Layer that should be drawn on top of the fusion
- * @param {CPRect} rect - The rectangle of pixels that should be fused.
- */
-CPBlend.fuseLayerOntoLayer = function (fusion, fusionHasTransparency, layer, rect) {
-	if (layer.getEffectiveAlpha() == 0) {
-		return;
-	}
-
-	// Our blending operators don't support fusion with alpha < 100, so ensure that first
-	this.multiplyAlphaBy(fusion.image, fusion.alpha);
-
-	this.fuseImageOntoImage(fusion.image, fusionHasTransparency, layer.image, layer.alpha, layer.blendMode, rect);
 };

@@ -630,8 +630,8 @@ CPColorBmp.prototype.floodFill = function(x, y, color) {
 /**
  * Premultiply the RGB channels in the given R,G,B,A channel buffer with the alpha channel.
  * 
- * @param buffer R,G,B,A channel array
- * @param len Number of pixels in buffer to modify
+ * @param {Uint8Array} buffer - buffer R,G,B,A channel array
+ * @param {int} len - Number of pixels in buffer to modify
  */
 function multiplyAlpha(buffer, len) {
     var

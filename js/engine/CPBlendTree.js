@@ -65,13 +65,24 @@ function CPBlendNode(width, height, layer) {
 }
 
 /**
+ * Add zero (null), one (CPBlendNode) or more (CPBlendNode[]) children to this node.
  *
- * @param {CPBlendNode} child
+ * @param {(?CPBlendNode|CPBlendNode[])} children
  */
-CPBlendNode.prototype.addChild = function(child) {
-	if (child) {
-		child.parent = this;
-		this.layers.push(child);
+CPBlendNode.prototype.addChildren = function(children) {
+	if (children != null) {
+		if (Array.isArray(children)) {
+			children.forEach(child => (child.parent = this));
+
+			this.layers = this.layers.concat(children);
+		} else {
+			var
+				child = children;
+
+			child.parent = this;
+
+			this.layers.push(child);
+		}
 	}
 };
 
@@ -82,11 +93,11 @@ CPBlendNode.prototype.addChild = function(child) {
  * @param {CPLayerGroup} drawingRootGroup - The root of the layer stack.
  * @param {int} width - Dimension of layers and final merge result.
  * @param {int} height
- * @param {boolean} requireOpaqueFusion - Set to true if the result must have alpha 100.
+ * @param {boolean} requireSimpleFusion - Set to true if the result must have alpha 100 and no mask.
  *
  * @constructor
  */
-export default function CPBlendTree(drawingRootGroup, width, height, requireOpaqueFusion) {
+export default function CPBlendTree(drawingRootGroup, width, height, requireSimpleFusion) {
 	const
 		DEBUG = false;
 
@@ -119,7 +130,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	/**
 	 *
 	 * @param {CPBlendNode} groupNode
-	 * @returns {?CPBlendNode}
+	 * @returns {?CPBlendNode|CPBlendNode[]}
 	 */
 	function optimizeGroupNode(groupNode) {
 		if (groupNode.layers.length == 0) {
@@ -131,7 +142,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 		if (groupNode.layers.length == 1 && (groupNode.mask == null || groupNode.layers[0].mask == null)) {
 			/*
 			 * Replace this group with the layer it contains (combine the alpha of the two layers)
-			 * At most one of the two layers may have a mask, so we can use that mask for both of them.
+			 * At most one of the two layers may have a mask, so that we can use that mask for both of them.
 			 */
 			var
 				flattenedNode = groupNode.layers[0];
@@ -151,6 +162,11 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			}
 
 			return flattenedNode;
+		}
+
+		// Replace logically-transparent pass-through groups with their contents
+		if (groupNode.blendMode == CPBlend.LM_PASSTHROUGH && groupNode.alpha == 100 && groupNode.mask == null) {
+			return groupNode.layers;
 		}
 
 		// Since we didn't fall into any of the optimized cases, our group must need a temporary buffer to merge its children into
@@ -176,23 +192,14 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 	/**
 	 * Build a CPBlendNode for this CPLayerGroup and return it, or null if this group doesn't draw anything.
 	 *
-	 * This is achieved by the following algorithm:
-	 *
-	 * Perform an in-order traversal of layers
-	 *   Convert layers which are in a clipping group into a group node
-	 *   Drop hidden layers, hidden groups and their contents, pass-through groups
-	 *   When leaving a group during traversal:
-	 *     If no children remain, drop it
-	 *     If there is only one child layer, replace the group with the layer (set blending to the group's and multiply alpha)
-	 *   
-	 *   We could:
-	 *   If all the children are Normal blending and we are Normal at 100%, drop the group
-	 *      - This is because blending C <- A, C <- B is the same as A <- B, C <- A
-	 *      - We could probably do this for more blending modes too
-	 *
 	 * @param {CPLayerGroup} layerGroup
+	 * @returns {?CPBlendNode|CPBlendNode[]}
 	 */
 	function buildTreeInternal(layerGroup) {
+		if (layerGroup.getEffectiveAlpha() == 0) {
+			return null;
+		}
+
 		var
 			treeNode = createNodeForLayer(layerGroup);
 
@@ -211,13 +218,13 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				clippingGroupNode.alpha = 100;
 				clippingGroupNode.clip = true;
 
-				clippingGroupNode.addChild(createNodeForLayer(childLayer));
+				clippingGroupNode.addChildren(createNodeForLayer(childLayer));
 
 				// All the contiguous layers above us with "clip" set will become the children of the new group
 				for (j = i + 1; j < layerGroup.layers.length; j++) {
 					if (layerGroup.layers[j].clip) {
 						if (layerGroup.layers[j].getEffectiveAlpha() > 0) {
-							clippingGroupNode.addChild(createNodeForLayer(layerGroup.layers[j]));
+							clippingGroupNode.addChildren(createNodeForLayer(layerGroup.layers[j]));
 						}
 					} else {
 						break;
@@ -226,7 +233,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 
 				// If the clipping base is invisible, so will the children be (so drop them here by not adding them anywhere)
 				if (childLayer.getEffectiveAlpha() > 0) {
-					treeNode.addChild(optimizeGroupNode(clippingGroupNode));
+					treeNode.addChildren(optimizeGroupNode(clippingGroupNode));
 				}
 
 				// Skip the layers we just added
@@ -234,33 +241,10 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 				continue;
 			}
 
-			if (childLayer.getEffectiveAlpha() == 0) {
-				continue;
-			}
-
 			if (childLayer instanceof CPLayerGroup) {
-				let
-					childGroupNode = buildTreeInternal(childLayer);
-
-				// If the group ended up being non-empty...
-				if (childGroupNode) {
-					if (childGroupNode.blendMode == CPBlend.LM_PASSTHROUGH && childGroupNode.isGroup && childGroupNode.alpha == 100 && childGroupNode.mask == null) {
-						/*
-						 Eliminate the pass-through group by adding its children to us instead
-						 */
-						for (let subLayer of childGroupNode.layers) {
-							treeNode.addChild(subLayer);
-						}
-					} else {
-						treeNode.addChild(childGroupNode);
-					}
-				}
-			} else {
-				// It's a layer, so we'll add it to our tree node
-				let
-					childNode = createNodeForLayer(childLayer);
-
-				treeNode.addChild(childNode);
+				treeNode.addChildren(buildTreeInternal(childLayer));
+			} else if (childLayer.getEffectiveAlpha() > 0) {
+				treeNode.addChildren(createNodeForLayer(childLayer));
 			}
 		}
 
@@ -310,19 +294,21 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 					alpha: 100
 				});
 				drawTree.image.clearAll(0);
-			} else if (requireOpaqueFusion && (drawTree.alpha < 100 || drawTree.mask)) {
-				/* e.g. document only contains one layer and it is transparent. Caller needs fusion to be opaque, so add
-				 * a group node to render the multiplied alpha version to. (The group node is used to hold a merge buffer
-				 * for us).
+			} else {
+				/*
+				 * Caller wants fusion to be a single opaque node, so add a group node as a wrapper if needed (to hold
+				 * a buffer for the merged children).
 				 */
-				var
-					oldNode = drawTree;
+				if (Array.isArray(drawTree) || requireSimpleFusion && (drawTree.alpha < 100 || drawTree.mask)) {
+					var
+						oldNode = drawTree;
 
-				drawTree = new CPBlendNode(width, height);
-				drawTree.blendMode = oldNode.blendMode;
-				drawTree.alpha = 100;
-				drawTree.image = allocateBuffer();
-				drawTree.addChild(oldNode);
+					drawTree = new CPBlendNode(width, height);
+					drawTree.blendMode = Array.isArray(oldNode) ? CPBlend.LM_NORMAL : oldNode.blendMode;
+					drawTree.alpha = 100;
+					drawTree.image = allocateBuffer();
+					drawTree.addChildren(oldNode);
+				}
 			}
 
 			/* Assume we'll have re-used most of the buffers we were ever going to, so we can trim our memory usage
@@ -473,11 +459,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireOpaq
 			return treeNode;
 		}
 		
-		if (treeNode.blendMode == CPBlend.LM_PASSTHROUGH) {
-			/* Since it wasn't eliminated by optimization, this must be a passthrough group which modifies the layers
-			 * it contains (by alpha < 100 or a mask)
-			 */
-
+		if (treeNode.blendMode == CPBlend.LM_PASSTHROUGH && treeNode.parent) {
 			// We need to fuse our children layers onto a copy of our parents fusion, so make that copy now
 			groupIsEmpty = false;
 

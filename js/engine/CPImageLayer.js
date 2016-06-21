@@ -22,6 +22,7 @@
 
 import CPColorBmp from './CPColorBmp';
 import CPLayer from './CPLayer';
+import CPRect from "../util/CPRect";
 
 /**
  * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().
@@ -171,6 +172,13 @@ CPImageLayer.prototype.setClip = function(clip) {
  */
 CPImageLayer.prototype.getNonTransparentBounds = function(initialBounds) {
 	return this.image.getNonTransparentBounds(initialBounds);
+};
+
+/**
+ * @returns {CPRect}
+ */
+CPImageLayer.prototype.getBounds = function() {
+	return new CPRect(0, 0, this.image.width, this.image.height);
 };
 
 /**
