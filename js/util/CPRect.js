@@ -324,7 +324,7 @@ CPRect.subtract = function(rectsA, rectsB) {
             rectB = rectsB[i],
             resultLength = result.length;
 
-        for (var j = 0; j < resultLength; j++) {
+        for (let j = 0; j < resultLength; j++) {
             let
                 rectA = result[j];
 
@@ -358,8 +358,8 @@ CPRect.subtract = function(rectsA, rectsB) {
                 if (newRects.length > 0) {
                     result[j] = newRects[0];
 
-                    for (var j = 1; j < newRects.length; j++) {
-                        result.push(newRects[j]);
+                    for (let k = 1; k < newRects.length; k++) {
+                        result.push(newRects[k]);
                     }
                 } else {
                     result[j] = null;
