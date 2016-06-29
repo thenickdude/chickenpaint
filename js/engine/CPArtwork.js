@@ -39,6 +39,8 @@ import CPRandom from "../util/CPRandom";
 import CPTransform from "../util/CPTransform";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 /**
  * Capitalize the first letter of the string.
  *
@@ -67,6 +69,16 @@ function arrayEquals(a, b) {
     return true;
 }
 
+/**
+ * Create a new empty artwork with the given dimensions.
+ *
+ * Note that an artwork with no layers is invalid, so you must call a routine like addBackgroundLayer(), addLayer(), or
+ * addLayerObject() before calling any other routines.
+ *
+ * @param {int} _width
+ * @param {int} _height
+ * @constructor
+ */
 export default function CPArtwork(_width, _height) {
     
     _width = _width | 0;
@@ -104,7 +116,11 @@ export default function CPArtwork(_width, _height) {
          *
          * @type {CPColorBmp}
          */
-        undoImage = new CPColorBmp(_width, _height);
+        undoImage = new CPColorBmp(_width, _height),
+
+        brushManager = new CPBrushManager(),
+
+        that = this;
 
     var
         paintingModes = [],
@@ -114,7 +130,7 @@ export default function CPArtwork(_width, _height) {
          *
          * @type {(CPImageLayer|CPLayerGroup)}
          */
-        curLayer,
+        curLayer = layersRoot,
 
 	    /**
          * True if we're editing the mask of the currently selected layer, false otherwise.
@@ -191,9 +207,7 @@ export default function CPArtwork(_width, _height) {
         undoList = [], redoList = [],
         
         curBrush = null,
-        
-        brushManager = new CPBrushManager(),
-        
+
         lastX = 0.0, lastY = 0.0, lastPressure = 0.0,
         brushBuffer = null,
         
@@ -213,9 +227,7 @@ export default function CPArtwork(_width, _height) {
         thumbnailRebuildTimer = null,
 
         curColor = 0x000000, // Black
-        transformInterpolation = "smooth",
-
-        that = this;
+        transformInterpolation = "smooth";
 
 	/**
      * We use this routine to suppress the updating of a thumbnail while the user is still drawing.
@@ -456,7 +468,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     /**
-     * Add a layer of the specified type (layer, group) on top of the selected layer.
+     * Add a layer of the specified type (layer, group) on top of the current layer.
      *
      * @param {string} layerType
      * @returns {CPLayer}
@@ -502,8 +514,9 @@ export default function CPArtwork(_width, _height) {
      */
     this.addLayerObject = function(parent, layer) {
         parent.addLayer(layer);
-        
-        if (layersRoot.layers.length == 1) {
+
+        // Select the layer if it's the first one in the document (so we can get a valid curLayer field)
+        if (parent == layersRoot && layersRoot.layers.length == 1) {
             curLayer = layer;
         }
         
@@ -604,7 +617,7 @@ export default function CPArtwork(_width, _height) {
      * @param {int} toIndex
      */
     this.relocateLayer = function(layer, toGroup, toIndex) {
-        if (layer && toGroup && !toGroup.hasAncestor(layer)) {
+        if (layer && toGroup && layer != toGroup && !toGroup.hasAncestor(layer)) {
             addUndo(new CPActionRelocateLayer(layer, toGroup, toIndex));
         }
     };
@@ -1828,11 +1841,15 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
+    this.isReleaseClippingMaskAllowed = function() {
+        return curLayer instanceof CPImageLayer && curLayer.clip;
+    };
+
     /**
      * Clip this layer to the one below, if it is not already clipped.
      */
     this.releaseClippingMask = function() {
-        if ((curLayer instanceof CPImageLayer) && curLayer.clip) {
+        if (this.isReleaseClippingMaskAllowed()) {
             addUndo(new CPActionChangeLayerClip(curLayer, false));
         }
     };
@@ -1920,20 +1937,20 @@ export default function CPArtwork(_width, _height) {
         return total;
     };
     
-    function canUndo() {
+    this.isUndoAllowed = function() {
         return undoList.length > 0;
-    }
+    };
 
-    function canRedo() {
+    this.isRedoAllowed = function() {
         return redoList.length > 0;
-    }
+    };
 
     //
     // Undo / Redo
     //
 
     this.undo = function() {
-        if (!canUndo()) {
+        if (!this.isUndoAllowed()) {
             return;
         }
         hasUnsavedChanges = true;
@@ -1947,7 +1964,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.redo = function() {
-        if (!canRedo()) {
+        if (!this.isRedoAllowed()) {
             return;
         }
         hasUnsavedChanges = true;
@@ -2991,7 +3008,8 @@ export default function CPArtwork(_width, _height) {
      *
      * @param {CPLayer} layer
      * @param {CPLayerGroup} toGroup - The group that the layer will be a child of after moving
-     * @param {int} toIndex - The index inside the destination group that the layer will have after moving
+     * @param {int} toIndex - The index of the layer inside the destination group that the layer will be below after the
+     *                        move.
      * @constructor
      */
     function CPActionRelocateLayer(layer, toGroup, toIndex) {

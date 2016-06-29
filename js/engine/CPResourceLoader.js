@@ -4,6 +4,8 @@ import CPColorBmp from "./CPColorBmp";
 import CPImageLayer from "./CPImageLayer";
 import AdobeColorTable from "../util/AdobeColorTable";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 /**
  * Loads ChickenPaint resources from a remote server and emits progress events.
  *

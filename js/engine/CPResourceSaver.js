@@ -2,6 +2,8 @@ import CPChibiFile from "./CPChibiFile";
 import CPArtwork from "./CPArtwork";
 import AdobeColorTable from "../util/AdobeColorTable";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 /**
  * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
  * This function converts such a string to a Uint8Array instead.

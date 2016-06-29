@@ -19,6 +19,9 @@
 	You should have received a copy of the GNU General Public License
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
+
+import EventEmitter from "wolfy87-eventemitter";
+
 export default function CPConfirmTransformDialog(parent, controller) {
 	var
 		dialog =

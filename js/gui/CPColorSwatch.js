@@ -26,6 +26,8 @@ import CPSlider from './CPSlider';
 import CPColorSelect from './CPColorSelect';
 import CPColorSlider from './CPColorSlider';
 
+import EventEmitter from "wolfy87-eventemitter";
+
 export default function CPColorSwatch(initialColor, initialAlpha) {
     var
         that = this,

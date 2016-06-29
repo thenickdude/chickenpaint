@@ -29,6 +29,8 @@ import CPLayersPalette from "./CPLayersPalette";
 import CPTexturePalette from "./CPTexturePalette";
 import CPSwatchesPalette from "./CPSwatchesPalette";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 export default function CPPaletteManager(cpController) {
     var
         palettes = {

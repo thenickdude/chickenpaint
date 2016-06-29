@@ -58,7 +58,6 @@ Add something like this to your &lt;head> to load the required libraries in:
 <script src="lib/pep.min.js"></script>
 <script src="lib/pako.min.js"></script>
 <script src="lib/keymaster.js"></script>
-<script src="lib/EventEmitter.min.js"></script>
 <script src="lib/FileSaver.min.js"></script>
 <script src="lib/bootstrap.min.js"></script>
 ```
@@ -91,11 +90,11 @@ new ChickenPaint({
 The possible options, including additional options for loading saved .chi or .png files for editing, are described
 in the comments for the constructor of the ChickenPaint object in `/js/ChickenPaint.js`.
 
-See `/test/index.html` for a complete example of a page that hosts ChickenPaint.
+See `/example/index.html` for a complete example of a page that hosts ChickenPaint.
 
 Your `saveUrl` will receive the uploaded .chi layer file (if the drawing had multiple layers), flat PNG image (always)
 and .aco color palette (if the user edited it), which would arrive in PHP as `$_FILES["picture"]`, `$_FILES["chibifile"]`
-and `$_FILES["swatches"]`. For an example of an upload script, see `/test/save.php`.
+and `$_FILES["swatches"]`. For an example of an upload script, see `/example/save.php`.
 
 ChickenPaint's saving workflow has been customised for use on Chicken Smoothie. The user can save their drawing, and
 then either continue editing the drawing, publish their completed drawing to the forum, or exit their drawing session

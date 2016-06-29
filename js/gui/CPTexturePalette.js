@@ -26,6 +26,8 @@ import CPLookUpTable from '../engine/CPLookUpTable';
 import CPPalette from './CPPalette';
 import CPSlider from './CPSlider';
 
+import EventEmitter from "wolfy87-eventemitter";
+
 function wrapCheckboxWithLabel(checkbox, title) {
     var
         div = document.createElement("div"),

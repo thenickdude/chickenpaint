@@ -24,12 +24,21 @@ import CPBitmap from "./CPBitmap";
 import CPRect from "../util/CPRect";
 
 function createImageData(width, height) {
-    // return new ImageData(this.width, this.height); // Doesn't work on old IE
-    var
-        canvas = document.createElement("canvas"),
-        context = canvas.getContext("2d");
-    
-    return context.createImageData(width, height);
+    if (typeof document !== "undefined") {
+        // return new ImageData(this.width, this.height); // Doesn't work on old IE
+        var
+            canvas = document.createElement("canvas"),
+            context = canvas.getContext("2d");
+
+        return context.createImageData(width, height);
+    } else {
+        // node.js
+        return {
+            data: new Uint8ClampedArray(width * height * CPColorBmp.BYTES_PER_PIXEL),
+            width: width,
+            height: height
+        };
+    }
 }
 
 /**
@@ -47,17 +56,17 @@ function createImageData(width, height) {
  * @property {ImageData} imageData
  */
 export default function CPColorBmp(width, height) {
-    if (width instanceof ImageData) {
+    if (typeof width == "number") {
+        CPBitmap.call(this, width, height);
+
+        this.imageData = createImageData(this.width, this.height);
+    } else {
         var
             imageData = width;
 
         CPBitmap.call(this, imageData.width, imageData.height);
 
         this.imageData = imageData;
-    } else {
-        CPBitmap.call(this, width, height);
-
-        this.imageData = createImageData(this.width, this.height);
     }
 
     this.data = this.imageData.data;
@@ -1562,21 +1571,4 @@ CPColorBmp.createFromImage = function(image) {
     imageContext.drawImage(image, 0, 0);
 
     return new CPColorBmp(imageContext.getImageData(0, 0, image.width, image.height));
-};
-
-window.debugImage = function(image) {
-    if (image instanceof CPColorBmp) {
-        image = image.getAsCanvas();
-    } else if (image instanceof CanvasRenderingContext2D) {
-        image = image.canvas;
-    } else if (!(image instanceof HTMLCanvasElement)) {
-        console.error("Bad image type");
-    }
-
-    var
-        imgTag = document.createElement("img");
-
-    imgTag.src = image.toDataURL('image/png');
-
-    document.body.appendChild(imgTag);
 };

@@ -24,6 +24,8 @@ import CPCanvas from "./CPCanvas";
 import CPPaletteManager from "./CPPaletteManager";
 import CPMainMenu from "./CPMainMenu";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 export default function CPMainGUI(controller, uiElem) {
     var
         lowerArea = document.createElement("div"),

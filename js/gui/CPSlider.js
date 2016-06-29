@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import EventEmitter from "wolfy87-eventemitter";
+
 /**
  * A simple slider control.
  */

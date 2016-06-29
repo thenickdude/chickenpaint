@@ -51,6 +51,8 @@ import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
 
+import EventEmitter from "wolfy87-eventemitter";
+
 function checkBrowserSupport() {
     var
         supportsAPIs = isCanvasSupported() && "Uint8Array" in window;
@@ -337,13 +339,15 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.undo();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isUndoAllowed"
             },
             CPRedo: {
                 action: function () {
                     that.artwork.redo();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isRedoAllowed"
             },
             CPClearHistory: {
                 action: function () {
@@ -476,18 +480,14 @@ export default function ChickenPaint(options) {
                     that.artwork.mergeDown();
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isMergeDownAllowed();
-                }
+                allowed: "isMergeDownAllowed"
             },
             CPGroupMerge: {
                 action: function () {
                     that.artwork.mergeGroup();
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isMergeGroupAllowed();
-                }
+                allowed: "isMergeGroupAllowed"
             },
             CPLayerMergeAll: {
                 action: function () {
@@ -555,9 +555,7 @@ export default function ChickenPaint(options) {
                     that.artwork.colorNoise();
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isColorNoiseAllowed();
-                }
+                allowed: "isColorNoiseAllowed"
             },
             CPFXBoxBlur: {
                 action: function () {
@@ -658,18 +656,14 @@ export default function ChickenPaint(options) {
                     that.artwork.applyLayerMask(true);
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isApplyLayerMaskAllowed();
-                }
+                allowed: "isApplyLayerMaskAllowed"
             },
             CPRemoveLayerMask: {
                 action: function() {
                     that.artwork.removeLayerMask(false);
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isRemoveLayerMaskAllowed();
-                }
+                allowed: "isRemoveLayerMaskAllowed"
             },
             CPRemoveLayer: {
                 action: function() {
@@ -684,15 +678,14 @@ export default function ChickenPaint(options) {
                     that.artwork.createClippingMask();
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return that.artwork.isCreateClippingMaskAllowed();
-                }
+                allowed: "isCreateClippingMaskAllowed"
             },
             CPReleaseClippingMask: {
                 action: function() {
                     that.artwork.releaseClippingMask();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isReleaseClippingMaskAllowed"
             },
             CPRelocateLayer: {
                 action: function(e) {
@@ -1044,6 +1037,8 @@ export default function ChickenPaint(options) {
             return false;
         } else if (typeof action.allowed == "function") {
             return action.allowed();
+        } else if (typeof action.allowed == "string") {
+            return this.artwork[action.allowed]();
         } else {
             return !action.requiresDrawable || this.artwork.isActiveLayerDrawable();
         }
