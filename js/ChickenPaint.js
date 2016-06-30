@@ -493,7 +493,8 @@ export default function ChickenPaint(options) {
                 action: function () {
                     that.artwork.mergeAllLayers();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isMergeAllLayersAllowed"
             },
             CPExpandLayerGroup: {
                 action: function (e) {
@@ -671,7 +672,8 @@ export default function ChickenPaint(options) {
                         alert("Sorry, you can't remove the last remaining layer in the drawing.");
                     }
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isRemoveLayerAllowed"
             },
             CPCreateClippingMask: {
                 action: function() {

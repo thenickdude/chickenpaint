@@ -146,7 +146,7 @@ CPLayer.prototype.setName = function(name) {
 };
 
 CPLayer.prototype.getName = function() {
-    return name;
+    return this.name;
 };
 
 CPLayer.prototype.setBlendMode = function(blendMode) {

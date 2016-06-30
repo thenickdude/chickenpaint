@@ -544,33 +544,32 @@ export default function CPArtwork(_width, _height) {
 
         this.addLayerObject(parent, group);
     };
-    
+
+    this.isRemoveLayerAllowed = function() {
+        if (curLayer instanceof CPImageLayer) {
+            return layersRoot.getLinearizedLayerList(false).some(layer => layer instanceof CPImageLayer && layer != curLayer);
+        }
+        if (curLayer instanceof CPLayerGroup) {
+            return layersRoot.getLinearizedLayerList(false).some(layer => layer instanceof CPImageLayer && !layer.hasAncestor(curLayer));
+        }
+
+        return false;
+    };
+
     /**
      * Remove the currently selected layer.
      * 
-     * Returns true if the layer was removed, or false when removal failed because there is currently only one image
-     * layer in the document.
+     * @return {boolean} True if the layer was removed, or false when removal failed because there would be no image
+     * layers left in the document after deletion.
      */
     this.removeLayer = function() {
-        if (curLayer instanceof CPImageLayer) {
-            var
-                layers = layersRoot.getLinearizedLayerList(false),
-                imageLayerCount = 0;
+        if (this.isRemoveLayerAllowed()) {
+            addUndo(new CPActionRemoveLayer(curLayer));
 
-            for (let layer of layers) {
-                if (layer instanceof CPImageLayer) {
-                    imageLayerCount++;
-                }
-            }
-
-            if (imageLayerCount <= 1) {
-                return false;
-            }
+            return true;
         }
-        
-        addUndo(new CPActionRemoveLayer(curLayer));
 
-        return true;
+        return false;
     };
 
     this.duplicateLayer = function() {
@@ -600,11 +599,12 @@ export default function CPArtwork(_width, _height) {
         }
     };
 
+    this.isMergeAllLayersAllowed = function() {
+        return layersRoot.getLinearizedLayerList(false).length > 1;
+    };
+
     this.mergeAllLayers = function() {
-        var
-            numLayers = layersRoot.getLinearizedLayerList(false).length;
-        
-        if (numLayers > 1) {
+        if (this.isMergeAllLayersAllowed()) {
             addUndo(new CPActionMergeAllLayers());
         }
     };
@@ -2742,19 +2742,27 @@ export default function CPArtwork(_width, _height) {
      * @param {CPLayer} layer
      */
     function CPActionRemoveLayer(layer) {
-        var
+        let
             oldGroup = layer.parent,
             oldIndex = oldGroup.indexOf(layer),
             oldMask = maskEditingMode,
 
-            fromBelowLayer = oldGroup.layers[oldIndex + 1],
-            removeClipFromAboveLayer = fromBelowLayer instanceof CPImageLayer && fromBelowLayer.getClippingBase() == layer;
-    
+            numLayersClippedAbove = 0;
+
+        if (layer instanceof CPImageLayer && !layer.clip) {
+            for (let i = oldIndex + 1; i < oldGroup.layers.length; i++) {
+                if (oldGroup.layers[i] instanceof CPImageLayer && oldGroup.layers[i].clip) {
+                    numLayersClippedAbove++;
+                } else {
+                    break;
+                }
+            }
+        }
         this.undo = function() {
             oldGroup.insertLayer(oldIndex, layer);
 
-            if (removeClipFromAboveLayer) {
-                fromBelowLayer.clip = true;
+            for (let i = 0; i < numLayersClippedAbove; i++) {
+                oldGroup.layers[i + oldIndex + 1].clip = true;
             }
 
             artworkStructureChanged();
@@ -2762,8 +2770,9 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            if (removeClipFromAboveLayer) {
-                fromBelowLayer.clip = false;
+            // Release the clip of any layers who had us as their clipping root
+            for (let i = 0; i < numLayersClippedAbove; i++) {
+                oldGroup.layers[i + oldIndex + 1].clip = false;
             }
 
             oldGroup.removeLayerAtIndex(oldIndex);
@@ -2957,52 +2966,7 @@ export default function CPArtwork(_width, _height) {
     
     CPActionMergeAllLayers.prototype = Object.create(CPUndo.prototype);
     CPActionMergeAllLayers.prototype.constructor = CPActionMergeAllLayers;
-
-    /**
-     * Move the layer to the given index in the given group, releasing the layer clip if appropriate.
-     *
-     * @param {CPLayer} layer - The layer to move
-     * @param {CPLayerGroup} toGroup - The group to move it to
-     * @param {?CPLayer} toBelowLayer - The layer to insert the layer underneath, or null to insert at the top of the group.
-     */
-    function relocateLayerInternal(layer, toGroup, toBelowLayer) {
-        const
-            fromGroup = layer.parent,
-            fromBelowLayer = fromGroup.layers[fromGroup.indexOf(layer) + 1],
-            wasClippedTo = layer instanceof CPImageLayer ? layer.getClippingBase() : null;
-
-        // Do we need to release the clip of the layer that was above us?
-        if (fromBelowLayer instanceof CPImageLayer && fromBelowLayer.getClippingBase() == layer) {
-            fromBelowLayer.clip = false;
-        }
-
-        layer.parent.removeLayer(layer);
-
-        var
-            destIndex = toGroup.indexOf(toBelowLayer);
-
-        toGroup.insertLayer(destIndex == -1 ? toGroup.layers.length : destIndex, layer);
-
-        if (layer instanceof CPImageLayer) {
-            /*
-             * Release the layer clip if we move the layer somewhere it won't be clipped onto its original base
-             */
-            if (wasClippedTo && layer.getClippingBase() != wasClippedTo) {
-                layer.clip = false;
-            }
-
-            // If we're moving into the middle of a new clipping group, join the clip
-            if (toBelowLayer instanceof CPImageLayer && toBelowLayer.clip) {
-                layer.clip = true;
-            }
-        } else {
-            // If we move a group into the middle of a clipping group, release the clip of the layer above
-            if (toBelowLayer instanceof CPImageLayer && toBelowLayer.clip) {
-                toBelowLayer.clip = false;
-            }
-        }
-    }
-
+    
 	/**
      * Move the layer to the given position in the layer tree.
      *
@@ -3015,24 +2979,55 @@ export default function CPArtwork(_width, _height) {
     function CPActionRelocateLayer(layer, toGroup, toIndex) {
         const
             fromGroup = layer.parent,
+            fromIndex = layer.parent.indexOf(layer),
             fromMask = maskEditingMode,
             fromBelowLayer = fromGroup.layers[fromGroup.indexOf(layer) + 1],
             toBelowLayer = toGroup.layers[toIndex],
-            wasToBelowLayerClipped = toBelowLayer instanceof CPImageLayer && toBelowLayer.clip,
             wasClipped = layer instanceof CPImageLayer && layer.clip,
-            wasFromBelowLayerClipped = fromBelowLayer instanceof CPImageLayer && fromBelowLayer.clip;
+            wasClippedTo = wasClipped ? layer.getClippingBase() : false;
+
+        let
+            fromNumLayersClippedAbove = 0,
+            toNumLayersClippedAbove = 0;
+
+        if (layer instanceof CPImageLayer && !layer.clip) {
+            // Release the clip of any layers that had us as their clipping root
+            for (let i = fromIndex + 1; i < fromGroup.layers.length; i++) {
+                if (fromGroup.layers[i] instanceof CPImageLayer && fromGroup.layers[i].clip) {
+                    fromNumLayersClippedAbove++;
+                } else {
+                    break;
+                }
+            }
+        } else if (layer instanceof CPLayerGroup) {
+            // If we move a group into the middle of a clipping group, release the clip of the layers above
+            for (let i = toIndex; i < toGroup.layers.length; i++) {
+                if (toGroup.layers[i] instanceof CPImageLayer && toGroup.layers[i].clip) {
+                    toNumLayersClippedAbove++;
+                } else {
+                    break;
+                }
+            }
+        }
 
         this.undo = function() {
-            relocateLayerInternal(layer, fromGroup, fromBelowLayer);
+            layer.parent.removeLayer(layer);
 
-            if (wasClipped) {
-                layer.clip = true;
+            var
+                newIndex = fromBelowLayer ? fromGroup.indexOf(fromBelowLayer) : fromGroup.layers.length;
+
+            fromGroup.insertLayer(newIndex, layer);
+
+            if (layer instanceof CPImageLayer) {
+                layer.clip = wasClipped;
             }
-            if (wasFromBelowLayerClipped) {
-                fromBelowLayer.clip = true;
+
+            for (let i = 0; i < fromNumLayersClippedAbove; i++) {
+                fromGroup.layers[i + fromIndex + 1].clip = true;
             }
-            if (wasToBelowLayerClipped) {
-                toBelowLayer.clip = true;
+
+            for (let i = 0; i < toNumLayersClippedAbove; i++) {
+                toGroup.layers[i + toIndex].clip = true;
             }
 
             artworkStructureChanged();
@@ -3040,10 +3035,42 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            relocateLayerInternal(layer, toGroup, toBelowLayer);
+            for (let i = 0; i < fromNumLayersClippedAbove; i++) {
+                fromGroup.layers[i + fromIndex + 1].clip = false;
+            }
 
-            // TODO if moving to a collapsed group, select the group rather than the layer
+            layer.parent.removeLayer(layer);
+
+            var
+                newIndex = toBelowLayer ? toGroup.indexOf(toBelowLayer) : toGroup.layers.length;
+
+            toGroup.insertLayer(newIndex, layer);
+
+            for (let i = 0; i < toNumLayersClippedAbove; i++) {
+                toGroup.layers[i + newIndex + 1].clip = false;
+            }
+
+            if (layer instanceof CPImageLayer) {
+                /*
+                 * Release the layer clip if we move the layer somewhere it won't be clipped onto its original base
+                 */
+                if (layer.clip && layer.getClippingBase() != wasClippedTo) {
+                    layer.clip = false;
+                }
+
+                // If we're moving into the middle of a new clipping group, join the clip
+                if (toBelowLayer instanceof CPImageLayer && toBelowLayer.clip) {
+                    layer.clip = true;
+                }
+            }
+
+            for (let i = 0; i < toNumLayersClippedAbove; i++) {
+                toGroup.layers[i + newIndex + 1].clip = false;
+            }
+
             artworkStructureChanged();
+            
+            // TODO if moving to a collapsed group, select the group rather than the layer
             that.setActiveLayer(layer, false);
         };
 
