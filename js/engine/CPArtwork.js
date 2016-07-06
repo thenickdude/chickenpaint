@@ -777,38 +777,44 @@ export default function CPArtwork(_width, _height) {
          */
         paintDab(dab) {
             var
-                srcRect = new CPRect(0, 0, dab.width, dab.height),
-                dstRect = new CPRect(0, 0, dab.width, dab.height);
+                brushRect = new CPRect(0, 0, dab.width, dab.height),
+                imageRect = new CPRect(0, 0, dab.width, dab.height);
 
-            dstRect.translate(dab.x, dab.y);
+            imageRect.translate(dab.x, dab.y);
 
-            that.getBounds().clipSourceDest(srcRect, dstRect);
+            that.getBounds().clipSourceDest(brushRect, imageRect);
 
             // drawing entirely outside the canvas
-            if (dstRect.isEmpty()) {
+            if (imageRect.isEmpty()) {
                 return;
             }
 
-            undoArea.union(dstRect);
-            strokedRegion.union(dstRect);
+            undoArea.union(imageRect);
+            strokedRegion.union(imageRect);
 
-            this.paintDabImplementation(srcRect, dstRect, dab);
+            this.paintDabImplementation(brushRect, imageRect, dab);
 
-            invalidateLayerPaint(curLayer, dstRect);
+            invalidateLayerPaint(curLayer, imageRect);
         }
     }
 
     class CPBrushToolSimpleBrush extends CPBrushToolBase {
 
-        paintDabImplementation(srcRect, dstRect, dab) {
+	    /**
+         *
+         * @param {CPRect} brushRect - The rectangle of the dab which will be painted to the canvas
+         * @param {CPRect} imageRect - The area on the canvas that will be painted to
+         * @param {CPBrushDab} dab
+	     */
+        paintDabImplementation(brushRect, imageRect, dab) {
             // FIXME: there should be no reference to a specific tool here
             // create a new brush parameter instead
             if (curBrush.isAirbrush) {
-                this.paintFlow(srcRect, dstRect, dab.brush, dab.width, Math.max(1, dab.alpha / 8));
+                this.paintFlow(brushRect, imageRect, dab.brush, dab.width, Math.max(1, dab.alpha / 8));
             } else if (curBrush.toolNb == ChickenPaint.T_PEN) {
-                this.paintFlow(srcRect, dstRect, dab.brush, dab.width, Math.max(1, dab.alpha / 2));
+                this.paintFlow(brushRect, imageRect, dab.brush, dab.width, Math.max(1, dab.alpha / 2));
             } else {
-                this.paintOpacity(srcRect, dstRect, dab.brush, dab.width, dab.alpha);
+                this.paintOpacity(brushRect, imageRect, dab.brush, dab.width, dab.alpha);
             }
         }
 
@@ -910,29 +916,29 @@ export default function CPArtwork(_width, _height) {
          *
          * Painting the same area multiple times during a single stroke does not increase the opacity.
          *
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
-         * @param {int[]} brush
+         * @param {CPRect} brushRect
+         * @param {CPRect} imageRect
+         * @param {Uint8Array} brush
          * @param {int} brushWidth
          * @param {int} alpha
          */
-        paintOpacity(srcRect, dstRect, brush, brushWidth, alpha) {
+        paintOpacity(brushRect, imageRect, brush, brushWidth, alpha) {
             var
                 strokeData = strokeBuffer.data,
 
-                srcOffset = srcRect.left + srcRect.top * brushWidth,
-                dstOffset = strokeBuffer.offsetOfPixel(dstRect.left, dstRect.top),
+                brushOffset = brushRect.left + brushRect.top * brushWidth,
+                imageOffset = strokeBuffer.offsetOfPixel(imageRect.left, imageRect.top),
 
-                dstWidth = dstRect.getWidth(),
+                imageWidth = imageRect.getWidth(),
 
-                srcYStride = brushWidth - dstWidth,
-                dstYStride = that.width - dstWidth;
+                srcYStride = brushWidth - imageWidth,
+                dstYStride = that.width - imageWidth;
 
             alpha = Math.min(255, alpha);
 
-            for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-                for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
-                    strokeData[dstOffset] = Math.max(brush[srcOffset] * alpha, strokeData[dstOffset]);
+            for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, imageOffset += dstYStride) {
+                for (var x = 0; x < imageWidth; x++, brushOffset++, imageOffset++) {
+                    strokeData[imageOffset] = Math.max(brush[brushOffset] * alpha, strokeData[imageOffset]);
                 }
             }
         }
@@ -940,31 +946,31 @@ export default function CPArtwork(_width, _height) {
         /**
          * If the brush covers the same area multiple times, ink builds up until the area becomes opaque.
          *
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
-         * @param {int[]} brush
-         * @param {int} brushWidth
+         * @param {CPRect} brushRect
+         * @param {CPRect} imageRect
+         * @param {Uint8Array} brush
+         * @param {int} brushWidth - Width of the brush buffer
          * @param {int} alpha
          */
-        paintFlow(srcRect, dstRect, brush, brushWidth, alpha) {
+        paintFlow(brushRect, imageRect, brush, brushWidth, alpha) {
             var
                 strokeData = strokeBuffer.data,
 
-                srcOffset = srcRect.left + srcRect.top * brushWidth,
-                dstOffset = strokeBuffer.offsetOfPixel(dstRect.left, dstRect.top),
+                brushOffset = brushRect.left + brushRect.top * brushWidth,
+                strokeOffset = strokeBuffer.offsetOfPixel(imageRect.left, imageRect.top),
 
-                dstWidth = dstRect.getWidth(),
+                dstWidth = imageRect.getWidth(),
 
                 srcYStride = brushWidth - dstWidth,
                 dstYStride = that.width - dstWidth;
 
-            for (var y = dstRect.top; y < dstRect.bottom; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-                for (var x = 0; x < dstWidth; x++, srcOffset++, dstOffset++) {
+            for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, strokeOffset += dstYStride) {
+                for (var x = 0; x < dstWidth; x++, brushOffset++, strokeOffset++) {
                     var
-                        brushAlpha = brush[srcOffset] * alpha;
+                        brushAlpha = brush[brushOffset] * alpha;
 
                     if (brushAlpha != 0) {
-                        strokeData[dstOffset] = Math.min(255 * 255, strokeData[dstOffset] + (255 - strokeData[dstOffset] / 255) * brushAlpha / 255);
+                        strokeData[strokeOffset] = Math.min(255 * 255, strokeData[strokeOffset] + (255 - strokeData[strokeOffset] / 255) * brushAlpha / 255);
                     }
                 }
             }
@@ -1528,124 +1534,132 @@ export default function CPArtwork(_width, _height) {
     class CPBrushToolSmudge extends CPBrushToolDirectBrush {
         
         /**
-         * 
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
-         * @param {Uint32Array} buffer
-         * @param {int} bufferWidth
-         * @param {int} alpha
+         * Pick up paint from the canvas and store into the given brush buffer.
+         *
+         * @param {CPRect} imageRect - Rectangle of the canvas that our brush covers
+         * @param {CPRect} brushRect - The corresponding rectangle within the brush buffer
+         * @param {Uint32Array} brush - Buffer for accumulating paint
+         * @param {int} brushWidth - Width of the brush buffer
+         * @param {int} alpha - Alpha of brush (0-255)
          */
-        static smudgeAccumBuffer(srcRect, dstRect, buffer, bufferWidth, alpha) {
+        static sampleFromImage(brushRect, imageRect, brush, brushWidth, alpha) {
             let
                 imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image,
-                opacityAlpha = 255 - alpha,
-                bufferY = srcRect.top;
+                invAlpha = 255 - alpha;
 
-            if (opacityAlpha == 0) {
+            if (alpha == 255) {
+                // Brush doesn't sample from the image
                 return;
             }
 
-            for (let y = dstRect.top; y < dstRect.bottom; y++, bufferY++) {
+            // Blend pixels (in the area where the brush overlaps the canvas) into the brush buffer
+            for (let imageY = imageRect.top, bufferY = brushRect.top; imageY < imageRect.bottom; imageY++, bufferY++) {
                 let
-                    srcOffset = srcRect.left + bufferY * bufferWidth,
-                    dstOffset = imageToSample.offsetOfPixel(dstRect.left, y);
+                    brushOffset = bufferY * brushWidth + brushRect.left,
+                    imageOffset = imageToSample.offsetOfPixel(imageRect.left, imageY);
                 
-                for (let x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                for (let imageX = imageRect.left; imageX < imageRect.right; imageX++, brushOffset++, imageOffset += CPColorBmp.BYTES_PER_PIXEL) {
                     let
-                        sampleRed = imageToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
-                        sampleGreen = imageToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                        sampleBlue = imageToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-                        sampleAlpha = imageToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
+                        sampleRed = imageToSample.data[imageOffset + CPColorBmp.RED_BYTE_OFFSET],
+                        sampleGreen = imageToSample.data[imageOffset + CPColorBmp.GREEN_BYTE_OFFSET],
+                        sampleBlue = imageToSample.data[imageOffset + CPColorBmp.BLUE_BYTE_OFFSET],
+                        sampleAlpha = imageToSample.data[imageOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
                     
-                        dstColor = buffer[srcOffset],
+                        oldBrushColor = brush[brushOffset],
 
-                        destAlpha = 255,
-                        newLayerAlpha = (opacityAlpha + destAlpha * (255 - opacityAlpha) / 255) | 0,
-                        realAlpha = (255 * opacityAlpha / newLayerAlpha) | 0,
-                        invAlpha = 255 - realAlpha,
+                        newBrushColor =
+                            ((sampleAlpha * invAlpha + (oldBrushColor >>> 24 & 0xff) * alpha) / 255) << 24 & 0xff000000
+                            | ((sampleRed * invAlpha + (oldBrushColor >>> 16 & 0xff) * alpha) / 255) << 16 & 0xff0000
+                            | ((sampleGreen * invAlpha + (oldBrushColor >>> 8 & 0xff) * alpha) / 255) << 8 & 0xff00
+                            | ((sampleBlue * invAlpha + (oldBrushColor & 0xff) * alpha) / 255) & 0xff;
 
-                        newColor =
-                            ((sampleAlpha * realAlpha + (dstColor >>> 24 & 0xff) * invAlpha) / 255) << 24 & 0xff000000
-                            | ((sampleRed * realAlpha + (dstColor >>> 16 & 0xff) * invAlpha) / 255) << 16 & 0xff0000
-                            | ((sampleGreen * realAlpha + (dstColor >>> 8 & 0xff) * invAlpha) / 255) << 8 & 0xff00
-                            | ((sampleBlue * realAlpha + (dstColor & 0xff) * invAlpha) / 255) & 0xff;
-
-                    if (newColor == dstColor) {
+                    /* If low-alpha rounding caused us to not even update the brush color, take a 1-unit step
+                     * in the direction of the sample color.
+                     */
+                    if (newBrushColor == oldBrushColor) {
                         let
-                            destRed   = (dstColor & 0xff0000) >> 16,
-                            destGreen = (dstColor & 0x00ff00) >> 8,
-                            destBlue  =  dstColor & 0x0000ff;
+                            newBrushRed   = (newBrushColor & 0xff0000) >> 16,
+                            newBrushGreen = (newBrushColor & 0x00ff00) >> 8,
+                            newBrushBlue  =  newBrushColor & 0x0000ff;
 
-                        if (sampleRed > destRed) {
-                            newColor += 1 << 16;
-                        } else if (sampleRed < destRed) {
-                            newColor -= 1 << 16;
+                        if (sampleRed > newBrushRed) {
+                            newBrushColor += 1 << 16;
+                        } else if (sampleRed < newBrushRed) {
+                            newBrushColor -= 1 << 16;
                         }
 
-                        if (sampleGreen > destGreen) {
-                            newColor += 1 << 8;
-                        } else if (sampleGreen < destGreen) {
-                            newColor -= 1 << 8;
+                        if (sampleGreen > newBrushGreen) {
+                            newBrushColor += 1 << 8;
+                        } else if (sampleGreen < newBrushGreen) {
+                            newBrushColor -= 1 << 8;
                         }
 
-                        if (sampleBlue > destBlue) {
-                            newColor += 1;
-                        } else if (sampleBlue < destBlue) {
-                            newColor -= 1;
+                        if (sampleBlue > newBrushBlue) {
+                            newBrushColor += 1;
+                        } else if (sampleBlue < newBrushBlue) {
+                            newBrushColor -= 1;
                         }
                     }
 
-                    buffer[srcOffset] = newColor;
+                    brush[brushOffset] = newBrushColor;
                 }
             }
 
-            if (srcRect.left > 0) {
-                let
-                    fill = srcRect.left;
-                
-                for (let y = srcRect.top; y < srcRect.bottom; y++) {
+            /*
+             * The areas of the brush buffer that lay outside the canvas haven't been filled yet. Stretch the pixels
+             * around the edge of the area we did sample to fill in the gaps.
+             */
+
+            // First stretch the source rect pixels out horizontally to fill W and E areas
+            if (brushRect.left > 0) {
+                for (let y = brushRect.top; y < brushRect.bottom; y++) {
                     let
-                        offset = y * bufferWidth,
-                        fillColor = buffer[offset + srcRect.left];
+                        rowStartOffset = y * brushWidth,
+
+                        dstOffset = rowStartOffset,
+                        fillColor = brush[rowStartOffset + brushRect.left];
                     
-                    for (let x = 0; x < fill; x++) {
-                        buffer[offset++] = fillColor;
+                    for (let x = 0; x < brushRect.left; x++) {
+                        brush[dstOffset++] = fillColor;
                     }
                 }
             }
 
-            if (srcRect.right < bufferWidth) {
-                let
-                    fill = bufferWidth - srcRect.right;
-                
-                for (let y = srcRect.top; y < srcRect.bottom; y++) {
-                    var
-                        offset = y * bufferWidth + srcRect.right,
-                        fillColor = buffer[offset - 1];
+            if (brushRect.right < brushWidth) {
+                for (let y = brushRect.top; y < brushRect.bottom; y++) {
+                    let
+                        rowStartOffset = y * brushWidth,
+
+                        dstOffset = rowStartOffset + brushRect.right,
+                        fillColor = brush[dstOffset - 1];
                     
-                    for (let x = 0; x < fill; x++) {
-                        buffer[offset++] = fillColor;
+                    for (let x = brushRect.right; x < brushWidth; x++) {
+                        brush[dstOffset++] = fillColor;
                     }
                 }
             }
 
-            for (let y = 0; y < srcRect.top; y++) {
+            // Then stretch those rows upwards and downwards (to fill NW, N, NE, SW, S, SE areas)
+            let
+                dstOffset = 0;
+
+            for (let y = 0; y < brushRect.top; y++) {
                 let
-                    srcOffset = srcRect.top * bufferWidth,
-                    dstOffset = y * bufferWidth;
+                    srcOffset = brushRect.top * brushWidth;
                 
-                for (let x = 0; x < bufferWidth; x++, srcOffset++, dstOffset++) {
-                    buffer[dstOffset] = buffer[srcOffset];
+                for (let x = 0; x < brushWidth; x++, srcOffset++, dstOffset++) {
+                    brush[dstOffset] = brush[srcOffset];
                 }
             }
-            
-            for (let y = srcRect.bottom; y < bufferWidth; y++) {
+
+            dstOffset = brushRect.bottom * brushWidth;
+
+            for (let y = brushRect.bottom; y < brushWidth; y++) {
                 let
-                    srcOffset = (srcRect.bottom - 1) * bufferWidth,
-                    dstOffset = y * bufferWidth;
+                    srcOffset = (brushRect.bottom - 1) * brushWidth;
                 
-                for (let x = 0; x < bufferWidth; x++, srcOffset++, dstOffset++) {
-                    buffer[dstOffset] = buffer[srcOffset];
+                for (let x = 0; x < brushWidth; x++, srcOffset++, dstOffset++) {
+                    brush[dstOffset] = brush[srcOffset];
                 }
             }
         }
@@ -1654,32 +1668,32 @@ export default function CPArtwork(_width, _height) {
          * Write the smudge buffer onto the layer's image.
          *
          * @param {CPColorBmp} destImage
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
-         * @param {Uint32Array} buffer
-         * @param {Uint8Array} brush
+         * @param {CPRect} brushRect
+         * @param {CPRect} imageRect
+         * @param {Uint32Array} brushPaintBuffer
+         * @param {Uint8Array} brushShape
          * @param {int} brushWidth
          */
-        static smudgePasteBuffer(destImage, srcRect, dstRect, buffer, brush, brushWidth) {
+        static paintToImage(destImage, brushRect, imageRect, brushPaintBuffer, brushShape, brushWidth) {
             var
-                brushY = srcRect.top,
+                brushY = brushRect.top,
                 destImageData = destImage.data;
             
-            for (var y = dstRect.top; y < dstRect.bottom; y++, brushY++) {
+            for (var y = imageRect.top; y < imageRect.bottom; y++, brushY++) {
                 var 
-                    srcOffset = srcRect.left + brushY * brushWidth,
-                    dstOffset = destImage.offsetOfPixel(dstRect.left, y);
+                    srcOffset = brushRect.left + brushY * brushWidth,
+                    dstOffset = destImage.offsetOfPixel(imageRect.left, y);
                 
-                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
+                for (var x = imageRect.left; x < imageRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
                     var
-                        bufferColor = buffer[srcOffset],
-                        opacityAlpha = (bufferColor >>> 24) * (brush[srcOffset] & 0xff) / 255;
+                        paintColor = brushPaintBuffer[srcOffset],
+                        opacityAlpha = (paintColor >>> 24) * (brushShape[srcOffset] & 0xff) / 255;
                     
                     if (opacityAlpha > 0) {
-                        destImageData[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (bufferColor >> 16) & 0xff;
-                        destImageData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (bufferColor >> 8) & 0xff;
-                        destImageData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = bufferColor & 0xff;
-                        destImageData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (bufferColor >> 24) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (paintColor >> 16) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (paintColor >> 8) & 0xff;
+                        destImageData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = paintColor & 0xff;
+                        destImageData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (paintColor >> 24) & 0xff;
                     }
                 }
             }
@@ -1687,20 +1701,20 @@ export default function CPArtwork(_width, _height) {
         
         /**
          * @override
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
+         * @param {CPRect} brushRect
+         * @param {CPRect} imageRect
          * @param {CPBrushDab} dab
          */
-        paintDabImplementation(srcRect, dstRect, dab) {
+        paintDabImplementation(brushRect, imageRect, dab) {
             if (brushBuffer == null) {
                 brushBuffer = new Uint32Array(dab.width * dab.height);
-                CPBrushToolSmudge.smudgeAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, 0);
+                CPBrushToolSmudge.sampleFromImage(brushRect, imageRect, brushBuffer, dab.width, 0);
             } else {
-                CPBrushToolSmudge.smudgeAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, dab.alpha);
-                CPBrushToolSmudge.smudgePasteBuffer(curLayer.image, srcRect, dstRect, brushBuffer, dab.brush, dab.width);
+                CPBrushToolSmudge.sampleFromImage(brushRect, imageRect, brushBuffer, dab.width, dab.alpha);
+                CPBrushToolSmudge.paintToImage(curLayer.image, brushRect, imageRect, brushBuffer, dab.brush, dab.width);
 
                 if (lockAlpha) {
-                    restoreImageAlpha(curLayer.image, dstRect);
+                    restoreImageAlpha(curLayer.image, imageRect);
                 }
             }
             
