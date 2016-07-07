@@ -46,7 +46,7 @@ export default function CPColorPalette(cpController) {
     body.appendChild(colorShow.getElement());
 }
 
-function CPColorShow(cpController) {
+function CPColorShow(controller) {
     var
         color = 0,
         
@@ -80,7 +80,7 @@ function CPColorShow(cpController) {
                 var 
                     newColor = parseInt(colHex, 16);
 
-                cpController.setCurColor(new CPColor(newColor));
+                controller.setCurColor(new CPColor(newColor));
             } catch (e) {
             }
         }
@@ -90,7 +90,7 @@ function CPColorShow(cpController) {
         return element;
     };
     
-    cpController.on("colorChange", function(_color) {
+    controller.on("colorChange", function(_color) {
         color = _color.getRgb();
         paint();
     });

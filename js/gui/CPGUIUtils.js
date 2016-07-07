@@ -38,3 +38,30 @@ export function createCheckerboardPattern(canvasContext) {
 
     return canvasContext.createPattern(checkerboardCanvas, 'repeat');
 }
+
+/**
+ * Set the globalCompositeOperation and fill/stroke color up to maximize contrast for the drawn items
+ * against arbitrary backgrounds.
+ *
+ * @param {CanvasRenderingContext2D} canvasContext
+ * @param {string} kind - "stroke" or "fill" depending on which colour you'd like to set
+ */
+export function setContrastingDrawStyle(canvasContext, kind) {
+    kind = kind + "Style";
+    canvasContext.globalCompositeOperation = 'exclusion';
+
+    if (canvasContext.globalCompositeOperation == "exclusion") {
+        // White + exclusion inverts the colors underneath, giving us good contrast
+        canvasContext[kind] = 'white';
+    } else {
+        // IE Edge doesn't support Exclusion, so how about Difference with mid-grey instead
+        // This is visible on black and white, but disappears on a grey background
+        canvasContext.globalCompositeOperation = 'difference';
+        canvasContext[kind] = '#888';
+
+        // For super dumb browsers (only support source-over), at least don't make the cursor invisible on a white BG!
+        if (canvasContext.globalCompositeOperation != "difference") {
+            canvasContext[kind] = 'black';
+        }
+    }
+}

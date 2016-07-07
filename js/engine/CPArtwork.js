@@ -225,7 +225,10 @@ export default function CPArtwork(_width, _height) {
         rebuildMaskThumbnail = new Set(),
         rebuildImageThumbnail = new Set(),
         thumbnailRebuildTimer = null,
-
+	
+	    /**
+         * @type {int}
+         */
         curColor = 0x000000, // Black
         transformInterpolation = "smooth";
 
@@ -1875,7 +1878,10 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} selectMask - True to select the layer's mask for editing
      */
     this.setActiveLayer = function(newLayer, selectMask) {
-        if (newLayer && (curLayer != newLayer || selectMask != maskEditingMode)) {
+        var
+            editingModeChanged = selectMask != maskEditingMode;
+
+        if (newLayer && (curLayer != newLayer || editingModeChanged)) {
             var
                 oldLayer = curLayer;
             
@@ -1885,6 +1891,10 @@ export default function CPArtwork(_width, _height) {
             invalidateUndoBuffers();
 
             this.emitEvent("changeActiveLayer", [oldLayer, newLayer, maskEditingMode]);
+            
+            if (editingModeChanged) {
+                this.emitEvent("editModeChanged", [maskEditingMode ? CPArtwork.EDITING_MODE_MASK : CPArtwork.EDITING_MODE_IMAGE]);
+            }
         }
     };
     
@@ -2452,7 +2462,10 @@ export default function CPArtwork(_width, _height) {
     this.setLockAlpha = function(b) {
         lockAlpha = b;
     };
-
+	
+	/**
+     * @param {int} color - RGB color
+     */
     this.setForegroundColor = function(color) {
         curColor = color;
     };
@@ -3921,3 +3934,6 @@ CPArtwork.prototype.getBounds = function() {
 CPArtwork.prototype.isPointWithin = function(x, y) {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;
 };
+
+CPArtwork.EDITING_MODE_IMAGE = 0;
+CPArtwork.EDITING_MODE_MASK = 1;

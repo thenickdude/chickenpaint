@@ -22,62 +22,98 @@
 
 import CPColor from "../util/CPColor";
 import CPColorBmp from "../engine/CPColorBmp";
+import {setContrastingDrawStyle} from "./CPGUIUtils";
 
-export default function CPColorSelect(cpController, initialColor) {
-    var
-        w = 128, h = 128,
+/**
+ *
+ * @param controller
+ * @param {CPColor} initialColor
+ * @constructor
+ */
+export default function CPColorSelect(controller, initialColor) {
+    const
+        WIDTH = 128, HEIGHT = 128;
 
+    const
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
 
-        imageData = canvasContext.createImageData(w, h),
+        imageData = canvasContext.createImageData(WIDTH, HEIGHT),
         data = imageData.data,
-        color = new CPColor(),
+        color = new CPColor(0);
 
-        needRefresh = true,
-
-        capturedMouse = false;
+    var
+        bitmapInvalid = true,
+        capturedMouse = false,
+        greyscale = false;
 
     function makeBitmap() {
-        var
-            col = color.clone(),
+        let
             pixIndex = 0;
 
-        for (var y = 0; y < h; y++) {
-            col.setValue(255 - (y * 255) / h);
+        if (greyscale) {
+            for (let y = 0; y < HEIGHT; y++) {
+                let
+                    col = Math.round(255 - (y * 255) / HEIGHT);
 
-            for (var x = 0; x < w; x++) {
-                col.setSaturation((x * 255) / w);
+                for (let x = 0; x < WIDTH; x++) {
+                    data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = col;
+                    data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = col;
+                    data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col;
+                    data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
 
-                data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (col.rgb >> 16) & 0xFF;
-                data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (col.rgb >> 8) & 0xFF;
-                data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col.rgb & 0xFF;
-                data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
+                    pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+                }
+            }
+        } else {
+            let
+                col = color.clone();
 
-                pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+            for (let y = 0; y < HEIGHT; y++) {
+                col.setValue(255 - (y * 255) / HEIGHT);
+
+                for (let x = 0; x < WIDTH; x++) {
+                    if (!greyscale) {
+                        col.setSaturation((x * 255) / WIDTH);
+                    }
+
+                    data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (col.rgb >> 16) & 0xFF;
+                    data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (col.rgb >> 8) & 0xFF;
+                    data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col.rgb & 0xFF;
+                    data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
+
+                    pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+                }
             }
         }
 
-        needRefresh = false;
+        bitmapInvalid = false;
     }
 
     function paint() {
-        if (needRefresh) {
+        if (bitmapInvalid) {
             makeBitmap();
         }
 
-        canvasContext.putImageData(imageData, 0, 0, 0, 0, w, h);
+        canvasContext.putImageData(imageData, 0, 0, 0, 0, WIDTH, HEIGHT);
 
         var
-            x = color.getSaturation() * w / 255,
-            y = (255 - color.getValue()) * h / 255;
+            x = color.getSaturation() * WIDTH / 255,
+            y = (255 - color.getValue()) * HEIGHT / 255;
 
-        canvasContext.globalCompositeOperation = 'exclusion';
-        canvasContext.strokeStyle = 'white';
+        setContrastingDrawStyle(canvasContext, "stroke");
+
         canvasContext.lineWidth = 1.5;
 
         canvasContext.beginPath();
-        canvasContext.arc(x, y, 5, 0, Math.PI * 2);
+
+        if (greyscale) {
+            canvasContext.moveTo(0, y + 0.5); // Draw through centre of target pixel
+            canvasContext.lineTo(WIDTH, y + 0.5);
+        } else {
+            canvasContext.arc(x, y, 5, 0, Math.PI * 2);
+        }
+
         canvasContext.stroke();
 
         canvasContext.globalCompositeOperation = 'source-over';
@@ -87,15 +123,20 @@ export default function CPColorSelect(cpController, initialColor) {
         var
             x = e.pageX - $(canvas).offset().left,
             y = e.pageY - $(canvas).offset().top,
+            value = Math.round(255 - y * 255 / HEIGHT);
 
-            sat = x * 255 / w,
-            value = 255 - y * 255 / h;
+        if (greyscale) {
+            color.setGreyscale(Math.max(Math.min(255, value), 0));
+        } else {
+            var
+                sat = x * 255 / WIDTH;
 
-        color.setSaturation(Math.max(0, Math.min(255, sat)));
-        color.setValue(Math.max(0, Math.min(255, value)));
+            color.setSaturation(Math.max(0, Math.min(255, sat)));
+            color.setValue(Math.max(0, Math.min(255, value)));
+        }
 
         paint();
-        cpController.setCurColor(color);
+        controller.setCurColor(color);
     }
 
     function continueDrag(e) {
@@ -123,7 +164,7 @@ export default function CPColorSelect(cpController, initialColor) {
     this.setHue = function(hue) {
         if (color.getHue() != hue) {
             color.setHue(hue);
-            cpController.setCurColor(color);
+            controller.setCurColor(color);
         }
     };
 
@@ -131,10 +172,17 @@ export default function CPColorSelect(cpController, initialColor) {
         return canvas;
     };
 
-    cpController.on("colorChange", function(c) {
+    controller.on("colorChange", function(c) {
         color.copyFrom(c);
 
-        needRefresh = true;
+        bitmapInvalid = true;
+        paint();
+    });
+
+    controller.on("colorModeChange", function(newMode) {
+        greyscale = (newMode == "greyscale");
+
+        bitmapInvalid = true;
         paint();
     });
 
@@ -143,8 +191,8 @@ export default function CPColorSelect(cpController, initialColor) {
     canvas.className = 'chickenpaint-colorpicker-select';
     canvas.setAttribute("touch-action", "none");
 
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
 
     if (initialColor) {
         color.copyFrom(initialColor);

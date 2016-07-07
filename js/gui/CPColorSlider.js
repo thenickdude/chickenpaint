@@ -23,16 +23,17 @@
 import CPColor from "../util/CPColor";
 import CPColorBmp from "../engine/CPColorBmp";
 
-export default function CPColorSlider(cpController, selecter, initialHue) {
+export default function CPColorSlider(controller, selecter, initialHue) {
+    const
+        WIDTH = 24, HEIGHT = 128;
+
     var
         that = this,
-
-        w = 24, h = 128,
 
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
 
-        imageData = canvasContext.createImageData(w, h),
+        imageData = canvasContext.createImageData(WIDTH, HEIGHT),
         data = imageData.data,
 
         capturedMouse = false,
@@ -40,19 +41,17 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
         hue = initialHue || 0;
 
     function makeBitmap() {
-        var
-            color = new CPColor(),
+        let
+            color = new CPColor(0x00FFFF),
             pixIndex = 0;
 
-        color.setRgbComponents(0, 255, 255);
+        for (let y = 0; y < HEIGHT; y++) {
+            color.setHue((y * 359) / HEIGHT);
 
-        for (var y = 0; y < h; y++) {
-            color.setHue((y * 359) / h);
-
-            for (var x = 0; x < w; x++) {
+            for (let x = 0; x < WIDTH; x++) {
                 data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (color.rgb >> 16) & 0xFF;
-                data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (color.rgb >> 8) & 0xFF
-                data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = color.rgb & 0xFF
+                data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (color.rgb >> 8) & 0xFF;
+                data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = color.rgb & 0xFF;
                 data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = 0xFF;
 
                 pixIndex += CPColorBmp.BYTES_PER_PIXEL;
@@ -61,10 +60,10 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
     }
 
     function paint() {
-        canvasContext.putImageData(imageData, 0, 0, 0, 0, w, h);
+        canvasContext.putImageData(imageData, 0, 0, 0, 0, WIDTH, HEIGHT);
 
         var
-            y = (hue * h) / 360;
+            y = (hue * HEIGHT) / 360;
 
         canvasContext.globalCompositeOperation = 'exclusion';
         canvasContext.strokeStyle = 'white';
@@ -72,7 +71,7 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
 
         canvasContext.beginPath();
         canvasContext.moveTo(0, y);
-        canvasContext.lineTo(w, y);
+        canvasContext.lineTo(WIDTH, y);
         canvasContext.stroke();
 
         canvasContext.globalCompositeOperation = 'source-over';
@@ -82,7 +81,7 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
         var
             y = e.pageY - $(canvas).offset().top,
 
-            _hue = ~~(y * 360 / h);
+            _hue = ~~(y * 360 / HEIGHT);
 
         hue = Math.max(0, Math.min(359, _hue));
         paint();
@@ -123,20 +122,23 @@ export default function CPColorSlider(cpController, selecter, initialHue) {
         paint();
     };
 
-    cpController.on("colorChange", function(color) {
+    controller.on("colorChange", function(color) {
         that.setHue(color.getHue());
+    });
+
+    controller.on("colorModeChange", function(mode) {
+        canvas.style.display = (mode == "greyscale" ? "none" : "block");
     });
 
     canvas.setAttribute("touch-action", "none");
 
     canvas.addEventListener("pointerdown", startDrag);
 
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
 
     canvas.className = 'chickenpaint-colorpicker-slider';
 
     makeBitmap();
     paint();
-
 }

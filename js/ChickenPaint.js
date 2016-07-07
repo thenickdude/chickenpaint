@@ -34,7 +34,7 @@ import CPArtwork from "./engine/CPArtwork";
 import CPResourceLoader from "./engine/CPResourceLoader";
 import CPResourceSaver from "./engine/CPResourceSaver";
 
-import CPSpashScreen from "./gui/CPSplashScreen.js";
+import CPSplashScreen from "./gui/CPSplashScreen.js";
 
 import CPMainGUI from "./gui/CPMainGUI";
 
@@ -283,7 +283,15 @@ export default function ChickenPaint(options) {
          */
         mainGUI,
 
+	    /**
+         *
+         * @type {CPColor}
+         */
         curColor = new CPColor(0),
+        curMaskColor = 0xFF,
+
+        colorMode = ChickenPaint.COLOR_MODE_RGB,
+
         curBrush = ChickenPaint.T_PENCIL,
         curMode = ChickenPaint.M_DRAW,
         preTransformMode = curMode,
@@ -504,7 +512,7 @@ export default function ChickenPaint(options) {
             },
             CPFill: {
                 action: function () {
-                    that.artwork.fill(that.getCurColorRgb() | 0xff000000);
+                    that.artwork.fill(that.getCurColor().getRgb() | 0xff000000);
                 },
                 modifies: {document: true},
                 requiresDrawable: true
@@ -824,6 +832,27 @@ export default function ChickenPaint(options) {
     };
     ModeChangeAction.prototype.modifies = {mode: true};
 
+    function onEditModeChanged(newMode) {
+        colorMode = (newMode == CPArtwork.EDITING_MODE_IMAGE ? ChickenPaint.COLOR_MODE_RGB : ChickenPaint.COLOR_MODE_GREYSCALE);
+
+        that.emitEvent("colorModeChange", [newMode == CPArtwork.EDITING_MODE_IMAGE ? "rgb" : "greyscale"]);
+
+        var 
+            newColor;
+        
+        switch (colorMode) {
+            case ChickenPaint.COLOR_MODE_RGB:
+                newColor = curColor.clone();
+            break;
+            case ChickenPaint.COLOR_MODE_GREYSCALE:
+                newColor = new CPColor(CPColor.greyToRGB(curMaskColor));
+            break;
+        }
+
+        that.artwork.setForegroundColor(newColor.getRgb());
+        that.emitEvent('colorChange', [newColor]);
+    }
+
     function showBoxBlurDialog() {
         if (!boxBlurDialog) {
             boxBlurDialog = new CPBoxBlurDialog(uiElem, that);
@@ -853,10 +882,6 @@ export default function ChickenPaint(options) {
         that.emitEvent('modeChange', [curMode]);
     }
 
-    function callViewListeners(viewInfo) {
-        that.emitEvent('viewChange', [viewInfo]);
-    }
-
 	/**
      * @returns {CPArtwork}
      */
@@ -876,27 +901,50 @@ export default function ChickenPaint(options) {
     this.setTransformInterpolation = function(interpolation) {
         this.artwork.setTransformInterpolation(interpolation);
     };
-    
+
+	/**
+     *
+     * @param {CPColor} color
+     */
     this.setCurColor = function(color) {
-        if (!curColor.isEqual(color)) {
-            this.artwork.setForegroundColor(color.getRgb());
+        switch (colorMode) {
+            case ChickenPaint.COLOR_MODE_RGB:
+                if (!curColor.isEqual(color)) {
+                    curColor.copyFrom(color);
 
-            curColor.copyFrom(color);
+                    this.artwork.setForegroundColor(color.getRgb());
 
-            this.emitEvent('colorChange', [color]);
+                    this.emitEvent('colorChange', [color]);
+                }
+            break;
+            case ChickenPaint.COLOR_MODE_GREYSCALE:
+                var 
+                    grey = color.getValue();
+
+                if (curMaskColor != grey) {
+                    var
+                        greyRGB = CPColor.greyToRGB(grey);
+
+                    this.artwork.setForegroundColor(greyRGB);
+            
+                    curMaskColor = grey;
+
+                    this.emitEvent('colorChange', [new CPColor(greyRGB)]);
+                }
+            break;
         }
     };
 
+	/**
+     * @returns {CPColor}
+     */
     this.getCurColor = function() {
-        return curColor.clone();
-    };
-
-    this.getCurColorRgb = function() {
-        return curColor.getRgb();
-    };
-
-    this.setCurColorRgb = function(color) {
-        this.setCurColor(new CPColor(color));
+        switch (colorMode) {
+            case ChickenPaint.COLOR_MODE_RGB:
+                return curColor.clone();
+            case ChickenPaint.COLOR_MODE_GREYSCALE:
+                return new CPColor(CPColor.greyToRGB(curMaskColor));
+        }
     };
 
     this.setCurGradient = function(gradient) {
@@ -1107,6 +1155,8 @@ export default function ChickenPaint(options) {
     }
     
     function startMainGUI(swatches, initialRotation90) {
+        that.artwork.on("editModeChanged", onEditModeChanged);
+
         mainGUI = new CPMainGUI(that, uiElem);
 
         setTool(ChickenPaint.T_PEN);
@@ -1147,7 +1197,7 @@ export default function ChickenPaint(options) {
         var
             loader = new CPResourceLoader(options);
         
-        new CPSpashScreen(uiElem, loader, options.resourcesRoot);
+        new CPSplashScreen(uiElem, loader, options.resourcesRoot);
 
         loader.on("loadingComplete", function(resources) {
             that.artwork = resources.layers || resources.flat;
@@ -1212,3 +1262,6 @@ ChickenPaint.T_BLUR = 8;
 ChickenPaint.T_SMUDGE = 9;
 ChickenPaint.T_BLENDER = 10;
 ChickenPaint.T_MAX = 11;
+
+ChickenPaint.COLOR_MODE_RGB = 0;
+ChickenPaint.COLOR_MODE_GREYSCALE = 1;

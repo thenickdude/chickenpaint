@@ -36,6 +36,8 @@ import CPBrushInfo from "../engine/CPBrushInfo";
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
 import CPLayerGroup from "../engine/CPLayerGroup";
+import CPColor from "../util/CPColor";
+import {setContrastingDrawStyle} from "./CPGUIUtils";
 
 function CPModeStack() {
     this.modes = [];
@@ -827,7 +829,7 @@ export default function CPCanvas(controller) {
                     pf = coordToDocument({x: mouseX, y: mouseY});
 
                 if (artwork.isPointWithin(pf.x, pf.y)) {
-                    controller.setCurColorRgb(artwork.colorPicker(pf.x, pf.y));
+                    controller.setCurColor(new CPColor(artwork.colorPicker(pf.x, pf.y)));
                 }
 
                 return true;
@@ -2252,33 +2254,6 @@ export default function CPCanvas(controller) {
         repaintRegion.union(rect);
         
         repaint();
-    }
-
-	/**
-     * Set the globalCompositeOperation and fill/stroke color up to maximize contrast for the drawn items
-     * against arbitrary backgrounds.
-     *
-     * @param canvasContext
-     * @param {string} kind - "stroke" or "fill" depending on which colour you'd like to set
-     */
-    function setContrastingDrawStyle(canvasContext, kind) {
-        kind = kind + "Style";
-        canvasContext.globalCompositeOperation = 'exclusion';
-
-        if (canvasContext.globalCompositeOperation == "exclusion") {
-            // White + exclusion inverts the colors underneath, giving us good contrast
-            canvasContext[kind] = 'white';
-        } else {
-            // IE Edge doesn't support Exclusion, so how about Difference with mid-grey instead
-            // This is visible on black and white, but disappears on a grey background
-            canvasContext.globalCompositeOperation = 'difference';
-            canvasContext[kind] = '#888';
-
-            // For super dumb browsers (only support source-over), at least don't make the cursor invisible on a white BG!
-            if (canvasContext.globalCompositeOperation != "difference") {
-                canvasContext[kind] = 'black';
-            }
-        }
     }
     
     this.paint = function() {
