@@ -2141,9 +2141,9 @@ export default function CPArtwork(_width, _height) {
     };
 
 	/**
-     * Fill the selection rectangle with a solid opaque color.
+     * Replace the pixels in the selection rectangle with the specified color.
      *
-     * @param {int} color - RGB color to fill with
+     * @param {int} color - ARGB color to fill with
      */
     this.fill = function(color) {
         var
@@ -2160,7 +2160,11 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.clear = function() {
-        this.fill(0xffffff);
+        if (maskEditingMode) {
+            this.fill(EMPTY_MASK_COLOR);
+        } else {
+            this.fill(EMPTY_LAYER_COLOR);
+        }
     };
 
 	/**
@@ -2169,13 +2173,19 @@ export default function CPArtwork(_width, _height) {
      */
     this.flip = function(horizontal) {
         var
-            rect = this.getSelectionAutoSelect(),
+            rect = this.getSelection(),
 
-            transformBoth = curLayer instanceof CPImageLayer && curLayer.mask && curLayer.maskLinked,
+            flipWholeLayer = rect.isEmpty(),
+
+            transformBoth = flipWholeLayer && curLayer instanceof CPImageLayer && curLayer.mask && curLayer.maskLinked,
             transformImage = !maskEditingMode || transformBoth,
             transformMask = maskEditingMode || transformBoth,
 
             routine = horizontal ? "copyRegionHFlip" : "copyRegionVFlip";
+
+        if (flipWholeLayer) {
+            rect = this.getBounds();
+        }
 
         undoArea = rect.clone();
 
@@ -2321,7 +2331,7 @@ export default function CPArtwork(_width, _height) {
             redoList = [];
             hasUnsavedChanges = true;
         } else {
-            addUndo(new CPActionMoveSelection(this.getSelectionAutoSelect(), offsetX, offsetY, copy));
+            addUndo(new CPActionMoveSelection(this.getSelection(), offsetX, offsetY, copy));
         }
     };
 
@@ -3520,7 +3530,7 @@ export default function CPArtwork(_width, _height) {
     /**
      * Upon creation, moves the currently selected region of the current layer by the given offset
      *
-     * @param {CPRect} srcRect - Rectangle that will be moved
+     * @param {?CPRect} srcRect - Rectangle that will be moved, or an empty rectangle to move whole layer.
      * @param {int} offsetX
      * @param {int} offsetY
      * @param {boolean} copy - True if we should copy to the destination instead of move.
@@ -3538,7 +3548,8 @@ export default function CPArtwork(_width, _height) {
             fromSelection = that.getSelection(),
             fromMaskMode = maskEditingMode,
 
-            movingWholeLayer = srcRect.equals(that.getBounds()),
+            movingWholeLayer = srcRect.isEmpty(),
+
             movingImage = !maskEditingMode || movingWholeLayer && this.layer.maskLinked,
             movingMask = maskEditingMode || movingWholeLayer && this.layer.maskLinked;
 
@@ -3546,6 +3557,10 @@ export default function CPArtwork(_width, _height) {
             dstRect = new CPRect(0, 0, 0, 0),
 
 	        hasFullUndo = false;
+
+        if (movingWholeLayer) {
+            srcRect = that.getBounds();
+        }
 
         /**
          * @typedef {Object} LayerMoveInfo

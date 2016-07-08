@@ -684,17 +684,25 @@ function separateAlpha(buffer, len) {
     }
 }
 
+/**
+ * Blur the first `len` pixels in the src array by `radius` pixels, and store the result in the `dst` array.
+ *
+ * @param {Uint8Array} src
+ * @param {Uint8Array} dst
+ * @param {int} len
+ * @param {int} radius - Number of pixels that will be averaged either side of a target pixel.
+ */
 function boxBlurLine(src, dst, len, radius) {
     var
-        totalPixels = 0, totalChannels = [0, 0, 0, 0],
+        pixelCount = 0, channelSums = [0, 0, 0, 0],
         pixIndex, dstIndex;
-    
+
     pixIndex = 0;
     for (let i = 0; i < radius && i < len; i++) {
         for (let j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
-            totalChannels[j] += src[pixIndex++];
+            channelSums[j] += src[pixIndex++];
         }
-        totalPixels++;
+        pixelCount++;
     }
     
     dstIndex = 0;
@@ -704,13 +712,13 @@ function boxBlurLine(src, dst, len, radius) {
             pixIndex = (i + radius) * CPColorBmp.BYTES_PER_PIXEL;
             
             for (let j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
-                totalChannels[j] += src[pixIndex++];
+                channelSums[j] += src[pixIndex++];
             }
-            totalPixels++;
+            pixelCount++;
         }
 
         for (let j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
-            dst[dstIndex++] = Math.round(totalChannels[j] / totalPixels);
+            dst[dstIndex++] = Math.round(channelSums[j] / pixelCount);
         }
 
         // Old pixel leaves the window at the left
@@ -718,9 +726,9 @@ function boxBlurLine(src, dst, len, radius) {
             pixIndex = (i - radius) * CPColorBmp.BYTES_PER_PIXEL;
             
             for (let j = 0; j < CPColorBmp.BYTES_PER_PIXEL; j++) {
-                totalChannels[j] -= src[pixIndex++];
+                channelSums[j] -= src[pixIndex++];
             }
-            totalPixels--;
+            pixelCount--;
         }
     }
 }
@@ -728,10 +736,10 @@ function boxBlurLine(src, dst, len, radius) {
 /**
  * Copy a column of pixels in the bitmap to the given R,G,B,A buffer.
  * 
- * @param x X-coordinate of column
- * @param y Y-coordinate of top of column to copy
- * @param len Number of pixels to copy
- * @param buffer R,G,B,A array
+ * @param {int} x X-coordinate of column
+ * @param {int} y Y-coordinate of top of column to copy
+ * @param {int} len Number of pixels to copy
+ * @param {Uint8Array} buffer R,G,B,A array
  */
 CPColorBmp.prototype.copyPixelColumnToArray = function(x, y, len, buffer) {
     var
@@ -751,10 +759,10 @@ CPColorBmp.prototype.copyPixelColumnToArray = function(x, y, len, buffer) {
 /**
  * Copy the pixels from the given R,G,B,A buffer to a column of pixels in the bitmap.
  * 
- * @param x X-coordinate of column
- * @param y Y-coordinate of top of column to copy
- * @param len Number of pixels to copy
- * @param buffer R,G,B,A array to copy from
+ * @param {int} x X-coordinate of column
+ * @param {int} y Y-coordinate of top of column to copy
+ * @param {int} len Number of pixels to copy
+ * @param {Uint8Array} buffer R,G,B,A array to copy from
  */
 CPColorBmp.prototype.copyArrayToPixelColumn = function(x, y, len, buffer) {
     var

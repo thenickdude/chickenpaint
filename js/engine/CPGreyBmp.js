@@ -501,6 +501,123 @@ CPGreyBmp.prototype.copyRegionVFlip = function(rect, source) {
     }
 };
 
+/**
+ * Blur the first `len` pixels in the src array by `radius` pixels, and store the result in the `dst` array.
+ *
+ * @param {Uint8Array} src
+ * @param {Uint8Array} dst
+ * @param {int} len
+ * @param {int} radius - Number of pixels that will be averaged either side of a target pixel.
+ */
+function boxBlurLine(src, dst, len, radius) {
+    var
+        pixelCount = 0, pixelSum = 0,
+        dstIndex;
+
+    for (let i = 0; i < radius && i < len; i++) {
+        pixelSum += src[i];
+        pixelCount++;
+    }
+
+    dstIndex = 0;
+    for (let i = 0; i < len; i++) {
+        // New pixel joins the window at the right
+        if (i + radius < len) {
+            pixelSum += src[i + radius];
+            pixelCount++;
+        }
+
+        dst[dstIndex++] = Math.round(pixelSum / pixelCount);
+
+        // Old pixel leaves the window at the left
+        if (i - radius >= 0) {
+            pixelSum -= src[i - radius];
+            pixelCount--;
+        }
+    }
+}
+
+/**
+ * Copy a column of pixels in the bitmap to the given R,G,B,A buffer.
+ *
+ * @param {int} x X-coordinate of column
+ * @param {int} y Y-coordinate of top of column to copy
+ * @param {int} len Number of pixels to copy
+ * @param {TypedArray} buffer Pixel array
+ */
+CPGreyBmp.prototype.copyPixelColumnToArray = function(x, y, len, buffer) {
+    var
+        yJump = this.width,
+        dstOffset = 0,
+        srcOffset = this.offsetOfPixel(x, y);
+
+    for (var i = 0; i < len; i++) {
+        buffer[dstOffset] = this.data[srcOffset];
+
+        srcOffset += yJump;
+        dstOffset++;
+    }
+};
+
+/**
+ * Copy the pixels from the buffer to a column of pixels in the bitmap.
+ *
+ * @param {int} x X-coordinate of column
+ * @param {int} y Y-coordinate of top of column to copy
+ * @param {int} len Number of pixels to copy
+ * @param {TypedArray} buffer Pixel array to copy from
+ */
+CPGreyBmp.prototype.copyArrayToPixelColumn = function(x, y, len, buffer) {
+    var
+        yJump = this.width,
+        srcOffset = 0,
+        dstOffset = this.offsetOfPixel(x, y);
+
+    for (var i = 0; i < len; i++) {
+        this.data[dstOffset] = buffer[srcOffset];
+
+        dstOffset += yJump;
+        srcOffset++;
+    }
+};
+
+CPGreyBmp.prototype.boxBlur = function(rect, radiusX, radiusY) {
+    rect = this.getBounds().clipTo(rect);
+
+    let
+        rectWidth = rect.getWidth(),
+        rectHeight = rect.getHeight(),
+        rectLength = Math.max(rectWidth, rectHeight),
+
+        src = new this.data.constructor(rectLength),
+        dst = new this.data.constructor(rectLength);
+
+    for (let y = rect.top; y < rect.bottom; y++) {
+        var
+            pixOffset = this.offsetOfPixel(rect.left, y);
+
+        for (let x = 0; x < rectWidth; x++) {
+            src[x] = this.data[pixOffset++];
+        }
+
+        boxBlurLine(src, dst, rectWidth, radiusX);
+
+        pixOffset = this.offsetOfPixel(rect.left, y);
+
+        for (let x = 0; x < rectWidth; x++) {
+            this.data[pixOffset++] = dst[x];
+        }
+    }
+
+    for (let x = rect.left; x < rect.right; x++) {
+        this.copyPixelColumnToArray(x, rect.top, rectHeight, src);
+
+        boxBlurLine(src, dst, rectHeight, radiusY);
+
+        this.copyArrayToPixelColumn(x, rect.top, rectHeight, dst);
+    }
+};
+
 CPGreyBmp.prototype.offsetOfPixel = function(x, y) {
     return y * this.width + x;
 };
