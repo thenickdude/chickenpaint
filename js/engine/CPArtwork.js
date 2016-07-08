@@ -426,8 +426,9 @@ export default function CPArtwork(_width, _height) {
 
 	/**
      * Gets the image that the user has selected for drawing onto (a member of the currently active layer).
+     * Can be null if selecting a group's "image".
      *
-     * @returns {CPColorBmp|?CPGreyBmp}
+     * @returns {?CPColorBmp|CPGreyBmp}
      */
     function getActiveImage() {
         return maskEditingMode ? curLayer.mask : curLayer.image;
@@ -2419,14 +2420,15 @@ export default function CPArtwork(_width, _height) {
     };
     
     // Copy/Paste functions
-    
+    this.isCutSelectionAllowed = function() {
+        return !this.getSelection().isEmpty() && getActiveImage() != null;
+    };
+
+    this.isCopySelectionAllowed = this.isCutSelectionAllowed;
+
     this.cutSelection = function() {
-        var
-            selection = this.getSelection(),
-            image = getActiveImage();
-        
-        if (!selection.isEmpty() && image != null) {
-            addUndo(new CPActionCut(curLayer, maskEditingMode, selection));
+        if (this.isCutSelectionAllowed()) {
+            addUndo(new CPActionCut(curLayer, maskEditingMode, this.getSelection()));
         }
     };
 
@@ -2435,20 +2437,22 @@ export default function CPArtwork(_width, _height) {
             selection = that.getSelection(),
             image = getActiveImage();
         
-        if (!selection.isEmpty() && image != null) {
+        if (this.isCopySelectionAllowed()) {
             clipboard = new CPClip(image.cloneRect(selection), selection.left, selection.top);
         }
     };
 
-    this.copySelectionMerged = function() {
-        var 
-            selection = that.getSelection();
-        
-        if (selection.isEmpty()) {
-            return;
-        }
+    this.isCopySelectionMergedAllowed = function() {
+        return !this.getSelection().isEmpty()
+    };
 
-        clipboard = new CPClip(this.fusionLayers().cloneRect(selection), selection.left, selection.top);
+    this.copySelectionMerged = function() {
+        if (this.isCopySelectionMergedAllowed()) {
+            var
+                selection = that.getSelection();
+
+            clipboard = new CPClip(this.fusionLayers().cloneRect(selection), selection.left, selection.top);
+        }
     };
 
     this.isPasteClipboardAllowed = function() {

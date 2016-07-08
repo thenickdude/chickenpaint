@@ -586,29 +586,30 @@ export default function ChickenPaint(options) {
                     that.artwork.cutSelection();
                 },
                 modifies: {document: true},
-                requiresDrawable: true
+                requiresDrawable: true,
+                allowed: "isCutSelectionAllowed"
             },
             CPCopy: {
                 action: function () {
                     that.artwork.copySelection();
                 },
                 modifies: {document: true},
-                requiresDrawable: true
+                requiresDrawable: true,
+                allowed: "isCopySelectionAllowed"
             },
             CPCopyMerged: {
                 action: function () {
                     that.artwork.copySelectionMerged();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isCopySelectionMergedAllowed"
             },
             CPPaste: {
                 action: function () {
                     that.artwork.pasteClipboard();
                 },
                 modifies: {document: true},
-                allowed: function() {
-                    return !that.artwork.isClipboardEmpty();
-                }
+                allowed: "isPasteClipboardAllowed"
             },
 
             CPToggleGrid: {
