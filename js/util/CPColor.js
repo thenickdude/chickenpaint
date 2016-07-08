@@ -176,7 +176,7 @@ CPColor.prototype.setRgb = function(rgb) {
     convertRgbToHsv(rgb, this);
 };
 
-CPColor.prototype.setHsv = function(hue, value, saturation) {
+CPColor.prototype.setHsv = function(hue, saturation, value) {
     this.hue = hue;
     this.saturation = saturation;
     this.value = value;
