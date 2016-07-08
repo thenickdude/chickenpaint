@@ -713,6 +713,17 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {document: true}
             },
+            CPToggleMaskView: {
+                action: function() {
+                    var
+                        newView = that.artwork.toggleMaskView();
+                    
+                    if (newView) {
+                        that.emitEvent("maskViewOpened", [newView]);
+                    }
+                },
+                modifies: {gui: true}
+            },
             CPSetLayerVisibility: {
                 action: function(e) {
                     that.artwork.setLayerVisibility(e.layer, e.visible);

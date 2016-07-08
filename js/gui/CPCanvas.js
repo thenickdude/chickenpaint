@@ -32,10 +32,11 @@ import CPVector from "../util/CPVector";
 import ChickenPaint from "../ChickenPaint";
 
 import CPBrushInfo from "../engine/CPBrushInfo";
+import CPLayerGroup from "../engine/CPLayerGroup";
+import CPMaskView from "../engine/CPMaskView";
 
 import {createCheckerboardPattern} from "./CPGUIUtils";
 import CPScrollbar from "./CPScrollbar";
-import CPLayerGroup from "../engine/CPLayerGroup";
 import CPColor from "../util/CPColor";
 import {setContrastingDrawStyle} from "./CPGUIUtils";
 
@@ -235,7 +236,7 @@ export default function CPCanvas(controller) {
          * 
          * Initially set to the size of the artwork so we can repaint the whole thing.
          */
-        artworkUpdateRegion = new CPRect(0, 0, artwork.width, artwork.height),
+        artworkUpdateRegion = artwork.getBounds(),
         
         /**
          * The area of the canvas that should be repainted to the screen during the next repaint internal (in canvas
@@ -243,6 +244,13 @@ export default function CPCanvas(controller) {
          */
         repaintRegion = new CPRect(0, 0, 0, 0),
         scheduledRepaint = false,
+
+	    /**
+         * If we're viewing a single mask on its own instead of the document fusion, we store that view here.
+         *
+         * @type {CPMaskView}
+         */
+        maskView,
         
         //
         // Modes system: modes control the way the GUI is reacting to the user input
@@ -2287,9 +2295,15 @@ export default function CPCanvas(controller) {
         
         /* Copy pixels that changed in the document into our local fused image cache */
         if (!artworkUpdateRegion.isEmpty()) {
-            var
+            let
+                imageData;
+
+            if (maskView && maskView.isOpen()) {
+                imageData = maskView.getImageData();
+            } else {
                 imageData = artwork.fusionLayers().getImageData();
-            
+            }
+
             artworkCanvasContext.putImageData(
                 imageData, 0, 0, artworkUpdateRegion.left, artworkUpdateRegion.top, artworkUpdateRegion.getWidth(), artworkUpdateRegion.getHeight()
             );
@@ -2466,6 +2480,23 @@ export default function CPCanvas(controller) {
         }
 
         modeStack.setUserMode(newMode);
+    });
+
+    function onMaskViewChangeLayer() {
+        artworkUpdateRegion = artwork.getBounds();
+        that.repaintAll();
+    }
+
+    controller.on("maskViewOpened", function(newMaskView) {
+        if (maskView) {
+            maskView.off("changeLayer", onMaskViewChangeLayer);
+        }
+
+        maskView = newMaskView;
+
+        maskView.on("changeLayer", onMaskViewChangeLayer);
+
+        onMaskViewChangeLayer();
     });
     
     //

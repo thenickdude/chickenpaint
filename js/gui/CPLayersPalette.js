@@ -636,6 +636,12 @@ export default function CPLayersPalette(controller) {
                         });
                     }
 
+                    if (selectMask && e.altKey) {
+                        controller.actionPerformed({
+                            action: "CPToggleMaskView"
+                        });
+                    }
+
                     if (e.button == BUTTON_PRIMARY) {
                         isDragging = true;
                         dropTarget = null;

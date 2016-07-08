@@ -26,6 +26,7 @@ import CPLayerGroup from "./CPLayerGroup";
 import CPBlend from "./CPBlend";
 import CPGreyBmp from "./CPGreyBmp";
 import CPBlendTree from "./CPBlendTree";
+import CPMaskView from "./CPMaskView";
 import CPColorBmp from "./CPColorBmp";
 import CPBrushManager from "./CPBrushManager";
 import CPBrushInfo from "./CPBrushInfo";
@@ -138,7 +139,14 @@ export default function CPArtwork(_width, _height) {
          * @type {boolean}
          */
         maskEditingMode = false,
-        
+
+	    /**
+         * If the user is viewing a single mask from the document, we cache the view of that here for later invalidation.
+         *
+         * @type {CPMaskView}
+         */
+        maskView = null,
+
         hasUnsavedChanges = false,
         
         curSelection = new CPRect(0, 0, 0, 0),
@@ -352,51 +360,45 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} invalidateMask - True if drawing happened on the layer's mask
      */
     function invalidateLayer(layer, rect, invalidateImage, invalidateMask) {
-        if (blendTree) {
-            if (Array.isArray(layer)) {
-                layer.forEach(l => blendTree.invalidateLayerRect(l, rect));
-            } else {
-                blendTree.invalidateLayerRect(layer, rect);
-            }
+        if (!Array.isArray(layer)) {
+            layer = [layer];
         }
 
-        // This updated area will need to be updated in our undo buffer later
+        if (blendTree) {
+            layer.forEach(l => blendTree.invalidateLayerRect(l, rect));
+        }
+
+        var
+            newThumbToRebuild = false;
+
         if (invalidateImage) {
+            // This updated area will need to be updated in our undo buffer later
             undoImageInvalidRegion.union(rect);
+
+            // Invalidate changed thumbnails
+            for (let l of layer) {
+                if (l instanceof CPImageLayer) {
+                    rebuildImageThumbnail.add(l);
+                    newThumbToRebuild = true;
+                }
+            }
         }
 
         if (invalidateMask) {
             undoMaskInvalidRegion.union(rect);
-        }
 
-        // Update layer thumbnails
-        var
-            newThumbToRebuild = false;
+            layer.forEach(l => {
+                rebuildMaskThumbnail.add(l);
 
-        if (invalidateMask) {
-            if (Array.isArray(layer)) {
-                layer.forEach(l => rebuildMaskThumbnail.add(l));
-            } else {
-                rebuildMaskThumbnail.add(layer);
-            }
+                if (maskView && maskView.layer == l) {
+                    maskView.invalidateRect(rect);
+                }
+            });
+
             newThumbToRebuild = true;
         }
 
-        if (invalidateImage) {
-            if (Array.isArray(layer)) {
-                for (let l of layer) {
-                    if (l instanceof CPImageLayer) {
-                        rebuildImageThumbnail.add(l);
-                        newThumbToRebuild = true;
-                    }
-                }
-                newThumbToRebuild = true;
-            } else if (layer instanceof CPImageLayer) {
-                rebuildImageThumbnail.add(layer);
-                newThumbToRebuild = true;
-            }
-        }
-
+        // Update layer thumbnails
         if (newThumbToRebuild) {
             if (thumbnailRebuildTimer) {
                 clearTimeout(thumbnailRebuildTimer);
@@ -737,9 +739,10 @@ export default function CPArtwork(_width, _height) {
         endStroke() {
             undoArea.clipTo(that.getBounds());
 
+            mergeStrokeBuffer();
+
             // Did we end up painting anything?
             if (!undoArea.isEmpty()) {
-                mergeStrokeBuffer();
                 addUndo(new CPUndoPaint());
 
                 /* Eagerly update the undo buffer for next time so we can avoid this lengthy
@@ -775,7 +778,7 @@ export default function CPArtwork(_width, _height) {
         }
 
         /**
-         * Paint a dab returned by brushManager.getDab()
+         * Paint a dab returned by brushManager.getDab().
          *
          * @param {CPBrushDab} dab
          */
@@ -788,14 +791,17 @@ export default function CPArtwork(_width, _height) {
 
             that.getBounds().clipSourceDest(brushRect, imageRect);
 
-            // drawing entirely outside the canvas
             if (imageRect.isEmpty()) {
+                // drawing entirely outside the canvas
                 return;
             }
 
             undoArea.union(imageRect);
-            strokedRegion.union(imageRect);
 
+            /* The brush will either paint itself directly to the image, or paint itself to the strokeBuffer and update
+             * the strokedRegion (which will be merged to the image later by mergeStrokeBuffer(), perhaps in response
+             * to a call to fusionLayers())
+             */
             this.paintDabImplementation(brushRect, imageRect, dab);
 
             invalidateLayerPaint(curLayer, imageRect);
@@ -915,7 +921,7 @@ export default function CPArtwork(_width, _height) {
         }
 
         /**
-         * The shape of the brush is combined with the alpha in the strokeData with a simple max()
+         * The shape of the brush is combined with the alpha in the strokeBuffer with a simple max()
          * operation. Effectively, the brush just sets the opacity of the buffer.
          *
          * Painting the same area multiple times during a single stroke does not increase the opacity.
@@ -939,6 +945,8 @@ export default function CPArtwork(_width, _height) {
                 dstYStride = that.width - imageWidth;
 
             alpha = Math.min(255, alpha);
+
+            strokedRegion.union(imageRect);
 
             for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, imageOffset += dstYStride) {
                 for (var x = 0; x < imageWidth; x++, brushOffset++, imageOffset++) {
@@ -967,6 +975,8 @@ export default function CPArtwork(_width, _height) {
 
                 srcYStride = brushWidth - dstWidth,
                 dstYStride = that.width - dstWidth;
+
+            strokedRegion.union(imageRect);
 
             for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, strokeOffset += dstYStride) {
                 for (var x = 0; x < dstWidth; x++, brushOffset++, strokeOffset++) {
@@ -1261,7 +1271,7 @@ export default function CPArtwork(_width, _height) {
         }
 
 	    /**
-         * Blend the brush stroke with full color into the brushBuffer
+         * Blend the brush stroke with full color into the strokeBuffer
          *
          * @param {CPRect} srcRect
          * @param {CPRect} dstRect
@@ -1275,7 +1285,9 @@ export default function CPArtwork(_width, _height) {
                 strokeData = strokeBuffer.data,
 
                 brushY = srcRect.top;
-            
+
+            strokedRegion.union(dstRect);
+
             for (var y = dstRect.top; y < dstRect.bottom; y++, brushY++) {
                 var
                     srcOffset = srcRect.left + brushY * brushWidth,
@@ -1376,6 +1388,7 @@ export default function CPArtwork(_width, _height) {
             previousSamples.shift();
 
             paintDirect(srcRect, dstRect, dab.brush, dab.width, Math.max(1, dab.alpha / 4), newColor);
+
             mergeStrokeBuffer();
             
             if (sampleAllLayers) {
@@ -1475,6 +1488,8 @@ export default function CPArtwork(_width, _height) {
                 destImageData = destImage.data,
     
                 brushY = srcRect.top;
+
+            strokedRegion.union(dstRect);
             
             for (var y = dstRect.top; y < dstRect.bottom; y++, brushY++) {
                 var 
@@ -1516,17 +1531,18 @@ export default function CPArtwork(_width, _height) {
             }
         }
         
-        paintDabImplementation(srcRect, dstRect, dab) {
+        paintDabImplementation(brushRect, imageRect, dab) {
             if (brushBuffer == null) {
                 brushBuffer = new Uint32Array(dab.width * dab.height); // Initialized to 0 for us by the browser
 
-                CPBrushToolOil.oilAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, 255);
+                CPBrushToolOil.oilAccumBuffer(brushRect, imageRect, brushBuffer, dab.width, 255);
             } else {
-                CPBrushToolOil.oilResatBuffer(srcRect, dstRect, brushBuffer, dab.width, ~~((curBrush.resat <= 0.0) ? 0 : Math.max(1, (curBrush.resat * curBrush.resat) * 255)), curColor & 0xFFFFFF);
-                CPBrushToolOil.oilPasteBuffer(srcRect, dstRect, brushBuffer, dab.brush, dab.width, dab.alpha);
-                CPBrushToolOil.oilAccumBuffer(srcRect, dstRect, brushBuffer, dab.width, ~~(curBrush.bleed * 255));
+                CPBrushToolOil.oilResatBuffer(brushRect, imageRect, brushBuffer, dab.width, ~~((curBrush.resat <= 0.0) ? 0 : Math.max(1, (curBrush.resat * curBrush.resat) * 255)), curColor & 0xFFFFFF);
+                CPBrushToolOil.oilPasteBuffer(brushRect, imageRect, brushBuffer, dab.brush, dab.width, dab.alpha);
+                CPBrushToolOil.oilAccumBuffer(brushRect, imageRect, brushBuffer, dab.width, ~~(curBrush.bleed * 255));
             }
-            
+
+            // We need our stroke to be written through to the layer for us to sample next cycle
             mergeStrokeBuffer();
             
             if (sampleAllLayers) {
@@ -1721,9 +1737,7 @@ export default function CPArtwork(_width, _height) {
                     restoreImageAlpha(curLayer.image, imageRect);
                 }
             }
-            
-            strokedRegion.makeEmpty();
-            
+
             if (sampleAllLayers) {
                 that.fusionLayers();
             }
@@ -1812,6 +1826,9 @@ export default function CPArtwork(_width, _height) {
     }
 
     function prepareForFusion() {
+        // The current brush renders out its buffers to the layer stack for us
+        mergeStrokeBuffer();
+
         blendTree.buildTree();
     }
 
@@ -1832,9 +1849,6 @@ export default function CPArtwork(_width, _height) {
      * @returns {CPColorBmp}
      */
     this.fusionLayers = function() {
-        // The current brush renders out its buffers to the layer stack for us
-        mergeStrokeBuffer();
-
         prepareForFusion();
 
         fusion = blendTree.blendTree().image;
@@ -1871,8 +1885,8 @@ export default function CPArtwork(_width, _height) {
             addUndo(new CPActionChangeLayerClip(curLayer, false));
         }
     };
-
-	/**
+    
+    /**
      * Change the currently active layer. The layer may not be set to null.
      *
      * @param {(CPLayer|CPImageLayer|CPLayerGroup)} newLayer
@@ -1885,7 +1899,7 @@ export default function CPArtwork(_width, _height) {
         if (newLayer && (curLayer != newLayer || editingModeChanged)) {
             var
                 oldLayer = curLayer;
-            
+
             curLayer = newLayer;
             maskEditingMode = selectMask;
 
@@ -1896,9 +1910,36 @@ export default function CPArtwork(_width, _height) {
             if (editingModeChanged) {
                 this.emitEvent("editModeChanged", [maskEditingMode ? CPArtwork.EDITING_MODE_MASK : CPArtwork.EDITING_MODE_IMAGE]);
             }
+
+            if (maskView && maskView.layer == oldLayer) {
+                if (selectMask) {
+                    maskView.setLayer(newLayer);
+                } else {
+                    this.closeMaskView();
+                }
+            }
         }
     };
+
+    this.closeMaskView = function() {
+        maskView.close();
+        maskView = null;
+    };
     
+    this.toggleMaskView = function() {
+        if (maskView == null || !maskView.isOpen()) {
+            if (curLayer.mask) {
+                maskView = new CPMaskView(curLayer, mergeStrokeBuffer);
+            } else {
+                maskView = null;
+            }
+        } else {
+            this.closeMaskView();
+        }
+
+        return maskView;
+    };
+
     /**
      * Select the topmost visible layer, or the topmost layer if none are visible.
      */
@@ -2321,8 +2362,6 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        strokedRegion.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
-
         var
             activeOp = getActiveOperation();
 
@@ -2389,8 +2428,6 @@ export default function CPArtwork(_width, _height) {
          * Though probably ChickenPaint's global exclusive mode will enforce this for us.
          */
         previewOperation = new CPActionTransformSelection(initialRect, initialTransform, transformInterpolation);
-    
-        strokedRegion.makeEmpty(); // Prevents a drawing tool being called during layer fusion to draw itself to the layer
 
         beginPaintingInteraction();
 
