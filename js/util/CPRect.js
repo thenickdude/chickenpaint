@@ -162,11 +162,16 @@ CPRect.prototype.isEmpty = function() {
     return this.right <= this.left || this.bottom <= this.top;
 };
 
-CPRect.prototype.set = function(r) {
-    this.left = r.left;
-    this.top = r.top;
-    this.right = r.right;
-    this.bottom = r.bottom;
+/**
+ * Set this rectangle's coordinates to a copy of that ones.
+ *
+ * @param {CPRect} thatRect
+ */
+CPRect.prototype.set = function(thatRect) {
+    this.left = thatRect.left;
+    this.top = thatRect.top;
+    this.right = thatRect.right;
+    this.bottom = thatRect.bottom;
 };
 
 /**

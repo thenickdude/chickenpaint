@@ -22,22 +22,252 @@
 
 import CPBrushInfo from "./CPBrushInfo";
 
+const
+    MAX_SQUEEZE = 10;
+
+/**
+ *
+ * @param {Uint8Array} brush
+ * @param {CPBrushInfo} brushInfo
+ */
+function buildBrush(brush, brushInfo) {
+    var
+        intSize = Math.ceil(brushInfo.curSize),
+
+        center = intSize / 2.0,
+        sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
+
+        xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
+        cosA = Math.cos(brushInfo.curAngle),
+        sinA = Math.sin(brushInfo.curAngle),
+
+        offset = 0;
+
+    for (var j = 0; j < intSize; j++) {
+        for (var i = 0; i < intSize; i++) {
+            var
+                x = (i + 0.5 - center),
+                y = (j + 0.5 - center),
+                dx = (x * cosA - y * sinA) * xFactor,
+                dy = (y * cosA + x * sinA),
+
+                sqrDist = dx * dx + dy * dy;
+
+            if (sqrDist <= sqrRadius) {
+                brush[offset++] = 0xFF;
+            } else {
+                brush[offset++] = 0;
+            }
+        }
+    }
+}
+
+/**
+ * @param {Uint8Array} brush
+ * @param {CPBrushInfo} brushInfo
+ */
+function buildBrushAA(brush, brushInfo) {
+    var
+        intSize = Math.ceil(brushInfo.curSize),
+
+        center = intSize / 2.0,
+        sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
+        sqrRadiusInner = ((brushInfo.curSize - 2) / 2) * ((brushInfo.curSize - 2) / 2),
+        sqrRadiusOuter = ((brushInfo.curSize + 2) / 2) * ((brushInfo.curSize + 2) / 2),
+
+        xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
+        cosA = Math.cos(brushInfo.curAngle),
+        sinA = Math.sin(brushInfo.curAngle),
+
+        offset = 0;
+
+    for (var j = 0; j < intSize; j++) {
+        for (var i = 0; i < intSize; i++) {
+            var
+                x = (i + 0.5 - center),
+                y = (j + 0.5 - center),
+                dx = (x * cosA - y * sinA) * xFactor,
+                dy = (y * cosA + x * sinA),
+
+                sqrDist = dx * dx + dy * dy;
+
+            if (sqrDist <= sqrRadiusInner) {
+                brush[offset++] = 0xFF;
+            } else if (sqrDist > sqrRadiusOuter) {
+                brush[offset++] = 0;
+            } else {
+                var
+                    count = 0;
+
+                for (var oy = 0; oy < 4; oy++) {
+                    for (var ox = 0; ox < 4; ox++) {
+                        x = i + ox * (1.0 / 4.0) - center;
+                        y = j + oy * (1.0 / 4.0) - center;
+                        dx = (x * cosA - y * sinA) * xFactor;
+                        dy = (y * cosA + x * sinA);
+
+                        sqrDist = dx * dx + dy * dy;
+                        if (sqrDist <= sqrRadius) {
+                            count += 1;
+                        }
+                    }
+                }
+                brush[offset++] = Math.min(count * 16, 255);
+            }
+        }
+    }
+}
+
+/**
+ * @param {Uint8Array} brush
+ * @param {CPBrushInfo} brushInfo
+ */
+function buildBrushSquare(brush, brushInfo) {
+    var
+        intSize = Math.ceil(brushInfo.curSize),
+        center = intSize / 2.0,
+
+        size = brushInfo.curSize * Math.sin(Math.PI / 4),
+        sizeX = (size / 2) / (1.0 + brushInfo.curSqueeze * MAX_SQUEEZE),
+        sizeY = (size / 2),
+
+        cosA = Math.cos(brushInfo.curAngle),
+        sinA = Math.sin(brushInfo.curAngle),
+
+        offset = 0;
+
+    for (var j = 0; j < intSize; j++) {
+        for (var i = 0; i < intSize; i++) {
+            var
+                x = (i + 0.5 - center),
+                y = (j + 0.5 - center),
+                dx = Math.abs(x * cosA - y * sinA),
+                dy = Math.abs(y * cosA + x * sinA);
+
+            if (dx <= sizeX && dy <= sizeY) {
+                brush[offset++] = 0xFF;
+            } else {
+                brush[offset++] = 0;
+            }
+        }
+    }
+}
+
+/**
+ * @param {Uint8Array} brush
+ * @param {CPBrushInfo} brushInfo
+ */
+function buildBrushSquareAA(brush, brushInfo) {
+    var
+        intSize = Math.ceil(brushInfo.curSize),
+        center = intSize / 2.0,
+
+        size = brushInfo.curSize * Math.sin(Math.PI / 4),
+        sizeX = (size / 2) / (1.0 + brushInfo.curSqueeze * MAX_SQUEEZE),
+        sizeY = (size / 2),
+
+        sizeXInner = sizeX - 1,
+        sizeYInner = sizeY - 1,
+
+        sizeXOuter = sizeX + 1,
+        sizeYOuter = sizeY + 1,
+
+        cosA = Math.cos(brushInfo.curAngle),
+        sinA = Math.sin(brushInfo.curAngle),
+
+        offset = 0;
+
+    for (var j = 0; j < intSize; j++) {
+        for (var i = 0; i < intSize; i++) {
+            var
+                x = (i + 0.5 - center),
+                y = (j + 0.5 - center),
+                dx = Math.abs(x * cosA - y * sinA),
+                dy = Math.abs(y * cosA + x * sinA);
+
+            if (dx <= sizeXInner && dy <= sizeYInner) {
+                brush[offset++] = 0xFF;
+            } else if (dx > sizeXOuter || dy > sizeYOuter) {
+                brush[offset++] = 0;
+            } else {
+                var
+                    count = 0;
+
+                for (var oy = 0; oy < 4; oy++) {
+                    for (var ox = 0; ox < 4; ox++) {
+                        x = i + ox * (1.0 / 4.0) - center;
+                        y = j + oy * (1.0 / 4.0) - center;
+                        dx = Math.abs(x * cosA - y * sinA);
+                        dy = Math.abs(y * cosA + x * sinA);
+
+                        if (dx <= sizeX && dy <= sizeY) {
+                            count++;
+                        }
+                    }
+                }
+                brush[offset++] = Math.min(count * 16, 255);
+            }
+        }
+    }
+}
+
+/**
+ *
+ * @param {Uint8Array} brush
+ * @param {CPBrushInfo} brushInfo
+ */
+function buildBrushSoft(brush, brushInfo) {
+    var
+        intSize = Math.ceil(brushInfo.curSize),
+        center = intSize / 2.0,
+        sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
+
+        xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
+        cosA = Math.cos(brushInfo.curAngle),
+        sinA = Math.sin(brushInfo.curAngle),
+
+        offset = 0;
+
+    for (var j = 0; j < intSize; j++) {
+        for (var i = 0; i < intSize; i++) {
+            var
+                x = (i + 0.5 - center),
+                y = (j + 0.5 - center),
+                dx = (x * cosA - y * sinA) * xFactor,
+                dy = (y * cosA + x * sinA),
+
+                sqrDist = dx * dx + dy * dy;
+
+            if (sqrDist <= sqrRadius) {
+                brush[offset++] = ~~(255 * (1 - (sqrDist / sqrRadius)));
+            } else {
+                brush[offset++] = 0;
+            }
+        }
+    }
+}
+
+
 /**
  * A brush spot
  *
  * @typedef {Object} CPBrushDab
  *
  * @property {Uint8Array} brush - The brush image mask
- * @property {int} width - The size of the brush image
+ * @property {int} width - The size of the brush image (note, it need not occupy the entire brush array).
  * @property {int} height
- * @property {int} x - Position in the document where the brush will be applied
+ * @property {int} x - Pixel in the document where the brush will be applied
  * @property {int} y
  * @property {int} alpha
  */
 
+/**
+ * Creates and holds one cached brush at a time, with the given parameters.
+ *
+ * @constructor
+ */
 export default function CPBrushManager() {
     const
-        MAX_SQUEEZE = 10,
         BRUSH_MAX_DIM = 201,
         BRUSH_AA_MAX_DIM = 202;
     
@@ -46,44 +276,49 @@ export default function CPBrushManager() {
         brushAA = new Uint8Array(BRUSH_AA_MAX_DIM * BRUSH_AA_MAX_DIM),
 
         cacheBrush = null,
-        cacheSize, cacheSqueeze, cacheAngle,
-        cacheType,
+        cacheSize, cacheSqueeze, cacheAngle, cacheTip,
 
-        that = this; 
+        that = this;
 
     /**
-     * Shift a brush by a positive sub-pixel amount (dx, dy) [0..1), and return the new brush. 
-     * 
+     * Shift a brush by a positive sub-pixel amount (dx, dy) [0..1), and return the new brush.
+     *
      * The resulting brush array is 1 pixel larger than the original one in both dimensions.
+     *
+     * @param {CPBrushInfo} brushInfo
+     * @param {number} dx
+     * @param {number} dy
      *
      * @returns {Uint8Array}
      */
-    function getBrushWithAA(brushInfo, dx, dy) {
+    function createSubpixelShiftedBrush(brushInfo, dx, dy) {
         let
             nonAABrush = getBrush(brushInfo),
 
             intSize = Math.ceil(brushInfo.curSize),
             intSizeAA = Math.ceil(brushInfo.curSize) + 1;
-        
+
         for (let x = 0; x < intSizeAA * intSizeAA; x++) {
             brushAA[x] = 0;
         }
-        
+
         let
             invdx_invdy = (1 - dx) * (1 - dy),
             dx_invdy = dx * (1 - dy),
             dx_dy = dx * dy,
             invdx_dy = (1 - dx) * dy,
-            
+
             srcIndex = 0,
-            dstIndex = 0;
-        
-        for (let y = 0; y < intSize; y++) {
-            for (let x = 0; x < intSize; x++) {
+            dstIndex = 0,
+
+            dstYSkip = intSizeAA - intSize;
+
+        for (let y = 0; y < intSize; y++, dstIndex += dstYSkip) {
+            for (let x = 0; x < intSize; x++, srcIndex++, dstIndex++) {
                 let
                     brushAlpha = nonAABrush[srcIndex];
 
-                /* 
+                /*
                  * Use a weighted sum to shift the source pixels's position by a sub-pixel amount dx, dy and accumulate
                  * it into the final brushAA array.
                  */
@@ -91,288 +326,46 @@ export default function CPBrushManager() {
                 brushAA[dstIndex + 1] += ~~(brushAlpha * dx_invdy);
                 brushAA[dstIndex + 1 + intSizeAA] += ~~(brushAlpha * dx_dy);
                 brushAA[dstIndex + intSizeAA] += ~~(brushAlpha * invdx_dy);
-                
-                srcIndex++;
-                dstIndex++;
             }
-            dstIndex += intSizeAA - intSize;
         }
 
         return brushAA;
     }
 
-	/**
-     *
-     * @param brush
-     * @param brushInfo
-     * @returns {Uint8Array}
-     */
-    function buildBrush(brush, brushInfo) {
-        var
-            intSize = Math.ceil(brushInfo.curSize),
-            
-            center = intSize / 2.0,
-            sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
-    
-            xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
-            cosA = Math.cos(brushInfo.curAngle),
-            sinA = Math.sin(brushInfo.curAngle),
-    
-            offset = 0;
-        
-        for (var j = 0; j < intSize; j++) {
-            for (var i = 0; i < intSize; i++) {
-                var 
-                    x = (i + 0.5 - center),
-                    y = (j + 0.5 - center),
-                    dx = (x * cosA - y * sinA) * xFactor,
-                    dy = (y * cosA + x * sinA),
-
-                    sqrDist = dx * dx + dy * dy;
-
-                if (sqrDist <= sqrRadius) {
-                    brush[offset++] = 0xFF;
-                } else {
-                    brush[offset++] = 0;
-                }
-            }
-        }
-
-        return brush;
-    }
-
-	/**
-     *
-     * @param brush
-     * @param brushInfo
-     * @returns {Uint8Array}
-     */
-    function buildBrushAA(brush, brushInfo) {
-        var
-            intSize = Math.ceil(brushInfo.curSize),
-            
-            center = intSize / 2.0,
-            sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
-            sqrRadiusInner = ((brushInfo.curSize - 2) / 2) * ((brushInfo.curSize - 2) / 2),
-            sqrRadiusOuter = ((brushInfo.curSize + 2) / 2) * ((brushInfo.curSize + 2) / 2),
-
-            xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
-            cosA = Math.cos(brushInfo.curAngle),
-            sinA = Math.sin(brushInfo.curAngle),
-
-            offset = 0;
-        
-        for (var j = 0; j < intSize; j++) {
-            for (var i = 0; i < intSize; i++) {
-                var 
-                    x = (i + 0.5 - center),
-                    y = (j + 0.5 - center),
-                    dx = (x * cosA - y * sinA) * xFactor,
-                    dy = (y * cosA + x * sinA),
-
-                    sqrDist = dx * dx + dy * dy;
-
-                if (sqrDist <= sqrRadiusInner) {
-                    brush[offset++] = 0xFF;
-                } else if (sqrDist > sqrRadiusOuter) {
-                    brush[offset++] = 0;
-                } else {
-                    var 
-                        count = 0;
-                    
-                    for (var oy = 0; oy < 4; oy++) {
-                        for (var ox = 0; ox < 4; ox++) {
-                            x = i + ox * (1.0 / 4.0) - center;
-                            y = j + oy * (1.0 / 4.0) - center;
-                            dx = (x * cosA - y * sinA) * xFactor;
-                            dy = (y * cosA + x * sinA);
-
-                            sqrDist = dx * dx + dy * dy;
-                            if (sqrDist <= sqrRadius) {
-                                count += 1;
-                            }
-                        }
-                    }
-                    brush[offset++] = Math.min(count * 16, 255);
-                }
-            }
-        }
-
-        return brush;
-    }
-
-	/**
-     *
-     * @param brush
-     * @param brushInfo
-     * @returns {Uint8Array}
-     */
-    function buildBrushSquare(brush, brushInfo) {
-        var
-            intSize = Math.ceil(brushInfo.curSize),
-            center = intSize / 2.0,
-
-            size = brushInfo.curSize * Math.sin(Math.PI / 4),
-            sizeX = (size / 2) / (1.0 + brushInfo.curSqueeze * MAX_SQUEEZE),
-            sizeY = (size / 2),
-
-            cosA = Math.cos(brushInfo.curAngle),
-            sinA = Math.sin(brushInfo.curAngle),
-
-            offset = 0;
-        
-        for (var j = 0; j < intSize; j++) {
-            for (var i = 0; i < intSize; i++) {
-                var 
-                    x = (i + 0.5 - center),
-                    y = (j + 0.5 - center),
-                    dx = Math.abs(x * cosA - y * sinA),
-                    dy = Math.abs(y * cosA + x * sinA);
-
-                if (dx <= sizeX && dy <= sizeY) {
-                    brush[offset++] = 0xFF;
-                } else {
-                    brush[offset++] = 0;
-                }
-            }
-        }
-
-        return brush;
-    }
-
-	/**
-     *
-     * @param brush
-     * @param brushInfo
-     * @returns {Uint8Array}
-     */
-    function buildBrushSquareAA(brush, brushInfo) {
-        var
-            intSize = Math.ceil(brushInfo.curSize),
-            center = intSize / 2.0,
-
-            size = brushInfo.curSize * Math.sin(Math.PI / 4),
-            sizeX = (size / 2) / (1.0 + brushInfo.curSqueeze * MAX_SQUEEZE),
-            sizeY = (size / 2),
-
-            sizeXInner = sizeX - 1,
-            sizeYInner = sizeY - 1,
-
-            sizeXOuter = sizeX + 1,
-            sizeYOuter = sizeY + 1,
-
-            cosA = Math.cos(brushInfo.curAngle),
-            sinA = Math.sin(brushInfo.curAngle),
-
-            offset = 0;
-        
-        for (var j = 0; j < intSize; j++) {
-            for (var i = 0; i < intSize; i++) {
-                var 
-                    x = (i + 0.5 - center),
-                    y = (j + 0.5 - center),
-                    dx = Math.abs(x * cosA - y * sinA),
-                    dy = Math.abs(y * cosA + x * sinA);
-
-                if (dx <= sizeXInner && dy <= sizeYInner) {
-                    brush[offset++] = 0xFF;
-                } else if (dx > sizeXOuter || dy > sizeYOuter) {
-                    brush[offset++] = 0;
-                } else {
-                    var
-                        count = 0;
-                    
-                    for (var oy = 0; oy < 4; oy++) {
-                        for (var ox = 0; ox < 4; ox++) {
-                            x = i + ox * (1.0 / 4.0) - center;
-                            y = j + oy * (1.0 / 4.0) - center;
-                            dx = Math.abs(x * cosA - y * sinA);
-                            dy = Math.abs(y * cosA + x * sinA);
-
-                            if (dx <= sizeX && dy <= sizeY) {
-                                count++;
-                            }
-                        }
-                    }
-                    brush[offset++] = Math.min(count * 16, 255);
-                }
-            }
-        }
-
-        return brush;
-    }
-
-	/**
-     *
-     * @param brush
-     * @param brushInfo
-     * @returns {Uint8Array}
-     */
-    function buildBrushSoft(brush, brushInfo) {
-        var
-            intSize = Math.ceil(brushInfo.curSize),
-            center = intSize / 2.0,
-            sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
-
-            xFactor = 1.0 + brushInfo.curSqueeze * MAX_SQUEEZE,
-            cosA = Math.cos(brushInfo.curAngle),
-            sinA = Math.sin(brushInfo.curAngle),
-
-            offset = 0;
-        
-        for (var j = 0; j < intSize; j++) {
-            for (var i = 0; i < intSize; i++) {
-                var 
-                    x = (i + 0.5 - center),
-                    y = (j + 0.5 - center),
-                    dx = (x * cosA - y * sinA) * xFactor,
-                    dy = (y * cosA + x * sinA),
-
-                    sqrDist = dx * dx + dy * dy;
-
-                if (sqrDist <= sqrRadius) {
-                    brush[offset++] = ~~(255 * (1 - (sqrDist / sqrRadius)));
-                } else {
-                    brush[offset++] = 0;
-                }
-            }
-        }
-
-        return brush;
-    } 
-    
     /**
      * Build and return a brush that conforms to the given brush settings.
-     * 
+     *
+     * @param {CPBrushInfo} brushInfo
+     *
      * @returns {Uint8Array}
      */ 
     function getBrush(brushInfo) {
         if (cacheBrush != null && brushInfo.curSize == cacheSize && brushInfo.curSqueeze == cacheSqueeze
-                && brushInfo.curAngle == cacheAngle && brushInfo.type == cacheType) {
+                && brushInfo.curAngle == cacheAngle && brushInfo.tip == cacheTip) {
             return cacheBrush;
         }
         
-        switch (brushInfo.type) {
-            case CPBrushInfo.B_ROUND_AIRBRUSH:
-                brush = buildBrushSoft(brush, brushInfo);
+        switch (brushInfo.tip) {
+            case CPBrushInfo.TIP_ROUND_AIRBRUSH:
+                buildBrushSoft(brush, brushInfo);
             break;
-            case CPBrushInfo.B_ROUND_AA:
-                brush = buildBrushAA(brush, brushInfo);
+            case CPBrushInfo.TIP_ROUND_AA:
+                buildBrushAA(brush, brushInfo);
             break;
-            case CPBrushInfo.B_ROUND_PIXEL:
-                brush = buildBrush(brush, brushInfo);
+            case CPBrushInfo.TIP_ROUND_PIXEL:
+                buildBrush(brush, brushInfo);
             break;
-            case CPBrushInfo.B_SQUARE_AA:
-                brush = buildBrushSquareAA(brush, brushInfo);
+            case CPBrushInfo.TIP_SQUARE_AA:
+                buildBrushSquareAA(brush, brushInfo);
             break;
-            case CPBrushInfo.B_SQUARE_PIXEL:
-                brush = buildBrushSquare(brush, brushInfo);
+            case CPBrushInfo.TIP_SQUARE_PIXEL:
+                buildBrushSquare(brush, brushInfo);
             break;
         }
 
         cacheBrush = brush;
         cacheSize = brushInfo.curSize;
-        cacheType = brushInfo.type;
+        cacheTip = brushInfo.tip;
         cacheSqueeze = brushInfo.curSqueeze;
         cacheAngle = brushInfo.curAngle;
 
@@ -431,9 +424,11 @@ export default function CPBrushManager() {
     }
     
     /**
-     * @param {float} x
-     * @param {float} y
-     * @param brushInfo - a CPBrushInfo object
+     * Create a paint dab using the given brush at the given image co-ordinates.
+     *
+     * @param {number} x - Image coordinate of center of brush dab
+     * @param {number} y - Image coordinate of center of brush dab
+     * @param {CPBrushInfo} brushInfo - Brush appearance parameters
      *
      * @returns {CPBrushDab}
      */
@@ -447,37 +442,35 @@ export default function CPBrushManager() {
 
         // FIXME: I don't like this special case for ROUND_PIXEL
         // it would be better to have brush presets for working with pixels
-        var useAA = brushInfo.isAA && brushInfo.type != CPBrushInfo.B_ROUND_PIXEL;
+        let
+            useSubpixelShift = brushInfo.isAA && brushInfo.tip != CPBrushInfo.TIP_ROUND_PIXEL;
 
-        if (useAA) {
+        if (useSubpixelShift) {
             dab.width++;
             dab.height++;
         }
 
-        var
-            nx = x - dab.width / 2.0 + 0.5,
-            ny = y - dab.height / 2.0 + 0.5;
+        let
+            // The top left corner of the brush dab
+            dabX = x - dab.width / 2.0 + 0.5,
+            dabY = y - dab.height / 2.0 + 0.5,
 
-        // this is necessary as Java uses convert towards zero float to int conversion
-        if (nx < 0) {
-            nx -= 1;
-        }
-        if (ny < 0) {
-            ny -= 1;
-        }
+            // The pixel the top left corner lies in
+            dabXInt = Math.floor(dabX),
+            dabYInt = Math.floor(dabY);
 
-        if (useAA) {
+        if (useSubpixelShift) {
             var
-                dx = Math.abs(nx - ~~nx),
-                dy = Math.abs(ny - ~~ny);
+                subpixelX = dabX - dabXInt,
+                subpixelY = dabY - dabYInt;
             
-            dab.brush = getBrushWithAA(brushInfo, dx, dy);
+            dab.brush = createSubpixelShiftedBrush(brushInfo, subpixelX, subpixelY);
         } else {
             dab.brush = getBrush(brushInfo);
         }
 
-        dab.x = ~~nx;
-        dab.y = ~~ny;
+        dab.x = dabXInt;
+        dab.y = dabYInt;
 
         if (brushInfo.texture > 0.0 && this.texture != null) {
             // we need a brush bitmap that can be modified everytime

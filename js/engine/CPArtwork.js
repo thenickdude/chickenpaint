@@ -34,13 +34,14 @@ import CPUndo from "./CPUndo";
 import CPClip from "./CPClip";
 
 import CPColor from "../util/CPColor";
-import CPColorFloat from "../util/CPColorFloat";
 import CPRect from "../util/CPRect";
 import CPRandom from "../util/CPRandom";
 import CPTransform from "../util/CPTransform";
 import {setCanvasInterpolation} from "../util/CPPolyfill";
 
 import EventEmitter from "wolfy87-eventemitter";
+import {CPBrushTool,CPBrushToolEraser,CPBrushToolDodge,CPBrushToolBurn,CPBrushToolWatercolor,
+    CPBrushToolBlur,CPBrushToolSmudge,CPBrushToolOil} from "./CPBrushTool";
 
 /**
  * Capitalize the first letter of the string.
@@ -90,10 +91,6 @@ export default function CPArtwork(_width, _height) {
         EMPTY_BACKGROUND_COLOR = 0xFFFFFFFF,
         EMPTY_MASK_COLOR = 0,
         EMPTY_LAYER_COLOR = 0x00FFFFFF,
-        
-        BURN_CONSTANT = 260,
-        BLUR_MIN = 64,
-        BLUR_MAX = 1,
 
         THUMBNAIL_REBUILD_DELAY_MSEC = 1000;
 
@@ -118,6 +115,48 @@ export default function CPArtwork(_width, _height) {
          * @type {CPColorBmp}
          */
         undoImage = new CPColorBmp(_width, _height),
+
+        /**
+         * The region of the undoImage which is out of date with respect to the content of the layer, and needs updated
+         * with prepareForLayerUndo().
+         *
+         * @type {CPRect}
+         */
+        undoImageInvalidRegion = new CPRect(0, 0, _width, _height),
+
+        /**
+         * A copy of the current layer's mask that can be used for undo operations.
+         *
+         * @type {CPGreyBmp}
+         */
+        undoMask = new CPGreyBmp(_width, _height, 8),
+
+        /**
+         * The region of the undoMask which is out of date with respect to the content of the layer, and needs updated
+         * with prepareForLayerUndo().
+         *
+         * @type {CPRect}
+         */
+        undoMaskInvalidRegion = new CPRect(0, 0, _width, _height),
+
+        /**
+         * We use this buffer so we can customize the accumulation of the area painted during a brush stroke.
+         * (e.g. so that brushing over the same area multiple times during one stroke doesn't further increase opacity
+         * there).
+         *
+         * Normally we use it as a 16-bit opacity channel per pixel, but some brushes use the full 32-bits per pixel
+         * as ARGB.
+         *
+         * @type {CPGreyBmp}
+         */
+        strokeBuffer = new CPGreyBmp(_width, _height, 32),
+
+        /**
+         * The area of dirty data contained by strokeBuffer that should be merged by fusionLayers()
+         *
+         * @type {CPRect}
+         */
+        strokedRegion = new CPRect(0, 0, 0, 0),
 
         brushManager = new CPBrushManager(),
 
@@ -147,6 +186,12 @@ export default function CPArtwork(_width, _height) {
          */
         maskView = null,
 
+        /**
+         * Used by CPUndoPaint to keep track of the area of layer data that has been dirtied during a brush stroke
+         * (or other drawing operation) and should be saved for later undo.
+         */
+        paintUndoArea = new CPRect(0, 0, 0, 0),
+
         hasUnsavedChanges = false,
         
         curSelection = new CPRect(0, 0, 0, 0),
@@ -159,66 +204,20 @@ export default function CPArtwork(_width, _height) {
          */
         fusion = null,
 
-        /**
-         * The region of the undoImage which is out of date with respect to the content of the layer, and needs updated
-         * with prepareForLayerUndo().
-         *
-         * @type {CPRect}
-         */
-        undoImageInvalidRegion = new CPRect(0, 0, _width, _height),
-
-        /**
-         * A copy of the current layer's mask that can be used for undo operations.
-         *
-         * @type {CPGreyBmp}
-         */
-        undoMask = new CPGreyBmp(_width, _height, 8),
-
-        /**
-         * The region of the undoMask which is out of date with respect to the content of the layer, and needs updated
-         * with prepareForLayerUndo().
-         *
-         * @type {CPRect}
-         */
-        undoMaskInvalidRegion = new CPRect(0, 0, _width, _height),
-
-        /**
-         * We use this buffer so we can customize the accumulation of the area painted during a brush stroke.
-         * (e.g. so that brushing over the same area multiple times during one stroke doesn't further increase opacity
-         * there).
-         * 
-         * Normally we use it as a 16-bit opacity channel per pixel, but some brushes use the full 32-bits per pixel
-         * as ARGB.
-         *
-         * @type {CPGreyBmp}
-         */
-        strokeBuffer = new CPGreyBmp(_width, _height, 32),
-
-        /**
-         * The area of dirty data contained by strokeBuffer that should be merged by fusionLayers()
-         *
-         * @type {CPRect}
-         */
-        strokedRegion = new CPRect(0, 0, 0, 0),
-        
-        /**
-         * Used by CPUndoPaint to keep track of the area of layer data that has been dirtied during a brush stroke
-         * (or other drawing operation) and should be saved for later undo.
-         */
-        undoArea = new CPRect(0, 0, 0, 0),
-
         rnd = new CPRandom(),
 
         previewOperation = null,
         
         clipboard = null, // A CPClip
         undoList = [], redoList = [],
-        
+
+	    /**
+         * @type {?CPBrushInfo}
+         */
         curBrush = null,
 
         lastX = 0.0, lastY = 0.0, lastPressure = 0.0,
-        brushBuffer = null,
-        
+
         sampleAllLayers = false,
         lockAlpha = false,
 
@@ -696,1061 +695,66 @@ export default function CPArtwork(_width, _height) {
             addUndo(new CPActionChangeLayerName(layer, name));
         }
     };
-    
-    class CPBrushToolBase {
-        beginStroke(x, y, pressure) {
-            prepareForLayerPaintUndo();
-            undoArea.makeEmpty();
 
-            strokeBuffer.clearAll(0);
-            strokedRegion.makeEmpty();
-
-            lastX = x;
-            lastY = y;
-            lastPressure = pressure;
-
-            beginPaintingInteraction();
-
-            this.createAndPaintDab(x, y, pressure);
-        }
-
-        continueStroke(x, y, pressure) {
-            var
-                dist = Math.sqrt(((lastX - x) * (lastX - x) + (lastY - y) * (lastY - y))),
-                spacing = Math.max(curBrush.minSpacing, curBrush.curSize * curBrush.spacing);
-
-            if (dist > spacing) {
-                var
-                    nx = lastX, ny = lastY, np = lastPressure,
-                    df = (spacing - 0.001) / dist;
-
-                for (var f = df; f <= 1.0; f += df) {
-                    nx = f * x + (1.0 - f) * lastX;
-                    ny = f * y + (1.0 - f) * lastY;
-                    np = f * pressure + (1.0 - f) * lastPressure;
-                    this.createAndPaintDab(nx, ny, np);
-                }
-                lastX = nx;
-                lastY = ny;
-                lastPressure = np;
-            }
-        }
-
-        endStroke() {
-            undoArea.clipTo(that.getBounds());
-
-            mergeStrokeBuffer();
-
-            // Did we end up painting anything?
-            if (!undoArea.isEmpty()) {
-                addUndo(new CPUndoPaint());
-
-                /* Eagerly update the undo buffer for next time so we can avoid this lengthy
-                 * prepare at the beginning of a paint stroke
-                 */
-                prepareForLayerPaintUndo();
-            }
-
-            brushBuffer = null;
-
-            endPaintingInteraction();
-        }
-
-        /**
-         * Create a paint dab at the given position using the current brush, and paint it.
-         *
-         * @param x float
-         * @param y float
-         * @param pressure float
-         */
-        createAndPaintDab(x, y, pressure) {
-            curBrush.applyPressure(pressure);
-
-            if (curBrush.scattering > 0.0) {
-                x += rnd.nextGaussian() * curBrush.curScattering / 4.0;
-                y += rnd.nextGaussian() * curBrush.curScattering / 4.0;
-            }
-
-            var
-                dab = brushManager.getDab(x, y, curBrush);
-
-            this.paintDab(dab);
-        }
-
-        /**
-         * Paint a dab returned by brushManager.getDab().
-         *
-         * @param {CPBrushDab} dab
-         */
-        paintDab(dab) {
-            var
-                brushRect = new CPRect(0, 0, dab.width, dab.height),
-                imageRect = new CPRect(0, 0, dab.width, dab.height);
-
-            imageRect.translate(dab.x, dab.y);
-
-            that.getBounds().clipSourceDest(brushRect, imageRect);
-
-            if (imageRect.isEmpty()) {
-                // drawing entirely outside the canvas
-                return;
-            }
-
-            undoArea.union(imageRect);
-
-            /* The brush will either paint itself directly to the image, or paint itself to the strokeBuffer and update
-             * the strokedRegion (which will be merged to the image later by mergeStrokeBuffer(), perhaps in response
-             * to a call to fusionLayers())
-             */
-            this.paintDabImplementation(brushRect, imageRect, dab);
-
-            invalidateLayerPaint(curLayer, imageRect);
-        }
-    }
-
-    class CPBrushToolSimpleBrush extends CPBrushToolBase {
-
-	    /**
-         *
-         * @param {CPRect} brushRect - The rectangle of the dab which will be painted to the canvas
-         * @param {CPRect} imageRect - The area on the canvas that will be painted to
-         * @param {CPBrushDab} dab
-	     */
-        paintDabImplementation(brushRect, imageRect, dab) {
-            // FIXME: there should be no reference to a specific tool here
-            // create a new brush parameter instead
-            if (curBrush.isAirbrush) {
-                this.paintFlow(brushRect, imageRect, dab.brush, dab.width, Math.max(1, dab.alpha / 8));
-            } else if (curBrush.toolNb == ChickenPaint.T_PEN) {
-                this.paintFlow(brushRect, imageRect, dab.brush, dab.width, Math.max(1, dab.alpha / 2));
-            } else {
-                this.paintOpacity(brushRect, imageRect, dab.brush, dab.width, dab.alpha);
-            }
-        }
-
-        /**
-         * Blends the brush data from the current stroke onto the original (pre-stroke)
-         * image data (from undoData) and stores the result in destImage.
-         *
-         * @param {CPColorBmp} destImage - The layer to draw onto
-         * @param {CPColorBmp} undoImage - The original pixels for the layer before the stroke began
-         * @param {CPGreyBmp} strokeBuffer - Stroke data from the current stroke
-         * @param {CPRect} rect - Area to merge
-         * @param {int} color
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-
-                destData = destImage.data,
-
-                red = (color >> 16) & 0xFF,
-                green = (color >> 8) & 0xFF,
-                blue = color & 0xFF,
-
-                width = rect.getWidth() | 0,
-                height = rect.getHeight() | 0,
-
-                dstOffset = destImage.offsetOfPixel(rect.left, rect.top),
-                srcOffset = strokeBuffer.offsetOfPixel(rect.left, rect.top),
-
-                srcYStride = (strokeBuffer.width - width) | 0,
-                dstYStride = ((destImage.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0;
-
-            for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-                for (var x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        strokeAlpha = (strokeData[srcOffset] / 255) | 0;
-
-                    if (strokeAlpha > 0) {
-                        var
-                            destAlpha = undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
-
-                            newLayerAlpha = (strokeAlpha + destAlpha * (255 - strokeAlpha) / 255) | 0,
-                            realAlpha = (255 * strokeAlpha / newLayerAlpha) | 0,
-                            invAlpha = 255 - realAlpha;
-
-                        destData[dstOffset] = ((red * realAlpha + undoData[dstOffset] * invAlpha) / 255) & 0xff;
-                        destData[dstOffset + 1] = ((green * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) & 0xff;
-                        destData[dstOffset + 2] = ((blue * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) & 0xff;
-                        destData[dstOffset + 3] = newLayerAlpha;
-                    }
-                }
-            }
-        }
-
-        /**
-         * Blends the brush data from the current stroke (strokeBuffer) onto the original (pre-stroke) mask data (undoMask)
-         * and stores the result in destMask.
-         *
-         * @param {CPGreyBmp} destMask - The destination to write to
-         * @param {CPGreyBmp} undoMask - The original contents of the mask
-         * @param {CPGreyBmp} strokeBuffer - Data from the current stroke
-         * @param {CPRect} rect - Area to merge
-         * @param {int} color - Intensity to paint (0-255)
-         */
-        mergeOntoMask(destMask, undoMask, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoMask.data,
-                destData = destMask.data,
-
-                width = rect.getWidth() | 0,
-                height = rect.getHeight() | 0,
-
-                dstOffset = destMask.offsetOfPixel(rect.left, rect.top),
-                srcOffset = strokeBuffer.offsetOfPixel(rect.left, rect.top),
-
-                srcYStride = (strokeBuffer.width - width) | 0,
-                dstYStride = (destMask.width - width) | 0;
-
-            for (var y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-                for (var x = 0; x < width; x++, srcOffset++, dstOffset++) {
-                    var
-                        strokeAlpha = (strokeData[srcOffset] / 255) | 0;
-
-                    if (strokeAlpha > 0) {
-                        var
-                            invAlpha = 255 - strokeAlpha;
-
-                        destData[dstOffset] = (color * strokeAlpha + undoData[dstOffset] * invAlpha) / 255;
-                    }
-                }
-            }
-        }
-
-        /**
-         * The shape of the brush is combined with the alpha in the strokeBuffer with a simple max()
-         * operation. Effectively, the brush just sets the opacity of the buffer.
-         *
-         * Painting the same area multiple times during a single stroke does not increase the opacity.
-         *
-         * @param {CPRect} brushRect
-         * @param {CPRect} imageRect
-         * @param {Uint8Array} brush
-         * @param {int} brushWidth
-         * @param {int} alpha
-         */
-        paintOpacity(brushRect, imageRect, brush, brushWidth, alpha) {
-            var
-                strokeData = strokeBuffer.data,
-
-                brushOffset = brushRect.left + brushRect.top * brushWidth,
-                imageOffset = strokeBuffer.offsetOfPixel(imageRect.left, imageRect.top),
-
-                imageWidth = imageRect.getWidth(),
-
-                srcYStride = brushWidth - imageWidth,
-                dstYStride = that.width - imageWidth;
-
-            alpha = Math.min(255, alpha);
-
-            strokedRegion.union(imageRect);
-
-            for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, imageOffset += dstYStride) {
-                for (var x = 0; x < imageWidth; x++, brushOffset++, imageOffset++) {
-                    strokeData[imageOffset] = Math.max(brush[brushOffset] * alpha, strokeData[imageOffset]);
-                }
-            }
-        }
-
-        /**
-         * If the brush covers the same area multiple times, ink builds up until the area becomes opaque.
-         *
-         * @param {CPRect} brushRect
-         * @param {CPRect} imageRect
-         * @param {Uint8Array} brush
-         * @param {int} brushWidth - Width of the brush buffer
-         * @param {int} alpha
-         */
-        paintFlow(brushRect, imageRect, brush, brushWidth, alpha) {
-            var
-                strokeData = strokeBuffer.data,
-
-                brushOffset = brushRect.left + brushRect.top * brushWidth,
-                strokeOffset = strokeBuffer.offsetOfPixel(imageRect.left, imageRect.top),
-
-                dstWidth = imageRect.getWidth(),
-
-                srcYStride = brushWidth - dstWidth,
-                dstYStride = that.width - dstWidth;
-
-            strokedRegion.union(imageRect);
-
-            for (var y = imageRect.top; y < imageRect.bottom; y++, brushOffset += srcYStride, strokeOffset += dstYStride) {
-                for (var x = 0; x < dstWidth; x++, brushOffset++, strokeOffset++) {
-                    var
-                        brushAlpha = brush[brushOffset] * alpha;
-
-                    if (brushAlpha != 0) {
-                        strokeData[strokeOffset] = Math.min(255 * 255, strokeData[strokeOffset] + (255 - strokeData[strokeOffset] / 255) * brushAlpha / 255);
-                    }
-                }
-            }
-        }
-    }
-
-    class CPBrushToolEraser extends CPBrushToolSimpleBrush {
-	    /**
-         * @override
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-                destData = destImage.data;
-
-            for (var y = rect.top; y < rect.bottom; y++) {
-                var
-                    dstOffset = destImage.offsetOfPixel(rect.left, y) + CPColorBmp.ALPHA_BYTE_OFFSET,
-                    srcOffset = strokeBuffer.offsetOfPixel(rect.left, y);
-
-                for (var x = rect.left; x < rect.right; x++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        opacityAlpha = (strokeData[srcOffset++] / 255) | 0;
-
-                    if (opacityAlpha > 0) {
-                        var
-                            destAlpha = undoData[dstOffset],
-                            realAlpha = destAlpha * (255 - opacityAlpha) / 255;
-
-                        destData[dstOffset] = realAlpha;
-                    }
-                }
-            }
-        }
-    }
-
-    class CPBrushToolDodge extends CPBrushToolSimpleBrush {
-	    /**
-         * @override
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-                destImageData = destImage.data;
-
-            for (var y = rect.top; y < rect.bottom; y++) {
-                var
-                    dstOffset = destImage.offsetOfPixel(rect.left, y),
-                    srcOffset = strokeBuffer.offsetOfPixel(rect.left, y);
-
-                for (var x = rect.left; x < rect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        opacityAlpha = (strokeData[srcOffset] / 255) | 0;
-
-                    if (opacityAlpha > 0 && undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
-                        opacityAlpha += 255;
-
-                        for (var i = 0; i < 3; i++) {
-                            var channel = (undoData[dstOffset + i] * opacityAlpha / 255) | 0;
-
-                            if (channel > 255) {
-                                channel = 255;
-                            }
-
-                            destImageData[dstOffset + i] = channel;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    class CPBrushToolBurn extends CPBrushToolSimpleBrush {
-	    /**
-         * @override
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-                destImageData = destImage.data;
-
-            for (var y = rect.top; y < rect.bottom; y++) {
-                var
-                    dstOffset = destImage.offsetOfPixel(rect.left, y),
-                    srcOffset = strokeBuffer.offsetOfPixel(rect.left, y);
-
-                for (var x = rect.left; x < rect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        strokeAlpha = (strokeData[srcOffset] / 255) | 0;
-
-                    if (strokeAlpha > 0 && undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
-                        for (var i = 0; i < 3; i++) {
-                            var channel = undoData[dstOffset + i];
-
-                            channel = (channel - (BURN_CONSTANT - channel) * strokeAlpha / 255) | 0;
-
-                            if (channel < 0) {
-                                channel = 0;
-                            }
-
-                            destImageData[dstOffset + i] = channel;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    class CPBrushToolBlur extends CPBrushToolSimpleBrush {
-	    /**
-         * @override
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-                destImageData = destImage.data,
-
-                destYStride = undoImage.width * CPColorBmp.BYTES_PER_PIXEL,
-
-                r, g, b, a;
-
-            function addSample(sampleOffset) {
-                r += undoData[sampleOffset + CPColorBmp.RED_BYTE_OFFSET];
-                g += undoData[sampleOffset + CPColorBmp.GREEN_BYTE_OFFSET];
-                b += undoData[sampleOffset + CPColorBmp.BLUE_BYTE_OFFSET];
-                a += undoData[sampleOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
-            }
-
-            for (var y = rect.top; y < rect.bottom; y++) {
-                var
-                    destOffset = undoImage.offsetOfPixel(rect.left, y),
-                    srcOffset = strokeBuffer.offsetOfPixel(rect.left, y);
-
-                for (var x = rect.left; x < rect.right; x++, destOffset += CPColorBmp.BYTES_PER_PIXEL, srcOffset++) {
-                    var
-                        strokeAlpha = (strokeData[srcOffset] / 255) | 0;
-
-                    if (strokeAlpha > 0) {
-                        var
-                            blur = (BLUR_MIN + (BLUR_MAX - BLUR_MIN) * strokeAlpha / 255) | 0,
-
-                            sum = blur + 4;
-
-                        r = blur * undoData[destOffset + CPColorBmp.RED_BYTE_OFFSET];
-                        g = blur * undoData[destOffset + CPColorBmp.GREEN_BYTE_OFFSET];
-                        b = blur * undoData[destOffset + CPColorBmp.BLUE_BYTE_OFFSET];
-                        a = blur * undoData[destOffset + CPColorBmp.ALPHA_BYTE_OFFSET];
-
-                        addSample(y > 0 ? destOffset - destYStride : destOffset);
-                        addSample(y < undoImage.height - 1 ? destOffset + destYStride : destOffset);
-                        addSample(x > 0 ? destOffset - CPColorBmp.BYTES_PER_PIXEL : destOffset);
-                        addSample(x < undoImage.width - 1 ? destOffset + CPColorBmp.BYTES_PER_PIXEL : destOffset);
-
-                        a /= sum;
-                        r /= sum;
-                        g /= sum;
-                        b /= sum;
-
-                        destImageData[destOffset + CPColorBmp.RED_BYTE_OFFSET] = r | 0;
-                        destImageData[destOffset + CPColorBmp.GREEN_BYTE_OFFSET] = g | 0;
-                        destImageData[destOffset + CPColorBmp.BLUE_BYTE_OFFSET] = b | 0;
-                        destImageData[destOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = a | 0;
-                    }
-                }
-            }
-        }
-    }
-    
     /**
-     * Brushes derived from this class use the opacity buffer as a simple alpha layer (32-bit pixels in ARGB order).
+     * Paint a dab of paint to the canvas using the current brush.
      *
-     * The undoBuffer (pre-stroke image data) is restored to the layer, then the pixels from opacityData are blended
-     * on top of that.
+     * @param {number} x - Position of brush tip
+     * @param {number} y - Position of brush tip
+     * @param {number} pressure - Pen pressure (tablets).
      */
-    class CPBrushToolDirectBrush extends CPBrushToolSimpleBrush {
-	    /**
-         * @override
-         */
-        mergeOntoImage(destImage, undoImage, strokeBuffer, rect, color) {
-            var
-                strokeData = strokeBuffer.data,
-                undoData = undoImage.data,
-                destImageData = destImage.data,
+    this.paintDab = function(x, y, pressure) {
+        curBrush.applyPressure(pressure);
 
-                srcOffset = strokeBuffer.offsetOfPixel(rect.left, rect.top),
-                dstOffset = destImage.offsetOfPixel(rect.left, rect.top),
-
-                width = rect.getWidth() | 0,
-                height = rect.getHeight() | 0,
-
-                srcYStride = (strokeBuffer.width - width) | 0,
-                dstYStride = ((destImage.width - width) * CPColorBmp.BYTES_PER_PIXEL) | 0,
-
-                x, y;
-
-            for (y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
-                for (x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        color1 = strokeData[srcOffset],
-                        alpha1 = color1 >>> 24;
-
-                    if (alpha1 == 0) {
-                        continue;
-                    }
-
-                    var
-                        alpha2 = undoData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
-                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-
-                    if (newAlpha > 0) {
-                        var
-                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
-                            invAlpha = 255 - realAlpha;
-
-                        destImageData[dstOffset] = ((((color1 >> 16) & 0xFF) * realAlpha + undoData[dstOffset] * invAlpha) / 255) | 0;
-                        destImageData[dstOffset + 1] = ((((color1 >> 8) & 0xFF) * realAlpha + undoData[dstOffset + 1] * invAlpha) / 255) | 0;
-                        destImageData[dstOffset + 2] = (((color1 & 0xFF) * realAlpha + undoData[dstOffset + 2] * invAlpha) / 255) | 0;
-                        destImageData[dstOffset + 3] = newAlpha;
-                    }
-                }
-            }
+        if (curBrush.scattering > 0.0) {
+            x += rnd.nextGaussian() * curBrush.curScattering / 4.0;
+            y += rnd.nextGaussian() * curBrush.curScattering / 4.0;
         }
-    }
-    
-    function CPBrushToolWatercolor() {
-        const
-            WCMEMORY = 50,
-            WXMAXSAMPLERADIUS = 64;
+
+        let
+            brushTool = paintingModes[curBrush.brushMode],
+
+            dab = brushManager.getDab(x, y, curBrush),
+
+            brushRect = new CPRect(0, 0, dab.width, dab.height),
+            imageRect = new CPRect(0, 0, dab.width, dab.height);
+
+        imageRect.translate(dab.x, dab.y);
+
+        that.getBounds().clipSourceDest(brushRect, imageRect);
+
+        if (imageRect.isEmpty()) {
+            // drawing entirely outside the canvas
+            return;
+        }
+
+        paintUndoArea.union(imageRect);
 
         var
-            previousSamples = [];
+            destImage = maskEditingMode ? curLayer.mask : curLayer.image,
+            sampleImage = sampleAllLayers && !maskEditingMode ? fusion : destImage;
 
-        /**
-         * Average out a bunch of samples around the given pixel (x, y).
-         * 
-         * dx, dy controls the spread of the samples.
-         * 
-         * @returns CPColorFloat
+        /* The brush will either paint itself directly to the image, or paint itself to the strokeBuffer and update
+         * the strokedRegion (which will be merged to the image later by mergeStrokeBuffer(), perhaps in response
+         * to a call to fusionLayers())
          */
-        function sampleColor(x, y, dx, dy) {
-            var
-                samples = [],
-                
-                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image;
-            
-            x = x | 0;
-            y = y | 0;
+        brushTool.paintDab(destImage, imageRect, sampleImage, curBrush, brushRect, dab, curColor);
 
-            samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, y)));
-
-            for (var r = 0.25; r < 1.001; r += .25) {
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * dx), y)));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * dx), y)));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, ~~(y + r * dy))));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(x, ~~(y - r * dy))));
-
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x + r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y + r * 0.7 * dy))));
-                samples.push(CPColorFloat.createFromInt(imageToSample.getPixel(~~(x - r * 0.7 * dx), ~~(y - r * 0.7 * dy))));
-            }
-
-            var
-                average = new CPColorFloat(0, 0, 0);
-            
-            for (var i = 0; i < samples.length; i++) {
-                var
-                    sample = samples[i];
-                
-                average.r += sample.r;
-                average.g += sample.g;
-                average.b += sample.b;
-            }
-            
-            average.r /= samples.length;
-            average.g /= samples.length;
-            average.b /= samples.length;
-
-            return average;
+        if (lockAlpha && !maskEditingMode && brushTool.noMergePhase) {
+            // This tool painted to the image during paintDab(), so we have to apply image alpha here instead of during merge
+            restoreImageAlpha(destImage, imageRect);
         }
 
-	    /**
-         * Blend the brush stroke with full color into the strokeBuffer
-         *
-         * @param {CPRect} srcRect
-         * @param {CPRect} dstRect
-         * @param {Uint8Array} brush
-         * @param {int} brushWidth
-         * @param {int} alpha
-         * @param {int} color1
-	     */
-        function paintDirect(srcRect, dstRect, brush, brushWidth, alpha, color1) {
-            var
-                strokeData = strokeBuffer.data,
-
-                brushY = srcRect.top;
-
-            strokedRegion.union(dstRect);
-
-            for (var y = dstRect.top; y < dstRect.bottom; y++, brushY++) {
-                var
-                    srcOffset = srcRect.left + brushY * brushWidth,
-                    dstOffset = strokeBuffer.offsetOfPixel(dstRect.left, y);
-                
-                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset++) {
-                    var 
-                        alpha1 = ((brush[srcOffset] & 0xff) * alpha / 255) | 0;
-                    
-                    if (alpha1 <= 0) {
-                        continue;
-                    }
-
-                    var
-                        color2 = strokeData[dstOffset],
-                        alpha2 = color2 >>> 24,
-
-                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-                    
-                    if (newAlpha > 0) {
-                        var 
-                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
-                            invAlpha = 255 - realAlpha;
-
-                        // The usual alpha blending formula C = A * alpha + B * (1 - alpha)
-                        // has to rewritten in the form C = A + (1 - alpha) * B - (1 - alpha) *A
-                        // that way the rounding up errors won't cause problems
-
-                        var 
-                            newColor = newAlpha << 24
-                                | ((color1 >>> 16 & 0xff) + (((color2 >>> 16 & 0xff) * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
-                                | ((color1 >>> 8 & 0xff) + (((color2 >>> 8 & 0xff) * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
-                                | ((color1 & 0xff) + (((color2 & 0xff) * invAlpha - (color1 & 0xff) * invAlpha) / 255));
-
-                        strokeData[dstOffset] = newColor;
-                    }
-                }
-            }
-        }
-        
-        this.beginStroke = function(x, y, pressure) {
-            previousSamples = null;
-
-            CPBrushToolDirectBrush.prototype.beginStroke.call(this, x, y, pressure);
-        };
-
-        this.paintDabImplementation = function(srcRect, dstRect, dab) {
-            if (previousSamples == null) {
-                // Seed the previousSamples list to capacity with a bunch of copies of one sample to get us started
-                var 
-                    startColor = sampleColor(
-                        ~~((dstRect.left + dstRect.right) / 2),
-                        ~~((dstRect.top + dstRect.bottom) / 2), 
-                        Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getWidth() * 2 / 6)), 
-                        Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getHeight() * 2 / 6))
-                    );
-
-                previousSamples = [];
-                
-                for (let i = 0; i < WCMEMORY; i++) {
-                    previousSamples.push(startColor);
-                }
-            }
-            
-            let
-                wcColor = new CPColorFloat(0, 0, 0);
-            
-            for (let i = 0; i < previousSamples.length; i++) {
-                var
-                    sample = previousSamples[i];
-                
-                wcColor.r += sample.r;
-                wcColor.g += sample.g;
-                wcColor.b += sample.b;
-            }
-            wcColor.r /= previousSamples.length;
-            wcColor.g /= previousSamples.length;
-            wcColor.b /= previousSamples.length;
-
-            // resaturation
-            wcColor.mixWith(CPColorFloat.createFromInt(curColor), curBrush.resat * curBrush.resat);
-
-            var
-                newColor = wcColor.toInt();
-
-            // bleed
-            wcColor.mixWith(
-                sampleColor(
-                    (dstRect.left + dstRect.right) / 2,
-                    (dstRect.top + dstRect.bottom) / 2,
-                    Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getWidth() * 2 / 6)),
-                    Math.max(1, Math.min(WXMAXSAMPLERADIUS, dstRect.getHeight() * 2 / 6))
-                ), 
-                curBrush.bleed
-            );
-
-            previousSamples.push(wcColor);
-            previousSamples.shift();
-
-            paintDirect(srcRect, dstRect, dab.brush, dab.width, Math.max(1, dab.alpha / 4), newColor);
-
+        if (brushTool.wantsOutputAsInput) {
             mergeStrokeBuffer();
-            
-            if (sampleAllLayers) {
-                that.fusionLayers();
-            }
-        };
-    }
-    
-    CPBrushToolWatercolor.prototype = Object.create(CPBrushToolDirectBrush.prototype);
-    CPBrushToolWatercolor.prototype.constructor = CPBrushToolWatercolor;
-    
-    class CPBrushToolOil extends CPBrushToolDirectBrush {
-        static oilAccumBuffer(srcRect, dstRect, buffer, bufferWidth, alpha) {
-            var
-                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image,
 
-                bufferY = srcRect.top;
-            
-            for (var y = dstRect.top; y < dstRect.bottom; y++, bufferY++) {
-                var 
-                    srcOffset = srcRect.left + bufferY * bufferWidth,
-                    dstOffset = imageToSample.offsetOfPixel(dstRect.left, y);
-                
-                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        alpha1 = (imageToSample.data[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] * alpha / 255) | 0;
-                    
-                    if (alpha1 <= 0) {
-                        continue;
-                    }
-
-                    var
-                        color2 = buffer[srcOffset],
-                        alpha2 = color2 >>> 24,
-
-                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-                    
-                    if (newAlpha > 0) {
-                        var 
-                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
-                            invAlpha = 255 - realAlpha,
-                            
-                            color1Red = imageToSample.data[dstOffset + CPColorBmp.RED_BYTE_OFFSET],
-                            color1Green = imageToSample.data[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                            color1Blue = imageToSample.data[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-
-                            newColor = newAlpha << 24
-                                | (color1Red + (((color2 >>> 16 & 0xff) * invAlpha - color1Red * invAlpha) / 255)) << 16
-                                | (color1Green + (((color2 >>> 8 & 0xff) * invAlpha - color1Green * invAlpha) / 255)) << 8
-                                | (color1Blue + (((color2 & 0xff) * invAlpha - color1Blue * invAlpha) / 255));
-
-                        buffer[srcOffset] = newColor;
-                    }
-                }
-            }
-        }
-
-        static oilResatBuffer(srcRect, dstRect, buffer, bufferWidth, alpha1, color1) {
-            var
-                bufferY = srcRect.top;
-            
-            if (alpha1 <= 0) {
-                return;
-            }
-            
-            for (var y = dstRect.top; y < dstRect.bottom; y++, bufferY++) {
-                var 
-                    srcOffset = srcRect.left + bufferY * bufferWidth;
-                
-                for (var x = dstRect.left; x < dstRect.right; x++, srcOffset++) {
-                    var
-                        color2 = buffer[srcOffset],
-                        alpha2 = (color2 >>> 24),
-    
-                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-                    
-                    if (newAlpha > 0) {
-                        var 
-                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
-                            invAlpha = 255 - realAlpha,
-                            
-                            newColor = newAlpha << 24
-                                | ((color1 >>> 16 & 0xff) + (((color2 >>> 16 & 0xff) * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
-                                | ((color1 >>> 8 & 0xff) + (((color2 >>> 8 & 0xff) * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
-                                | ((color1 & 0xff) + (((color2 & 0xff) * invAlpha - (color1 & 0xff) * invAlpha) / 255));
-                        
-                        buffer[srcOffset] = newColor;
-                    }
-                }
-            }
-        }
-
-        static oilPasteBuffer(srcRect, dstRect, buffer, brush, brushWidth, alpha) {
-            var
-                strokeData = strokeBuffer.data,
-                destImage = curLayer.image,
-                destImageData = destImage.data,
-    
-                brushY = srcRect.top;
-
-            strokedRegion.union(dstRect);
-            
-            for (var y = dstRect.top; y < dstRect.bottom; y++, brushY++) {
-                var 
-                    bufferOffset = srcRect.left + brushY * brushWidth, // Brush buffer is 1 integer per pixel
-                    strokeOffset = dstRect.left + y * that.width, // Opacity buffer is 1 integer per pixel
-                    layerOffset = destImage.offsetOfPixel(dstRect.left, y); // 4 bytes per pixel
-                
-                for (var x = dstRect.left; x < dstRect.right; x++, bufferOffset++, layerOffset += CPColorBmp.BYTES_PER_PIXEL, strokeOffset++) {
-                    var 
-                        color1 = buffer[bufferOffset],
-                        alpha1 = ((color1 >>> 24) * (brush[bufferOffset] & 0xff) * alpha / (255 * 255)) | 0;
-                    
-                    if (alpha1 <= 0) {
-                        continue;
-                    }
-
-                    var
-                        alpha2 = destImageData[layerOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
-
-                        newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
-                    
-                    if (newAlpha > 0) {
-                        var 
-                            color2Red = destImageData[layerOffset + CPColorBmp.RED_BYTE_OFFSET],
-                            color2Green = destImageData[layerOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                            color2Blue = destImageData[layerOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-                            
-                            realAlpha = (alpha1 * 255 / newAlpha) | 0,
-                            invAlpha = 255 - realAlpha,
-
-                            newColor = newAlpha << 24
-                                | ((color1 >>> 16 & 0xff) + ((color2Red * invAlpha - (color1 >>> 16 & 0xff) * invAlpha) / 255)) << 16
-                                | ((color1 >>> 8 & 0xff) + ((color2Green * invAlpha - (color1 >>> 8 & 0xff) * invAlpha) / 255)) << 8
-                                | ((color1 & 0xff) + ((color2Blue * invAlpha - (color1 & 0xff) * invAlpha) / 255));
-
-                        strokeData[strokeOffset] = newColor;
-                    }
-                }
-            }
-        }
-        
-        paintDabImplementation(brushRect, imageRect, dab) {
-            if (brushBuffer == null) {
-                brushBuffer = new Uint32Array(dab.width * dab.height); // Initialized to 0 for us by the browser
-
-                CPBrushToolOil.oilAccumBuffer(brushRect, imageRect, brushBuffer, dab.width, 255);
-            } else {
-                CPBrushToolOil.oilResatBuffer(brushRect, imageRect, brushBuffer, dab.width, ~~((curBrush.resat <= 0.0) ? 0 : Math.max(1, (curBrush.resat * curBrush.resat) * 255)), curColor & 0xFFFFFF);
-                CPBrushToolOil.oilPasteBuffer(brushRect, imageRect, brushBuffer, dab.brush, dab.width, dab.alpha);
-                CPBrushToolOil.oilAccumBuffer(brushRect, imageRect, brushBuffer, dab.width, ~~(curBrush.bleed * 255));
-            }
-
-            // We need our stroke to be written through to the layer for us to sample next cycle
-            mergeStrokeBuffer();
-            
-            if (sampleAllLayers) {
-                that.fusionLayers();
-            }
-        }
-    }
-
-    class CPBrushToolSmudge extends CPBrushToolDirectBrush {
-        
-        /**
-         * Pick up paint from the canvas and store into the given brush buffer.
-         *
-         * @param {CPRect} imageRect - Rectangle of the canvas that our brush covers
-         * @param {CPRect} brushRect - The corresponding rectangle within the brush buffer
-         * @param {Uint32Array} brush - Buffer for accumulating paint
-         * @param {int} brushWidth - Width of the brush buffer
-         * @param {int} alpha - Alpha of brush (0-255)
-         */
-        static sampleFromImage(brushRect, imageRect, brush, brushWidth, alpha) {
-            let
-                imageToSample = sampleAllLayers ? fusion : that.getActiveLayer().image,
-                invAlpha = 255 - alpha;
-
-            if (alpha == 255) {
-                // Brush doesn't sample from the image
-                return;
-            }
-
-            // Blend pixels (in the area where the brush overlaps the canvas) into the brush buffer
-            for (let imageY = imageRect.top, bufferY = brushRect.top; imageY < imageRect.bottom; imageY++, bufferY++) {
-                let
-                    brushOffset = bufferY * brushWidth + brushRect.left,
-                    imageOffset = imageToSample.offsetOfPixel(imageRect.left, imageY);
-                
-                for (let imageX = imageRect.left; imageX < imageRect.right; imageX++, brushOffset++, imageOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    let
-                        sampleRed = imageToSample.data[imageOffset + CPColorBmp.RED_BYTE_OFFSET],
-                        sampleGreen = imageToSample.data[imageOffset + CPColorBmp.GREEN_BYTE_OFFSET],
-                        sampleBlue = imageToSample.data[imageOffset + CPColorBmp.BLUE_BYTE_OFFSET],
-                        sampleAlpha = imageToSample.data[imageOffset + CPColorBmp.ALPHA_BYTE_OFFSET],
-                    
-                        oldBrushColor = brush[brushOffset],
-
-                        newBrushColor =
-                            ((sampleAlpha * invAlpha + (oldBrushColor >>> 24 & 0xff) * alpha) / 255) << 24 & 0xff000000
-                            | ((sampleRed * invAlpha + (oldBrushColor >>> 16 & 0xff) * alpha) / 255) << 16 & 0xff0000
-                            | ((sampleGreen * invAlpha + (oldBrushColor >>> 8 & 0xff) * alpha) / 255) << 8 & 0xff00
-                            | ((sampleBlue * invAlpha + (oldBrushColor & 0xff) * alpha) / 255) & 0xff;
-
-                    /* If low-alpha rounding caused us to not even update the brush color, take a 1-unit step
-                     * in the direction of the sample color.
-                     */
-                    if (newBrushColor == oldBrushColor) {
-                        let
-                            newBrushRed   = (newBrushColor & 0xff0000) >> 16,
-                            newBrushGreen = (newBrushColor & 0x00ff00) >> 8,
-                            newBrushBlue  =  newBrushColor & 0x0000ff;
-
-                        if (sampleRed > newBrushRed) {
-                            newBrushColor += 1 << 16;
-                        } else if (sampleRed < newBrushRed) {
-                            newBrushColor -= 1 << 16;
-                        }
-
-                        if (sampleGreen > newBrushGreen) {
-                            newBrushColor += 1 << 8;
-                        } else if (sampleGreen < newBrushGreen) {
-                            newBrushColor -= 1 << 8;
-                        }
-
-                        if (sampleBlue > newBrushBlue) {
-                            newBrushColor += 1;
-                        } else if (sampleBlue < newBrushBlue) {
-                            newBrushColor -= 1;
-                        }
-                    }
-
-                    brush[brushOffset] = newBrushColor;
-                }
-            }
-
-            /*
-             * The areas of the brush buffer that lay outside the canvas haven't been filled yet. Stretch the pixels
-             * around the edge of the area we did sample to fill in the gaps.
-             */
-
-            // First stretch the source rect pixels out horizontally to fill W and E areas
-            if (brushRect.left > 0) {
-                for (let y = brushRect.top; y < brushRect.bottom; y++) {
-                    let
-                        rowStartOffset = y * brushWidth,
-
-                        dstOffset = rowStartOffset,
-                        fillColor = brush[rowStartOffset + brushRect.left];
-                    
-                    for (let x = 0; x < brushRect.left; x++) {
-                        brush[dstOffset++] = fillColor;
-                    }
-                }
-            }
-
-            if (brushRect.right < brushWidth) {
-                for (let y = brushRect.top; y < brushRect.bottom; y++) {
-                    let
-                        rowStartOffset = y * brushWidth,
-
-                        dstOffset = rowStartOffset + brushRect.right,
-                        fillColor = brush[dstOffset - 1];
-                    
-                    for (let x = brushRect.right; x < brushWidth; x++) {
-                        brush[dstOffset++] = fillColor;
-                    }
-                }
-            }
-
-            // Then stretch those rows upwards and downwards (to fill NW, N, NE, SW, S, SE areas)
-            let
-                dstOffset = 0;
-
-            for (let y = 0; y < brushRect.top; y++) {
-                let
-                    srcOffset = brushRect.top * brushWidth;
-                
-                for (let x = 0; x < brushWidth; x++, srcOffset++, dstOffset++) {
-                    brush[dstOffset] = brush[srcOffset];
-                }
-            }
-
-            dstOffset = brushRect.bottom * brushWidth;
-
-            for (let y = brushRect.bottom; y < brushWidth; y++) {
-                let
-                    srcOffset = (brushRect.bottom - 1) * brushWidth;
-                
-                for (let x = 0; x < brushWidth; x++, srcOffset++, dstOffset++) {
-                    brush[dstOffset] = brush[srcOffset];
-                }
-            }
-        }
-
-        /**
-         * Write the smudge buffer onto the layer's image.
-         *
-         * @param {CPColorBmp} destImage
-         * @param {CPRect} brushRect
-         * @param {CPRect} imageRect
-         * @param {Uint32Array} brushPaintBuffer
-         * @param {Uint8Array} brushShape
-         * @param {int} brushWidth
-         */
-        static paintToImage(destImage, brushRect, imageRect, brushPaintBuffer, brushShape, brushWidth) {
-            var
-                brushY = brushRect.top,
-                destImageData = destImage.data;
-            
-            for (var y = imageRect.top; y < imageRect.bottom; y++, brushY++) {
-                var 
-                    srcOffset = brushRect.left + brushY * brushWidth,
-                    dstOffset = destImage.offsetOfPixel(imageRect.left, y);
-                
-                for (var x = imageRect.left; x < imageRect.right; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
-                    var
-                        paintColor = brushPaintBuffer[srcOffset],
-                        opacityAlpha = (paintColor >>> 24) * (brushShape[srcOffset] & 0xff) / 255;
-                    
-                    if (opacityAlpha > 0) {
-                        destImageData[dstOffset + CPColorBmp.RED_BYTE_OFFSET] = (paintColor >> 16) & 0xff;
-                        destImageData[dstOffset + CPColorBmp.GREEN_BYTE_OFFSET] = (paintColor >> 8) & 0xff;
-                        destImageData[dstOffset + CPColorBmp.BLUE_BYTE_OFFSET] = paintColor & 0xff;
-                        destImageData[dstOffset + CPColorBmp.ALPHA_BYTE_OFFSET] = (paintColor >> 24) & 0xff;
-                    }
-                }
-            }
-        }
-        
-        /**
-         * @override
-         * @param {CPRect} brushRect
-         * @param {CPRect} imageRect
-         * @param {CPBrushDab} dab
-         */
-        paintDabImplementation(brushRect, imageRect, dab) {
-            if (brushBuffer == null) {
-                brushBuffer = new Uint32Array(dab.width * dab.height);
-                CPBrushToolSmudge.sampleFromImage(brushRect, imageRect, brushBuffer, dab.width, 0);
-            } else {
-                CPBrushToolSmudge.sampleFromImage(brushRect, imageRect, brushBuffer, dab.width, dab.alpha);
-                CPBrushToolSmudge.paintToImage(curLayer.image, brushRect, imageRect, brushBuffer, dab.brush, dab.width);
-
-                if (lockAlpha) {
-                    restoreImageAlpha(curLayer.image, imageRect);
-                }
-            }
-
-            if (sampleAllLayers) {
+            if (sampleAllLayers && !maskEditingMode) {
                 that.fusionLayers();
             }
         }
 
-	    /**
-         * A no-op since our paint implementation paints directly to the underlying image during the stroke.
-         *
-         * @override
-	     */
-        mergeOntoImage(destImage, undoImage, opacityBuffer, rect, color) {
-        }
-    }
+        invalidateLayerPaint(curLayer, imageRect);
+    };
 
     this.getDefaultLayerName = function(isGroup) {
         var
@@ -1782,38 +786,31 @@ export default function CPArtwork(_width, _height) {
     }
     
     /**
-     * Merge the brush buffer from the current drawing operation to the active layer.*
+     * Merge the brushstroke buffer from the current drawing operation to the active layer.
      */
     function mergeStrokeBuffer() {
         if (!strokedRegion.isEmpty()) {
-            var
-                color;
-
             if (maskEditingMode) {
                 var
                     destMask = curLayer.mask;
 
                 // Can't erase on masks, so just paint black instead
-                if (curBrush.paintMode == CPBrushInfo.M_ERASE) {
-                    paintingModes[CPBrushInfo.M_PAINT].mergeOntoMask(destMask, undoMask, strokeBuffer, strokedRegion, 0xFF000000);
+                if (curBrush.brushMode == CPBrushInfo.BRUSH_MODE_ERASE) {
+                    paintingModes[CPBrushInfo.BRUSH_MODE_PAINT].mergeOntoMask(destMask, undoMask, 0xFF000000);
                 } else {
-                    color = curColor & 0xFF;
-
-                    paintingModes[curBrush.paintMode].mergeOntoMask(destMask, undoMask, strokeBuffer, strokedRegion, color);
+                    paintingModes[curBrush.brushMode].mergeOntoMask(destMask, undoMask, curColor & 0xFF);
                 }
             } else {
                 var
                     destImage = curLayer.image;
 
-                color = curColor;
-
-                if (curBrush.paintMode == CPBrushInfo.M_ERASE && lockAlpha) {
+                if (curBrush.brushMode == CPBrushInfo.BRUSH_MODE_ERASE && lockAlpha) {
                     // We're erasing with locked alpha, so the only sensible thing to do is paint white...
 
                     // FIXME: it would be nice to be able to set the paper color
-                    paintingModes[CPBrushInfo.M_PAINT].mergeOntoImage(destImage, undoImage, strokeBuffer, strokedRegion, EMPTY_LAYER_COLOR);
+                    paintingModes[CPBrushInfo.BRUSH_MODE_PAINT].mergeOntoImage(destImage, undoImage, EMPTY_LAYER_COLOR);
                 } else {
-                    paintingModes[curBrush.paintMode].mergeOntoImage(destImage, undoImage, strokeBuffer, strokedRegion, color);
+                    paintingModes[curBrush.brushMode].mergeOntoImage(destImage, undoImage, curColor);
                 }
 
                 if (lockAlpha) {
@@ -2080,8 +1077,11 @@ export default function CPArtwork(_width, _height) {
      * buffer won't contain any data from the new layer to begin with).
      */
     function invalidateUndoBuffers() {
-        undoImageInvalidRegion = that.getBounds();
-        undoMaskInvalidRegion = that.getBounds();
+        var
+            bounds = that.getBounds();
+
+        undoImageInvalidRegion.set(bounds);
+        undoMaskInvalidRegion.set(bounds);
     }
 
     /**
@@ -2156,7 +1156,7 @@ export default function CPArtwork(_width, _height) {
 
     this.floodFill = function(x, y) {
         prepareForLayerPaintUndo();
-        undoArea = this.getBounds();
+        paintUndoArea = this.getBounds();
 
         getActiveImage().floodFill(~~x, ~~y, curColor | 0xff000000);
 
@@ -2170,7 +1170,7 @@ export default function CPArtwork(_width, _height) {
             target = getActiveImage();
 
         prepareForLayerPaintUndo();
-        undoArea = r.clone();
+        paintUndoArea = r.clone();
 
         target.gradient(r, fromX, fromY, toX, toY, gradientPoints, false);
 
@@ -2193,7 +1193,7 @@ export default function CPArtwork(_width, _height) {
             target = getActiveImage();
 
         prepareForLayerPaintUndo();
-        undoArea = r.clone();
+        paintUndoArea = r.clone();
 
         target.clearRect(r, color);
 
@@ -2229,7 +1229,7 @@ export default function CPArtwork(_width, _height) {
             rect = this.getBounds();
         }
 
-        undoArea = rect.clone();
+        paintUndoArea = rect.clone();
 
         if (transformImage) {
             prepareForLayerImageUndo();
@@ -2259,7 +1259,7 @@ export default function CPArtwork(_width, _height) {
             r = this.getSelectionAutoSelect();
 
         prepareForLayerPaintUndo();
-        undoArea = r.clone();
+        paintUndoArea = r.clone();
 
         getActiveImage().fillWithNoise(r);
 
@@ -2280,7 +1280,7 @@ export default function CPArtwork(_width, _height) {
                 r = this.getSelectionAutoSelect();
 
             prepareForLayerPaintUndo();
-            undoArea = r.clone();
+            paintUndoArea = r.clone();
 
             curLayer.image.fillWithColorNoise(r);
 
@@ -2295,7 +1295,7 @@ export default function CPArtwork(_width, _height) {
             target = getActiveImage();
 
         prepareForLayerPaintUndo();
-        undoArea = r.clone();
+        paintUndoArea = r.clone();
 
         target.invert(r);
 
@@ -2309,7 +1309,7 @@ export default function CPArtwork(_width, _height) {
             target = getActiveImage();
 
         prepareForLayerPaintUndo();
-        undoArea = r.clone();
+        paintUndoArea = r.clone();
 
         for (var i = 0; i < iterations; i++) {
             target.boxBlur(r, radiusX, radiusY);
@@ -2534,7 +1534,21 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        paintingModes[curBrush.paintMode].beginStroke(x, y, pressure);
+        prepareForLayerPaintUndo();
+        paintUndoArea.makeEmpty();
+
+        strokeBuffer.clearAll(0);
+        strokedRegion.makeEmpty();
+
+        lastX = x;
+        lastY = y;
+        lastPressure = pressure;
+
+        beginPaintingInteraction();
+
+        paintingModes[curBrush.brushMode].beginStroke();
+
+        this.paintDab(x, y, pressure);
     };
 
     this.continueStroke = function(x, y, pressure) {
@@ -2542,7 +1556,25 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        paintingModes[curBrush.paintMode].continueStroke(x, y, pressure);
+        var
+            dist = Math.sqrt(((lastX - x) * (lastX - x) + (lastY - y) * (lastY - y))),
+            spacing = Math.max(curBrush.minSpacing, curBrush.curSize * curBrush.spacing);
+
+        if (dist > spacing) {
+            var
+                nx = lastX, ny = lastY, np = lastPressure,
+                df = (spacing - 0.001) / dist;
+
+            for (var f = df; f <= 1.0; f += df) {
+                nx = f * x + (1.0 - f) * lastX;
+                ny = f * y + (1.0 - f) * lastY;
+                np = f * pressure + (1.0 - f) * lastPressure;
+                this.paintDab(nx, ny, np);
+            }
+            lastX = nx;
+            lastY = ny;
+            lastPressure = np;
+        }
     };
 
     this.endStroke = function() {
@@ -2550,7 +1582,23 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        paintingModes[curBrush.paintMode].endStroke();
+        mergeStrokeBuffer();
+
+        paintingModes[curBrush.brushMode].endStroke();
+
+        paintUndoArea.clipTo(this.getBounds());
+
+        // Did we end up painting anything?
+        if (!paintUndoArea.isEmpty()) {
+            addUndo(new CPUndoPaint());
+
+            /* Eagerly update the undo buffer for next time so we can avoid this lengthy
+             * prepare at the beginning of a paint stroke
+             */
+            prepareForLayerPaintUndo();
+        }
+
+        endPaintingInteraction();
     };
     
     this.hasAlpha = function() {
@@ -2592,14 +1640,14 @@ export default function CPArtwork(_width, _height) {
         }
 
         var
-            rect = undoArea.clone(),
+            rect = paintUndoArea.clone(),
 
             xorImage = paintedImage ? undoImage.copyRectXOR(curLayer.image, rect) : null,
             xorMask = paintedMask ? undoMask.copyRectXOR(curLayer.mask, rect) : null;
         
         this.layer = curLayer;
 
-        undoArea.makeEmpty();
+        paintUndoArea.makeEmpty();
 
         this.undo = function() {
             if (xorImage) {
@@ -3272,10 +2320,6 @@ export default function CPArtwork(_width, _height) {
              * @type {HTMLCanvasElement[]}
              */
             sourceRectCanvas = null,
-	        /**
-             * @type {CanvasRenderingContext2D[]}
-             */
-            sourceRectCanvasContext = null,
 
 	        /**
              * A copy of the original layer within the undoDataRect
@@ -3330,7 +2374,6 @@ export default function CPArtwork(_width, _height) {
                 setCanvasInterpolation(composeCanvasContext, interpolation == "smooth");
 
                 sourceRectCanvas = [];
-                sourceRectCanvasContext = [];
 
                 // Make a copy of just the source rectangles in their own canvases so we can transform them layer with Canvas APIs
                 thisAction.imageLayers.forEach(function (layer) {
@@ -3343,7 +2386,6 @@ export default function CPArtwork(_width, _height) {
                     context.putImageData(layer.image.getImageData(), -srcRect.left, -srcRect.top, srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
 
                     sourceRectCanvas.push(canvas);
-                    sourceRectCanvasContext.push(context);
                 });
             }
         }
@@ -3505,7 +2547,6 @@ export default function CPArtwork(_width, _height) {
             composeCanvas = null;
             composeCanvasContext = null;
             sourceRectCanvas = null;
-            sourceRectCanvasContext = null;
         };
 
         this.getMemoryUsed = function(undone, param) {
@@ -3971,10 +3012,15 @@ export default function CPArtwork(_width, _height) {
     CPActionPaste.prototype.constructor = CPActionPaste;
 
     paintingModes = [
-        new CPBrushToolSimpleBrush(), new CPBrushToolEraser(), new CPBrushToolDodge(),
-        new CPBrushToolBurn(), new CPBrushToolWatercolor(), new CPBrushToolBlur(), new CPBrushToolSmudge(),
-        new CPBrushToolOil()
-    ];
+        CPBrushTool,
+        CPBrushToolEraser,
+        CPBrushToolDodge,
+        CPBrushToolBurn,
+        CPBrushToolWatercolor,
+        CPBrushToolBlur,
+        CPBrushToolSmudge,
+        CPBrushToolOil
+    ].map(modeFunc => new modeFunc(strokeBuffer, strokedRegion));
 
     this.width = _width;
     this.height = _height;

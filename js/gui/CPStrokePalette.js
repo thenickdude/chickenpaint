@@ -93,9 +93,9 @@ export default function CPStrokePalette(cpController) {
     buildButtons();
     
     cpController.on("toolChange", function(tool, toolInfo) {
-        $(".chickenpaint-tool-freehand", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_FREEHAND);
-        $(".chickenpaint-tool-line", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_LINE);
-        $(".chickenpaint-tool-bezier", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.SM_BEZIER);
+        $(".chickenpaint-tool-freehand", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.STROKE_MODE_FREEHAND);
+        $(".chickenpaint-tool-line", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.STROKE_MODE_LINE);
+        $(".chickenpaint-tool-bezier", body).toggleClass("selected", toolInfo.strokeMode == CPBrushInfo.STROKE_MODE_BEZIER);
     });
 }
 

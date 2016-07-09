@@ -24,10 +24,26 @@
  * @param {Object} properties - Non-default properties to set on the brush
  *
  * @property {int} alpha - The user-chosen alpha of this brush
- * @property {int} curAlpha - The current alpha after pen pressure has been applied
+ * @property {float} alphaScale - A scale factor applied to curAlpha before drawing
+ * @property {int} curAlpha - The current alpha after pen pressure etc. has been applied
+ *
+ * @property {int} spacing
+ * @property {int} minSpacing
+ * 
  * @property {int} size - The user-chosen size of this brush
  * @property {int} curSize - The current size of the brush after pen pressure has been applied
- * @property {float} angle
+ *
+ * @property {int} brushMode - Selects the CPBrushTool that will be used to render the brush (CPBrushInfo.BRUSH_MODE_*)
+ * @property {int} paintMode - Controls how paint builds up on the canvas during painting (for brush modes that don't
+ * override the default paintDab() function). (CPBrushInfo.PAINT_MODE_*)
+ * @property {int} strokeMode - How stroke points will be connected during drawing (CPBrushInfo.STROKE_MODE_*)
+ * @property {int} tip - Kind of brush tip to be used (CPBrushInfo.TIP_*)
+ *
+ * @property {number} scattering
+ * @property {number} curScattering
+ * @property {number} angle
+ * @property {number} resat - 0-1.0, controls how much of the user's selected paint color is mixed into the brush while painting.
+ * @property {number} bleed - 0-1.0, controls how much of the color from the canvas is picked up by the brush.
  *
  * @constructor
  */
@@ -50,37 +66,42 @@ export default function CPBrushInfo(properties) {
 }
 
 // Stroke modes
-CPBrushInfo.SM_FREEHAND = 0;
-CPBrushInfo.SM_LINE = 1;
-CPBrushInfo.SM_BEZIER = 2;
+CPBrushInfo.STROKE_MODE_FREEHAND = 0;
+CPBrushInfo.STROKE_MODE_LINE = 1;
+CPBrushInfo.STROKE_MODE_BEZIER = 2;
 
 // Brush dab types
-CPBrushInfo.B_ROUND_PIXEL = 0;
-CPBrushInfo.B_ROUND_AA = 1;
-CPBrushInfo.B_ROUND_AIRBRUSH = 2;
-CPBrushInfo.B_SQUARE_PIXEL = 3;
-CPBrushInfo.B_SQUARE_AA = 4;
+CPBrushInfo.TIP_ROUND_PIXEL = 0;
+CPBrushInfo.TIP_ROUND_AA = 1;
+CPBrushInfo.TIP_ROUND_AIRBRUSH = 2;
+CPBrushInfo.TIP_SQUARE_PIXEL = 3;
+CPBrushInfo.TIP_SQUARE_AA = 4;
 
-// painting modes
-CPBrushInfo.M_PAINT = 0;
-CPBrushInfo.M_ERASE = 1;
-CPBrushInfo.M_DODGE = 2;
-CPBrushInfo.M_BURN = 3;
-CPBrushInfo.M_WATER = 4;
-CPBrushInfo.M_BLUR = 5;
-CPBrushInfo.M_SMUDGE = 6;
-CPBrushInfo.M_OIL = 7;
+CPBrushInfo.BRUSH_MODE_PAINT = 0;
+CPBrushInfo.BRUSH_MODE_ERASE = 1;
+CPBrushInfo.BRUSH_MODE_DODGE = 2;
+CPBrushInfo.BRUSH_MODE_BURN = 3;
+CPBrushInfo.BRUSH_MODE_WATER = 4;
+CPBrushInfo.BRUSH_MODE_BLUR = 5;
+CPBrushInfo.BRUSH_MODE_SMUDGE = 6;
+CPBrushInfo.BRUSH_MODE_OIL = 7;
+
+CPBrushInfo.PAINT_MODE_OPACITY = 0;
+CPBrushInfo.PAINT_MODE_FLOW = 1;
 
 CPBrushInfo.DEFAULTS = {
-    isAA: false, isAirbrush: false,
+    isAA: false,
     minSpacing: 0, spacing: 0,
     
     pressureSize: true,
     pressureAlpha: false,
     pressureScattering: false,
+    alphaScale: 1.0,
     
-    type: 0, paintMode: 0,
-    strokeMode: CPBrushInfo.SM_FREEHAND,
+    tip: CPBrushInfo.TIP_ROUND_PIXEL,
+    brushMode: CPBrushInfo.BRUSH_MODE_PAINT, 
+    paintMode: CPBrushInfo.PAINT_MODE_OPACITY,
+    strokeMode: CPBrushInfo.STROKE_MODE_FREEHAND,
     resat: 1.0, bleed: 0.0,
 
     texture: 1.0,
@@ -97,7 +118,7 @@ CPBrushInfo.DEFAULTS = {
 
 CPBrushInfo.prototype.applyPressure = function(pressure) {
     // FIXME: no variable size for smudge and oil :(
-    if (this.pressureSize && this.paintMode != CPBrushInfo.M_SMUDGE && this.paintMode != CPBrushInfo.M_OIL) {
+    if (this.pressureSize && this.brushMode != CPBrushInfo.BRUSH_MODE_SMUDGE && this.brushMode != CPBrushInfo.BRUSH_MODE_OIL) {
         this.curSize = Math.max(0.1, this.size * pressure);
     } else {
         this.curSize = Math.max(0.1, this.size);

@@ -88,9 +88,21 @@ export default function CPTexturePalette(controller) {
     var
         TEXTURE_PREVIEW_SIZE = 64,
         TEXTURE_SWATCH_BUTTON_SIZE = 32,
-    
+
+	    /**
+         * @type {CPGreyBmp[]}
+         */
         textures = [], // Array of CPGreyBmp
-        selectedTexture, processedTexture, //Both CPGreyBmp
+
+        /**
+         * @type {CPGreyBmp}
+         */
+        selectedTexture,
+
+        /**
+         * @type {CPGreyBmp}
+         */
+        processedTexture,
 
         mirror = false, inverse = false,
         
@@ -403,6 +415,13 @@ export default function CPTexturePalette(controller) {
         this.updateTexture();
     }
 
+	/**
+     *
+     * @param {CPGreyBmp} texture
+     * @param {int} width
+     * @param {int} height
+     * @constructor
+     */
     function CPTextureSwatch(texture, width, height) {
         var
             canvas = document.createElement("canvas"),
@@ -410,6 +429,9 @@ export default function CPTexturePalette(controller) {
             
             that = this;
 
+	    /**
+         * @param {CPGreyBmp} texture
+         */
         this.setTexture = function(texture) {
             this.texture = texture;
 

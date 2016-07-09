@@ -172,7 +172,7 @@ function CPBrushPanel(controller) {
         scatteringCB.setValue(controller.getBrushInfo().pressureScattering);
         scatteringSlider.setValue(~~(controller.getBrushInfo().scattering * 100));
 
-        tipCombo.value = controller.getBrushInfo().type;
+        tipCombo.value = controller.getBrushInfo().tip;
 
         resatSlider.setValue(~~(controller.getBrushInfo().resat * 100));
         bleedSlider.setValue(~~(controller.getBrushInfo().bleed * 100));
@@ -261,7 +261,7 @@ function CPBrushPanel(controller) {
     });
 
     tipCombo.addEventListener("change", function(e) {
-        controller.getBrushInfo().type = parseInt(tipCombo.value, 10);
+        controller.getBrushInfo().tip = parseInt(tipCombo.value, 10);
     });
 
     tipCombo.className = 'form-control';
@@ -286,7 +286,7 @@ function CPBrushPanel(controller) {
         sizeSlider.setValue(toolInfo.size);
         sizeCB.setValue(toolInfo.pressureSize);
         alphaCB.setValue(toolInfo.pressureAlpha);
-        tipCombo.value = toolInfo.type;
+        tipCombo.value = toolInfo.tip;
         scatteringCB.setValue(toolInfo.pressureScattering);
 
         if (~~(toolInfo.resat * 100.0) != resatSlider.value) {

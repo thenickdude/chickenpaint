@@ -2517,7 +2517,7 @@ export default function CPCanvas(controller) {
     // this must correspond to the stroke modes defined in CPToolInfo
     drawingModes = [new CPFreehandMode(), new CPLineMode(), new CPBezierMode()];
 
-    curDrawMode = drawingModes[CPBrushInfo.SM_FREEHAND];
+    curDrawMode = drawingModes[CPBrushInfo.STROKE_MODE_FREEHAND];
 
     // The default mode will handle the events that no other modes are interested in
     modeStack.setDefaultMode(defaultMode);

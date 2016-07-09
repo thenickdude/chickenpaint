@@ -23,9 +23,10 @@
 /**
  * An RGB color with floating point values for each channel (between 0.0 and 1.0)
  *
- * @param r
- * @param g
- * @param b
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ *
  * @constructor
  */
 export default function CPColorFloat(r, g, b) {

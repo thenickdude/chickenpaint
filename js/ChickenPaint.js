@@ -27,6 +27,7 @@ import "core-js/es6/map";
 import "core-js/es6/set";
 import "core-js/es6/typed"; // For TypedArray.slice
 import "core-js/fn/array/iterator";
+import "core-js/fn/array/fill";
 import "core-js/fn/string/ends-with";
 
 import CPBrushInfo from "./engine/CPBrushInfo";
@@ -88,8 +89,9 @@ function createDrawingTools() {
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AA,
-        paintMode: CPBrushInfo.M_PAINT
+        tip: CPBrushInfo.TIP_ROUND_AA,
+        brushMode: CPBrushInfo.BRUSH_MODE_PAINT,
+        paintMode: CPBrushInfo.PAINT_MODE_OPACITY
     });
 
     tools[ChickenPaint.T_ERASER] = new CPBrushInfo({
@@ -101,8 +103,9 @@ function createDrawingTools() {
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: false,
-        type: CPBrushInfo.B_ROUND_AA,
-        paintMode: CPBrushInfo.M_ERASE
+        tip: CPBrushInfo.TIP_ROUND_AA,
+        brushMode: CPBrushInfo.BRUSH_MODE_ERASE,
+        paintMode: CPBrushInfo.PAINT_MODE_OPACITY
     });
 
     tools[ChickenPaint.T_PEN] = new CPBrushInfo({
@@ -114,8 +117,10 @@ function createDrawingTools() {
         spacing: 0.05,
         pressureSize: true,
         pressureAlpha: false,
-        type: CPBrushInfo.B_ROUND_AA,
-        paintMode: CPBrushInfo.M_PAINT
+        tip: CPBrushInfo.TIP_ROUND_AA,
+        brushMode: CPBrushInfo.BRUSH_MODE_PAINT,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 2
     });
 
     tools[ChickenPaint.T_SOFTERASER] = new CPBrushInfo({
@@ -123,13 +128,14 @@ function createDrawingTools() {
         size: 16,
         alpha: 64,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_ERASE
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_ERASE,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8
     });
 
     tools[ChickenPaint.T_AIRBRUSH] = new CPBrushInfo({
@@ -137,13 +143,14 @@ function createDrawingTools() {
         size: 50,
         alpha: 32,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_PAINT
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_PAINT,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8
     });
 
     tools[ChickenPaint.T_DODGE] = new CPBrushInfo({
@@ -151,13 +158,14 @@ function createDrawingTools() {
         size: 30,
         alpha: 32,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_DODGE
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_DODGE,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8
     });
 
     tools[ChickenPaint.T_BURN] = new CPBrushInfo({
@@ -165,13 +173,14 @@ function createDrawingTools() {
         size: 30,
         alpha: 32,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_BURN
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_BURN,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8
     });
 
     tools[ChickenPaint.T_WATER] = new CPBrushInfo({
@@ -179,13 +188,14 @@ function createDrawingTools() {
         size: 30,
         alpha: 70,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.02,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AA,
-        paintMode: CPBrushInfo.M_WATER,
+        tip: CPBrushInfo.TIP_ROUND_AA,
+        brushMode: CPBrushInfo.BRUSH_MODE_WATER,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8,
         resat: 0.3,
         bleed: 0.6
     });
@@ -195,13 +205,14 @@ function createDrawingTools() {
         size: 20,
         alpha: 255,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.05,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_PIXEL,
-        paintMode: CPBrushInfo.M_BLUR
+        tip: CPBrushInfo.TIP_ROUND_PIXEL,
+        brushMode: CPBrushInfo.BRUSH_MODE_BLUR,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8
     });
 
     tools[ChickenPaint.T_SMUDGE] = new CPBrushInfo({
@@ -209,13 +220,14 @@ function createDrawingTools() {
         size: 20,
         alpha: 128,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.01,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_SMUDGE,
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_SMUDGE,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8,
         resat: 0.0,
         bleed: 1.0
     });
@@ -225,13 +237,14 @@ function createDrawingTools() {
         size: 20,
         alpha: 60,
         isAA: false,
-        isAirbrush: true,
         minSpacing: 0.5,
         spacing: 0.1,
         pressureSize: false,
         pressureAlpha: true,
-        type: CPBrushInfo.B_ROUND_AIRBRUSH,
-        paintMode: CPBrushInfo.M_OIL,
+        tip: CPBrushInfo.TIP_ROUND_AIRBRUSH,
+        brushMode: CPBrushInfo.BRUSH_MODE_OIL,
+        paintMode: CPBrushInfo.PAINT_MODE_FLOW,
+        alphaScale: 1 / 8,
         resat: 0.0,
         bleed: 0.07
     });
@@ -434,21 +447,21 @@ export default function ChickenPaint(options) {
 
             CPFreeHand: {
                 action: function () {
-                    tools[curBrush].strokeMode = CPBrushInfo.SM_FREEHAND;
+                    tools[curBrush].strokeMode = CPBrushInfo.STROKE_MODE_FREEHAND;
                     callToolListeners();
                 },
                 modifies: {tool: true}
             },
             CPLine: {
                 action: function () {
-                    tools[curBrush].strokeMode = CPBrushInfo.SM_LINE;
+                    tools[curBrush].strokeMode = CPBrushInfo.STROKE_MODE_LINE;
                     callToolListeners();
                 },
                 modifies: {tool: true}
             },
             CPBezier: {
                 action: function () {
-                    tools[curBrush].strokeMode = CPBrushInfo.SM_BEZIER;
+                    tools[curBrush].strokeMode = CPBrushInfo.STROKE_MODE_BEZIER;
                     callToolListeners();
                 },
                 modifies: {tool: true}
