@@ -32,13 +32,19 @@ import {setContrastingDrawStyle} from "./CPGUIUtils";
  */
 export default function CPColorSelect(controller, initialColor) {
     const
-        WIDTH = 128, HEIGHT = 128;
+        CONTROL_WIDTH = 128,
+        CONTROL_HEIGHT = 128,
+
+        PIXEL_SCALE = (window.devicePixelRatio || 1),
+
+        CANVAS_WIDTH = Math.round(CONTROL_WIDTH * PIXEL_SCALE),
+        CANVAS_HEIGHT = Math.round(CONTROL_HEIGHT * PIXEL_SCALE);
 
     const
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
 
-        imageData = canvasContext.createImageData(WIDTH, HEIGHT),
+        imageData = canvasContext.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT),
         data = imageData.data,
         color = new CPColor(0);
 
@@ -52,11 +58,11 @@ export default function CPColorSelect(controller, initialColor) {
             pixIndex = 0;
 
         if (greyscale) {
-            for (let y = 0; y < HEIGHT; y++) {
+            for (let y = 0; y < CANVAS_HEIGHT; y++) {
                 let
-                    col = Math.round(255 - (y * 255) / HEIGHT);
+                    col = 255 - Math.round(y / (CANVAS_HEIGHT - 1) * 255);
 
-                for (let x = 0; x < WIDTH; x++) {
+                for (let x = 0; x < CANVAS_WIDTH; x++) {
                     data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = col;
                     data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = col;
                     data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = col;
@@ -69,13 +75,11 @@ export default function CPColorSelect(controller, initialColor) {
             let
                 col = color.clone();
 
-            for (let y = 0; y < HEIGHT; y++) {
-                col.setValue(255 - (y * 255) / HEIGHT);
+            for (let y = 0; y < CANVAS_HEIGHT; y++) {
+                col.setValue(255 - ~~(y / (CANVAS_HEIGHT - 1) * 255));
 
-                for (let x = 0; x < WIDTH; x++) {
-                    if (!greyscale) {
-                        col.setSaturation((x * 255) / WIDTH);
-                    }
+                for (let x = 0; x < CANVAS_WIDTH; x++) {
+                    col.setSaturation(Math.round(x / (CANVAS_WIDTH - 1) * 255));
 
                     data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = (col.rgb >> 16) & 0xFF;
                     data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = (col.rgb >> 8) & 0xFF;
@@ -95,23 +99,23 @@ export default function CPColorSelect(controller, initialColor) {
             makeBitmap();
         }
 
-        canvasContext.putImageData(imageData, 0, 0, 0, 0, WIDTH, HEIGHT);
+        canvasContext.putImageData(imageData, 0, 0, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
         var
-            x = color.getSaturation() * WIDTH / 255,
-            y = (255 - color.getValue()) * HEIGHT / 255;
+            cursorX = color.getSaturation() / 255 * (CANVAS_WIDTH - 1),
+            cursorY = (255 - color.getValue()) / 255 * (CANVAS_HEIGHT - 1);
 
         setContrastingDrawStyle(canvasContext, "stroke");
 
-        canvasContext.lineWidth = 1.5;
+        canvasContext.lineWidth = 1.5 * PIXEL_SCALE;
 
         canvasContext.beginPath();
 
         if (greyscale) {
-            canvasContext.moveTo(0, y + 0.5); // Draw through centre of target pixel
-            canvasContext.lineTo(WIDTH, y + 0.5);
+            canvasContext.moveTo(0, cursorY);
+            canvasContext.lineTo(CANVAS_WIDTH, cursorY);
         } else {
-            canvasContext.arc(x, y, 5, 0, Math.PI * 2);
+            canvasContext.arc(cursorX, cursorY, 5 * PIXEL_SCALE, 0, Math.PI * 2);
         }
 
         canvasContext.stroke();
@@ -123,16 +127,16 @@ export default function CPColorSelect(controller, initialColor) {
         var
             x = e.pageX - $(canvas).offset().left,
             y = e.pageY - $(canvas).offset().top,
-            value = Math.round(255 - y * 255 / HEIGHT);
+
+            value = Math.max(Math.min(255 - ~~(y * 255 / (CONTROL_HEIGHT - 1)), 255), 0);
 
         if (greyscale) {
-            color.setGreyscale(Math.max(Math.min(255, value), 0));
+            color.setGreyscale(value);
         } else {
             var
-                sat = x * 255 / WIDTH;
+                sat = Math.max(Math.min(~~(x * 255 / (CONTROL_WIDTH - 1)), 255), 0);
 
-            color.setSaturation(Math.max(0, Math.min(255, sat)));
-            color.setValue(Math.max(0, Math.min(255, value)));
+            color.setHsv(color.getHue(), sat, value);
         }
 
         paint();
@@ -191,8 +195,11 @@ export default function CPColorSelect(controller, initialColor) {
     canvas.className = 'chickenpaint-colorpicker-select';
     canvas.setAttribute("touch-action", "none");
 
-    canvas.width = WIDTH;
-    canvas.height = HEIGHT;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    canvas.style.width = CONTROL_WIDTH + "px";
+    canvas.style.height = CONTROL_HEIGHT + "px";
 
     if (initialColor) {
         color.copyFrom(initialColor);
