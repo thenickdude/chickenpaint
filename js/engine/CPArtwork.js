@@ -1382,7 +1382,7 @@ export default function CPArtwork(_width, _height) {
      */
     this.setTransformInterpolation = function(interpolation) {
         transformInterpolation = interpolation;
-        if (previewOperation instanceof CPActionTransformSelection) {
+        if (previewOperation instanceof CPActionAffineTransformSelection) {
             previewOperation.setInterpolation(interpolation);
         }
     };
@@ -1391,7 +1391,7 @@ export default function CPArtwork(_width, _height) {
      * If the current operation is an affine transform, roll it back and remove it from the undo history.
      */
     this.transformAffineAbort = function() {
-        if (previewOperation instanceof CPActionTransformSelection) {
+        if (previewOperation instanceof CPActionAffineTransformSelection) {
             previewOperation.undo();
             previewOperation = null;
             endPaintingInteraction();
@@ -1409,7 +1409,7 @@ export default function CPArtwork(_width, _height) {
      */
     this.transformAffineBegin = function() {
         // Are we already transforming? Continue that instead
-        if (previewOperation instanceof CPActionTransformSelection) {
+        if (previewOperation instanceof CPActionAffineTransformSelection) {
             return {transform: previewOperation.getTransform(), rect: previewOperation.getInitialTransformRect(), selection: previewOperation.getInitialSelectionRect()};
         }
 
@@ -1427,7 +1427,7 @@ export default function CPArtwork(_width, _height) {
         /* If we introduce other previewOperations, we might want to check we aren't overwriting them here...
          * Though probably ChickenPaint's global exclusive mode will enforce this for us.
          */
-        previewOperation = new CPActionTransformSelection(initialRect, initialTransform, transformInterpolation);
+        previewOperation = new CPActionAffineTransformSelection(initialRect, initialTransform, transformInterpolation);
 
         beginPaintingInteraction();
 
@@ -1438,7 +1438,7 @@ export default function CPArtwork(_width, _height) {
      * Finish and save the transform that is currently in progress.
      */
     this.transformAffineFinish = function() {
-        if (previewOperation instanceof CPActionTransformSelection) {
+        if (previewOperation instanceof CPActionAffineTransformSelection) {
             addUndo(previewOperation);
             previewOperation = null;
             endPaintingInteraction();
@@ -1451,7 +1451,7 @@ export default function CPArtwork(_width, _height) {
      * @param {CPTransform} affineTransform
      */
     this.transformAffineAmend = function(affineTransform) {
-        if (previewOperation instanceof CPActionTransformSelection) {
+        if (previewOperation instanceof CPActionAffineTransformSelection) {
             previewOperation.amend(affineTransform);
         }
     };
@@ -2267,6 +2267,8 @@ export default function CPArtwork(_width, _height) {
     /**
      * @param {CPRect} from
      * @param {CPRect} to
+     *
+     * @constructor
      */
     function CPUndoRectangleSelection(from, to) {
         from = from.clone();
@@ -2291,6 +2293,83 @@ export default function CPArtwork(_width, _height) {
     CPUndoRectangleSelection.prototype = Object.create(CPUndo.prototype);
     CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
 
+    class CPActionTransformSelection extends CPUndo {
+	    /**
+         * @override
+         */
+        undo() {
+
+        }
+
+        /**
+         * @override
+         */
+        redo() {
+
+        }
+
+		/**
+         * @param {CPRect} srcRect
+         */
+        constructor(srcRect) {
+            /**
+             * The layer we're moving (which might be an image layer or a whole group of layers).
+             *
+             * @type {CPLayer}
+             */
+            this.layer = curLayer;
+
+            /**
+             * @type {CPRect}
+             */
+            this.fromSelection = that.getSelection();
+            this.fromMaskMode = maskEditingMode;
+
+            this.movingWholeLayer = srcRect.isEmpty();
+
+            this.movingImage = !maskEditingMode || this.movingWholeLayer && this.layer.maskLinked;
+            this.movingMask = maskEditingMode || this.movingWholeLayer && this.layer.maskLinked;
+
+            this.hasFullUndo = false;
+
+            if (this.movingWholeLayer) {
+                this.srcRect = that.getBounds();
+            } else {
+                this.srcRect = srcRect.clone();
+            }
+
+            this.dstRect = new CPRect(0, 0, 0, 0);
+
+            /**
+             * @typedef {Object} LayerMoveInfo
+             *
+             * @property {CPLayer} layer
+             * @property {boolean} moveImage
+             * @property {boolean} moveMask
+             *
+             * We either have these full undos which cover the whole layer area:
+             *
+             * @property {?CPColorBmp} imageUndo
+             * @property {?CPGreyBmp} maskUndo
+             *
+             * Or else we have these snippets which cover the source and destination rectangles only (and we drop dest if it
+             * is contained within src!)
+             *
+             * @property {?CPColorBmp} imageSrcUndo
+             * @property {?CPColorBmp} imageDestUndo
+             * @property {?CPGreyBmp} maskSrcUndo
+             * @property {?CPGreyBmp} maskDestUndo
+             */
+
+            /**
+             * Info about the layers we're moving.
+             *
+             * @type {LayerMoveInfo[]}
+             */
+            this.movingLayers = [];
+        }
+    }
+
     /**
      * Upon creation, transforms the currently selected region of the current layer by the given affine transform.
      *
@@ -2298,7 +2377,7 @@ export default function CPArtwork(_width, _height) {
      * @param {CPTransform} affineTransform - Transform to apply
      * @param {string} interpolation - "smooth" or "sharp"
      */
-    function CPActionTransformSelection(srcRect, affineTransform, interpolation) {
+    function CPActionAffineTransformSelection(srcRect, affineTransform, interpolation) {
         var
             thisAction = this,
 
@@ -2606,8 +2685,8 @@ export default function CPArtwork(_width, _height) {
         this.redo();
     }
 
-    CPActionTransformSelection.prototype = Object.create(CPUndo.prototype);
-    CPActionTransformSelection.prototype.constructor = CPActionTransformSelection;
+    CPActionAffineTransformSelection.prototype = Object.create(CPUndo.prototype);
+    CPActionAffineTransformSelection.prototype.constructor = CPActionAffineTransformSelection;
 
     /**
      * Upon creation, moves the currently selected region of the current layer by the given offset
