@@ -5,8 +5,5 @@
     "plugins": [
     	"add-module-exports"
     ],
-    "only": [
-        "js/**/*.js"
-    ],
     "compact": false
 }
