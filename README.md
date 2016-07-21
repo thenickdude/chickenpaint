@@ -57,7 +57,7 @@ Add something like this to your &lt;head> to load the required libraries in:
 <script src="lib/es6-promise.min.js"></script>
 <script src="lib/jquery-2.2.1.min.js"></script>
 <script src="lib/pep.min.js"></script>
-<script src="lib/pako.min.js"></script>
+<script src="lib/pako-1.0.1-1.min.js"></script>
 <script src="lib/keymaster.js"></script>
 <script src="lib/EventEmitter.min.js"></script>
 <script src="lib/FileSaver.min.js"></script>
