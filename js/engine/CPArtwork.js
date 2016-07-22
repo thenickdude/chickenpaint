@@ -1362,7 +1362,7 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        var
+        let
             activeOp = getActiveOperation();
 
         // If we've changed layers since our last move, we want to move the new layer, not the old one, so can't amend
@@ -1371,7 +1371,12 @@ export default function CPArtwork(_width, _height) {
             redoList = [];
             hasUnsavedChanges = true;
         } else {
-            addUndo(new CPActionMoveSelection(this.getSelection(), offsetX, offsetY, copy));
+            let
+                action = new CPActionMoveSelection(this.getSelection(), offsetX, offsetY, copy);
+            
+            addUndo(action);
+            
+            action.redo();
         }
     };
 
@@ -2294,52 +2299,52 @@ export default function CPArtwork(_width, _height) {
     CPUndoRectangleSelection.prototype.constructor = CPUndoRectangleSelection;
 
     class CPActionTransformSelection extends CPUndo {
-	    /**
-         * @override
-         */
-        undo() {
-
-        }
-
+    
         /**
-         * @override
-         */
-        redo() {
-
-        }
-
-		/**
          * @param {CPRect} srcRect
          */
         constructor(srcRect) {
+            super();
+        
             /**
              * The layer we're moving (which might be an image layer or a whole group of layers).
              *
              * @type {CPLayer}
              */
             this.layer = curLayer;
-
+        
             /**
              * @type {CPRect}
              */
             this.fromSelection = that.getSelection();
             this.fromMaskMode = maskEditingMode;
-
+        
             this.movingWholeLayer = srcRect.isEmpty();
-
+        
             this.movingImage = !maskEditingMode || this.movingWholeLayer && this.layer.maskLinked;
             this.movingMask = maskEditingMode || this.movingWholeLayer && this.layer.maskLinked;
-
+        
             this.hasFullUndo = false;
-
+        
+            /**
+             * Set to true for transformations which will clear the pixels of the source rectangle (i.e. moves)
+             * @type {boolean}
+             */
+            this.erasesSourceRect = false;
+        
             if (this.movingWholeLayer) {
                 this.srcRect = that.getBounds();
             } else {
                 this.srcRect = srcRect.clone();
             }
-
+        
+            /**
+             * The rectangle we transformed onto in a previous iteration.
+             *
+             * @type {CPRect}
+             */
             this.dstRect = new CPRect(0, 0, 0, 0);
-
+        
             /**
              * @typedef {Object} LayerMoveInfo
              *
@@ -2352,22 +2357,153 @@ export default function CPArtwork(_width, _height) {
              * @property {?CPColorBmp} imageUndo
              * @property {?CPGreyBmp} maskUndo
              *
-             * Or else we have these snippets which cover the source and destination rectangles only (and we drop dest if it
-             * is contained within src!)
+             * Or else we have this map from rectangles to images which cover the dirtied areas only.
              *
-             * @property {?CPColorBmp} imageSrcUndo
-             * @property {?CPColorBmp} imageDestUndo
-             * @property {?CPGreyBmp} maskSrcUndo
-             * @property {?CPGreyBmp} maskDestUndo
+             * @property {Map} imageRect
+             * @property {Map} maskRect
              */
-
+        
             /**
-             * Info about the layers we're moving.
+             * A list of the layers we're moving, and their properties.
              *
              * @type {LayerMoveInfo[]}
              */
-            this.movingLayers = [];
+            this.movingLayers = [{
+                layer: this.layer,
+                moveImage: this.layer instanceof CPImageLayer && this.movingImage,
+                moveMask: this.layer.mask != null && this.movingMask
+            }];
+        
+            if (this.layer instanceof CPLayerGroup && this.movingImage) {
+                // Moving the "image" of a group means to move all of its children
+                if (this.movingWholeLayer && this.movingImage) {
+                    this.movingLayers = this.movingLayers.concat(this.layer.getLinearizedLayerList(false).map(layer => ({
+                        layer: layer,
+                        moveImage: layer instanceof CPImageLayer,
+                        moveMask: layer.mask != null && layer.maskLinked
+                    })));
+                }
+            }
+            
+            this.buildFullUndo();
         }
+        
+	    /**
+         * @override
+         */
+        undo() {
+            let
+                // The region we're repainting for undo
+                restoreRegions = [this.dstRect];
+        
+            if (this.erasesSourceRect) {
+                restoreRegions = CPRect.union(restoreRegions, this.srcRect);
+            }
+            
+            // Restore the image data in the src and dest rectangles
+            this.movingLayers.forEach(function(layerInfo) {
+                if (this.hasFullUndo) {
+                    restoreRegions.forEach(function(region) {
+                        if (layerInfo.moveImage) {
+                            layerInfo.layer.image.copyBitmapRect(layerInfo.imageUndo, region.left, region.top, region);
+                        }
+                        if (layerInfo.moveMask) {
+                            layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, region.left, region.top, region);
+                        }
+                    });
+                } else {
+                    if (layerInfo.moveImage) {
+                        for (let [rect, image] of layerInfo.imageRect) {
+                            layerInfo.layer.image.copyBitmapRect(image, rect.left, rect.top, image.getBounds());
+                        }
+                    }
+    
+                    if (layerInfo.moveMask) {
+                        for (let [rect, mask] of layerInfo.maskRect) {
+                            layerInfo.layer.mask.copyBitmapRect(mask, rect.left, rect.top, mask.getBounds());
+                        }
+                    }
+                }
+            });
+            
+            this.dstRect.makeEmpty();
+        
+            that.setSelection(this.fromSelection);
+            that.setActiveLayer(this.layer, this.fromMaskMode);
+        
+            invalidateLayer(this.movingLayers.map(layerInfo => layerInfo.layer), restoreRegions.reduce((a, b) => a.getUnion(b), new CPRect(0,0,0,0)), true, true);
+        
+            /*
+             * FIXME Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
+             * won't end up repainting the selection rectangle there.
+             */
+            callListenersSelectionChange();
+        }
+
+        getMemoryUsed(undone, param) {
+            return this.movingLayers.map(function(layerInfo) {
+                var
+                    images = [layerInfo.imageUndo, layerInfo.maskUndo, layerInfo.imageRect, layerInfo.imageRect, layerInfo.maskRect, layerInfo.maskRect];
+            
+                return images.map(image => image ? image.getMemorySize() : 0).reduce(sum, 0);
+            }).reduce(sum, 0);
+        }
+	
+	    /**
+         * Called internally to reverse the effects of compact()
+         */
+        buildFullUndo() {
+            if (!this.hasFullUndo) {
+                this.movingLayers.forEach(function(layerInfo) {
+                    if (layerInfo.moveImage) {
+                        layerInfo.imageUndo = layerInfo.layer.image.clone();
+                    }
+                    if (layerInfo.moveMask) {
+                        layerInfo.maskUndo = layerInfo.layer.mask.clone();
+                    }
+                
+                    layerInfo.imageRect = null;
+                    layerInfo.maskRect = null;
+                });
+            
+                this.hasFullUndo = true;
+            }
+        }
+    
+        /**
+         * Called when we're no longer the top operation in the undo stack, so that we can optimize for lower memory
+         * usage instead of faster revision speed
+         */
+        compact() {
+            if (hasFullUndo && srcRect.getArea() * 2 < that.width * that.height) {
+                // Replace our copy of the entire layer with just a copy of the areas we damaged
+                var
+                    needDestData = !dstRect.isInside(srcRect);
+            
+                this.movingLayers.forEach(function(layerInfo) {
+                    // Save src and dest rectangles for undo
+                    if (layerInfo.moveImage) {
+                        layerInfo.imageRect = layerInfo.imageUndo.cloneRect(srcRect);
+                        if (needDestData) {
+                            layerInfo.imageRect = layerInfo.imageUndo.cloneRect(dstRect);
+                        }
+                    }
+                    if (layerInfo.moveMask) {
+                        layerInfo.maskRect = layerInfo.maskUndo.cloneRect(srcRect);
+                        if (needDestData) {
+                            layerInfo.maskRect = layerInfo.maskUndo.cloneRect(dstRect);
+                        }
+                    }
+                
+                    // Discard the full-size undos
+                    layerInfo.imageUndo = null;
+                    layerInfo.maskUndo = null;
+                });
+            
+                hasFullUndo = false;
+            }
+        }
+    
     }
 
     /**
@@ -2377,130 +2513,79 @@ export default function CPArtwork(_width, _height) {
      * @param {CPTransform} affineTransform - Transform to apply
      * @param {string} interpolation - "smooth" or "sharp"
      */
-    function CPActionAffineTransformSelection(srcRect, affineTransform, interpolation) {
-        var
-            thisAction = this,
-
-	        /**
-             * @type {CPRect}
-             */
-            fromSelection = that.getSelection(),
-
+    class CPActionAffineTransformSelection extends CPActionTransformSelection {
+        constructor(srcRect, affineTransform, interpolation) {
+            super(srcRect);
+            
+            this.erasesSourceRect = true;
+            
+            this.affineTransform = affineTransform.clone();
+            this.interpolation = interpolation || "smooth";
+    
             /**
-             * The rectangle we transformed onto in a previous iteration.
-             *
-             * @type {CPRect}
-             */
-            dstRect = new CPRect(0, 0, 0, 0),
-
-	        /**
              * A copy of the source rectangles from the original layers to use for Canvas drawing operations.
              *
              * @type {HTMLCanvasElement[]}
              */
-            sourceRectCanvas = null,
-
-	        /**
-             * A copy of the original layer within the undoDataRect
-             *
-             * @type {CPColorBmp[]}
-             */
-            undoData,
-
-	        /**
-             * The rectangle of the image that undoData represents
-             * @type {CPRect}
-             */
-            undoDataRect,
-
-	        /**
+            this.sourceRectCanvas = null;
+        
+            /**
              * A canvas for composing the transform onto
              * @type {HTMLCanvasElement}
              */
-            composeCanvas = null,
-
-	        /**
+            this.composeCanvas = null;
+        
+            /**
              * @type {CanvasRenderingContext2D}
              */
-            composeCanvasContext = null;
-
-        affineTransform = affineTransform.clone();
-        interpolation = interpolation || "smooth";
-
-        function expand() {
-            if (undoDataRect.getWidth() < that.width || undoDataRect.getHeight() < that.height) {
-                /*
-                 * We need a complete copy of the layer in undoData to support further redo(). (As we probably previously
-                 * only made a backup copy of the areas we erased using the old transform).
-                 */
-                thisAction.undo();
-
-                undoData = thisAction.imageLayers.map(layer => layer.image.clone());
-                undoDataRect = that.getBounds();
+            this.composeCanvasContext = null;
+        }
+        
+        buildFullUndo() {
+            super.buildFullUndo();
+    
+            // Make a copy of just the source rectangles in their own canvases so we can transform them layer with Canvas APIs
+            this.movingLayers.forEach(function (layerInfo) {
+                let
+                    canvas = document.createElement("canvas"),
+                    context = canvas.getContext("2d");
+        
+                canvas.width = this.srcRect.getWidth();
+                canvas.height = this.srcRect.getHeight();
+                context.putImageData(layerInfo.image.getImageData(), -this.srcRect.left, -this.srcRect.top, this.srcRect.left, this.srcRect.top, this.srcRect.getWidth(), this.srcRect.getHeight());
+        
+                layerInfo.imageSourceCanvas = canvas;
+            });
+        }
+        
+        buildTempCanvasesForRedo() {
+            if (!this.composeCanvas) {
+                this.composeCanvas = document.createElement("canvas");
+    
+                this.composeCanvas.width = that.width;
+                this.composeCanvas.height = that.height;
+    
+                this.composeCanvasContext = this.composeCanvas.getContext("2d");
+                setCanvasInterpolation(this.composeCanvasContext, this.interpolation == "smooth");
             }
         }
 
-        function buildTempCanvasesForRedo() {
-            expand();
-
-            if (!composeCanvas) {
-                composeCanvas = document.createElement("canvas");
-
-                composeCanvas.width = that.width;
-                composeCanvas.height = that.height;
-
-                composeCanvasContext = composeCanvas.getContext("2d");
-                setCanvasInterpolation(composeCanvasContext, interpolation == "smooth");
-
-                sourceRectCanvas = [];
-
-                // Make a copy of just the source rectangles in their own canvases so we can transform them layer with Canvas APIs
-                thisAction.imageLayers.forEach(function (layer) {
-                    let
-                        canvas = document.createElement("canvas"),
-                        context = canvas.getContext("2d");
-
-                    canvas.width = srcRect.getWidth();
-                    canvas.height = srcRect.getHeight();
-                    context.putImageData(layer.image.getImageData(), -srcRect.left, -srcRect.top, srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
-
-                    sourceRectCanvas.push(canvas);
-                });
+        redo() {
+            if (!this.hasFullUndo) {
+                this.undo();
+                this.buildFullUndo();
             }
-        }
-
-        this.undo = function() {
-            var
-                invalidateRegion = dstRect.getUnion(srcRect),
-                undoSrcRegion = invalidateRegion.getTranslated(-undoDataRect.left, -undoDataRect.top);
-
-            this.imageLayers.forEach((layer, index) => layer.image.copyBitmapRect(undoData[index], invalidateRegion.left, invalidateRegion.top, undoSrcRegion));
-
-            dstRect.makeEmpty();
-
-            that.setSelection(fromSelection);
-            that.setActiveLayer(this.layer);
-
-            invalidateLayer(this.layer, invalidateRegion);
-
-            /*
-             * Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
-             * won't end up repainting the selection rectangle there.
-             */
-            callListenersSelectionChange();
-        };
-
-        this.redo = function() {
-            buildTempCanvasesForRedo();
-
-            var
-                oldDstRect = dstRect.clone(),
-                dstCorners = srcRect.toPoints();
-
-            affineTransform.transformPoints(dstCorners);
-
-            dstRect = CPRect.createBoundingBox(dstCorners);
-            dstRect.roundContain().clipTo(that.getBounds());
+    
+            this.buildTempCanvasesForRedo();
+    
+            let
+                oldDstRect = this.dstRect.clone(),
+                dstCorners = this.srcRect.toPoints();
+    
+            this.affineTransform.transformPoints(dstCorners);
+    
+            this.dstRect = CPRect.createBoundingBox(dstCorners);
+            this.dstRect.roundContain().clipTo(that.getBounds());
 
             let
             // The region that'll be different from the undo state after this redo is applied.
@@ -2520,35 +2605,35 @@ export default function CPArtwork(_width, _height) {
                     // The region inside undoData[] that the dstRect corresponds to
                     let
                         undoSrcRegion = rect.getTranslated(-undoDataRect.left, -undoDataRect.top);
-
-                    composeCanvasContext.putImageData(undoImageData, undoDataRect.left, undoDataRect.top, undoSrcRegion.left, undoSrcRegion.top, undoSrcRegion.getWidth(), undoSrcRegion.getHeight());
+    
+                    this.composeCanvasContext.putImageData(undoImageData, undoDataRect.left, undoDataRect.top, undoSrcRegion.left, undoSrcRegion.top, undoSrcRegion.getWidth(), undoSrcRegion.getHeight());
                 });
 
                 // Erase the region we moved from
-                composeCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
-
-                composeCanvasContext.save();
+                this.composeCanvasContext.clearRect(srcRect.left, srcRect.top, srcRect.getWidth(), srcRect.getHeight());
+    
+                this.composeCanvasContext.save();
 
                 // Apply the transform when drawing the transformed fragment
-                composeCanvasContext.setTransform(
-                    affineTransform.m[0], affineTransform.m[1], affineTransform.m[2],
-                    affineTransform.m[3], affineTransform.m[4], affineTransform.m[5]
+                this.composeCanvasContext.setTransform(
+                    this.affineTransform.m[0], this.affineTransform.m[1], this.affineTransform.m[2],
+                    this.affineTransform.m[3], this.affineTransform.m[4], this.affineTransform.m[5]
                 );
-                composeCanvasContext.drawImage(sourceRectCanvas[layerIndex], srcRect.left, srcRect.top);
-
-                composeCanvasContext.restore();
+                this.composeCanvasContext.drawImage(this.sourceRectCanvas[layerIndex], this.srcRect.left, this.srcRect.top);
+    
+                this.composeCanvasContext.restore();
 
                 // Now apply this to the actual layer data
 
                 // First erase the source area that won't be covered by the dest
-                CPRect.subtract(srcRect, dstRect).forEach(rect => layer.image.clearRect(rect, EMPTY_LAYER_COLOR));
+                CPRect.subtract(this.srcRect, this.dstRect).forEach(rect => layer.image.clearRect(rect, EMPTY_LAYER_COLOR));
 
                 // Now copy the transformed dest area from the canvas.
                 layer.image.copyBitmapRect(
-                    new CPColorBmp(composeCanvasContext.getImageData(dstRect.left, dstRect.top, dstRect.getWidth(), dstRect.getHeight())),
-                    dstRect.left,
-                    dstRect.top,
-                    new CPRect(0, 0, dstRect.getWidth(), dstRect.getHeight())
+                    new CPColorBmp(this.composeCanvasContext.getImageData(this.dstRect.left, this.dstRect.top, this.dstRect.getWidth(), dstRect.getHeight())),
+                    this.dstRect.left,
+                    this.dstRect.top,
+                    new CPRect(0, 0, this.dstRect.getWidth(), this.dstRect.getHeight())
                 );
 
                 /* Use the CPColorBmp undo data to erase any leftovers from the previous redo(). We do this
@@ -2556,7 +2641,7 @@ export default function CPArtwork(_width, _height) {
                  * (due to premultiplied alpha on some browsers/systems) and we want to avoid damaging areas we don't
                  * need to touch.
                  */
-                CPRect.subtract(oldDstRect, [dstRect, srcRect]).forEach(
+                CPRect.subtract(oldDstRect, [this.dstRect, this.srcRect]).forEach(
                     rect => layer.image.copyBitmapRect(undoData[layerIndex], rect.left, rect.top, rect.getTranslated(-undoDataRect.left, -undoDataRect.top))
                 );
             });
@@ -2564,12 +2649,12 @@ export default function CPArtwork(_width, _height) {
             invalidateLayer(this.imageLayers, invalidateRect);
 
             // Transform the selection rect to enclose the transformed selection
-            if (!fromSelection.isEmpty()) {
+            if (!this.fromSelection.isEmpty()) {
                 var
-                    toSelectionPoints = fromSelection.toPoints(),
+                    toSelectionPoints = this.fromSelection.toPoints(),
                     toSelectionRect;
-
-                affineTransform.transformPoints(toSelectionPoints);
+    
+                this.affineTransform.transformPoints(toSelectionPoints);
 
                 toSelectionRect = CPRect.createBoundingBox(toSelectionPoints);
                 toSelectionRect.roundNearest();
@@ -2579,84 +2664,74 @@ export default function CPArtwork(_width, _height) {
             }
 
             that.setActiveLayer(this.layer);
-        };
+        }
 
         /**
          * Replace the transform with the given one.
          *
-         * @param {CPTransform} _affineTransform
+         * @param {CPTransform} affineTransform
          */
-        this.amend = function(_affineTransform) {
-            expand();
-
-            affineTransform = _affineTransform.clone();
+        amend(affineTransform) {
+            this.affineTransform = affineTransform.clone();
+            
             this.redo();
-        };
+        }
 
-        this.setInterpolation = function(newInterpolation) {
-            if (newInterpolation != interpolation) {
-                interpolation = newInterpolation;
+        setInterpolation(newInterpolation) {
+            if (newInterpolation != this.interpolation) {
+                this.interpolation = newInterpolation;
 
-                if (composeCanvasContext) {
-                    setCanvasInterpolation(composeCanvasContext, interpolation == "smooth");
+                if (this.composeCanvasContext) {
+                    setCanvasInterpolation(this.composeCanvasContext, this.interpolation == "smooth");
                 }
 
                 this.undo();
                 this.redo();
             }
-        };
+        }
 
         /**
          * Called when we're no longer the top operation in the undo stack, so that we can optimize for lower memory
          * usage instead of faster revision speed
          */
-        this.compact = function() {
-            // If we have a full undo, and we don't need very much area for undo, trim it to just the area we need
-            if (undoDataRect.getWidth() == that.width && undoDataRect.getHeight() == that.height) {
-                var
-                    dirtyRect = srcRect.getUnion(dstRect);
-
-                if (dirtyRect.getArea() * 2 < that.width * that.height) {
-                    undoDataRect = dirtyRect;
-                    undoData = undoData.map(image => image.cloneRect(undoDataRect));
-                }
-            }
+        compact() {
+            super.compact();
 
             // Discard our temporary drawing canvases
-            composeCanvas = null;
-            composeCanvasContext = null;
-            sourceRectCanvas = null;
-        };
+            this.composeCanvas = null;
+            this.composeCanvasContext = null;
+            this.sourceRectCanvas = null;
+        }
 
-        this.getMemoryUsed = function(undone, param) {
+        getMemoryUsed(undone, param) {
             var
-                result = undoData.map(image => image.getMemorySize()).reduce(sum, 0);
-
-            if (composeCanvas) {
-                result += composeCanvas.width * composeCanvas.height * 4;
+                result = super.getMemoryUsed(undone, param);
+            
+            if (this.composeCanvas) {
+                result += this.composeCanvas.width * this.composeCanvas.height * 4;
             }
-            if (sourceRectCanvas) {
-                result += sourceRectCanvas.map(canvas => (canvas.width * canvas.height * 4)).reduce(sum, 0);
+            if (this.sourceRectCanvas) {
+                result += this.sourceRectCanvas.map(canvas => (canvas.width * canvas.height * 4)).reduce(sum, 0);
             }
 
             return result;
-        };
+        }
 
 	    /**
          * Get a copy of the affine transform.
          */
-        this.getTransform = function() {
-            return affineTransform.clone();
-        };
+        getTransform() {
+            return this.affineTransform.clone();
+        }
 
         /**
          * Get a copy of the initial document rectangle (before the transform was applied)
          *
          * @returns {CPRect}
          */
-        this.getInitialTransformRect = function() {
-            return srcRect.clone();
-        };
+        getInitialTransformRect() {
+            return this.srcRect.clone();
+        }
 
         /**
          * Get a copy of the initial user selection rectangle (before the transform was applied). Can be empty if
@@ -2664,29 +2739,10 @@ export default function CPArtwork(_width, _height) {
          *
          * @returns {CPRect}
          */
-        this.getInitialSelectionRect = function() {
-            return fromSelection.clone();
-        };
-
-        this.layer = that.getActiveLayer();
-
-        // Only transform image layers
-        if (this.layer instanceof CPImageLayer) {
-            this.imageLayers = [this.layer];
-        } else if (this.layer instanceof CPLayerGroup) {
-            this.imageLayers = this.layer.getLinearizedLayerList(false).filter(layer => layer instanceof CPImageLayer);
-        } else {
-            throw "Unsupported layer type in CPActionTransform command";
+        getInitialSelectionRect() {
+            return this.fromSelection.clone();
         }
-
-        undoData = this.imageLayers.map(layer => layer.image.clone());
-        undoDataRect = that.getBounds();
-
-        this.redo();
     }
-
-    CPActionAffineTransformSelection.prototype = Object.create(CPUndo.prototype);
-    CPActionAffineTransformSelection.prototype.constructor = CPActionAffineTransformSelection;
 
     /**
      * Upon creation, moves the currently selected region of the current layer by the given offset
@@ -2697,286 +2753,129 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} copy - True if we should copy to the destination instead of move.
      * @constructor
      */
-    function CPActionMoveSelection(srcRect, offsetX, offsetY, copy) {
-        /**
-         * The layer we're moving (which might be an image layer or a whole group of layers).
-         *
-         * @type {CPLayer}
-         */
-        this.layer = curLayer;
-
-        const
-            fromSelection = that.getSelection(),
-            fromMaskMode = maskEditingMode,
-
-            movingWholeLayer = srcRect.isEmpty(),
-
-            movingImage = !maskEditingMode || movingWholeLayer && this.layer.maskLinked,
-            movingMask = maskEditingMode || movingWholeLayer && this.layer.maskLinked;
-
-        var
-            dstRect = new CPRect(0, 0, 0, 0),
-
-	        hasFullUndo = false;
-
-        if (movingWholeLayer) {
-            srcRect = that.getBounds();
+    class CPActionMoveSelection extends CPActionTransformSelection {
+        constructor(srcRect, offsetX, offsetY, copy) {
+            super(srcRect);
+            
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+            
+            this.erasesSourceRect = !copy;
         }
-
-        /**
-         * @typedef {Object} LayerMoveInfo
-         *
-         * @property {CPLayer} layer
-         * @property {boolean} moveImage
-         * @property {boolean} moveMask
-         *
-         * We either have these full undos which cover the whole layer area:
-         *
-         * @property {?CPColorBmp} imageUndo
-         * @property {?CPGreyBmp} maskUndo
-         *
-         * Or else we have these snippets which cover the source and destination rectangles only (and we drop dest if it
-         * is contained within src!)
-         *
-         * @property {?CPColorBmp} imageSrcUndo
-         * @property {?CPColorBmp} imageDestUndo
-         * @property {?CPGreyBmp} maskSrcUndo
-         * @property {?CPGreyBmp} maskDestUndo
-         */
-
+	
 	    /**
-         * Info about the layers we're moving.
+         * Erase the given rectangles on all layers to represent that area being moved away.
          *
-         * @type {LayerMoveInfo[]}
+         * @param {CPRect} rect
          */
-        this.movingLayers = [];
-
-        this.undo = function() {
-            var
-                invalidateRegion = dstRect.clone();
-
-            if (!copy) {
-                invalidateRegion.union(srcRect);
-            }
-
-            // Restore the image data in the src and dest rectangles
+        eraseRectangle(rect) {
             this.movingLayers.forEach(function(layerInfo) {
-                if (hasFullUndo) {
-                    if (layerInfo.moveImage) {
-                        layerInfo.layer.image.copyBitmapRect(layerInfo.imageUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, invalidateRegion.left, invalidateRegion.top, invalidateRegion);
-                    }
-                } else {
-                    if (layerInfo.moveImage) {
-                        layerInfo.layer.image.copyBitmapRect(layerInfo.imageSrcUndo, srcRect.left, srcRect.top, layerInfo.imageSrcUndo.getBounds());
-
-                        if (layerInfo.imageDestUndo) {
-                            layerInfo.layer.image.copyBitmapRect(layerInfo.imageDestUndo, dstRect.left, dstRect.top, layerInfo.imageDestUndo.getBounds());
-                        }
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.layer.mask.copyBitmapRect(layerInfo.maskSrcUndo, srcRect.left, srcRect.top, layerInfo.maskSrcUndo.getBounds());
-
-                        if (layerInfo.maskDestUndo) {
-                            layerInfo.layer.mask.copyBitmapRect(layerInfo.maskDestUndo, dstRect.left, dstRect.top, layerInfo.maskDestUndo.getBounds());
-                        }
-                    }
+                if (layerInfo.moveImage) {
+                    layerInfo.layer.image.clearRect(rect, EMPTY_LAYER_COLOR);
+                }
+                if (layerInfo.moveMask) {
+                    layerInfo.layer.mask.clearRect(rect, this.movingWholeLayer ? 0xFF : EMPTY_MASK_COLOR);
                 }
             });
-
-            that.setSelection(fromSelection);
-            that.setActiveLayer(this.layer, fromMaskMode);
-
-            invalidateLayer(this.movingLayers.map(layerInfo => layerInfo.layer), invalidateRegion, true, true);
-
-            /*
-             * FIXME Required because in the case of a copy, we don't invalidate the source rect in the fusion, so the canvas
-             * won't end up repainting the selection rectangle there.
-             */
-            callListenersSelectionChange();
-        };
-
-        this.redo = function() {
-            var
-                invalidateRegion = new CPRect(0, 0, 0, 0);
+        }
+        
+        redo() {
+            let
+                oldDestRect = this.dstRect.clone(),
+                destRectUnclipped,
+	            /**
+                 * Do we have anything to repaint from a previous call to redo()? (if we are called by amend())
+                 * @type {CPRect[]}
+                 */
+                restoreAreas,
+                
+                invalidateRegion = oldDestRect.clone();
 
             this.buildFullUndo();
+    
+            this.dstRect.set(this.srcRect);
+            this.dstRect.translate(this.offsetX, this.offsetY);
+    
+            destRectUnclipped = this.dstRect.clone();
+            
+            // Clip dest rectangle to the bounds so we can update the invalidateRegion accurately
+            this.dstRect.clipTo(that.getBounds());
+    
+            if (this.erasesSourceRect) {
+                // We're moving, so erase the source region we're moving out of.
+                if (oldDestRect.isEmpty()) {
+                    this.eraseRectangle(this.srcRect);
+                } else {
+                    /*
+                     * We've erased the source rect already in a previous redo(), so we only need to erase the damaged
+                     * area.
+                     */
+                    this.eraseRectangle(this.srcRect.getIntersection(oldDestRect));
+                }
 
-            if (!copy) {
-                // Erase the source region we're moving out of
-
-                this.movingLayers.forEach(function(layerInfo) {
-                    if (layerInfo.moveImage) {
-                        layerInfo.layer.image.clearRect(srcRect, EMPTY_LAYER_COLOR);
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.layer.mask.clearRect(srcRect, movingWholeLayer ? 0xFF : EMPTY_MASK_COLOR);
-                    }
-                });
-
-                invalidateRegion.set(srcRect);
+                invalidateRegion.union(this.srcRect);
+    
+                restoreAreas = oldDestRect.subtract(this.srcRect);
+            } else {
+                restoreAreas = [oldDestRect];
             }
-
-            dstRect.set(srcRect);
-            dstRect.translate(offsetX, offsetY);
-
+            
+            if (restoreAreas.length > 0) {
+                this.movingLayers.forEach(function (layerInfo) {
+                    restoreAreas.forEach(function (restore) {
+                        if (layerInfo.moveImage) {
+                            layerInfo.layer.image.copyBitmapRect(layerInfo.imageUndo, restore.left, restore.top, restore);
+                        }
+                        if (layerInfo.moveMask) {
+                            layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, restore.left, restore.top, restore);
+                        }
+                    });
+                });
+            }
+            
             /* Note that while we could copy image data from the layer itself onto the layer (instead of sourcing that
              * data from the undo buffers), this would require that pasteAlphaRect do the right thing when source and
              * dest rectangles overlap, which it doesn't.
              */
-
-            // This function clamps the rectangles to the bounds for us
-            this.movingLayers.forEach(function(layerInfo) {
+            this.movingLayers.forEach(layerInfo => {
                 if (layerInfo.moveImage) {
-                    CPBlend.normalFuseImageOntoImageAtPosition(layerInfo.layer.image, layerInfo.imageUndo, dstRect.left, dstRect.top, srcRect);
+                    CPBlend.normalFuseImageOntoImageAtPosition(layerInfo.layer.image, layerInfo.imageUndo, destRectUnclipped.left, destRectUnclipped.top, this.srcRect);
                 }
                 if (layerInfo.moveMask) {
-                    layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, dstRect.left, dstRect.top, srcRect);
+                    layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, destRectUnclipped.left, destRectUnclipped.top, this.srcRect);
                 }
             });
 
-            // Clip dest rectangle to the bounds so we can update the invalidateRegion accurately
-            dstRect.clipTo(that.getBounds());
-
-            invalidateRegion.union(dstRect);
+            invalidateRegion.union(this.dstRect);
 
             invalidateLayer(this.movingLayers.map(layerInfo => layerInfo.layer), invalidateRegion, true, true);
 
-            if (!fromSelection.isEmpty()) {
+            if (!this.fromSelection.isEmpty()) {
                 var
-                    toSelection = fromSelection.clone();
-                toSelection.translate(offsetX, offsetY);
+                    toSelection = this.fromSelection.clone();
+                toSelection.translate(this.offsetX, this.offsetY);
                 that.setSelection(toSelection);
                 callListenersSelectionChange();
-            }
-        };
-
-        this.buildFullUndo = function() {
-            if (!hasFullUndo) {
-                this.movingLayers.forEach(function(layerInfo) {
-                    if (layerInfo.moveImage) {
-                        layerInfo.imageUndo = layerInfo.layer.image.clone();
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.maskUndo = layerInfo.layer.mask.clone();
-                    }
-
-                    layerInfo.imageSrcUndo = null;
-                    layerInfo.imageDestUndo = null;
-                    layerInfo.maskSrcUndo = null;
-                    layerInfo.maskDestUndo = null;
-                });
-
-                hasFullUndo = true;
             }
         };
 
         /**
          * Move further by the given offset on top of the current offset.
          *
-         * @param _offsetX {int}
-         * @param _offsetY {int}
+         * @param {int} offsetX
+         * @param {int} offsetY
          */
-        this.amend = function(_offsetX, _offsetY) {
-            if (copy || !hasFullUndo) {
+        amend(offsetX, offsetY) {
+            if (!this.hasFullUndo) {
                 this.undo();
-            } else {
-                /*
-                 * We don't need to restore the image at the *source* location as a full undo would do, since
-                 * we'll only erase that area again once we redo(). So just restore the data at the dest.
-                 */
-                this.movingLayers.forEach(function(layerInfo) {
-                    if (layerInfo.moveImage) {
-                        layerInfo.layer.image.copyBitmapRect(layerInfo.imageUndo, dstRect.left, dstRect.top, dstRect);
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.layer.mask.copyBitmapRect(layerInfo.maskUndo, dstRect.left, dstRect.top, dstRect);
-                    }
-                });
-
-                invalidateLayer(this.movingLayers.map(layerInfo => layerInfo.layer), dstRect, true, true);
             }
 
-            offsetX += _offsetX;
-            offsetY += _offsetY;
+            this.offsetX += offsetX;
+            this.offsetY += offsetY;
 
             this.redo();
-        };
-
-        /**
-         * Called when we're no longer the top operation in the undo stack, so that we can optimize for lower memory
-         * usage instead of faster revision speed
-         */
-        this.compact = function() {
-            if (hasFullUndo && srcRect.getArea() * 2 < that.width * that.height) {
-                // Replace our copy of the entire layer with just a copy of the areas we damaged
-                var
-                    needDestData = !dstRect.isInside(srcRect);
-
-                this.movingLayers.forEach(function(layerInfo) {
-                    // Save src and dest rectangles for undo
-                    if (layerInfo.moveImage) {
-                        layerInfo.imageSrcUndo = layerInfo.imageUndo.cloneRect(srcRect);
-                        if (needDestData) {
-                            layerInfo.imageDestUndo = layerInfo.imageUndo.cloneRect(dstRect);
-                        }
-                    }
-                    if (layerInfo.moveMask) {
-                        layerInfo.maskSrcUndo = layerInfo.maskUndo.cloneRect(srcRect);
-                        if (needDestData) {
-                            layerInfo.maskDestUndo = layerInfo.maskUndo.cloneRect(dstRect);
-                        }
-                    }
-
-                    // Discard the full-size undos
-                    layerInfo.imageUndo = null;
-                    layerInfo.maskUndo = null;
-                });
-
-                hasFullUndo = false;
-            }
-        };
-
-        this.getMemoryUsed = function(undone, param) {
-            return this.movingLayers.map(function(layerInfo) {
-                var
-                    images = [layerInfo.imageUndo, layerInfo.maskUndo, layerInfo.imageSrcUndo, layerInfo.imageDestUndo, layerInfo.maskSrcUndo, layerInfo.maskDestUndo];
-
-                return images.map(image => image ? image.getMemorySize() : 0).reduce(sum, 0);
-            }).reduce(sum, 0);
-        };
-
-        srcRect = srcRect.clone(); // Don't damage the caller's srcRect
-
-	    /**
-         * A list of the layers we're moving, and their properties.
-         *
-         * @type {LayerMoveInfo[]}
-         */
-        this.movingLayers = [{
-            layer: this.layer,
-            moveImage: this.layer instanceof CPImageLayer && movingImage,
-            moveMask: this.layer.mask != null && movingMask
-        }];
-
-        if (this.layer instanceof CPLayerGroup && movingImage) {
-            // Moving the "image" of a group means to move all of its children
-            if (movingWholeLayer && movingImage) {
-                this.movingLayers = this.movingLayers.concat(this.layer.getLinearizedLayerList(false).map(layer => ({
-                    layer: layer,
-                    moveImage: layer instanceof CPImageLayer,
-                    moveMask: layer.mask != null && layer.maskLinked
-                })));
-            }
         }
-
-        this.redo();
     }
-
-    CPActionMoveSelection.prototype = Object.create(CPUndo.prototype);
-    CPActionMoveSelection.prototype.constructor = CPActionMoveSelection;
 
     /**
      * Cut the selected rectangle from the layer

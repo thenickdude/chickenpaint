@@ -19,8 +19,8 @@
     "coverage": "babel-node node_modules/.bin/babel-istanbul cover _mocha -- test/*.js"
   },
   "dependencies": {
-    "wolfy87-eventemitter": "^5.1.0",
     "core-js": "^2.4.1",
-    "random-js": "^1.0.8"
+    "random-js": "^1.0.8",
+    "wolfy87-eventemitter": "^5.1.0"
   }
 }

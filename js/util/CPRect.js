@@ -207,7 +207,7 @@ CPRect.prototype.getTranslated = function(x, y) {
     result.translate(x, y);
 
     return result;
-}
+};
 
 CPRect.prototype.moveTo = function(x, y) {
     this.translate(x - this.left, y - this.top);
@@ -374,6 +374,78 @@ CPRect.subtract = function(rectsA, rectsB) {
     }
 
     return result.filter(rect => rect != null);
+};
+
+/**
+ * Union the second rectangle or array of rectangles with the first one, and return an array of CPRects to represent
+ * the resulting area (possibly empty).
+ *
+ * @param {(CPRect|CPRect[])} rectsA
+ * @param {(CPRect|CPRect[])} rectsB
+ * @returns {CPRect[]}
+ */
+CPRect.union = function(rectsA, rectsB) {
+	if (rectsA instanceof CPRect) {
+		rectsA = [rectsA];
+	}
+	if (rectsB instanceof CPRect) {
+		rectsB = [rectsB];
+	}
+	
+	let
+		result = rectsA.concat(rectsB);
+	
+	for (let i = 0; i < rectsB.length; i++) {
+		// Don't re-examine any new rectangles we push onto the result
+		let
+			rectB = rectsB[i],
+			resultLength = result.length;
+		
+		for (let j = 0; j < resultLength; j++) {
+			let
+				rectA = result[j];
+			
+			if (!rectA) {
+				continue;
+			}
+			
+			let
+				intersection = rectA.getIntersection(rectB);
+			
+			if (!intersection.isEmpty()) {
+				let
+					newRects = [];
+				
+				if (rectA.top < rectB.top) {
+					newRects.push(new CPRect(rectA.left, rectA.top, rectA.right, intersection.top));
+				}
+				if (rectA.bottom > rectB.bottom) {
+					newRects.push(new CPRect(rectA.left, intersection.bottom, rectA.right, rectA.bottom));
+				}
+				if (rectA.left < rectB.left) {
+					newRects.push(new CPRect(rectA.left, intersection.top, intersection.left, intersection.bottom));
+				}
+				if (rectA.right > rectB.right) {
+					newRects.push(new CPRect(intersection.right, intersection.top, rectA.right, intersection.bottom));
+				}
+				
+				newRects = newRects.filter(rect => !rect.isEmpty());
+				
+				// Replace the original rectangle in the array with the new fragments
+				if (newRects.length > 0) {
+					result[j] = newRects[0];
+					
+					for (let k = 1; k < newRects.length; k++) {
+						result.push(newRects[k]);
+					}
+				} else {
+					result[j] = null;
+				}
+			}
+		}
+	}
+	
+	return result.filter(rect => rect != null);
 };
 
 /* 

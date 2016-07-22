@@ -78,11 +78,12 @@ function ChibiChunkHeader(stream) {
 ChibiChunkHeader.HEADER_LENGTH = 8;
 
 const
-    LAYER_FLAG_VISIBLE     = 1,
-    LAYER_FLAG_CLIP        = 2,
-    LAYER_FLAG_HAS_MASK    = 4,
-    LAYER_FLAG_MASK_LINKED = 8,
-    LAYER_FLAG_EXPANDED    = 16,
+    LAYER_FLAG_VISIBLE      = 1,
+    LAYER_FLAG_CLIP         = 2,
+    LAYER_FLAG_HAS_MASK     = 4,
+    LAYER_FLAG_MASK_LINKED  = 8,
+    LAYER_FLAG_EXPANDED     = 16,
+    LAYER_FLAG_ALPHA_LOCKED = 32,
 
     LAYER_DECODE_STATE_FIXED_HEADER    = 0,
     LAYER_DECODE_STATE_VARIABLE_HEADER = 1,
@@ -91,248 +92,235 @@ const
     LAYER_DECODE_STATE_SKIP_TRAILING   = 5,
     LAYER_DECODE_STATE_COMPLETE        = 6;
 
-/**
- *
- * @param {ChibiChunkHeader} chunkHeader - The header for the layer chunk to decode
- * @param {int} width - The width of the document
- * @param {int} height - The height of the document
- * @constructor
- */
-function ChibiLayerDecoder(chunkHeader, width, height) {
-    this.chunkHeader = chunkHeader;
-    this.width = width;
-    this.height = height;
-
-    this.state = LAYER_DECODE_STATE_FIXED_HEADER;
-    this.payloadOffset = 0;
-    this.skipBytes = 0;
-    this.nameLength = 0;
-    this.done = false;
-
-    this.colorDecoder = null;
-    this.maskDecoder = null;
-}
-
-ChibiLayerDecoder.prototype.readFixedHeader = function(stream) {
-    this.payloadOffset = stream.readU32BE();
-
-    this.blendMode = stream.readU32BE();
-    this.alpha = stream.readU32BE();
-
-    var
-        layerFlags = stream.readU32BE();
-
-    this.visible = (layerFlags & LAYER_FLAG_VISIBLE) != 0;
-    this.clip = (layerFlags & LAYER_FLAG_CLIP) != 0;
-    this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
-    this.maskLinked = (layerFlags & LAYER_FLAG_MASK_LINKED) != 0;
-    this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
-
-    this.nameLength = stream.readU32BE();
-};
-
-ChibiLayerDecoder.prototype.getFixedHeaderLen = function() {
-    return 5 * 4;
-};
-
-ChibiLayerDecoder.prototype.getVariableHeaderLen = function() {
-    return this.nameLength;
-};
-
-ChibiLayerDecoder.prototype.readVariableSizeHeader = function(stream) {
-    this.name = stream.readString(this.nameLength);
-};
-
-/**
- * Decode some layer data from the beginning of the given block. Returns any non-layer data
- * that was left over from that block, or null if the block was read completely.
- *
- * Keep calling with more data until the .done property is set to true.
- *
- * @param {Uint8Array} block
- * @returns {?Uint8Array}
- */
-ChibiLayerDecoder.prototype.decode = function(block) {
-    var
-        stream;
-
-    // Dummy loop so we can re-enter the switch statement with "continue"
-    while (true) {
-        if (this.skipBytes > 0) {
-            if (this.skipBytes >= block.length) {
-                this.skipBytes -= block.length;
-                return null;
-            } else {
-                block = block.subarray(this.skipBytes);
-                this.skipBytes = 0;
-            }
-        }
-
-        switch (this.state) {
-            case LAYER_DECODE_STATE_FIXED_HEADER:
-                // Wait for first part of header to arrive
-                if (block.length < this.getFixedHeaderLen()) {
-                    break;
-                }
-
-                stream = new ArrayDataStream(block);
-                this.readFixedHeader(stream);
-
-                block = block.subarray(stream.pos);
-
-                this.state = LAYER_DECODE_STATE_VARIABLE_HEADER;
-                continue;
-
-            case LAYER_DECODE_STATE_VARIABLE_HEADER:
-                // Wait for variable part of header to arrive
-                if (block.length < this.getVariableHeaderLen()) {
-                    break;
-                }
-
-                stream = new ArrayDataStream(block);
-                this.readVariableSizeHeader(stream);
-
-                this.layer = this.createLayer();
-
-                if (this.hasMask) {
-                    this.layer.setMask(new CPGreyBmp(this.width, this.height, 8));
-                    this.maskDecoder = new CPMaskDecoder(this.layer.mask);
-                }
-
-                if (this.layer instanceof CPImageLayer) {
-                    this.colorDecoder = new CPColorPixelsDecoder(this.layer.image);
-                }
-
-                this.skipBytes = this.payloadOffset - this.getFixedHeaderLen();
-
-                if (this.colorDecoder) {
-                    this.state = LAYER_DECODE_STATE_IMAGE_DATA;
-                } else if (this.maskDecoder) {
-                    this.state = LAYER_DECODE_STATE_MASK_DATA;
+class ChibiLayerDecoder {
+    /**
+     * @param {ChibiChunkHeader} chunkHeader - The header for the layer chunk to decode
+     * @param {int} width - The width of the document
+     * @param {int} height - The height of the document
+     */
+    constructor(chunkHeader, width, height) {
+        this.chunkHeader = chunkHeader;
+        this.width = width;
+        this.height = height;
+        
+        this.state = LAYER_DECODE_STATE_FIXED_HEADER;
+        this.payloadOffset = 0;
+        this.skipBytes = 0;
+        this.nameLength = 0;
+        this.done = false;
+        
+        this.colorDecoder = null;
+        this.maskDecoder = null;
+    }
+    
+    readFixedHeader(stream) {
+        this.payloadOffset = stream.readU32BE();
+        
+        this.blendMode = stream.readU32BE();
+        this.alpha = stream.readU32BE();
+        
+        var
+            layerFlags = stream.readU32BE();
+        
+        this.visible = (layerFlags & LAYER_FLAG_VISIBLE) != 0;
+        this.clip = (layerFlags & LAYER_FLAG_CLIP) != 0;
+        this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
+        this.maskLinked = (layerFlags & LAYER_FLAG_MASK_LINKED) != 0;
+        this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
+        
+        this.nameLength = stream.readU32BE();
+    }
+    
+    getFixedHeaderLen() {
+        return 5 * 4;
+    }
+    
+    getVariableHeaderLen() {
+        return this.nameLength;
+    }
+    
+    readVariableSizeHeader(stream) {
+        this.name = stream.readString(this.nameLength);
+    }
+    
+    /**
+     * Decode some layer data from the beginning of the given block. Returns any non-layer data
+     * that was left over from that block, or null if the block was read completely.
+     *
+     * Keep calling with more data until the .done property is set to true.
+     *
+     * @param {Uint8Array} block
+     * @returns {?Uint8Array}
+     */
+    decode(block) {
+        var
+            stream;
+        
+        // Dummy loop so we can re-enter the switch statement with "continue"
+        while (true) {
+            if (this.skipBytes > 0) {
+                if (this.skipBytes >= block.length) {
+                    this.skipBytes -= block.length;
+                    return null;
                 } else {
-                    this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                    block = block.subarray(this.skipBytes);
+                    this.skipBytes = 0;
                 }
-
-                continue;
-
-            case LAYER_DECODE_STATE_IMAGE_DATA:
-                block = this.colorDecoder.decode(block);
-
-                if (this.colorDecoder.done) {
-                    if (this.maskDecoder) {
+            }
+            
+            switch (this.state) {
+                case LAYER_DECODE_STATE_FIXED_HEADER:
+                    // Wait for first part of header to arrive
+                    if (block.length < this.getFixedHeaderLen()) {
+                        break;
+                    }
+                    
+                    stream = new ArrayDataStream(block);
+                    this.readFixedHeader(stream);
+                    
+                    block = block.subarray(stream.pos);
+                    
+                    this.state = LAYER_DECODE_STATE_VARIABLE_HEADER;
+                    continue;
+                
+                case LAYER_DECODE_STATE_VARIABLE_HEADER:
+                    // Wait for variable part of header to arrive
+                    if (block.length < this.getVariableHeaderLen()) {
+                        break;
+                    }
+                    
+                    stream = new ArrayDataStream(block);
+                    this.readVariableSizeHeader(stream);
+                    
+                    this.layer = this.createLayer();
+                    
+                    if (this.hasMask) {
+                        this.layer.setMask(new CPGreyBmp(this.width, this.height, 8));
+                        this.maskDecoder = new CPMaskDecoder(this.layer.mask);
+                    }
+                    
+                    if (this.layer instanceof CPImageLayer) {
+                        this.colorDecoder = new CPColorPixelsDecoder(this.layer.image);
+                    }
+                    
+                    this.skipBytes = this.payloadOffset - this.getFixedHeaderLen();
+                    
+                    if (this.colorDecoder) {
+                        this.state = LAYER_DECODE_STATE_IMAGE_DATA;
+                    } else if (this.maskDecoder) {
                         this.state = LAYER_DECODE_STATE_MASK_DATA;
                     } else {
                         this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
                     }
+                    
                     continue;
-                }
-                break;
-
-            case LAYER_DECODE_STATE_MASK_DATA:
-                block = this.maskDecoder.decode(block);
-
-                if (this.maskDecoder.done) {
-                    this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                
+                case LAYER_DECODE_STATE_IMAGE_DATA:
+                    block = this.colorDecoder.decode(block);
+                    
+                    if (this.colorDecoder.done) {
+                        if (this.maskDecoder) {
+                            this.state = LAYER_DECODE_STATE_MASK_DATA;
+                        } else {
+                            this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                        }
+                        continue;
+                    }
+                    break;
+                
+                case LAYER_DECODE_STATE_MASK_DATA:
+                    block = this.maskDecoder.decode(block);
+                    
+                    if (this.maskDecoder.done) {
+                        this.state = LAYER_DECODE_STATE_SKIP_TRAILING;
+                        continue;
+                    }
+                    break;
+                
+                case LAYER_DECODE_STATE_SKIP_TRAILING:
+                    var
+                        bytesRead = this.payloadOffset;
+                    
+                    if (this.colorDecoder) {
+                        bytesRead += this.colorDecoder.bytesTotal;
+                    }
+                    
+                    if (this.maskDecoder) {
+                        bytesRead += this.maskDecoder.bytesTotal;
+                    }
+                    
+                    this.state = LAYER_DECODE_STATE_COMPLETE;
+                    this.skipBytes = this.chunkHeader.chunkSize - bytesRead;
                     continue;
-                }
-                break;
-
-            case LAYER_DECODE_STATE_SKIP_TRAILING:
-                var
-                    bytesRead = this.payloadOffset;
-
-                if (this.colorDecoder) {
-                    bytesRead += this.colorDecoder.bytesTotal;
-                }
-
-                if (this.maskDecoder) {
-                    bytesRead += this.maskDecoder.bytesTotal;
-                }
-
-                this.state = LAYER_DECODE_STATE_COMPLETE;
-                this.skipBytes = this.chunkHeader.chunkSize - bytesRead;
-                continue;
-
-            case LAYER_DECODE_STATE_COMPLETE:
-                this.done = true;
+                
+                case LAYER_DECODE_STATE_COMPLETE:
+                    this.done = true;
+            }
+            break;
         }
-        break;
+        
+        return block;
     }
-
-    return block;
-};
-
-/**
- *
- * @param chunkHeader
- * @param width
- * @param height
- * @constructor
- */
-function ChibiImageLayerDecoder(chunkHeader, width, height) {
-    ChibiLayerDecoder.call(this, chunkHeader, width, height);
 }
 
-ChibiImageLayerDecoder.prototype = Object.create(ChibiLayerDecoder.prototype);
-ChibiImageLayerDecoder.prototype.constructor = ChibiImageLayerDecoder;
-
-/**
- * Create a layer using the properties previously read into this decoder.
- *
- * @returns {CPImageLayer}
- */
-ChibiImageLayerDecoder.prototype.createLayer = function() {
-    var
-        layer = new CPImageLayer(this.width, this.height, this.name);
-
-    layer.blendMode = this.blendMode;
-    layer.alpha = this.alpha;
-
-    layer.visible = this.visible;
-    layer.clip = this.clip;
-
-    layer.maskLinked = this.maskLinked;
-
-    return layer;
-};
-
-function ChibiLayerGroupDecoder(chunkHeader, width, height) {
-    ChibiLayerDecoder.call(this, chunkHeader, width, height);
-
-    this.childLayers = 0;
+class ChibiImageLayerDecoder extends ChibiLayerDecoder {
+    /**
+     * Create a layer using the properties previously read into this decoder.
+     *
+     * @returns {CPImageLayer}
+     */
+    createLayer() {
+        var
+            layer = new CPImageLayer(this.width, this.height, this.name);
+        
+        layer.blendMode = this.blendMode;
+        layer.alpha = this.alpha;
+        
+        layer.visible = this.visible;
+        layer.clip = this.clip;
+        
+        layer.maskLinked = this.maskLinked;
+        
+        return layer;
+    }
 }
 
-ChibiLayerGroupDecoder.prototype = Object.create(ChibiLayerDecoder.prototype);
-ChibiLayerGroupDecoder.prototype.constructor = ChibiLayerGroupDecoder;
-
-ChibiLayerGroupDecoder.prototype.readFixedHeader = function(stream) {
-    ChibiLayerDecoder.prototype.readFixedHeader.call(this, stream);
-
-    this.childLayers = stream.readU32BE();
-};
-
-ChibiLayerGroupDecoder.prototype.getFixedHeaderLen = function() {
-    return ChibiLayerDecoder.prototype.getFixedHeaderLen.call(this) + 4;
-};
-
-/**
- * Create a group using the properties previously read into this decoder.
- *
- * @returns {CPLayerGroup}
- */
-ChibiLayerGroupDecoder.prototype.createLayer = function() {
-    var
-        group = new CPLayerGroup(this.name, this.blendMode);
-
-    group.alpha = this.alpha;
-
-    group.visible = this.visible;
-    group.expanded = this.expanded;
-
-    group.maskLinked = this.maskLinked;
-
-    return group;
-};
+class ChibiLayerGroupDecoder extends ChibiLayerDecoder {
+    constructor(chunkHeader, width, height) {
+        super(chunkHeader, width, height);
+        
+        this.childLayers = 0;
+    }
+    
+    readFixedHeader(stream) {
+        super.readFixedHeader.call(this, stream);
+        
+        this.childLayers = stream.readU32BE();
+    }
+    
+    getFixedHeaderLen() {
+        return super.getFixedHeaderLen.call(this) + 4;
+    }
+    
+    /**
+     * Create a group using the properties previously read into this decoder.
+     *
+     * @returns {CPLayerGroup}
+     */
+    createLayer() {
+        var
+            group = new CPLayerGroup(this.name, this.blendMode);
+        
+        group.alpha = this.alpha;
+        
+        group.visible = this.visible;
+        group.expanded = this.expanded;
+        
+        group.maskLinked = this.maskLinked;
+        
+        return group;
+    }
+}
 
 /**
  * Write the RGBA pixels of the given bitmap to the stream in ARGB order to match the Chibi specs.
@@ -367,143 +355,173 @@ function writeMaskToStream(stream, bitmap) {
     stream.pos += bitmap.data.length;
 }
 
-/**
- *
- * @param {CPColorBmp} destImage - Image to decode into.
- * @constructor
- */
-function CPColorPixelsDecoder(destImage) {
-    this.bytesRead = 0;
-    this.bytesTotal = destImage.width * destImage.height * CPColorBmp.BYTES_PER_PIXEL;
-    this.output = destImage.data;
-    this.done = false;
+class CPColorPixelsDecoder {
+    /**
+     * @param {CPColorBmp} destImage - Image to decode into.
+     */
+    constructor(destImage) {
+        this.bytesRead = 0;
+        this.bytesTotal = destImage.width * destImage.height * CPColorBmp.BYTES_PER_PIXEL;
+        this.output = destImage.data;
+        this.done = false;
+    }
+    
+    /**
+     * Decode A,R,G,B pixels from the given buffer into the R,G,B,A destination image.
+     *
+     * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
+     *
+     * @param {Uint8Array} buffer
+     */
+    decode(buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        
+        var
+            subpixel = this.bytesRead % CPColorBmp.BYTES_PER_PIXEL,
+            dstPixelStartOffset = this.bytesRead - subpixel,
+            bufferPos = 0,
+            
+            // Map from source channel order to CPLayer's dest order
+            channelMap = [
+                CPColorBmp.ALPHA_BYTE_OFFSET,
+                CPColorBmp.RED_BYTE_OFFSET,
+                CPColorBmp.GREEN_BYTE_OFFSET,
+                CPColorBmp.BLUE_BYTE_OFFSET
+            ];
+        
+        // The first pixel might be a partial one, since we might be continuing a pixel split over buffers
+        for (; subpixel < CPColorBmp.BYTES_PER_PIXEL && bufferPos < buffer.length; subpixel++) {
+            this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+            bufferPos++;
+        }
+        
+        this.bytesRead += bufferPos;
+        
+        // How many more pixels are we to read in this buffer?
+        var
+            bytesRemain = Math.min(buffer.length - bufferPos, this.bytesTotal - this.bytesRead) | 0,
+            fullPixelsRemain = (bytesRemain / CPColorBmp.BYTES_PER_PIXEL) | 0,
+            subpixelsRemain = bytesRemain % CPColorBmp.BYTES_PER_PIXEL;
+        
+        for (var i = 0; i < fullPixelsRemain; i++) {
+            this.output[this.bytesRead + CPColorBmp.ALPHA_BYTE_OFFSET] = buffer[bufferPos];
+            this.output[this.bytesRead + CPColorBmp.RED_BYTE_OFFSET] = buffer[bufferPos + 1];
+            this.output[this.bytesRead + CPColorBmp.GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
+            this.output[this.bytesRead + CPColorBmp.BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
+            this.bytesRead += CPColorBmp.BYTES_PER_PIXEL;
+            bufferPos += CPColorBmp.BYTES_PER_PIXEL;
+        }
+        
+        // Read a fractional pixel at the end of the buffer
+        dstPixelStartOffset = this.bytesRead;
+        for (subpixel = 0; subpixel < subpixelsRemain; subpixel++) {
+            this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
+            bufferPos++;
+        }
+        
+        this.bytesRead += subpixelsRemain;
+        
+        if (this.bytesRead >= this.bytesTotal) {
+            this.done = true;
+        }
+        
+        if (bufferPos < buffer.length) {
+            // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
+            return buffer.subarray(bufferPos);
+        } else {
+            // Buffer exhausted
+            return null;
+        }
+    }
+}
+
+class CPMaskDecoder {
+    /**
+     *
+     * @param {CPGreyBmp} mask - The destination to decode pixels into, must already be the correct size.
+     */
+    constructor(mask) {
+        this.bytesRead = 0;
+        this.bytesTotal = mask.width * mask.height;
+        this.output = mask.data;
+        this.done = false;
+    }
+    
+    /**
+     * Read 8-bit greyscale pixels from the given buffer into destination pixel array.
+     *
+     * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
+     *
+     * @param {Uint8Array} buffer
+     */
+    decode(buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        
+        var
+            // How many more pixels are we to read from this buffer?
+            bytesRemain = Math.min(buffer.length, this.bytesTotal - this.bytesRead) | 0,
+            dstIndex = this.bytesRead;
+        
+        for (var srcIndex = 0; srcIndex < bytesRemain; srcIndex++, dstIndex++) {
+            this.output[dstIndex] = buffer[srcIndex];
+        }
+        
+        this.bytesRead = dstIndex;
+        
+        if (this.bytesRead >= this.bytesTotal) {
+            this.done = true;
+        }
+        
+        if (srcIndex < buffer.length) {
+            // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
+            return buffer.subarray(srcIndex);
+        } else {
+            // Buffer exhausted
+            return null;
+        }
+    }
 }
 
 /**
- * Decode A,R,G,B pixels from the given buffer into the R,G,B,A destination image.
+ * Make a 32-bit Chibi file-version value for storing in the file header.
  *
- * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
- *
- * @param {Uint8Array} buffer
+ * @param {int} major
+ * @param {int} minor
+ * @returns {int}
  */
-CPColorPixelsDecoder.prototype.decode = function(buffer) {
-    if (buffer == null) {
-        return null;
-    }
-
-    var
-        subpixel = this.bytesRead % CPColorBmp.BYTES_PER_PIXEL,
-        dstPixelStartOffset = this.bytesRead - subpixel,
-        bufferPos = 0,
-
-    // Map from source channel order to CPLayer's dest order
-        channelMap = [
-            CPColorBmp.ALPHA_BYTE_OFFSET,
-            CPColorBmp.RED_BYTE_OFFSET,
-            CPColorBmp.GREEN_BYTE_OFFSET,
-            CPColorBmp.BLUE_BYTE_OFFSET
-        ];
-
-    // The first pixel might be a partial one, since we might be continuing a pixel split over buffers
-    for (; subpixel < CPColorBmp.BYTES_PER_PIXEL && bufferPos < buffer.length; subpixel++) {
-        this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
-        bufferPos++;
-    }
-
-    this.bytesRead += bufferPos;
-
-    // How many more pixels are we to read in this buffer?
-    var
-        bytesRemain = Math.min(buffer.length - bufferPos, this.bytesTotal - this.bytesRead) | 0,
-        fullPixelsRemain = (bytesRemain / CPColorBmp.BYTES_PER_PIXEL) | 0,
-        subpixelsRemain = bytesRemain % CPColorBmp.BYTES_PER_PIXEL;
-
-    for (var i = 0; i < fullPixelsRemain; i++) {
-        this.output[this.bytesRead + CPColorBmp.ALPHA_BYTE_OFFSET] = buffer[bufferPos];
-        this.output[this.bytesRead + CPColorBmp.RED_BYTE_OFFSET] = buffer[bufferPos + 1];
-        this.output[this.bytesRead + CPColorBmp.GREEN_BYTE_OFFSET] = buffer[bufferPos + 2];
-        this.output[this.bytesRead + CPColorBmp.BLUE_BYTE_OFFSET] = buffer[bufferPos + 3];
-        this.bytesRead += CPColorBmp.BYTES_PER_PIXEL;
-        bufferPos += CPColorBmp.BYTES_PER_PIXEL;
-    }
-
-    // Read a fractional pixel at the end of the buffer
-    dstPixelStartOffset = this.bytesRead;
-    for (subpixel = 0; subpixel < subpixelsRemain; subpixel++) {
-        this.output[dstPixelStartOffset + channelMap[subpixel]] = buffer[bufferPos];
-        bufferPos++;
-    }
-
-    this.bytesRead += subpixelsRemain;
-
-    if (this.bytesRead >= this.bytesTotal) {
-        this.done = true;
-    }
-
-    if (bufferPos < buffer.length) {
-        // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
-        return buffer.subarray(bufferPos);
-    } else {
-        // Buffer exhausted
-        return null;
-    }
-};
-
-/**
- *
- * @param {CPGreyBmp} mask - The destination to decode pixels into, must already be the correct size.
- * @constructor
- */
-function CPMaskDecoder(mask) {
-    this.bytesRead = 0;
-    this.bytesTotal = mask.width * mask.height;
-    this.output = mask.data;
-    this.done = false;
+function makeChibiVersion(major, minor) {
+    return (major << 16) | minor;
 }
 
 /**
- * Read 8-bit greyscale pixels from the given buffer into destination pixel array.
+ * Decides which Chibi file version will be required to support the features used by the given artwork, and returns
+ * the corresponding version number header.
  *
- * Returns the buffer with the read bytes removed from the front, or null if the buffer was read in its entirety.
- *
- * @param {Uint8Array} buffer
+ * @param {CPArtwork} artwork
+ * @returns {int}
  */
-CPMaskDecoder.prototype.decode = function(buffer) {
-    if (buffer == null) {
-        return null;
+function minimumVersionForArtwork(artwork) {
+    for (let layer of artwork.getLayersRoot().getLinearizedLayerList(false)) {
+        if (layer instanceof CPLayerGroup || layer.mask || layer.clip) {
+            /*
+             * We'll claim to be compatible with ChibiPaint (by not incrementing the major version number), since
+             * ChibiPaint will at least be able to open the file, even though it'll lose information in doing so.
+             */
+            return makeChibiVersion(0, 10);
+        }
     }
-
-    var
-    // How many more pixels are we to read from this buffer?
-        bytesRemain = Math.min(buffer.length, this.bytesTotal - this.bytesRead) | 0,
-        dstIndex = this.bytesRead;
-
-    for (var srcIndex = 0; srcIndex < bytesRemain; srcIndex++, dstIndex++) {
-        this.output[dstIndex] = buffer[srcIndex];
-    }
-
-    this.bytesRead = dstIndex;
-
-    if (this.bytesRead >= this.bytesTotal) {
-        this.done = true;
-    }
-
-    if (srcIndex < buffer.length) {
-        // Layer was completed before the end of the buffer, there is buffer left over for someone else to use
-        return buffer.subarray(srcIndex);
-    } else {
-        // Buffer exhausted
-        return null;
-    }
-};
+    
+    return makeChibiVersion(0, 0); // The version used by the original ChibiPaint
+}
 
 export default function CPChibiFile() {
     const
         MAX_SUPPORTED_MAJOR_VERSION = 1,
-        MAX_SUPPORTED_MINOR_VERSION = 1,
-        CURRENT_VERSION_NUMBER = (MAX_SUPPORTED_MAJOR_VERSION << 16) | MAX_SUPPORTED_MINOR_VERSION;
 
-    const
         CHI_MAGIC = "CHIBIOEK",
 
         CHUNK_TAG_HEAD = "HEAD",
@@ -535,7 +553,6 @@ export default function CPChibiFile() {
     }
 
 	/**
-     *
      * @param {CPArtwork} artwork
      * @param {int} numLayers
      *
@@ -544,9 +561,8 @@ export default function CPChibiFile() {
     function serializeFileHeaderChunk(artwork, numLayers) {
         var
             stream = allocateChunkStream(CHUNK_TAG_HEAD, CPChibiFileHeader.FIXED_HEADER_LENGTH);
-
-        // Current Version, with Major in the top word and Minor in the lower
-        stream.writeU32BE(CURRENT_VERSION_NUMBER);
+        
+        stream.writeU32BE(minimumVersionForArtwork(artwork));
         stream.writeU32BE(artwork.width);
         stream.writeU32BE(artwork.height);
         stream.writeU32BE(numLayers);
@@ -657,7 +673,7 @@ export default function CPChibiFile() {
 
         return stream.getAsDataArray();
     }
-
+        
     /**
      * Serialize the given artwork to Chibifile format. Returns a promise which resolves to the serialized Blob.
      *
@@ -738,7 +754,7 @@ export default function CPChibiFile() {
             STATE_FATAL                        = 5;
         
         var
-            pako = new window.pako.Inflate({}),
+            inflator = new window.pako.Inflate({}),
             state = STATE_WAIT_FOR_CHUNK,
 
 	        /**
@@ -915,9 +931,9 @@ export default function CPChibiFile() {
         // Remove the magic header
         arrayBuffer = arrayBuffer.subarray(CHI_MAGIC.length);
         
-        pako.onData = processBlock;
+        inflator.onData = processBlock;
         
-        pako.onEnd = function(status) {
+        inflator.onEnd = function(status) {
             if (status === 0 && state == STATE_SUCCESS) {
                 artwork.selectTopmostVisibleLayer();
                 
@@ -930,8 +946,8 @@ export default function CPChibiFile() {
         };
 
         // Begin decompression/decoding
-        pako.push(arrayBuffer);
+        inflator.push(arrayBuffer);
         
-        return pako.result;
+        return inflator.result;
     };
 }

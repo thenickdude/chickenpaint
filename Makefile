@@ -37,7 +37,7 @@ js/engine/CPBlend.js : codegenerator/BlendGenerator.js
 	node codegenerator/BlendGenerator.js > js/engine/CPBlend.js
 
 clean :
-	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map test/blending_bench/blending_test.js test/blending_bench/blending.js js/engine/CPBlend2.js
+	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map test/blending_bench/blending_test.js test/blending_bench/blending.js js/engine/CPBlend.js
 	rm -rf dist/*
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.less
