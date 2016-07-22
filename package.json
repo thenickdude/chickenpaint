@@ -12,7 +12,6 @@
     "browserify": "~13.0.1",
     "less": "^2.7.1",
     "mocha": "^2.5.3",
-    "random-js": "^1.0.8",
     "uglify-js": "~2.6.2"
   },
   "scripts": {
@@ -20,6 +19,8 @@
     "coverage": "babel-node node_modules/.bin/babel-istanbul cover _mocha -- test/*.js"
   },
   "dependencies": {
-    "wolfy87-eventemitter": "^5.1.0"
+    "wolfy87-eventemitter": "^5.1.0",
+    "core-js": "^2.4.1",
+    "random-js": "^1.0.8"
   }
 }
