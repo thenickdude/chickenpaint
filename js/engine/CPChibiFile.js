@@ -362,6 +362,8 @@ export default function CPChibiFile() {
                                 skipCount = chunk.chunkSize;
                                 state = STATE_SKIP_TRAILING_CHUNK_BYTES;
                             }
+    
+                            continue;
                         } else if (chunk.chunkType == CHUNK_TAG_HEAD) {
                             headerChunk = chunk;
                             
