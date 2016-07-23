@@ -35,6 +35,7 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         
         vertHandle = null,
         
+        dragAction,
         dragOffset,
         
         that = this;
@@ -81,27 +82,47 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         this.setHeight(height);
     };
     
-    function mouseDrag(e) {
-        that.setLocation(e.pageX - dragOffset.x, e.pageY - dragOffset.y);
-    }
-
-    function mouseDragRelease(e) {
-        window.removeEventListener("mousemove", mouseDrag);
-        window.removeEventListener("mouseup", mouseDragRelease);
+    function paletteHeaderPointerMove(e) {
+        if (e.buttons != 0 && dragAction == "move") {
+            that.setLocation(e.pageX - dragOffset.x, e.pageY - dragOffset.y);
+        }
     }
     
-    function vertHandleDrag(e) {
-        that.setHeight(e.pageY - $(containerElement).offset().top);
+    function paletteHeaderPointerDown(e) {
+        if (e.button == 0) {/* Left */
+            if (e.target.nodeName == "BUTTON") {
+                // Close button was clicked
+                that.emitEvent("paletteVisChange", [that, false]);
+            } else {
+                headElement.setPointerCapture(e.pointerId);
+    
+                dragOffset = {x: e.pageX - $(containerElement).position().left, y: e.pageY - $(containerElement).position().top};
+                dragAction = "move";
+            }
+        }
     }
 
-    function vertHandleRelease(e) {
-        window.removeEventListener("mousemove", vertHandleDrag);
-        window.removeEventListener("mouseup", vertHandleRelease);
+    function paletteHeaderPointerUp(e) {
+        if (dragAction == "move") {
+            headElement.releasePointerCapture(e.pointerId);
+            dragAction = false;
+        }
     }
     
-    function vertHandleMouseDown(e) {
-        window.addEventListener("mousemove", vertHandleDrag);
-        window.addEventListener("mouseup", vertHandleRelease);
+    function vertHandlePointerMove(e) {
+        if (dragAction == "vertResize") {
+            that.setHeight(e.pageY - $(containerElement).offset().top);
+        }
+    }
+
+    function vertHandlePointerUp(e) {
+        vertHandle.releasePointerCapture(e.pointerId);
+        dragAction = false;
+    }
+    
+    function vertHandlePointerDown(e) {
+        dragAction = "vertResize";
+        vertHandle.setPointerCapture(e.pointerId);
     }
     
     function addVertResizeHandle() {
@@ -109,7 +130,9 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         
         vertHandle.className = "chickenpaint-resize-handle-vert";
         
-        vertHandle.addEventListener("mousedown", vertHandleMouseDown);
+        vertHandle.addEventListener("pointerdown", vertHandlePointerDown);
+        vertHandle.addEventListener("pointermove", vertHandlePointerMove);
+        vertHandle.addEventListener("pointerup", vertHandlePointerUp);
         
         containerElement.appendChild(vertHandle);
     }
@@ -140,18 +163,9 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         addVertResizeHandle();
     }
 
-    headElement.addEventListener("mousedown", function(e) {
-        if (e.button == 0) {/* Left */
-            if (e.target.nodeName == "BUTTON") {
-                that.emitEvent("paletteVisChange", [that, false]);
-            } else {
-                window.addEventListener("mousemove", mouseDrag);
-                window.addEventListener("mouseup", mouseDragRelease);
-                
-                dragOffset = {x: e.pageX - $(containerElement).position().left, y: e.pageY - $(containerElement).position().top};
-            }
-        }
-    });
+    headElement.addEventListener("pointerdown", paletteHeaderPointerDown);
+    headElement.addEventListener("pointermove", paletteHeaderPointerMove);
+    headElement.addEventListener("pointerup", paletteHeaderPointerUp);
 }
 
 CPPalette.prototype = Object.create(EventEmitter.prototype);
