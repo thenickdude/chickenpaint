@@ -81,7 +81,7 @@ function wrapCheckboxWithLabel(checkbox, title) {
 }
 
 export default function CPLayersPalette(controller) {
-    CPPalette.call(this, controller, "layers", "Layers", true);
+    CPPalette.call(this, controller, "layers", "Layers", true, true);
 
     const
         BUTTON_PRIMARY = 0,
@@ -1205,6 +1205,7 @@ export default function CPLayersPalette(controller) {
 
     var
         parentSetSize = this.setSize,
+        parentSetWidth = this.setWidth,
         parentSetHeight = this.setHeight;
 
     this.setSize = function(w, h) {
@@ -1213,9 +1214,15 @@ export default function CPLayersPalette(controller) {
         layerWidget.dismissNotification();
         alphaSlider.resize();
     };
-
-    this.setHeight = function(h) {
-        parentSetHeight.call(this, h);
+    
+    this.setWidth = function(width) {
+        parentSetWidth.call(this, width);
+        alphaSlider.resize();
+        layerWidget.resize();
+    };
+    
+    this.setHeight = function(height) {
+        parentSetHeight.call(this, height);
 
         layerWidget.resize();
     };

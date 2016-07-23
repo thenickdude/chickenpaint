@@ -22,10 +22,11 @@
 
 import EventEmitter from "wolfy87-eventemitter";
 
-export default function CPPalette(cpController, className, title, resizeVert) {
+export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
     this.title = title;
     this.name = className;
     this.resizeVert = resizeVert || false;
+    this.resizeHorz = resizeHorz || false;
     
     var
         containerElement = document.createElement("div"),
@@ -34,6 +35,7 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         bodyElement = document.createElement("div"),
         
         vertHandle = null,
+        horzHandle = null,
         
         dragAction,
         dragOffset,
@@ -136,7 +138,35 @@ export default function CPPalette(cpController, className, title, resizeVert) {
         
         containerElement.appendChild(vertHandle);
     }
-
+    
+    function horzHandlePointerMove(e) {
+        if (dragAction == "horzResize") {
+            that.setWidth(e.pageX - $(containerElement).offset().left);
+        }
+    }
+    
+    function horzHandlePointerUp(e) {
+        horzHandle.releasePointerCapture(e.pointerId);
+        dragAction = false;
+    }
+    
+    function horzHandlePointerDown(e) {
+        dragAction = "horzResize";
+        horzHandle.setPointerCapture(e.pointerId);
+    }
+    
+    function addHorzResizeHandle() {
+        horzHandle = document.createElement("div");
+        
+        horzHandle.className = "chickenpaint-resize-handle-horz";
+        
+        horzHandle.addEventListener("pointerdown", horzHandlePointerDown);
+        horzHandle.addEventListener("pointermove", horzHandlePointerMove);
+        horzHandle.addEventListener("pointerup", horzHandlePointerUp);
+        
+        containerElement.appendChild(horzHandle);
+    }
+    
     closeButton.type = "button";
     closeButton.className = "close";
     closeButton.innerHTML = "&times;";
@@ -162,7 +192,11 @@ export default function CPPalette(cpController, className, title, resizeVert) {
     if (this.resizeVert) {
         addVertResizeHandle();
     }
-
+    
+    if (this.resizeHorz) {
+        addHorzResizeHandle();
+    }
+    
     headElement.addEventListener("pointerdown", paletteHeaderPointerDown);
     headElement.addEventListener("pointermove", paletteHeaderPointerMove);
     headElement.addEventListener("pointerup", paletteHeaderPointerUp);

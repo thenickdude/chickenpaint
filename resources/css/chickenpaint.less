@@ -188,6 +188,14 @@
     right: 0;
     cursor: row-resize;
 }
+.chickenpaint-resize-handle-horz {
+    position: absolute;
+    right: -5px;
+    width: 10px;
+    top: 0;
+    bottom: 0;
+    cursor: col-resize;
+}
 
 .chickenpaint {
     /* Prevent drag operations from beginning text selection */
@@ -450,6 +458,7 @@ body.chickenpaint-full-screen {
 
 .chickenpaint-palette-layers {
     min-height:250px;
+    min-width:150px;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body {
     display:-ms-flexbox;
