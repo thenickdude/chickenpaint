@@ -327,6 +327,7 @@ TestUtil.greyBitmapFromString = function(text) {
  *
  * @param {Object} test
  * @param {?function} test.pre - Routine to call after the layer has been configured, but before the test, called with the artwork as `this`.
+ * @param {?function} test.post - Routine to call after the test, called with the artwork as `this`.
  * @param {function} test.operation - Routine to execute to perform the paint, called with the artwork as `this`.
  * @param {(string|CPColorBmp)} test.beforeImage
  * @param {(string|CPColorBmp)} test.expectImage
@@ -379,6 +380,10 @@ TestUtil.testLayerPaintOperation = function(test) {
 		post: function () {
 			assert(TestUtil.bitmapsAreSimilar(layer.image, expectImage));
 			assert(TestUtil.bitmapsAreSimilar(layer.mask, expectMask));
+			
+			if (test.post) {
+				test.post.call(artwork);
+			}
 		},
 		testCompact: !!test.testCompact
 	});

@@ -71,7 +71,7 @@ export default class CPMaskView extends EventEmitter {
 		super();
 
 		this.layer = layer;
-		this.buffer = layer.mask.getImageData();
+		this.buffer = layer.mask.getImageData(0, 0, layer.mask.width, layer.mask.height);
 		this.invalidRect = new CPRect(0, 0, 0, 0); // Buffer starts off valid
 
 		/**

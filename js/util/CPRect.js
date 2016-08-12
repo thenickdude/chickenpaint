@@ -47,7 +47,7 @@ CPRect.prototype.makeEmpty = function() {
 CPRect.prototype.union = function(that) {
     if (this.isEmpty()) {
         this.set(that);
-    } else {
+    } else if (!that.isEmpty()) {
         this.left = Math.min(this.left, that.left);
         this.top = Math.min(this.top, that.top);
         this.right = Math.max(this.right, that.right);
@@ -377,35 +377,36 @@ CPRect.subtract = function(rectsA, rectsB) {
 };
 
 /**
- * Union the second rectangle or array of rectangles with the first one, and return an array of CPRects to represent
- * the resulting area (possibly empty).
+ * Create a union of the given rectangles, and return an array of non-overlapping CPRects to represent
+ * the resulting shape (possibly empty).
  *
- * @param {(CPRect|CPRect[])} rectsA
- * @param {(CPRect|CPRect[])} rectsB
+ * @param {(CPRect|CPRect[])} rects
  * @returns {CPRect[]}
  */
-CPRect.union = function(rectsA, rectsB) {
-	if (rectsA instanceof CPRect) {
-		rectsA = [rectsA];
-	}
-	if (rectsB instanceof CPRect) {
-		rectsB = [rectsB];
+CPRect.union = function(rects) {
+	if (rects instanceof CPRect) {
+		return [rects];
 	}
 	
 	let
-		result = rectsA.concat(rectsB);
+		result = rects.slice(0); // Clone to avoid damaging the original array
 	
-	for (let i = 0; i < rectsB.length; i++) {
-		// Don't re-examine any new rectangles we push onto the result
+	for (let i = 0; i < result.length; i++) {
+		// Intersect this rectangle with all the others
 		let
-			rectB = rectsB[i],
+			rectA = result[i],
 			resultLength = result.length;
 		
-		for (let j = 0; j < resultLength; j++) {
+		if (!rectA) {
+			continue;
+		}
+		
+		// Don't re-examine any new rectangles we push onto the result
+		for (let j = i + 1; j < resultLength; j++) {
 			let
-				rectA = result[j];
+				rectB = result[j];
 			
-			if (!rectA) {
+			if (!rectB) {
 				continue;
 			}
 			
@@ -413,39 +414,25 @@ CPRect.union = function(rectsA, rectsB) {
 				intersection = rectA.getIntersection(rectB);
 			
 			if (!intersection.isEmpty()) {
+				/* We need to eliminate the overlap between these rectangles. Subtract rectA from rectB and leave
+				 * rectA alone.
+				 */
+				
 				let
-					newRects = [];
+					newRects = CPRect.subtract(rectB, rectA);
 				
-				if (rectA.top < rectB.top) {
-					newRects.push(new CPRect(rectA.left, rectA.top, rectA.right, intersection.top));
-				}
-				if (rectA.bottom > rectB.bottom) {
-					newRects.push(new CPRect(rectA.left, intersection.bottom, rectA.right, rectA.bottom));
-				}
-				if (rectA.left < rectB.left) {
-					newRects.push(new CPRect(rectA.left, intersection.top, intersection.left, intersection.bottom));
-				}
-				if (rectA.right > rectB.right) {
-					newRects.push(new CPRect(intersection.right, intersection.top, rectA.right, intersection.bottom));
-				}
+				// Replace rectB with one of the fragments
+				result[j] = newRects[0];
 				
-				newRects = newRects.filter(rect => !rect.isEmpty());
-				
-				// Replace the original rectangle in the array with the new fragments
-				if (newRects.length > 0) {
-					result[j] = newRects[0];
-					
-					for (let k = 1; k < newRects.length; k++) {
-						result.push(newRects[k]);
-					}
-				} else {
-					result[j] = null;
+				// And add the rest of the fragments to the end
+				for (let k = 1; k < newRects.length; k++) {
+					result.push(newRects[k]);
 				}
 			}
 		}
 	}
 	
-	return result.filter(rect => rect != null);
+	return result.filter(rect => rect);
 };
 
 /* 

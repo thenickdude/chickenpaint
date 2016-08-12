@@ -10,6 +10,7 @@
     "babel-register": "^6.9.0",
     "babelify": "~7.3.0",
     "browserify": "~13.0.1",
+    "canvas": "^1.4.0",
     "less": "^2.7.1",
     "mocha": "^2.5.3",
     "uglify-js": "~2.6.2"
@@ -22,5 +23,8 @@
     "core-js": "^2.4.1",
     "random-js": "^1.0.8",
     "wolfy87-eventemitter": "^5.1.0"
+  },
+  "browser": {
+    "./js/util/Canvas.js": "./js/browser/util/Canvas.js"
   }
 }

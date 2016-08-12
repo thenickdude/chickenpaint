@@ -22,24 +22,8 @@
 
 import CPBitmap from "./CPBitmap";
 import CPRect from "../util/CPRect";
-
-function createImageData(width, height) {
-    if (typeof document !== "undefined") {
-        // return new ImageData(this.width, this.height); // Doesn't work on old IE
-        var
-            canvas = document.createElement("canvas"),
-            context = canvas.getContext("2d");
-
-        return context.createImageData(width, height);
-    } else {
-        // node.js
-        return {
-            data: new Uint8ClampedArray(width * height * CPColorBmp.BYTES_PER_PIXEL),
-            width: width,
-            height: height
-        };
-    }
-}
+import {createCanvas} from "../util/Canvas";
+import {createImageData} from "../util/Canvas";
 
 /**
  * A 32bpp bitmap class (one byte per channel in RGBA order)
@@ -1442,7 +1426,7 @@ function getRotatedCanvas(canvas, rotation) {
     }
 
     var
-        rotatedCanvas = document.createElement("canvas"),
+        rotatedCanvas = createCanvas(0, 0),
         rotatedCanvasContext = rotatedCanvas.getContext("2d");
 
     if (rotation % 2 == 0) {
@@ -1496,11 +1480,8 @@ function decodeBase64PNGDataURL(url) {
  */
 CPColorBmp.prototype.getAsCanvas = function(rotation) {
     var
-        canvas = document.createElement("canvas"),
+        canvas = createCanvas(this.imageData.width, this.imageData.height),
         canvasContext = canvas.getContext("2d");
-
-    canvas.width = this.imageData.width;
-    canvas.height = this.imageData.height;
 
     canvasContext.putImageData(this.imageData, 0, 0);
 
@@ -1569,11 +1550,8 @@ CPColorBmp.prototype.hasAlpha = function() {
  */
 CPColorBmp.createFromImage = function(image) {
     var
-        imageCanvas = document.createElement("canvas"),
+        imageCanvas = createCanvas(image.width, image.height),
         imageContext = imageCanvas.getContext("2d");
-
-    imageCanvas.width = image.width;
-    imageCanvas.height = image.height;
 
     imageContext.globalCompositeOperation = "copy";
     imageContext.drawImage(image, 0, 0);

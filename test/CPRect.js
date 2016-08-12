@@ -63,7 +63,7 @@ function makeRandomRects(numRects, maxRight, maxBottom, random) {
  * @param {int} height
  * @returns Uint8Array
  */
-function renderRectsAtBitmap(rects, width, height) {
+function rectsAsBitmap(rects, width, height) {
 	var
 		result = new Uint8Array(width * height);
 
@@ -76,6 +76,27 @@ function renderRectsAtBitmap(rects, width, height) {
 	}
 
 	return result;
+}
+
+/**
+ * Adds 1 to the bitmap inside each rectangle.
+ *
+ * @param {Uint8Array} bitmap
+ * @param {CPRect[]} rects
+ * @param {int} width
+ * @param {int} height
+ * @returns Uint8Array
+ */
+function addRectsToBitmap(bitmap, rects, width, height) {
+	for (let rect of rects) {
+		for (let y = rect.top; y < rect.bottom; y++) {
+			for (let x = rect.left; x < rect.right; x++) {
+				bitmap[y * width + x]++;
+			}
+		}
+	}
+	
+	return bitmap;
 }
 
 /**
@@ -123,6 +144,20 @@ function printBitmap(bitmap, width, height) {
 	console.log("");
 }
 
+function arraysEqual(a, b) {
+	if (a.length != b.length) {
+		return false;
+	}
+	
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] != b[i]) {
+			return false;
+		}
+	}
+	
+	return true;
+}
+
 function testSubtractFull(seed) {
 	const
 		NUM_TEST_RECTS = 80,
@@ -145,14 +180,51 @@ function testSubtractFull(seed) {
 		setASubB = CPRect.subtract(setA, setB),
 
 	// Compare our rectangle subtraction against a bitmap-based one
-		imageA = renderRectsAtBitmap(setA, TEST_AREA_SIZE, TEST_AREA_SIZE),
-		imageB = renderRectsAtBitmap(setB, TEST_AREA_SIZE, TEST_AREA_SIZE),
+		imageA = rectsAsBitmap(setA, TEST_AREA_SIZE, TEST_AREA_SIZE),
+		imageB = rectsAsBitmap(setB, TEST_AREA_SIZE, TEST_AREA_SIZE),
 
 		imageASubB = subtractBitmaps(imageA, imageB),
-		setASubBAsImage = renderRectsAtBitmap(setASubB, TEST_AREA_SIZE, TEST_AREA_SIZE);
+		setASubBAsImage = rectsAsBitmap(setASubB, TEST_AREA_SIZE, TEST_AREA_SIZE);
 
 	if (!areBitmapsEqual(imageASubB, setASubBAsImage)) {
 		throw Error(`Subtraction result incorrect (seed ${seed})`);
+	}
+}
+
+function testUnionFull(seed) {
+	const
+		NUM_TEST_RECTS = 80,
+		TEST_AREA_SIZE = 400;
+	
+	let
+		engine = Random.engines.mt19937();
+	
+	if (seed === undefined) {
+		engine.autoSeed();
+	} else {
+		engine.seed(seed);
+	}
+	
+	let
+		random = new Random(engine),
+		
+		rects = makeRandomRects(NUM_TEST_RECTS, TEST_AREA_SIZE, TEST_AREA_SIZE, random),
+		union = CPRect.union(rects),
+		
+		// Start off with a zero-filled bitmap
+		unionAsBitmap = rectsAsBitmap([], TEST_AREA_SIZE, TEST_AREA_SIZE),
+		
+		// Compare our union against a bitmap-based one
+		bitmap = rectsAsBitmap(rects, TEST_AREA_SIZE, TEST_AREA_SIZE);
+
+	/*
+	 * Add 1 inside the area of each rect, if the union is correct then no value will exceed 1, because no rects
+	 * will overlap.
+	 */
+	addRectsToBitmap(unionAsBitmap, union, TEST_AREA_SIZE, TEST_AREA_SIZE);
+	
+	if (!areBitmapsEqual(unionAsBitmap, bitmap)) {
+		throw Error(`Union result incorrect (seed ${seed})`);
 	}
 }
 
@@ -192,10 +264,10 @@ function testSubtractIterative(seed) {
 			setASubB = CPRect.subtract(setA, setB),
 
 		// Compare our rectangle subtraction against a bitmap-based one
-			imageA = renderRectsAtBitmap(setA, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
-			imageB = renderRectsAtBitmap(setB, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
+			imageA = rectsAsBitmap(setA, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
+			imageB = rectsAsBitmap(setB, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
 
-			rectSubResult = renderRectsAtBitmap(setASubB, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
+			rectSubResult = rectsAsBitmap(setASubB, TEST_AREA_WIDTH, TEST_AREA_HEIGHT),
 			bitmapResult = subtractBitmaps(imageA, imageB);
 
 		if (!areBitmapsEqual(bitmapResult, rectSubResult)) {
@@ -225,8 +297,40 @@ describe("CPRect", function() {
 		it("should give the same results as bitmap subtraction under a randomized testing regime", function() {
 			testSubtractFull();
 		});
-	});
+		
+		it("should compute correct subtraction with one or both rects being empty", function() {
+			var
+				rectEmpty = new CPRect(0, 0, 0, 0),
+				rectNonEmpty = new CPRect(0, 0, 1, 1),
+				result;
+			
+			result = rectEmpty.subtract(rectNonEmpty);
+			assert(result.length == 1 && result[0].equals(rectEmpty));
 
+			result = rectNonEmpty.subtract(rectEmpty);
+			assert(result.length == 1 && result[0].equals(rectNonEmpty));
+			
+			result = rectEmpty.subtract(rectEmpty);
+			assert(result.length == 1 && result[0].equals(rectEmpty));
+		});
+	});
+	
+	describe("#union", function() {
+		it("should give the same results as bitmap union under a randomized testing regime", function() {
+			testUnionFull();
+		});
+		
+		it("should compute correct unions with one or both rects being empty", function() {
+			var
+				rectEmpty = new CPRect(0, 0, 0, 0),
+				rectNonEmpty = new CPRect(1, 1, 2, 2);
+			
+			assert(rectEmpty.getUnion(rectNonEmpty).equals(rectNonEmpty));
+			assert(rectNonEmpty.getUnion(rectEmpty).equals(rectNonEmpty));
+			assert(rectEmpty.getUnion(rectEmpty).equals(rectEmpty));
+		});
+	});
+	
 	describe("#clipSourceDest", function() {
 		it("should set the width and height of the destination rect", function() {
 			var

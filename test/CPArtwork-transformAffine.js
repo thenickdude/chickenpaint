@@ -30,6 +30,7 @@ import assert from "assert";
 
 import "core-js/es6/symbol";
 import "core-js/fn/array/iterator";
+import CPTransform from "../js/util/CPTransform";
 
 const
 	SELECT_IMAGE = 0,
@@ -41,8 +42,8 @@ const
 	EXPECT_CHILDREN_WONT_MOVE = 0,
 	EXPECT_CHILDREN_TO_MOVE = 1;
 
-function testMoveGroup(selectType, linkMask, expectGroupMaskToMove, expectChildrenToMove) {
-	var
+function testTransformGroup(selectType, linkMask, expectGroupMaskToMove, expectChildrenToMove) {
+	let
 		artwork = new CPArtwork(4, 4),
 		group, layer,
 		beforeGroupMask = TestUtil.greyBitmapFromString(`
@@ -108,7 +109,14 @@ function testMoveGroup(selectType, linkMask, expectGroupMaskToMove, expectChildr
 			assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
 		},
 		action: function () {
-			artwork.move(-1, 0, false);
+			let
+				transform = new CPTransform();
+			
+			transform.translate(-1, 0);
+			
+			artwork.transformAffineBegin();
+			artwork.transformAffineAmend(transform);
+			artwork.transformAffineFinish();
 		},
 		post: function () {
 			assert(artwork.getLayersRoot().layers.length == 1);
@@ -122,60 +130,91 @@ function testMoveGroup(selectType, linkMask, expectGroupMaskToMove, expectChildr
 }
 
 describe("CPArtwork", function() {
-	describe("#move", function() {
-		it("should do nothing if the offset is 0, 0", function () {
-			var
-				artwork = new CPArtwork(100, 100);
+	describe("#transformAffine", function() {
+		const
+			boxImage = TestUtil.colorBitmapFromString(`
+			   .....
+			   .OOO.
+			   .OOO.
+			   .....
+			`),
+			
+			boxImageShifted = TestUtil.colorBitmapFromString(`
+			   .....
+			   ..OOO
+			   ..OOO
+			   .....
+			`);
+		
+		it("should not modify the image if the matrix is identity", function () {
+			let
+				artwork = new CPArtwork(5, 5),
+				layer;
 
 			artwork.addLayer("layer");
+			
+			layer = artwork.getActiveLayer();
 
-			artwork.clearHistory();
+			layer.image.copyPixelsFrom(boxImage);
 			
-			assert(!artwork.isUndoAllowed());
+			assert(artwork.transformAffineBegin());
 			
-			artwork.move(0, 0, false);
+			artwork.transformAffineAmend(new CPTransform());
 			
-			assert(!artwork.isUndoAllowed());
+			artwork.transformAffineFinish();
 			
-			artwork.move(0, 0, true);
-			
-			assert(!artwork.isUndoAllowed());
-			
-			artwork.move(0.4, -0.4, true);
-			
-			assert(!artwork.isUndoAllowed());
+			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImage));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during redo (full layer)", function () {
-			var
-				artwork = new CPArtwork(4, 4),
-				updatedRegion = new CPRect(0, 0, 0, 0);
+			let
+				artwork = new CPArtwork(5, 5),
+				layer,
+				updatedRegion = new CPRect(0, 0, 0, 0),
+				transform = new CPTransform();
 			
 			artwork.addLayer("layer");
 			
-			// Non-transparent so the selection will transform all pixels
-			artwork.getActiveLayer().image.clearAll(0xFFFFFFFF);
+			layer = artwork.getActiveLayer();
+			
+			layer.image.copyPixelsFrom(boxImage);
 			
 			artwork.on("updateRegion", function(rect) {
 				updatedRegion.union(rect);
 			});
 			
-			artwork.move(1, 0, false);
+			assert(artwork.transformAffineBegin());
 			
-			assert(updatedRegion.equals(new CPRect(0, 0, 4, 4)));
+			transform.translate(1, 0);
+			artwork.transformAffineAmend(transform);
+			
+			artwork.transformAffineFinish();
+			
+			// The non-transparent pixels in the source and destination regions should be updated
+			assert(updatedRegion.equals(new CPRect(1, 1, 5, 3)));
+			
+			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImageShifted));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during undo (full layer)", function () {
-			var
-				artwork = new CPArtwork(4, 4),
-				updatedRegion = new CPRect(0, 0, 0, 0);
+			let
+				artwork = new CPArtwork(5, 5),
+				layer,
+				updatedRegion = new CPRect(0, 0, 0, 0),
+				transform = new CPTransform();
 			
 			artwork.addLayer("layer");
 			
-			// Non-transparent so the selection will transform all pixels
-			artwork.getActiveLayer().image.clearAll(0xFFFFFFFF);
+			layer = artwork.getActiveLayer();
 			
-			artwork.move(1, 0, false);
+			layer.image.copyPixelsFrom(boxImage);
+			
+			assert(artwork.transformAffineBegin());
+			
+			transform.translate(1, 0);
+			artwork.transformAffineAmend(transform);
+			
+			artwork.transformAffineFinish();
 			
 			artwork.on("updateRegion", function(rect) {
 				updatedRegion.union(rect);
@@ -183,41 +222,68 @@ describe("CPArtwork", function() {
 			
 			artwork.undo();
 			
-			assert(updatedRegion.equals(new CPRect(0, 0, 4, 4)));
+			assert(updatedRegion.equals(new CPRect(1, 1, 5, 3)));
+			
+			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImage));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during redo (selection)", function () {
-			var
-				artwork = new CPArtwork(4, 4),
-				updatedRegion = new CPRect(0, 0, 0, 0);
+			let
+				artwork = new CPArtwork(5, 5),
+				layer,
+				updatedRegion = new CPRect(0, 0, 0, 0),
+				transform = new CPTransform();
 			
 			artwork.addLayer("layer");
 			
-			artwork.getActiveLayer().image.clearAll(0xFFFFFFFF);
+			layer = artwork.getActiveLayer();
 			
-			artwork.setSelection(new CPRect(0, 0, 1, 1));
+			layer.image.copyPixelsFrom(boxImage);
+			
+			artwork.setSelection(new CPRect(0, 0, 2, 2));
 			
 			artwork.on("updateRegion", function(rect) {
 				updatedRegion.union(rect);
 			});
 			
-			artwork.move(1, 0, false);
+			assert(artwork.transformAffineBegin());
 			
-			assert(updatedRegion.equals(new CPRect(0, 0, 2, 1)));
+			transform.translate(0, -1);
+			artwork.transformAffineAmend(transform);
+			
+			artwork.transformAffineFinish();
+			
+			assert(updatedRegion.equals(new CPRect(1, 0, 2, 2)));
+			
+			assert(TestUtil.bitmapsAreSimilar(layer.image, TestUtil.colorBitmapFromString(`
+			   .O...
+			   ..OO.
+			   .OOO.
+			   .....
+			`)));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during undo (selection)", function () {
-			var
-				artwork = new CPArtwork(4, 4),
-				updatedRegion = new CPRect(0, 0, 0, 0);
+			let
+				artwork = new CPArtwork(5, 5),
+				layer,
+				updatedRegion = new CPRect(0, 0, 0, 0),
+				transform = new CPTransform();
 			
 			artwork.addLayer("layer");
 			
-			artwork.getActiveLayer().image.clearAll(0xFFFFFFFF);
+			layer = artwork.getActiveLayer();
 			
-			artwork.setSelection(new CPRect(0, 0, 1, 1));
+			layer.image.copyPixelsFrom(boxImage);
 			
-			artwork.move(1, 0, false);
+			artwork.setSelection(new CPRect(0, 0, 2, 2));
+			
+			assert(artwork.transformAffineBegin());
+			
+			transform.translate(0, -1);
+			artwork.transformAffineAmend(transform);
+			
+			artwork.transformAffineFinish();
 			
 			artwork.on("updateRegion", function(rect) {
 				updatedRegion.union(rect);
@@ -225,7 +291,14 @@ describe("CPArtwork", function() {
 			
 			artwork.undo();
 			
-			assert(updatedRegion.equals(new CPRect(0, 0, 2, 1)));
+			assert(updatedRegion.equals(new CPRect(1, 0, 2, 2)));
+			
+			assert(TestUtil.bitmapsAreSimilar(layer.image, TestUtil.colorBitmapFromString(`
+			   .....
+			   .OOO.
+			   .OOO.
+			   .....
+			`)));
 		});
 		
 		{
@@ -243,7 +316,14 @@ describe("CPArtwork", function() {
 				     ....
 				`,
 				operation = function() {
-					this.move(-1, 0, false);
+					let
+						transform = new CPTransform();
+					
+					transform.translate(-1, 0);
+				
+					this.transformAffineBegin();
+					this.transformAffineAmend(transform);
+					this.transformAffineFinish();
 				},
 				expectImage = `
 					 ....
@@ -308,7 +388,14 @@ describe("CPArtwork", function() {
 				     ....
 				`,
 				operation = function() {
-					this.move(-1, -1, false);
+					let
+						transform = new CPTransform();
+					
+					transform.translate(-1, -1);
+					
+					this.transformAffineBegin();
+					this.transformAffineAmend(transform);
+					this.transformAffineFinish();
 				},
 				expectImage = `
 					O...
@@ -344,75 +431,20 @@ describe("CPArtwork", function() {
 			});
 		}
 
-		it("should allow the whole layer to be copied while moving", function() {
-			var
-				artwork = new CPArtwork(4, 4),
-				layer,
-				beforeImage = TestUtil.colorBitmapFromString(`
-					....
-					.OO.
-					.OO.
-					....
-				`),
-				beforeMask = TestUtil.greyBitmapFromString(`
-				     ....
-				     OOO.
-				     ....
-				     ....
-				`),
-				expectImage = TestUtil.colorBitmapFromString(`
-					 ....
-					 OOO.
-					 OOO.
-					 ....
-				`),
-				expectMask = TestUtil.greyBitmapFromString(`
-				     ....
-				     OO..
-				     ....
-				     ....
-				`);
-
-			artwork.addLayer("layer");
-			layer = artwork.getActiveLayer();
-			artwork.addLayerMask();
-
-			layer.image.copyPixelsFrom(beforeImage);
-			layer.mask.copyPixelsFrom(beforeMask);
-
-			TestUtil.artworkUndoRedo({
-				artwork: artwork,
-				pre: function () {
-					assert(artwork.getLayersRoot().layers.length == 1);
-					assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-					assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
-				},
-				action: function () {
-					artwork.move(-1, 0, true);
-				},
-				post: function () {
-					assert(artwork.getLayersRoot().layers.length == 1);
-					assert(TestUtil.bitmapsAreSimilar(layer.image, expectImage));
-					assert(TestUtil.bitmapsAreSimilar(layer.mask, expectMask));
-				},
-				testCompact: true
-			});
-		});
-
 		it("should move a group's mask and its children if the group has a linked mask, and the group's mask is selected", function () {
-			testMoveGroup(SELECT_MASK, LINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_TO_MOVE);
+			testTransformGroup(SELECT_MASK, LINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_TO_MOVE);
 		});
 
 		it("should move a group's mask and its children if the group has a linked mask, and the group's image is selected", function () {
-			testMoveGroup(SELECT_IMAGE, LINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_TO_MOVE);
+			testTransformGroup(SELECT_IMAGE, LINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_TO_MOVE);
 		});
 
 		it("should move a group's mask if the group doesn't link its mask, and the group's mask is selected", function () {
-			testMoveGroup(SELECT_MASK, UNLINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_WONT_MOVE);
+			testTransformGroup(SELECT_MASK, UNLINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_WONT_MOVE);
 		});
 
 		it("should move a group's children if the group doesn't link its mask, and the group's image is selected", function () {
-			testMoveGroup(SELECT_IMAGE, UNLINK_MASK, EXPECT_MASK_WONT_MOVE, EXPECT_CHILDREN_TO_MOVE);
+			testTransformGroup(SELECT_IMAGE, UNLINK_MASK, EXPECT_MASK_WONT_MOVE, EXPECT_CHILDREN_TO_MOVE);
 		});
 	});
 });

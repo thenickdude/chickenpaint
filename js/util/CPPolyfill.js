@@ -20,6 +20,8 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import {createCanvas} from "./Canvas";
+
 function getCanvasInterpolationPropName(canvasContext) {
 	var
 		browserProperties = [
@@ -38,7 +40,7 @@ function getCanvasInterpolationPropName(canvasContext) {
 
 export function isCanvasInterpolationSupported() {
 	var
-		canvas = document.createElement("canvas"),
+		canvas = createCanvas(0, 0),
 		canvasContext = canvas.getContext("2d");
 
 	return !!getCanvasInterpolationPropName(canvasContext);
@@ -69,6 +71,8 @@ export function isEventSupported(eventName) {
 }
 
 export function isCanvasSupported(){
-	var elem = document.createElement('canvas');
+	var
+		elem = createCanvas(0, 0);
+	
 	return !!(elem.getContext && elem.getContext('2d'));
 }

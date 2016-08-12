@@ -22,6 +22,8 @@
 
 import CPBitmap from "./CPBitmap";
 import CPRect from "../util/CPRect";
+import {createCanvas} from "../util/Canvas";
+import {createImageData} from "../util/Canvas";
 
 /**
  * Create a new greyscale bitmap with the given parameters. The bitmap will be filled with black upon creation.
@@ -313,13 +315,10 @@ CPGreyBmp.prototype.applyLUT = function(lut) {
  */
 CPGreyBmp.prototype.getAsCanvas = function() {
     var
-        imageData = this.getImageData(),
+        imageData = this.getImageData(0, 0, this.width, this.height),
 
-        canvas = document.createElement("canvas"),
+        canvas = createCanvas(this.width, this.height),
         context = canvas.getContext("2d");
-
-    canvas.width = this.width;
-    canvas.height = this.height;
 
     context.putImageData(imageData, 0, 0);
 
@@ -327,28 +326,56 @@ CPGreyBmp.prototype.getAsCanvas = function() {
 };
 
 /**
- * Get the image as an opaque RGBA ImageData object.
+ * Get the image data within the given rectangle as an opaque RGBA ImageData object.
+ *
+ * @param {int} x
+ * @param {int} y
+ * @param {int} width
+ * @param {int} height
+ *
  * @returns {ImageData}
  */
-CPGreyBmp.prototype.getImageData = function() {
-    var
-        canvas = document.createElement("canvas"),
-        context = canvas.getContext("2d"),
-        imageData = context.createImageData(this.width, this.height),
+CPGreyBmp.prototype.getImageData = function(x, y, width, height) {
+    let
+        imageData = createImageData(width, height),
 
-        srcIndex = 0,
-        dstIndex = 0;
+        srcIndex = this.offsetOfPixel(x, y),
+        dstIndex = 0,
+        
+        ySkip = this.width - width;
 
-    for (var y = 0; y < this.height; y++) {
-        for (var x = 0; x < this.width; x++) {
+    for (let y = 0; y < height; y++, srcIndex += ySkip) {
+        for (let x = 0; x < width; x++, srcIndex++) {
             imageData.data[dstIndex++] = this.data[srcIndex];
             imageData.data[dstIndex++] = this.data[srcIndex];
             imageData.data[dstIndex++] = this.data[srcIndex];
             imageData.data[dstIndex++] = 0xFF;
-            srcIndex++;
         }
     }
 
+    return imageData;
+};
+
+/**
+ * Replace the pixels at the given coordinates with the red channel from the given image data.
+ *
+ * @param {ImageData} imageData
+ * @param {int} x
+ * @param {int} y
+ */
+CPGreyBmp.prototype.pasteImageData = function(imageData, x, y) {
+    let
+        srcIndex = 0,
+        dstIndex = this.offsetOfPixel(x, y),
+        
+        ySkip = this.width - imageData.width;
+    
+    for (let y = 0; y < imageData.height; y++, dstIndex += ySkip) {
+        for (let x = 0; x < imageData.width; x++, srcIndex += 4, dstIndex++) {
+            this.data[dstIndex] = imageData.data[srcIndex]; // Use the first (red) channel as the intensity
+        }
+    }
+    
     return imageData;
 };
 
@@ -655,6 +682,111 @@ CPGreyBmp.prototype.invert = function(rect) {
             this.data[pixIndex] = ~this.data[pixIndex];
         }
     }
+};
+
+/**
+ * Get a rectangle that encloses pixels in the bitmap which don't match the given value within the given initialBounds
+ * (or an empty rect if all pixels inside the given bounds match the value).
+ *
+ * This can be used to find a rectangle which encloses the non-white pixels of a mask.
+ *
+ * @param {CPRect} initialBounds - The rect to search within (pass getBounds() to search the whole bitmap)
+ * @param {int} value
+ *
+ * @returns {CPRect}
+ */
+CPGreyBmp.prototype.getValueBounds = function(initialBounds, value) {
+    var
+        pixIndex,
+        result = initialBounds.clone(),
+        x, y,
+        yStride,
+        found;
+    
+    // Find the first non-matching row
+    yStride = this.width - result.getWidth();
+    pixIndex = this.offsetOfPixel(result.left, result.top);
+    
+    for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
+        found = false;
+        
+        for (x = result.left; x < result.right; x++, pixIndex++) {
+            if (this.data[pixIndex] != value) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (found) {
+            break;
+        }
+    }
+    
+    result.top = y;
+    
+    if (result.top == result.bottom) {
+        // Rect is empty, no opaque pixels in the initialBounds
+        return result;
+    }
+    
+    // Now the last non-matching row
+    pixIndex = this.offsetOfPixel(result.right - 1, result.bottom - 1);
+    for (y = result.bottom - 1; y >= result.top; y--, pixIndex -= yStride) {
+        found = false;
+        for (x = result.right - 1; x >= result.left; x--, pixIndex--) {
+            if (this.data[pixIndex] != value) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (found) {
+            break;
+        }
+    }
+    
+    result.bottom = y + 1; /* +1 since the bottom/right edges of the rect are exclusive */
+    
+    // Now columns from the left
+    yStride = this.width;
+    for (x = result.left; x < result.right; x++) {
+        pixIndex = this.offsetOfPixel(x, result.top);
+        
+        found = false;
+        for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
+            if (this.data[pixIndex] != value) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (found) {
+            break;
+        }
+    }
+    
+    result.left = x;
+    
+    // And columns from the right
+    for (x = result.right - 1; x >= result.left; x--) {
+        pixIndex = this.offsetOfPixel(x, result.top);
+        
+        found = false;
+        for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
+            if (this.data[pixIndex] != value) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (found) {
+            break;
+        }
+    }
+    
+    result.right = x + 1;
+    
+    return result;
 };
 
 /**
