@@ -442,6 +442,12 @@ export default function CPMainMenu(controller, mainGUI) {
             if (entry.action && !controller.isActionSupported(entry.action)) {
                 return;
             }
+            
+            if (entry.action == "CPSend" && !controller.isActionSupported("CPContinue")) {
+                // User won't be able to come back after saving, so make it sound more final
+                entry.name = "Post Oekaki";
+                entry.shortcut = "ctrl+p";
+            }
 
             if (entry.children) {
                 entryElem = $(

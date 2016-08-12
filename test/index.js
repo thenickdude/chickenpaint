@@ -7,6 +7,7 @@ $(document).ready(function() {
         postUrl: "posting.php",
         exitUrl: "forum.php",
         allowSave: true,
+        allowMultipleSends: true,
         resourcesRoot: "../resources/"
     });
 });

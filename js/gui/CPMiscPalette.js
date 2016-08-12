@@ -73,6 +73,11 @@ export default function CPMiscPalette(cpController) {
                 button = buttons[i],
                 buttonElem = document.createElement("li");
             
+            if (button.command == 'CPSend' && !cpController.isActionSupported("CPContinue")) {
+                button.toolTip = "Send picture to server";
+                button.className = "chickenpaint-tool-send-and-end";
+            }
+            
             buttonElem.className = "chickenpaint-toolbar-button " + button.className;
             buttonElem.setAttribute("data-buttonIndex", i);
             

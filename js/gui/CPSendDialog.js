@@ -56,7 +56,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
-                            <button type="button" class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-default chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
                             <button type="button" class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
                         </div>
                     </div>
@@ -72,7 +72,18 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, view the post</button>
-                            <button type="button" class="btn btn-default" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-default chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
+                        </div>
+                    </div>
+                    <div class="modal-content" data-stage="success-redirect" style="display:none">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <h4 class="modal-title">Drawing saved!</h4>
+                        </div>
+                        <div class="modal-body">
+                            <p>Your drawing has been saved, redirecting you to view your new post now...</p>
                         </div>
                     </div>
                 </div>
@@ -94,13 +105,17 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
             .css("width", progress + "%");
     });
  
-    resourceSaver.on("savingComplete", function(progress) {
+    resourceSaver.on("savingComplete", function() {
         $(".modal-content[data-stage='saving']", dialog).hide();
-        
-        if (controller.isActionSupported("CPExit")) {
-            $(".modal-content[data-stage='success-not-previously-posted']", dialog).show();
+
+        if (controller.isActionSupported("CPContinue")) {
+            if (controller.isActionSupported("CPExit")) {
+                $(".modal-content[data-stage='success-not-previously-posted']", dialog).show();
+            } else {
+                $(".modal-content[data-stage='success-already-posted']", dialog).show();
+            }
         } else {
-            $(".modal-content[data-stage='success-already-posted']", dialog).show();
+            $(".modal-content[data-stage='success-redirect']", dialog).show();
         }
     });
 
@@ -130,11 +145,13 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
         controller.actionPerformed({action: "CPPost"});
     });
 
-    $(".chickenpaint-exit", dialog).click(function() {
-        alert("When you want to come back and finish your drawing, just click the 'new drawing' button again and " 
-            + "you can choose to continue this drawing.");
-        controller.actionPerformed({action: "CPExit"});
-    });
+    $(".chickenpaint-exit", dialog)
+        .toggle(controller.isActionSupported("CPExit"))
+        .click(function() {
+            alert("When you want to come back and finish your drawing, just click the 'new drawing' button again and "
+                + "you can choose to continue this drawing.");
+            controller.actionPerformed({action: "CPExit"});
+        });
     
     $(".chickenpaint-send-cancel", dialog).click(function() {
         resourceSaver.cancel();

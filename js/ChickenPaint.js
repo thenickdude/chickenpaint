@@ -228,7 +228,8 @@ function createDrawingTools() {
  * loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
  * loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
  * loadSwatchesUrl  - URL of an .aco palette to load (optional)
- * 
+ *
+ * allowMultipleSends - Allow the drawing to be sent to the server multiple times (saving does not immediately end drawing session).
  * allowDownload - Allow the drawing to be saved to the user's computer
  * allowFullScreen - Allow the drawing tool to enter "full screen" mode, where the rest of the page contents will be hidden
  *
@@ -674,6 +675,13 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {document: true}
             },
+            CPContinue: {
+                action: function() {
+                },
+                isSupported: function() {
+                    return !!options.allowMultipleSends;
+                }
+            },
             CPExit: {
                 action: function () {
                     // Exit the drawing session without posting the drawing to the forum
@@ -867,6 +875,10 @@ export default function ChickenPaint(options) {
     }
     
     function sendDrawing() {
+        if (!that.isActionSupported("CPContinue") && !confirm('Are you sure you want to send your drawing to the server and finish drawing now?')) {
+            return;
+        }
+        
         var
             saver = new CPResourceSaver({
                 artwork: that.getArtwork(),
@@ -878,6 +890,11 @@ export default function ChickenPaint(options) {
         
         saver.on("savingComplete", function() {
             that.artwork.setHasUnsavedChanges(false);
+            
+            // If we're not allowed to keep editing, we can only go straight to viewing the new post
+            if (!that.isActionSupported("CPContinue") && that.isActionSupported("CPPost")) {
+                that.actionPerformed({action: "CPPost"});
+            }
         });
 
         // Allow the dialog to show before we begin serialization
