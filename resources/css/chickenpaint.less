@@ -534,11 +534,17 @@ body.chickenpaint-full-screen {
     /* Make the "open folder" icon the same width as the closed one */
     min-width:15px;
 }
-.chickenpaint-layer .fa:hover {
-    text-shadow:0 0 1px white;
+.chickenpaint-layer {
+  .chickenpaint-layer-eye .fa:hover,
+  .chickenpaint-layer-group-toggle:hover {
+    text-shadow: 0 0 1px white;
+  }
 }
-.chickenpaint-layer:not(.active) .fa:hover {
-    color:#444;
+.chickenpaint-layer:not(.active) {
+  .chickenpaint-layer-eye .fa:hover,
+  .chickenpaint-layer-group-toggle:hover{
+    color: #444;
+  }
 }
 .chickenpaint-layer-group-chevron {
     display:none !important;
@@ -657,7 +663,7 @@ body.chickenpaint-full-screen {
     cursor: pointer;
     border:2px solid rgba(255, 255, 255, 0.5);
     box-shadow:0 0 1px rgba(0, 0, 0, 0.3);
-    
+
     /* Don't allow the border to shrink the canvas in IE 10 */
     -webkit-box-sizing: content-box;
     -moz-box-sizing: content-box;
@@ -671,7 +677,7 @@ body.chickenpaint-full-screen {
 .chickenpaint-texture-options > canvas{
     margin:0 auto 3px auto;
     border: 1px solid black;
-    
+
     /* Don't allow the border to shrink the canvas in IE 10 */
     -webkit-box-sizing: content-box;
     -moz-box-sizing: content-box;
@@ -699,7 +705,7 @@ body.chickenpaint-full-screen {
 
 .chickenpaint-color-swatches {
     margin-bottom:0 !important;
-    
+
     display:-ms-flexbox;
     display:flex;
     -ms-flex-direction:row;
@@ -708,7 +714,7 @@ body.chickenpaint-full-screen {
     flex-wrap:wrap;
     align-items:flex-start;
     align-content:flex-start;
-    
+
     overflow-y:auto;
     width:130px;
 }
