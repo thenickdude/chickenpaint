@@ -1522,10 +1522,25 @@ export default function CPArtwork(_width, _height) {
 
     this.pasteClipboard = function() {
         if (this.isPasteClipboardAllowed()) {
-            addUndo(new CPActionPaste(clipboard, this.getActiveLayer()));
+            addUndo(new CPActionPaste(clipboard));
         }
     };
-
+	
+	/**
+     *
+     * @returns {CPClip}
+     */
+    this.getClipboard = function() {
+        return clipboard;
+    };
+    
+    /*
+     * @param {CPClip} clipboard
+     */
+    this.setClipboard = function(newClipboard) {
+        clipboard = newClipboard;
+    };
+    
     this.isClipboardEmpty = function() {
         return clipboard == null;
     };
@@ -2907,7 +2922,7 @@ export default function CPArtwork(_width, _height) {
                 restoreFromUndoAreas,
                 
                 invalidateRegion = oldDestRect.clone(),
-                eraseRegion = false;
+                eraseRegion = null;
 
             this.buildFullUndo();
     
@@ -3007,7 +3022,7 @@ export default function CPArtwork(_width, _height) {
      * @param {CPRect} selection - The cut rectangle co-ordinates
      */
     function CPActionCut(layer, cutFromMask, selection) {
-        var
+        const
             fromImage = cutFromMask ? layer.mask : layer.image,
             cutData = fromImage.cloneRect(selection);
 
@@ -3049,13 +3064,13 @@ export default function CPArtwork(_width, _height) {
      * Paste the given clipboard onto the given layer.
      * 
      * @param {CPClip} clip
-     * @param {CPLayer} oldLayer
      */
-    function CPActionPaste(clip, oldLayer) {
-        var
+    function CPActionPaste(clip) {
+        const
             oldSelection = that.getSelection(),
             oldMask = maskEditingMode,
             newLayer = new CPImageLayer(that.width, that.height, that.getDefaultLayerName(false)),
+            oldLayer = curLayer,
             parentGroup = oldLayer.parent;
 
         this.undo = function() {

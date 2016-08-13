@@ -23,8 +23,8 @@
 /**
  *
  * @param {(CPColorBmp|CPGreyBmp)} bmp
- * @param x
- * @param y
+ * @param int x - Position of the clipboard bmp within the document
+ * @param int y
  * @constructor
  */
 export default function CPClip(bmp, x, y) {

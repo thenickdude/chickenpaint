@@ -292,6 +292,66 @@ describe("CPArtwork", function() {
 
 		{
 			let
+				beforeImage = `
+					....
+					.OO.
+					.OO.
+					....
+				`,
+				beforeMask = `
+				     ....
+				     OOO.
+				     ....
+				     ....
+				`,
+				operation = function() {
+					this.move(-1, 0, false);
+					this.move(-1, 0, false);
+				},
+				expectImage = `
+					 ....
+					 O...
+					 O...
+					 ....
+				`,
+				expectMask = `
+				     ..OO
+				     O.OO
+				     ..OO
+				     ..OO
+				`;
+			
+			it("should support amend()", function () {
+				TestUtil.testLayerPaintOperation({
+					beforeImage, beforeMask, expectImage, expectMask, operation,
+					select: "image",
+					linkMask: true,
+					
+					expectImageToChange: true,
+					expectMaskToChange: true
+				});
+			});
+			
+			it("should support amend() after compact()", function () {
+				TestUtil.testLayerPaintOperation({
+					beforeImage, beforeMask, expectImage, expectMask,
+					
+					operation: function() {
+						this.move(-1, 0, false);
+						this.compactUndo();
+						this.move(-1, 0, false);
+					},
+					select: "image",
+					linkMask: true,
+					
+					expectImageToChange: true,
+					expectMaskToChange: true
+				});
+			});
+		}
+		
+		{
+			let
 				pre = function() {
 					this.setSelection(new CPRect(1, 1, 2, 2));
 				},
