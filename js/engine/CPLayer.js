@@ -42,7 +42,14 @@ export default function CPLayer(name) {
      * @type {?CPLayerGroup}
      */
     this.parent = null;
-
+    
+    /**
+     * True if drawing operations on the image of this layer should not change the alpha component of the layer.
+     *
+     * @type {boolean}
+     */
+    this.lockAlpha = false;
+    
 	/**
      * The opacity of this layer (0 = transparent, 100 = opaque)
      *
@@ -95,6 +102,7 @@ CPLayer.prototype.copyFrom = function(layer) {
     this.alpha = layer.alpha;
     this.visible = layer.visible;
     this.parent = layer.parent;
+    this.lockAlpha = layer.lockAlpha;
 
     if (!layer.mask) {
         this.mask = null;
@@ -155,6 +163,14 @@ CPLayer.prototype.setBlendMode = function(blendMode) {
 
 CPLayer.prototype.getBlendMode = function() {
     return this.blendMode;
+};
+
+CPLayer.prototype.getLockAlpha = function () {
+    return this.lockAlpha;
+};
+
+CPLayer.prototype.setLockAlpha = function(value) {
+    this.lockAlpha = value;
 };
 
 CPLayer.prototype.setVisible = function(visible) {

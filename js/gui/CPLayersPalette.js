@@ -155,9 +155,12 @@ export default function CPLayersPalette(controller) {
             CLASSNAME_LAYER_MASK_THUMBNAIL = "chickenpaint-layer-mask-thumbnail",
             CLASSNAME_LAYER_THUMBNAIL = "chickenpaint-layer-thumbnail";
 
-        var 
-            isDragging = false, isDraggingReally = false,
-            draggingLayerIndex,
+        var
+            // True while our mouse is down on a layer
+            isDragging = false,
+            // True when we have moved our mouse during mouse down (so dragging state is shown to user)
+            isDraggingReally = false,
+            
 	        /**
              * The image layer currently being dragged, or null if no drag is in progress.
              * @type {?CPLayer}
@@ -458,6 +461,7 @@ export default function CPLayersPalette(controller) {
                 mainDiv = document.createElement("div"),
                 iconsDiv = document.createElement("div"),
                 layerNameDiv = document.createElement("div"),
+                statusDiv = document.createElement("div"),
                 blendDiv = document.createElement("div");
 
             layerDiv.className = "chickenpaint-layer list-group-item";
@@ -489,6 +493,14 @@ export default function CPLayersPalette(controller) {
                 if (layer.clip) {
                     layerDiv.className += " chickenpaint-layer-clipped";
                     iconsDiv.appendChild(createFontAwesomeIcon("fa-level-down fa-flip-horizontal"))
+                }
+                
+                if (layer.lockAlpha) {
+                    var
+                        locked = createChickenPaintIcon("lock-alpha");
+                    
+                    locked.title = "Transparency locked";
+                    statusDiv.appendChild(locked);
                 }
             } else if (layer instanceof CPLayerGroup) {
                 layerDiv.className += " chickenpaint-layer-group";
@@ -530,6 +542,9 @@ export default function CPLayersPalette(controller) {
 
             layerDiv.appendChild(mainDiv);
             
+            statusDiv.className = "chickenpaint-layer-status";
+            layerDiv.appendChild(statusDiv);
+            
             layerDiv.setAttribute("data-display-index", index);
             layerDiv.setAttribute("data-toggle", "dropdown");
             layerDiv.setAttribute("data-target", "#chickenpaint-layer-pop");
@@ -565,7 +580,10 @@ export default function CPLayersPalette(controller) {
                 $(getElemFromDisplayIndex(displayIndex))
                     .dropdown("toggle")
                     .off("click.bs.dropdown");
-
+                
+                /* We don't want Bootstrap's default show or hide handlers, since they show the popup menu on left click,
+                 * and slow down all clicks on the document, respectively.
+                 */
                 $(document).off("click.bs.dropdown.data-api");
             }
         }
@@ -612,11 +630,9 @@ export default function CPLayersPalette(controller) {
                         layerChanged = artwork.getActiveLayer() != layer,
 
                         selectMask, maskChanged;
-
-                    selectMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
+                    
+                    dropdownOnMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
                         || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged);
-
-                    dropdownOnMask = selectMask;
 
                     if (e.button != BUTTON_PRIMARY && !layerChanged) {
                         /*
@@ -624,6 +640,8 @@ export default function CPLayersPalette(controller) {
                          * moving (but it does change the type of dropdown menu we receive)
                          */
                         selectMask = artwork.isEditingMask();
+                    } else {
+                        selectMask = dropdownOnMask;
                     }
 
                     maskChanged = artwork.isEditingMask() != selectMask;
@@ -649,7 +667,6 @@ export default function CPLayersPalette(controller) {
                         draggingLayer = layer;
                         // We might have replaced the layer with a new element due to the CPSetActiveLayer, so fetch that again
                         draggingLayerElem = getElemFromDisplayIndex(displayIndex);
-                        draggingLayerIndex = displayIndex;
                         draggingX = e.clientX;
                         draggingY = e.clientY;
 
@@ -657,14 +674,6 @@ export default function CPLayersPalette(controller) {
                         window.addEventListener("mouseup", mouseDragEnd);
                     }
                 }
-            }
-        }
-
-        function onMouseClick(e) {
-            if (e.button != BUTTON_SECONDARY && !$(dropdownParent).hasClass("open")) {
-                // Don't pop up the popup menu for us (bootstrap calls toggle)
-                e.stopPropagation();
-                e.preventDefault();
             }
         }
 
@@ -922,6 +931,14 @@ export default function CPLayersPalette(controller) {
 
             $arrow.css("top", "50%");
         }
+    
+        function clearDropDown() {
+            if ($(dropdownParent).hasClass("open")) {
+                $(dropdownParent)
+                    .dropdown("toggle")
+                    .off("click.bs.dropdown");
+            }
+        }
 
         function createLayerDropdownMenu() {
             var
@@ -1005,7 +1022,6 @@ export default function CPLayersPalette(controller) {
 
         widgetContainer.addEventListener("dblclick", onDoubleClick);
         widgetContainer.addEventListener("mousedown", onMouseDown);
-        widgetContainer.addEventListener("click", onMouseClick);
         widgetContainer.addEventListener("contextmenu", contextMenuShow);
 
         dropdownLayerMenu.addEventListener("click", onDropdownActionClick);
@@ -1040,11 +1056,7 @@ export default function CPLayersPalette(controller) {
             /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
              * document *while the menu is open!*
              */
-            $(document).one("click", function() {
-                if ($(dropdownParent).hasClass("open")) {
-                    $(dropdownParent).dropdown("toggle");
-                }
-            });
+            $(document).one("click", clearDropDown);
 
             var
                 layerElem = $(e.relatedTarget)[0],
@@ -1072,6 +1084,10 @@ export default function CPLayersPalette(controller) {
         if (activeLayer.getBlendMode() != parseInt(blendCombo.value, 10)) {
             blendCombo.value = activeLayer.getBlendMode();
         }
+	
+	    if (activeLayer.getLockAlpha() != cbLockAlpha.checked) {
+		    cbLockAlpha.checked = activeLayer.getLockAlpha();
+	    }
     }
 
     /**
@@ -1256,10 +1272,10 @@ export default function CPLayersPalette(controller) {
     
     cbLockAlpha.type = "checkbox";
     cbLockAlpha.addEventListener("click", function(e) {
-       artwork.setLockAlpha(cbLockAlpha.checked);
+        controller.actionPerformed({action: "CPSetLayerLockAlpha", lock: cbLockAlpha.checked});
     });
         
-    body.appendChild(wrapCheckboxWithLabel(cbLockAlpha, "Lock alpha"));
+    body.appendChild(wrapCheckboxWithLabel(cbLockAlpha, "Lock transparency"));
 
     body.appendChild(layerWidget.getElement());
 

@@ -762,6 +762,12 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {layerProp: true}
             },
+            CPSetLayerLockAlpha: {
+                action: function(e) {
+                    that.artwork.setLayerLockAlpha(e.lock);
+                },
+                modifies: {layerProp: true}
+            },
 
             // Palettes
 

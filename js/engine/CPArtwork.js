@@ -228,7 +228,6 @@ export default function CPArtwork(_width, _height) {
         lastX = 0.0, lastY = 0.0, lastPressure = 0.0,
 
         sampleAllLayers = false,
-        lockAlpha = false,
 
 	    /**
          * Set to true when the user is in the middle of a painting operation (so redrawing the thumbnail would be
@@ -332,7 +331,8 @@ export default function CPArtwork(_width, _height) {
      *
      * @param {CPLayer} layer
      * @param {boolean} noVisibleEffect - If true, notify listeners that the layer has changed but don't redraw anything.
-     *                                    This is useful for properties like "expanded" and "name".
+     *                                    This is useful for properties like "expanded" and "name" which don't change the
+     *                                    visual appearance of the layer on the canvas.
      */
     function layerPropertyChanged(layer, noVisibleEffect) {
         that.emitEvent("changeLayer", [layer]);
@@ -757,7 +757,7 @@ export default function CPArtwork(_width, _height) {
          */
         brushTool.paintDab(destImage, imageRect, sampleImage, curBrush, brushRect, dab, curColor);
 
-        if (lockAlpha && !maskEditingMode && brushTool.noMergePhase) {
+        if (!maskEditingMode && brushTool.noMergePhase && that.getLayerLockAlpha()) {
             // This tool painted to the image during paintDab(), so we have to apply image alpha here instead of during merge
             restoreImageAlpha(destImage, imageRect);
         }
@@ -819,7 +819,8 @@ export default function CPArtwork(_width, _height) {
                 }
             } else {
                 var
-                    destImage = curLayer.image;
+                    destImage = curLayer.image,
+                    lockAlpha = that.getLayerLockAlpha();
 
                 if (curBrush.brushMode == CPBrushInfo.BRUSH_MODE_ERASE && lockAlpha) {
                     // We're erasing with locked alpha, so the only sensible thing to do is paint white...
@@ -1191,7 +1192,7 @@ export default function CPArtwork(_width, _height) {
 
         target.gradient(r, fromX, fromY, toX, toY, gradientPoints, false);
 
-        if (lockAlpha && target instanceof CPColorBmp) {
+        if (this.getLayerLockAlpha() && target instanceof CPColorBmp) {
             restoreImageAlpha(target, r);
         }
 
@@ -1548,9 +1549,15 @@ export default function CPArtwork(_width, _height) {
     this.setSampleAllLayers = function(b) {
         sampleAllLayers = b;
     };
-
-    this.setLockAlpha = function(b) {
-        lockAlpha = b;
+    
+    this.getLayerLockAlpha = function() {
+        return this.getActiveLayer().getLockAlpha();
+    };
+    
+    this.setLayerLockAlpha = function(lock) {
+        if (curLayer.getLockAlpha() != lock) {
+            addUndo(new CPActionChangeLayerLockAlpha(curLayer, lock));
+        }
     };
 	
 	/**
@@ -2298,10 +2305,12 @@ export default function CPArtwork(_width, _height) {
     var
         CPActionChangeLayerAlpha = generateLayerPropertyChangeAction("alpha", true),
         CPActionChangeLayerMode = generateLayerPropertyChangeAction("blendMode", true),
-        CPActionChangeLayerName = generateLayerPropertyChangeAction("name", false),
         CPActionChangeLayerVisible = generateLayerPropertyChangeAction("visible", true),
         CPActionChangeLayerClip = generateLayerPropertyChangeAction("clip", true),
-        CPActionChangeLayerMaskLinked = generateLayerPropertyChangeAction("maskLinked", true);
+	    
+	    CPActionChangeLayerName = generateLayerPropertyChangeAction("name", false),
+	    CPActionChangeLayerLockAlpha = generateLayerPropertyChangeAction("lockAlpha", false),
+        CPActionChangeLayerMaskLinked = generateLayerPropertyChangeAction("maskLinked", false);
     
     /**
      * @param {CPRect} from

@@ -127,6 +127,7 @@ class ChibiLayerDecoder {
         this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
         this.maskLinked = (layerFlags & LAYER_FLAG_MASK_LINKED) != 0;
         this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
+        this.lockAlpha = (layerFlags & LAYER_FLAG_ALPHA_LOCKED) != 0;
         
         this.nameLength = stream.readU32BE();
     }
@@ -280,6 +281,7 @@ class ChibiImageLayerDecoder extends ChibiLayerDecoder {
         layer.clip = this.clip;
         
         layer.maskLinked = this.maskLinked;
+        layer.lockAlpha = this.lockAlpha;
         
         return layer;
     }
@@ -607,6 +609,9 @@ export default function CPChibiFile() {
         }
         if (layer.maskLinked) {
             layerFlags |= LAYER_FLAG_MASK_LINKED;
+        }
+        if (layer.lockAlpha) {
+            layerFlags |= LAYER_FLAG_ALPHA_LOCKED;
         }
 
         stream.writeU32BE(layerFlags);
