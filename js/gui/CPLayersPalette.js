@@ -48,7 +48,7 @@ function createChickenPaintIcon(iconName) {
     var
         icon = document.createElement("span");
     
-    icon.className = "cpif " + iconName;
+    icon.className = "chickenpaint-icon chickenpaint-icon-" + iconName;
     
     return icon;
 }
@@ -1285,7 +1285,7 @@ export default function CPLayersPalette(controller) {
 
     addMaskButton.className = 'chickenpaint-small-toolbar-button';
     addMaskButton.title = 'Add layer mask';
-    addMaskButton.appendChild(createChickenPaintIcon("cpif-mask"));
+    addMaskButton.appendChild(createChickenPaintIcon("mask"));
     addMaskButton.addEventListener("click", function() {
         controller.actionPerformed({action: "CPAddLayerMask"});
     });

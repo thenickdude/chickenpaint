@@ -553,6 +553,10 @@ body.chickenpaint-full-screen {
     padding:2px;
     min-width:0; /* Allow description to shrink below its content-width */
 }
+.chickenpaint-layer-status .chickenpaint-icon:before {
+    font-size: 17px;
+    padding: 3px;
+}
 .chickenpaint-layer-name,
 .chickenpaint-layer-blend {
     overflow: hidden;
@@ -859,25 +863,33 @@ body.chickenpaint-full-screen {
 }
 
 @font-face {
-    font-family: 'ChickenPaint Symbols';
-    src: url('../fonts/chickenpaint.eot');
-    src: url('../fonts/chickenpaint.eot?#iefix') format('embedded-opentype'),
-    url('../fonts/chickenpaint.woff') format('woff'),
-    url('../fonts/chickenpaint.ttf') format('truetype'),
-    url('../fonts/chickenpaint.svg') format('svg');
+    font-family: "ChickenPaint Symbols";
+    src: url("../fonts/ChickenPaint-Symbols.eot");
+    src: url("../fonts/ChickenPaint-Symbols.eot?#iefix") format("embedded-opentype"),
+    url("../fonts/ChickenPaint-Symbols.woff") format("woff"),
+    url("../fonts/ChickenPaint-Symbols.ttf") format("truetype"),
+    url("../fonts/ChickenPaint-Symbols.svg#icons") format("svg");
+    font-weight: normal;
+    font-style: normal;
 }
 
-.chickenpaint .cpif {
+.chickenpaint-icon:before {
     display: inline-block;
     font: normal normal normal 14px/1 "ChickenPaint Symbols";
     font-size: inherit;
     text-rendering: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    speak: none;
+    text-decoration: inherit;
+    line-height: 99%;
+    text-align: center;
+    vertical-align: baseline;
 }
-.chickenpaint .cpif-mask:before {
-    content: "\e900";
-}
+
+@import "../fonts/ChickenPaint-Symbols.less";
+.chickenpaint-icon-classes();
 
 /* More compact styles for small screens */
 @media (max-height: 768px) {
