@@ -380,9 +380,7 @@ export default function CPArtwork(_width, _height) {
             layers = [layers];
         }
 
-        if (blendTree) {
-            layers.forEach(layer => blendTree.invalidateLayerRect(layer, rect));
-        }
+        layers.forEach(layer => blendTree.invalidateLayerRect(layer, rect));
 
         let
             newThumbToRebuild = false;
