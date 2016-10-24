@@ -43,6 +43,7 @@ function CPBlendNode(width, height, layer) {
 		this.layer = layer;
 		this.blendMode = layer.blendMode;
 		this.alpha = layer.alpha;
+		this.visible = layer.visible;
 	} else {
 		this.isGroup = true;
 		this.image = null;
@@ -50,6 +51,7 @@ function CPBlendNode(width, height, layer) {
 		this.layer = null;
 		this.blendMode = CPBlend.LM_PASSTHROUGH;
 		this.alpha = 100;
+		this.visible = true;
 	}
 
 	/**
@@ -434,7 +436,6 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	 * Blend the given tree node and return the tree node that contains the resulting blend, or null if the tree is empty.
 	 * 
 	 * @param {?CPBlendNode} treeNode
-	 * @param blendArea
 	 */
 	function blendTreeInternal(treeNode) {
 		if (!treeNode || !treeNode.isGroup) {
