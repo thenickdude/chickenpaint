@@ -82,8 +82,9 @@ const
     LAYER_FLAG_CLIP         = 2,
     LAYER_FLAG_HAS_MASK     = 4,
     LAYER_FLAG_MASK_LINKED  = 8,
-    LAYER_FLAG_EXPANDED     = 16,
-    LAYER_FLAG_ALPHA_LOCKED = 32,
+	LAYER_FLAG_MASK_VISIBLE = 16,
+	LAYER_FLAG_EXPANDED     = 32,
+    LAYER_FLAG_ALPHA_LOCKED = 64,
 
     LAYER_DECODE_STATE_FIXED_HEADER    = 0,
     LAYER_DECODE_STATE_VARIABLE_HEADER = 1,
@@ -126,7 +127,8 @@ class ChibiLayerDecoder {
         this.clip = (layerFlags & LAYER_FLAG_CLIP) != 0;
         this.hasMask = (layerFlags & LAYER_FLAG_HAS_MASK) != 0;
         this.maskLinked = (layerFlags & LAYER_FLAG_MASK_LINKED) != 0;
-        this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
+	    this.maskVisible = (layerFlags & LAYER_FLAG_MASK_VISIBLE) != 0;
+	    this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
         this.lockAlpha = (layerFlags & LAYER_FLAG_ALPHA_LOCKED) != 0;
         
         this.nameLength = stream.readU32BE();
@@ -281,6 +283,7 @@ class ChibiImageLayerDecoder extends ChibiLayerDecoder {
         layer.clip = this.clip;
         
         layer.maskLinked = this.maskLinked;
+        layer.maskVisible = this.maskVisible;
         layer.lockAlpha = this.lockAlpha;
         
         return layer;
@@ -319,6 +322,7 @@ class ChibiLayerGroupDecoder extends ChibiLayerDecoder {
         group.expanded = this.expanded;
         
         group.maskLinked = this.maskLinked;
+        group.maskVisible = this.maskVisible;
         
         return group;
     }
@@ -610,6 +614,9 @@ export default function CPChibiFile() {
         if (layer.maskLinked) {
             layerFlags |= LAYER_FLAG_MASK_LINKED;
         }
+		if (layer.maskVisible) {
+			layerFlags |= LAYER_FLAG_MASK_VISIBLE;
+		}
         if (layer.lockAlpha) {
             layerFlags |= LAYER_FLAG_ALPHA_LOCKED;
         }
@@ -659,6 +666,9 @@ export default function CPChibiFile() {
         }
         if (group.maskLinked) {
             groupFlags |= LAYER_FLAG_MASK_LINKED;
+        }
+        if (group.maskVisible) {
+            groupFlags |= LAYER_FLAG_MASK_VISIBLE;
         }
         if (group.expanded) {
             groupFlags |= LAYER_FLAG_EXPANDED;

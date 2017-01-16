@@ -694,6 +694,17 @@ export default function CPArtwork(_width, _height) {
             addUndo(new CPActionChangeLayerMaskLinked(curLayer, linked));
         }
     };
+	
+	/**
+     *
+	 * @param {CPLayer} layer
+	 * @param {boolean} visible
+	 */
+	this.setLayerMaskVisible = function(layer, visible) {
+		if (layer.maskVisible != visible) {
+			addUndo(new CPActionChangeLayerMaskVisible(layer, visible));
+		}
+	};
 
     this.setLayerBlendMode = function(blendMode) {
         if (curLayer.getBlendMode() != blendMode) {
@@ -1722,10 +1733,17 @@ export default function CPArtwork(_width, _height) {
      * @constructor
      */
     function CPActionAddLayerMask(layer) {
+        let
+            oldMaskLinked = layer.maskLinked,
+            oldMaskVisible = layer.maskVisible;
+        
         this.undo = function() {
             layer.setMask(null);
-
-            artworkStructureChanged();
+	
+	        layer.maskLinked = oldMaskLinked;
+	        layer.maskVisible = oldMaskVisible;
+	
+	        artworkStructureChanged();
 
             that.setActiveLayer(layer, false);
         };
@@ -1733,9 +1751,12 @@ export default function CPArtwork(_width, _height) {
         this.redo = function() {
             var
                 newMask = new CPGreyBmp(that.width, that.height, 8);
+            
             newMask.clearAll(255);
 
             layer.maskLinked = true;
+            layer.maskVisible = true;
+            
             layer.setMask(newMask);
 
             artworkStructureChanged();
@@ -1748,8 +1769,8 @@ export default function CPArtwork(_width, _height) {
 
     CPActionAddLayerMask.prototype = Object.create(CPUndo.prototype);
     CPActionAddLayerMask.prototype.constructor = CPActionAddLayerMask;
-
-    /**
+    
+	/**
      * Upon creation, removes, or applies and removes, the layer mask on the given layer.
      *
      * @param {CPLayer} layer
@@ -2305,7 +2326,8 @@ export default function CPArtwork(_width, _height) {
         CPActionChangeLayerMode = generateLayerPropertyChangeAction("blendMode", true),
         CPActionChangeLayerVisible = generateLayerPropertyChangeAction("visible", true),
         CPActionChangeLayerClip = generateLayerPropertyChangeAction("clip", true),
-	    
+	    CPActionChangeLayerMaskVisible = generateLayerPropertyChangeAction("maskVisible", true),
+	
 	    CPActionChangeLayerName = generateLayerPropertyChangeAction("name", false),
 	    CPActionChangeLayerLockAlpha = generateLayerPropertyChangeAction("lockAlpha", false),
         CPActionChangeLayerMaskLinked = generateLayerPropertyChangeAction("maskLinked", false);

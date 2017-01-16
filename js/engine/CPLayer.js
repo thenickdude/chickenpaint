@@ -84,6 +84,13 @@ export default function CPLayer(name) {
      * @type {boolean}
      */
     this.maskLinked = true;
+	
+	/**
+     * True if the mask should be applied (if present)
+     *
+	 * @type {boolean}
+	 */
+	this.maskVisible = true;
 
     /**
      * The thumbnail of the mask (if a mask is present and the thumb has been built)
@@ -112,6 +119,7 @@ CPLayer.prototype.copyFrom = function(layer) {
         this.mask = layer.mask.clone();
     }
     this.maskLinked = layer.maskLinked;
+    this.maskVisible = layer.maskVisible;
 
     if (!layer.maskThumbnail) {
         this.maskThumbnail = null;
@@ -147,6 +155,18 @@ CPLayer.prototype.getEffectiveAlpha = function() {
         return this.alpha;
     }
     return 0;
+};
+
+/**
+ * Get the mask for this layer, or null if the mask is not present or hidden.
+ *
+ * @returns {?CPGreyBmp}
+ */
+CPLayer.prototype.getEffectiveMask = function() {
+    if (this.maskVisible) {
+        return this.mask;
+    }
+    return null;
 };
 
 CPLayer.prototype.setName = function(name) {
@@ -189,6 +209,14 @@ CPLayer.prototype.setMaskLinked = function(linked) {
 
 CPLayer.prototype.getMaskLinked = function() {
     return this.maskLinked;
+};
+
+CPLayer.prototype.setMaskVisible = function(visible) {
+	this.maskVisible = visible;
+};
+
+CPLayer.prototype.getMaskVisible = function() {
+	return this.maskVisible;
 };
 
 CPLayer.prototype.getMemoryUsed = function() {

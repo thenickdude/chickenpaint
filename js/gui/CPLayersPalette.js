@@ -195,7 +195,7 @@ export default function CPLayersPalette(controller) {
             dismissTimer = false,
 
             dropdownLayerMenu = createLayerDropdownMenu(),
-            dropdownMousePos,
+            dropdownMousePos = {x: 0, y: 0},
 
 	        /**
              * The layer we right-clicked on to open the dropdown
@@ -432,6 +432,25 @@ export default function CPLayersPalette(controller) {
 
             return thumbCanvas;
         }
+        
+        function drawRedX(canvas) {
+            const
+	            X_INSET = 5,
+                X_LINE_THICKNESS = 3,
+                
+		        context = canvas.getContext("2d");
+	
+	        context.strokeStyle = "red";
+	        context.lineWidth = X_LINE_THICKNESS;
+	        
+	        context.moveTo(X_INSET, X_INSET);
+	        context.lineTo(canvas.width - X_INSET, canvas.height - X_INSET);
+	
+	        context.moveTo(canvas.width - X_INSET, X_INSET);
+	        context.lineTo(X_INSET, canvas.height - X_INSET);
+	
+	        context.stroke();
+        }
 
         function createMaskThumb(layer) {
             let
@@ -443,6 +462,11 @@ export default function CPLayersPalette(controller) {
 
             if (layer == artwork.getActiveLayer() && artwork.isEditingMask()) {
                 thumbCanvas.className += " active";
+            }
+            if (!layer.maskVisible) {
+                thumbCanvas.className += " disabled";
+                
+                drawRedX(thumbCanvas);
             }
 
             return thumbCanvas;
@@ -572,8 +596,11 @@ export default function CPLayersPalette(controller) {
 
                 $(".chickenpaint-action-require-mask", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null);
                 $(".chickenpaint-action-require-no-mask", dropdownLayerMenu).toggle(!dropdownOnMask || layer.mask == null);
-
-                $("[data-action]", dropdownLayerMenu).each(function() {
+	
+	            $(".chickenpaint-action-require-mask-enabled", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null && layer.maskVisible);
+	            $(".chickenpaint-action-require-mask-disabled", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null && !layer.maskVisible);
+	
+	            $("[data-action]", dropdownLayerMenu).each(function() {
                     $(this).parent().toggleClass("disabled", !controller.isActionAllowed(this.getAttribute("data-action")));
                 });
 
@@ -605,12 +632,12 @@ export default function CPLayersPalette(controller) {
         }
 
         function onMouseDown(e) {
-            var
+            let
                 layerElem = $(e.target).closest(".chickenpaint-layer")[0],
                 displayIndex = getDisplayIndexFromElem(layerElem);
 
             if (displayIndex != -1) {
-                var
+                let
                     layer = getLayerFromDisplayIndex(displayIndex);
 
                 if (e.button == BUTTON_PRIMARY && $(e.target).closest(".chickenpaint-layer-eye").length) {
@@ -626,52 +653,61 @@ export default function CPLayersPalette(controller) {
                         expand: !layer.expanded
                     });
                 } else {
-                    var
-                        layerChanged = artwork.getActiveLayer() != layer,
-
-                        selectMask, maskChanged;
+                    let
+                        layerChanged = artwork.getActiveLayer() != layer;
                     
                     dropdownOnMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
                         || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged);
 
-                    if (e.button != BUTTON_PRIMARY && !layerChanged) {
-                        /*
-                         * Right clicking within the currently selected layer does not result in the mask/image selection
-                         * moving (but it does change the type of dropdown menu we receive)
-                         */
-                        selectMask = artwork.isEditingMask();
+                    if (e.button == BUTTON_PRIMARY && e.shiftKey && dropdownOnMask) {
+	                    controller.actionPerformed({
+		                    action: "CPSetMaskVisible",
+		                    layer: layer,
+		                    visible: !layer.maskVisible
+	                    });
                     } else {
-                        selectMask = dropdownOnMask;
-                    }
-
-                    maskChanged = artwork.isEditingMask() != selectMask;
-
-                    if (layerChanged || maskChanged) {
-                        controller.actionPerformed({
-                            action: "CPSetActiveLayer",
-                            layer: layer,
-                            mask: selectMask
-                        });
-                    }
-
-                    if (selectMask && e.altKey) {
-                        controller.actionPerformed({
-                            action: "CPToggleMaskView"
-                        });
-                    }
-
-                    if (e.button == BUTTON_PRIMARY) {
-                        isDragging = true;
-                        dropTarget = null;
-
-                        draggingLayer = layer;
-                        // We might have replaced the layer with a new element due to the CPSetActiveLayer, so fetch that again
-                        draggingLayerElem = getElemFromDisplayIndex(displayIndex);
-                        draggingX = e.clientX;
-                        draggingY = e.clientY;
-
-                        window.addEventListener("mousemove", mouseDragged);
-                        window.addEventListener("mouseup", mouseDragEnd);
+                        let
+	                        selectMask, maskChanged;
+                        
+	                    if (e.button != BUTTON_PRIMARY && !layerChanged) {
+                            /*
+                             * Right clicking within the currently selected layer does not result in the mask/image selection
+                             * moving (but it does change the type of dropdown menu we receive)
+                             */
+		                    selectMask = artwork.isEditingMask();
+	                    } else {
+		                    selectMask = dropdownOnMask;
+	                    }
+	
+	                    maskChanged = artwork.isEditingMask() != selectMask;
+	
+	                    if (layerChanged || maskChanged) {
+		                    controller.actionPerformed({
+			                    action: "CPSetActiveLayer",
+			                    layer: layer,
+			                    mask: selectMask
+		                    });
+	                    }
+	
+	                    if (selectMask && e.altKey) {
+                            controller.actionPerformed({
+                                action: "CPToggleMaskView"
+                            });
+                        }
+	
+	                    if (e.button == BUTTON_PRIMARY) {
+		                    isDragging = true;
+		                    dropTarget = null;
+		
+		                    draggingLayer = layer;
+		                    // We might have replaced the layer with a new element due to the CPSetActiveLayer, so fetch that again
+		                    draggingLayerElem = getElemFromDisplayIndex(displayIndex);
+		                    draggingX = e.clientX;
+		                    draggingY = e.clientY;
+		
+		                    window.addEventListener("mousemove", mouseDragged);
+		                    window.addEventListener("mouseup", mouseDragEnd);
+	                    }
                     }
                 }
             }
@@ -950,7 +986,9 @@ export default function CPLayersPalette(controller) {
                 mnuMergeGroup = document.createElement("a"),
                 mnuCreateMask = document.createElement("a"),
                 mnuDeleteMask = document.createElement("a"),
-                mnuApplyMask = document.createElement("a");
+                mnuApplyMask = document.createElement("a"),
+                mnuEnableMask = document.createElement("a"),
+                mnuDisableMask = document.createElement("a");
 
             mnuDeleteLayer.className = "chickenpaint-action-require-image-layer";
             mnuDeleteLayer.href = "#";
@@ -991,28 +1029,61 @@ export default function CPLayersPalette(controller) {
             mnuApplyMask.href = "#";
             mnuApplyMask.innerHTML = "Apply mask";
             mnuApplyMask.setAttribute("data-action", "CPApplyLayerMask");
+	
+	        mnuApplyMask.className = "chickenpaint-action-apply-mask chickenpaint-action-require-mask";
+	        mnuApplyMask.href = "#";
+	        mnuApplyMask.innerHTML = "Apply mask";
+	        mnuApplyMask.setAttribute("data-action", "CPApplyLayerMask");
+	
+	        mnuDisableMask.className = "chickenpaint-action-disable-mask chickenpaint-action-require-mask-enabled";
+	        mnuDisableMask.href = "#";
+	        mnuDisableMask.innerHTML = "Disable mask";
+	        mnuDisableMask.setAttribute("data-action", "CPSetMaskVisible");
+	        mnuDisableMask.setAttribute("data-action-visible", "false");
+	
+	        mnuEnableMask.className = "chickenpaint-action-enable-mask chickenpaint-action-require-mask-disabled";
+	        mnuEnableMask.href = "#";
+	        mnuEnableMask.innerHTML = "Enable mask";
+	        mnuEnableMask.setAttribute("data-action", "CPSetMaskVisible");
+	        mnuEnableMask.setAttribute("data-action-visible", "true");
+	
+	        menu.className = "dropdown-menu";
 
-            menu.className = "dropdown-menu";
-
-            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuDeleteMask, mnuApplyMask, mnuMergeGroup].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
+            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuDeleteMask, mnuApplyMask, mnuMergeGroup, mnuDisableMask, mnuEnableMask].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
 
             return menu;
         }
 
         function onDropdownActionClick(e) {
-            var
+            let
                 action = e.target.getAttribute("data-action");
 
             if (action) {
                 e.preventDefault();
+	
+	            controller.actionPerformed({
+		            action: "CPSetActiveLayer",
+		            layer: dropdownLayer,
+		            mask: artwork.isEditingMask()
+	            });
+                
+                let
+                    actionData = {
+                        action: action,
+                        layer: dropdownLayer
+                    },
+                    attributes = e.target.attributes;
+                
+                for (let i = 0; i < attributes.length; i++) {
+                    let
+                        matches = attributes[i].name.match(/^data-action-(.+)/);
+                    
+                    if (matches) {
+                        actionData[matches[1]] = JSON.parse(attributes[i].value);
+                    }
+                }
 
-                controller.actionPerformed({
-                    action: "CPSetActiveLayer",
-                    layer: dropdownLayer,
-                    mask: artwork.isEditingMask()
-                });
-
-                controller.actionPerformed({action: action});
+                controller.actionPerformed(actionData);
             }
         }
 

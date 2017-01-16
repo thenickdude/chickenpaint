@@ -39,7 +39,7 @@ function CPBlendNode(width, height, layer) {
 	if (layer) {
 		this.isGroup = layer instanceof CPLayerGroup;
 		this.image = layer.image;
-		this.mask = layer.mask;
+		this.mask = layer.getEffectiveMask();
 		this.layer = layer;
 		this.blendMode = layer.blendMode;
 		this.alpha = layer.alpha;
@@ -56,13 +56,27 @@ function CPBlendNode(width, height, layer) {
 
 	/**
 	 * For group nodes, this is the rectangle of data which is dirty (due to changes in child nodes) and needs to be re-merged
+	 *
 	 * @type {CPRect}
 	 */
 	this.dirtyRect = new CPRect(0, 0, width, height);
+	
+	/**
+	 *
+	 * @type {CPBlendNode[]}
+	 */
 	this.layers = [];
+	
+	/**
+	 * @type {?CPBlendNode}
+	 */
 	this.parent = null;
-
-	// When true, we should clip the layers in this group to the bottom layer of the stack
+	
+	/**
+	 * When true, we should clip the layers in this group to the bottom layer of the stack
+	 *
+	 * @type {boolean}
+	 */
 	this.clip = false;
 }
 
@@ -362,7 +376,8 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 		 * tree structure depends on this (as long as it isn't "passthrough").
 		 */
 		if (!layerNode
-				|| layerNode.visible != layer.visible || layerNode.alpha != layer.alpha || (layerNode.blendMode == CPBlend.LM_PASSTHROUGH) != (layer.blendMode == CPBlend.LM_PASSTHROUGH)) {
+				|| layerNode.visible != layer.visible || layerNode.alpha != layer.alpha || (layerNode.mask == null) != (layer.getEffectiveMask() == null)
+				|| (layerNode.blendMode == CPBlend.LM_PASSTHROUGH) != (layer.blendMode == CPBlend.LM_PASSTHROUGH)) {
 			this.resetTree();
 		} else {
 			layerNode.blendMode = layer.blendMode;

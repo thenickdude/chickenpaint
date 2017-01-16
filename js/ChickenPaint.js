@@ -720,6 +720,11 @@ export default function ChickenPaint(options) {
             },
             CPSetActiveLayer: {
                 action: function(e) {
+                    // Enable disabled layer masks when clicked on
+                    if (e.mask && e.layer.mask && !e.layer.maskVisible) {
+                        that.artwork.setLayerMaskVisible(e.layer, true);
+                    }
+                    
                     that.artwork.setActiveLayer(e.layer, e.mask);
 
                     // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
@@ -738,6 +743,12 @@ export default function ChickenPaint(options) {
                 },
                 modifies: {gui: true}
             },
+	        CPSetMaskVisible: {
+		        action: function(e) {
+			        that.artwork.setLayerMaskVisible(e.layer, e.visible);
+		        },
+		        modifies: {layerProp: true}
+	        },
             CPSetLayerVisibility: {
                 action: function(e) {
                     that.artwork.setLayerVisibility(e.layer, e.visible);
