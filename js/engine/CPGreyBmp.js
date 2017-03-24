@@ -150,6 +150,8 @@ CPGreyBmp.prototype.floodFill = function(x, y, color) {
         return;
     }
     
+    color = color & 0xFF;
+    
     let
         oldColor = this.getPixel(x, y),
         
