@@ -89,10 +89,10 @@ CPRect.prototype.clipTo = function(that) {
         if (that.isEmpty()) {
             this.makeEmpty();
         } else {
-            this.left = Math.max(this.left, that.left);
-            this.top = Math.max(this.top, that.top);
-            this.right = Math.min(this.right, that.right);
-            this.bottom = Math.min(this.bottom, that.bottom);
+            this.left = Math.min(Math.max(this.left, that.left), that.right);
+            this.top = Math.min(Math.max(this.top, that.top), that.bottom);
+            this.right = Math.max(Math.min(this.right, that.right), that.left);
+            this.bottom = Math.max(Math.min(this.bottom, that.bottom), that.top);
         }
     }
     
@@ -280,10 +280,10 @@ CPRect.prototype.roundContain = function() {
  * Create an AABB CPRect which encloses the given array of points.
  */
 CPRect.createBoundingBox = function(points) {
-    var
+    let
         result = new CPRect(points[0].x, points[0].y, points[0].x, points[0].y);
 
-    for (var i = 1; i < points.length; i++) {
+    for (let i = 1; i < points.length; i++) {
         result.left = Math.min(result.left, points[i].x);
         result.top = Math.min(result.top, points[i].y);
         result.right = Math.max(result.right, points[i].x);
