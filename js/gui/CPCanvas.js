@@ -496,13 +496,14 @@ export default function CPCanvas(controller) {
                 pf = coordToDocument({x: mouseX, y:mouseY});
 
             this.eraseBrushPreview();
-
-            this.capture = true;
-            artwork.beginStroke(pf.x, pf.y, pressure);
-
-            this.smoothMouse = pf;
-
-            return true;
+	
+	        if (artwork.beginStroke(pf.x, pf.y, pressure)) {
+		        this.capture = true;
+		
+		        this.smoothMouse = pf;
+		
+		        return true;
+	        }
         }
     };
 

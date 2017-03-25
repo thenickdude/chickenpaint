@@ -287,7 +287,7 @@ export default function CPArtwork(_width, _height) {
     /**
      * Gets the current selection rect or a rectangle covering the whole canvas if there are no selections
      * 
-     * @returns CPRect
+     * @returns {CPRect}
      */
     this.getSelectionAutoSelect = function() {
         var
@@ -917,31 +917,36 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} selectMask - True to select the layer's mask for editing
      */
     this.setActiveLayer = function(newLayer, selectMask) {
-        var
-            editingModeChanged = selectMask != maskEditingMode;
-
-        if (newLayer && (curLayer != newLayer || editingModeChanged)) {
-            var
-                oldLayer = curLayer;
-
-            curLayer = newLayer;
-            maskEditingMode = selectMask;
-
-            invalidateUndoBuffers();
-
-            this.emitEvent("changeActiveLayer", [oldLayer, newLayer, maskEditingMode]);
-            
-            if (editingModeChanged) {
-                this.emitEvent("editModeChanged", [maskEditingMode ? CPArtwork.EDITING_MODE_MASK : CPArtwork.EDITING_MODE_IMAGE]);
-            }
-
-            if (maskView && maskView.layer == oldLayer) {
-                if (selectMask) {
-                    maskView.setLayer(newLayer);
-                } else {
-                    this.closeMaskView();
-                }
-            }
+        if (newLayer) {
+	        // Ensure the mask really exists if we ask to select it
+	        selectMask = newLayer.mask && selectMask;
+	
+	        let
+		        editingModeChanged = selectMask != maskEditingMode;
+	
+	        if (curLayer != newLayer || editingModeChanged) {
+		        let
+			        oldLayer = curLayer;
+		
+		        curLayer = newLayer;
+		        maskEditingMode = selectMask;
+		
+		        invalidateUndoBuffers();
+		
+		        this.emitEvent("changeActiveLayer", [oldLayer, newLayer, maskEditingMode]);
+		
+		        if (editingModeChanged) {
+			        this.emitEvent("editModeChanged", [maskEditingMode ? CPArtwork.EDITING_MODE_MASK : CPArtwork.EDITING_MODE_IMAGE]);
+		        }
+		
+		        if (maskView && maskView.layer == oldLayer) {
+			        if (selectMask) {
+				        maskView.setLayer(newLayer);
+			        } else {
+				        this.closeMaskView();
+			        }
+		        }
+	        }
         }
     };
 
@@ -1005,7 +1010,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.isActiveLayerDrawable = function() {
-        return maskEditingMode && curLayer.mask || curLayer instanceof CPImageLayer;
+        return maskEditingMode && curLayer.mask || !maskEditingMode && curLayer instanceof CPImageLayer;
     };
 
 	/**
@@ -1178,39 +1183,54 @@ export default function CPArtwork(_width, _height) {
 
     this.setSelection = function(rect) {
         curSelection.set(rect);
+        // Ensure we never have fractional coordinates in our selections:
+        curSelection.roundNearest();
         curSelection.clipTo(this.getBounds());
     };
 
     this.emptySelection = function() {
         curSelection.makeEmpty();
     };
-
-    this.floodFill = function(x, y) {
-        prepareForLayerPaintUndo();
-        paintUndoArea = this.getBounds();
-
-        getActiveImage().floodFill(~~x, ~~y, curColor | 0xff000000);
-
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, this.getBounds());
+	
+	/**
+     * Flood fill the current layer using the current color at the given coordinates.
+     *
+	 * @param {int} x
+	 * @param {int} y
+	 */
+	this.floodFill = function(x, y) {
+        let
+            target = getActiveImage();
+        
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = this.getBounds();
+	
+	        target.floodFill(~~x, ~~y, curColor | 0xff000000);
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, this.getBounds());
+        }
     };
 
     this.gradientFill = function(fromX, fromY, toX, toY, gradientPoints) {
-        var
+        let
             r = this.getSelectionAutoSelect(),
             target = getActiveImage();
 
-        prepareForLayerPaintUndo();
-        paintUndoArea = r.clone();
-
-        target.gradient(r, fromX, fromY, toX, toY, gradientPoints, false);
-
-        if (this.getLayerLockAlpha() && target instanceof CPColorBmp) {
-            restoreImageAlpha(target, r);
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = r.clone();
+	
+	        target.gradient(r, fromX, fromY, toX, toY, gradientPoints, false);
+	
+	        if (this.getLayerLockAlpha() && target instanceof CPColorBmp) {
+		        restoreImageAlpha(target, r);
+	        }
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, r);
         }
-
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, r);
     };
 
 	/**
@@ -1219,17 +1239,19 @@ export default function CPArtwork(_width, _height) {
      * @param {int} color - ARGB color to fill with
      */
     this.fill = function(color) {
-        var
+        let
             r = this.getSelectionAutoSelect(),
             target = getActiveImage();
 
-        prepareForLayerPaintUndo();
-        paintUndoArea = r.clone();
-
-        target.clearRect(r, color);
-
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, r);
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = r.clone();
+	
+	        target.clearRect(r, color);
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, r);
+        }
     };
 
     this.clear = function() {
@@ -1251,11 +1273,15 @@ export default function CPArtwork(_width, _height) {
             flipWholeLayer = rect.isEmpty(),
 
             transformBoth = flipWholeLayer && curLayer instanceof CPImageLayer && curLayer.mask && curLayer.maskLinked,
-            transformImage = !maskEditingMode || transformBoth,
-            transformMask = maskEditingMode || transformBoth,
+            transformImage = (!maskEditingMode || transformBoth) && curLayer instanceof CPImageLayer,
+            transformMask = (maskEditingMode || transformBoth) && curLayer.mask,
 
             routine = horizontal ? "copyRegionHFlip" : "copyRegionVFlip";
 
+        if (!transformImage && !transformMask) {
+            return;
+        }
+        
         if (flipWholeLayer) {
             rect = this.getBounds();
         }
@@ -1286,16 +1312,19 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.monochromaticNoise = function() {
-        var
-            r = this.getSelectionAutoSelect();
+        let
+            r = this.getSelectionAutoSelect(),
+	        target = getActiveImage();
 
-        prepareForLayerPaintUndo();
-        paintUndoArea = r.clone();
-
-        getActiveImage().fillWithNoise(r);
-
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, r);
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = r.clone();
+	
+	        target.fillWithNoise(r);
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, r);
+        }
     };
 
     this.isColorNoiseAllowed = function() {
@@ -1307,7 +1336,7 @@ export default function CPArtwork(_width, _height) {
      */
     this.colorNoise = function() {
         if (this.isColorNoiseAllowed()) {
-            var
+            let
                 r = this.getSelectionAutoSelect();
 
             prepareForLayerPaintUndo();
@@ -1321,37 +1350,47 @@ export default function CPArtwork(_width, _height) {
     };
     
     this.invert = function() {
-        var
+        let
             r = this.getSelectionAutoSelect(),
             target = getActiveImage();
 
-        prepareForLayerPaintUndo();
-        paintUndoArea = r.clone();
-
-        target.invert(r);
-
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, r);
-    };
-    
-    this.boxBlur = function(radiusX, radiusY, iterations) {
-        var
-            r = this.getSelectionAutoSelect(),
-            target = getActiveImage();
-
-        prepareForLayerPaintUndo();
-        paintUndoArea = r.clone();
-
-        for (var i = 0; i < iterations; i++) {
-            target.boxBlur(r, radiusX, radiusY);
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = r.clone();
+	
+	        target.invert(r);
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, r);
         }
+    };
+	
+	/**
+     *
+	 * @param {int} radiusX
+	 * @param {int} radiusY
+	 * @param {int} iterations
+	 */
+	this.boxBlur = function(radiusX, radiusY, iterations) {
+        let
+            r = this.getSelectionAutoSelect(),
+            target = getActiveImage();
 
-        addUndo(new CPUndoPaint());
-        invalidateLayerPaint(curLayer, r);
+        if (target) {
+	        prepareForLayerPaintUndo();
+	        paintUndoArea = r.clone();
+	
+	        for (let i = 0; i < iterations; i++) {
+		        target.boxBlur(r, radiusX, radiusY);
+	        }
+	
+	        addUndo(new CPUndoPaint());
+	        invalidateLayerPaint(curLayer, r);
+        }
     };
     
     this.rectangleSelection = function(r) {
-        var
+        let
             newSelection = r.clone();
         
         newSelection.clipTo(this.getBounds());
@@ -1496,7 +1535,7 @@ export default function CPArtwork(_width, _height) {
     
     // Copy/Paste functions
     this.isCutSelectionAllowed = function() {
-        return !this.getSelection().isEmpty() && getActiveImage() != null;
+        return !this.getSelection().isEmpty() && getActiveImage() !== null;
     };
 
     this.isCopySelectionAllowed = this.isCutSelectionAllowed;
@@ -1508,11 +1547,11 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.copySelection = function() {
-        var
-            selection = that.getSelection(),
-            image = getActiveImage();
-        
         if (this.isCopySelectionAllowed()) {
+	        let
+		        selection = that.getSelection(),
+		        image = getActiveImage();
+	        
             clipboard = new CPClip(image.cloneRect(selection), selection.left, selection.top);
         }
     };
@@ -1587,10 +1626,18 @@ export default function CPArtwork(_width, _height) {
     this.setBrushTexture = function(texture) {
         brushManager.setTexture(texture);
     };
-
+	
+	/**
+     * Start a painting operation.
+     *
+	 * @param {float} x
+	 * @param {float} y
+	 * @param {float} pressure
+	 * @returns {boolean} - true if the painting began successfully, false otherwise (don't call continueStroke or endStroke!)
+	 */
     this.beginStroke = function(x, y, pressure) {
-        if (curBrush == null) {
-            return;
+        if (curBrush === null || !this.isActiveLayerDrawable()) {
+            return false;
         }
 
         prepareForLayerPaintUndo();
@@ -1608,6 +1655,8 @@ export default function CPArtwork(_width, _height) {
         paintingModes[curBrush.brushMode].beginStroke();
 
         this.paintDab(x, y, pressure);
+        
+        return true;
     };
 
     this.continueStroke = function(x, y, pressure) {
@@ -1615,16 +1664,16 @@ export default function CPArtwork(_width, _height) {
             return;
         }
 
-        var
+        let
             dist = Math.sqrt(((lastX - x) * (lastX - x) + (lastY - y) * (lastY - y))),
             spacing = Math.max(curBrush.minSpacing, curBrush.curSize * curBrush.spacing);
 
         if (dist > spacing) {
-            var
+            let
                 nx = lastX, ny = lastY, np = lastPressure,
                 df = (spacing - 0.001) / dist;
 
-            for (var f = df; f <= 1.0; f += df) {
+            for (let f = df; f <= 1.0; f += df) {
                 nx = f * x + (1.0 - f) * lastX;
                 ny = f * y + (1.0 - f) * lastY;
                 np = f * pressure + (1.0 - f) * lastPressure;
