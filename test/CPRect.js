@@ -412,4 +412,43 @@ describe("CPRect", function() {
 			assert(container.equals(new CPRect(0, 0, 100, 100)));
 		});
 	});
+	
+	describe("#createBoundingBox", function() {
+		it("should return an empty rectangle if the points array is empty", function() {
+			assert(CPRect.createBoundingBox([]).isEmpty());
+		});
+		
+		it("should return a bounding box with coordinates in the correct order left <= right, top <= bottom", function() {
+			const
+				points = [
+					{"x": -55.20418577365999,  "y": 676.0149770014896},
+					{"x": -55.38895627200145 , "y": 667.6091512359949},
+					{"x": -31.369367632443243, "y": 667.0811708225647},
+					{"x": -31.18459713410175,  "y": 675.4869965880594}
+				],
+				
+				box = CPRect.createBoundingBox(points);
+			
+			assert(box.left <= box.right);
+			assert(box.top <= box.bottom);
+		});
+	});
+	
+	describe("#clipTo", function() {
+		it("should return a rectangle with correct coordinates", function() {
+			const
+				rect = new CPRect(-56, 667, -31, 677),
+				bounds = new CPRect(0, 0, 800, 600),
+				
+				result = rect.clipTo(bounds);
+			
+			assert(result.left == 0);
+			assert(result.top == 600);
+			assert(result.right == 0);
+			assert(result.bottom == 600);
+			
+			assert(result.left <= result.right);
+			assert(result.top <= result.bottom);
+		});
+	});
 });

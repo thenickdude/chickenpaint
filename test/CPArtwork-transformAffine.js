@@ -430,6 +430,55 @@ describe("CPArtwork", function() {
 				});
 			});
 		}
+		
+		{
+			const
+				beforeImage = `
+					....
+					.OO.
+					.OO.
+					....
+				`,
+				beforeMask = `
+				     ....
+				     OOO.
+				     ....
+				     ....
+				`,
+				operation = function() {
+					let
+						transform = new CPTransform();
+					
+					transform.translate(-5, 0);
+					
+					this.transformAffineBegin();
+					this.transformAffineAmend(transform);
+					this.transformAffineFinish();
+				},
+				expectImage = `
+					 ....
+					 ....
+					 ....
+					 ....
+				`,
+				expectMask = `
+				     OOOO
+				     OOOO
+				     OOOO
+				     OOOO
+				`;
+			
+			it("should perform correctly if the destination lies completely outside the canvas", function () {
+				TestUtil.testLayerPaintOperation({
+					beforeImage, beforeMask, expectImage, expectMask, operation,
+					select: "image",
+					linkMask: true,
+					
+					expectImageToChange: true,
+					expectMaskToChange: true
+				});
+			});
+		}
 
 		it("should move a group's mask and its children if the group has a linked mask, and the group's mask is selected", function () {
 			testTransformGroup(SELECT_MASK, LINK_MASK, EXPECT_MASK_TO_MOVE, EXPECT_CHILDREN_TO_MOVE);
