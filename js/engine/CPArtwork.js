@@ -1061,7 +1061,7 @@ export default function CPArtwork(_width, _height) {
 
         var
             redo = redoList.pop();
-        
+	
         redo.redo();
         
         undoList.push(redo);
@@ -1122,15 +1122,19 @@ export default function CPArtwork(_width, _height) {
 
         prepareForFusion();
     };
-
-    function addUndo(undo) {
+	
+	/**
+     *
+	 * @param {CPUndo} undo
+	 */
+	function addUndo(undo) {
         hasUnsavedChanges = true;
 
         if (redoList.length > 0) {
             redoList = [];
         }
 
-        if (undoList.length == 0 || !undoList[undoList.length - 1].merge(undo)) {
+        if (undoList.length === 0 || !undoList[undoList.length - 1].merge(undo)) {
             if (undoList.length >= MAX_UNDO) {
                 undoList.unshift();
             }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Thumbnail test</title>
+
+<script type="text/javascript">
+    /* Check for native pointer event support before PEP adds its polyfill */
+    if (window.PointerEvent) {
+        window.hasNativePointerEvents = true;
+    }
+</script>
+
+<script src="../../lib/raf.js"></script>
+<script src="../../lib/jquery-2.2.4.min.js"></script>
+<script src="../../lib/pep.min.js"></script>
+<script src="../../lib/pako.min.js"></script>
+<script src="../../lib/keymaster.js"></script>
+<script src="../../lib/FileSaver.min.js"></script>
+<script src="../../lib/bootstrap.min.js"></script>
+
+<script src="integration.js"></script>
+<style type="text/css">
+</style>
+<link rel="stylesheet" type="text/css" href="../../resources/css/chickenpaint.css">
+
+</head>
+<body>
+    <h1>Integration test</h1>
+    <div id="chickenpaint-parent">
+    </div>
+    <script>
+	    new IntegrationTest();
+    </script>
+</body>
+</html>

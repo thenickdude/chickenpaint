@@ -1262,6 +1262,9 @@ export default function ChickenPaint(options) {
             that.artwork = resources.layers || resources.flat;
             
             startMainGUI(resources.swatches, options.rotation);
+            if (options.onLoaded) {
+                options.onLoaded(this);
+            }
         });
 
         loader.load();
@@ -1270,6 +1273,9 @@ export default function ChickenPaint(options) {
         this.artwork.addBackgroundLayer();
         
         startMainGUI();
+	    if (options.onLoaded) {
+		    options.onLoaded(this);
+	    }
     }
 }
 
