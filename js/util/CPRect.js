@@ -278,8 +278,16 @@ CPRect.prototype.roundContain = function() {
 
 /**
  * Create an AABB CPRect which encloses the given array of points.
+ *
+ * @param {{x: number, y: number}[]} points
+ *
+ * @returns {CPRect}
  */
 CPRect.createBoundingBox = function(points) {
+    if (points.length === 0) {
+        return new CPRect(0, 0, 0, 0);
+    }
+    
     let
         result = new CPRect(points[0].x, points[0].y, points[0].x, points[0].y);
 
