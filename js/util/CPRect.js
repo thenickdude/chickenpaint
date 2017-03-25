@@ -384,55 +384,57 @@ CPRect.subtract = function(rectsA, rectsB) {
  * @returns {CPRect[]}
  */
 CPRect.union = function(rects) {
+    let
+        result;
+    
 	if (rects instanceof CPRect) {
-		return [rects];
-	}
-	
-	let
-		result = rects.slice(0); // Clone to avoid damaging the original array
-	
-	for (let i = 0; i < result.length; i++) {
-		// Intersect this rectangle with all the others
-		let
-			rectA = result[i],
-			resultLength = result.length;
+		result = [rects];
+	} else {
+	    result = rects.slice(0); // Clone to avoid damaging the original array
 		
-		if (!rectA) {
-			continue;
-		}
-		
-		// Don't re-examine any new rectangles we push onto the result
-		for (let j = i + 1; j < resultLength; j++) {
+		for (let i = 0; i < result.length; i++) {
+			// Intersect this rectangle with all the others
 			let
-				rectB = result[j];
+				rectA = result[i],
+				resultLength = result.length;
 			
-			if (!rectB) {
+			if (!rectA) {
 				continue;
 			}
 			
-			let
-				intersection = rectA.getIntersection(rectB);
-			
-			if (!intersection.isEmpty()) {
-				/* We need to eliminate the overlap between these rectangles. Subtract rectA from rectB and leave
-				 * rectA alone.
-				 */
+			// Don't re-examine any new rectangles we push onto the result
+			for (let j = i + 1; j < resultLength; j++) {
+				let
+					rectB = result[j];
+				
+				if (!rectB) {
+					continue;
+				}
 				
 				let
-					newRects = CPRect.subtract(rectB, rectA);
+					intersection = rectA.getIntersection(rectB);
 				
-				// Replace rectB with one of the fragments
-				result[j] = newRects[0];
-				
-				// And add the rest of the fragments to the end
-				for (let k = 1; k < newRects.length; k++) {
-					result.push(newRects[k]);
+				if (!intersection.isEmpty()) {
+                    /* We need to eliminate the overlap between these rectangles. Subtract rectA from rectB and leave
+                     * rectA alone.
+                     */
+					
+					let
+						newRects = CPRect.subtract(rectB, rectA);
+					
+					// Replace rectB with one of the fragments
+					result[j] = newRects[0];
+					
+					// And add the rest of the fragments to the end
+					for (let k = 1; k < newRects.length; k++) {
+						result.push(newRects[k]);
+					}
 				}
 			}
 		}
 	}
 	
-	return result.filter(rect => rect);
+	return result.filter(rect => rect && !rect.isEmpty());
 };
 
 /* 
