@@ -1558,3 +1558,28 @@ CPColorBmp.createFromImage = function(image) {
 
     return new CPColorBmp(imageContext.getImageData(0, 0, image.width, image.height));
 };
+
+/**
+ * Are all the pixels in this image identical to those of that?
+ *
+ * @param {CPColorBmp} that
+ */
+CPColorBmp.prototype.equals = function(that) {
+    if (this.width != that.width || this.height != that.height) {
+        return false;
+    }
+	
+	for (let pixIndex = 0; pixIndex < this.data.length; pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+		// Fully transparent pixels don't need their color channels compared
+		if (this.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] != 0 || that.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
+			if (this.data[pixIndex] != that.data[pixIndex]
+                || this.data[pixIndex + 1] != that.data[pixIndex + 1]
+                || this.data[pixIndex + 2] != that.data[pixIndex + 2]
+                || this.data[pixIndex + 3] != that.data[pixIndex + 3]) {
+                return false;
+            }
+		}
+	}
+    
+    return true;
+};

@@ -194,7 +194,7 @@ describe("CPArtwork", function() {
 		
 		{
 			let
-				testSelection = new CPRect(1, 1, 2, 2),
+				testSelection = new CPRect(1, 1, 3, 3),
 				beforeImage = TestUtil.colorBitmapFromString(`
 					....
 					.OO.
@@ -221,10 +221,12 @@ describe("CPArtwork", function() {
 					artwork = new CPArtwork(beforeImage.width, beforeImage.height);
 				
 				artwork.addLayer("layer");
-				artwork.addLayerMask();
 				
 				let
 					layer = artwork.getActiveLayer();
+				
+				artwork.addLayerMask();
+				artwork.setActiveLayer(layer, false); // Select the image rather than the mask
 				
 				layer.image.copyPixelsFrom(beforeImage);
 				layer.mask.copyPixelsFrom(beforeMask);
@@ -235,6 +237,7 @@ describe("CPArtwork", function() {
 
 				assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
 				assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+				
 				assert(TestUtil.bitmapsAreSimilar(artwork.getClipboard().bmp, expectImageClipboard));
 				assert(artwork.getClipboard().x === 1);
 				assert(artwork.getClipboard().y === 1);

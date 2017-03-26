@@ -1043,3 +1043,17 @@ CPGreyBmp.prototype.gradient = function(rect, fromX, fromY, toX, toY, gradientPo
         this.gradientAlpha(rect, fromX, fromY, toX, toY, gradientPoints);
     }
 };
+
+CPGreyBmp.prototype.equals = function(that) {
+	if (this.width != that.width || this.height != that.height) {
+		return false;
+	}
+	
+	for (let pixIndex = 0; pixIndex < this.data.length; pixIndex++) {
+		if (this.data[pixIndex] != that.data[pixIndex]) {
+			return false;
+		}
+	}
+	
+	return true;
+};

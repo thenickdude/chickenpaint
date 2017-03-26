@@ -76,61 +76,12 @@ TestUtil.artworkUndoRedo = function(test) {
 
 /**
  *
- * @param {CPColorBmp} bitmap1
- * @param {CPColorBmp} bitmap2
- * @returns {boolean}
- */
-TestUtil.colorBitmapsAreSimilar = function(bitmap1, bitmap2) {
-	for (let pixIndex = 0; pixIndex < bitmap1.data.length; pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
-		// Fully transparent pixels don't need their color channels compared
-		if (bitmap1.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] != 0 ||
-			bitmap2.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] != 0) {
-
-			for (let i = 0; i < 4; i++) {
-				let
-					delta = Math.abs(bitmap1.data[pixIndex + i] - bitmap2.data[pixIndex + i]);
-
-				if (delta > 0) {
-					return false;
-				}
-			}
-		}
-	}
-
-	return true;
-};
-
-/**
- *
- * @param {CPGreyBmp} bitmap1
- * @param {CPGreyBmp} bitmap2
- * @returns {boolean}
- */
-TestUtil.greyBitmapsAreSimilar = function(bitmap1, bitmap2) {
-	for (let pixIndex = 0; pixIndex < bitmap1.data.length; pixIndex++) {
-		let
-			delta = Math.abs(bitmap1.data[pixIndex] - bitmap2.data[pixIndex]);
-
-		if (delta > 0) {
-			return false;
-		}
-	}
-
-	return true;
-};
-
-/**
- *
  * @param {(CPColorBmp|CPGreyBmp)} bitmap1
  * @param {(CPColorBmp|CPGreyBmp)} bitmap2
  * @returns {boolean}
  */
 TestUtil.bitmapsAreSimilar = function(bitmap1, bitmap2) {
-	if (bitmap1 instanceof CPColorBmp) {
-		return TestUtil.colorBitmapsAreSimilar(bitmap1, bitmap2);
-	} else {
-		return TestUtil.greyBitmapsAreSimilar(bitmap1, bitmap2);
-	}
+	return bitmap1.equals(bitmap2);
 };
 
 const
