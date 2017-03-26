@@ -2729,6 +2729,17 @@ export default function CPArtwork(_width, _height) {
 		
 		        this.composeCanvasContext = this.composeCanvas.getContext("2d");
 		        setCanvasInterpolation(this.composeCanvasContext, this.interpolation == "smooth");
+		        
+		        /* Calling getImageData on the canvas forces Chrome to disable hardware acceleration for it, see
+		         * GetImageDataForcesNoAcceleration in https://cs.chromium.org/chromium/src/third_party/WebKit/Source/platform/graphics/ExpensiveCanvasHeuristicParameters.h
+		         *
+		         * We normally call this as part of finishing up our redo(), which means that our first redo() would
+		         * use hardware acceleration, and all subsequent redo()s would use software emulation, with subtly
+		         * different pixel results.
+		         *
+		         * Force our results to be consistent by calling that right now:
+		         */
+                this.junk = this.composeCanvasContext.getImageData(0, 0, 1, 1);
             }
         }
         
