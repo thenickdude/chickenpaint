@@ -1,0 +1,172 @@
+<style type="text/css">
+    body {
+        background-color:#e4e4e4;
+        padding:1em;
+        font-family: sans-serif;
+    }
+
+    canvas {
+        margin:0 1em 0.5em 0;
+        border:1px solid black;
+    }
+
+    p {
+        white-space:pre;
+    }
+
+    .comparison {
+        margin-bottom: 3em;
+    }
+</style>
+
+<h1>Transform a small grey canvas onto a transparent canvas</h1>
+
+<div id="output">
+
+</div>
+
+<script type="application/javascript">
+	function transform(destCanvas, srcCanvas, affineTransform) {
+		var
+			destContext = destCanvas.getContext("2d");
+
+		// Erase the entire destination canvas
+		destContext.clearRect(0, 0, destCanvas.width, destCanvas.height);
+
+		destContext.save();
+
+		destContext.setTransform(
+			affineTransform[0], affineTransform[1], affineTransform[2],
+			affineTransform[3], affineTransform[4], affineTransform[5]
+		);
+
+		// Transform the source canvas onto the destination
+		destContext.drawImage(srcCanvas, 0, 0);
+
+		destContext.restore();
+
+		// Return the resulting pixels
+		return destContext.getImageData(0, 0, destCanvas.width, destCanvas.height);
+
+		/* NOTE: https://cs.chromium.org/chromium/src/third_party/WebKit/Source/platform/graphics/ExpensiveCanvasHeuristicParameters.h
+		 *
+		 * In Chrome, this call to getImageData() disables acceleration on the canvas, which will subtly change the pixel
+		 * values the next time we call transform() on the same canvas!
+		 */
+	}
+
+	/**
+	 * Compare two ImageData (R,G,B,A byte order) arrays
+	 */
+	function assertImagesAreEqual(image1, image2) {
+		var
+			CHANNEL_ALPHA = 3,
+
+			pixelIndex;
+
+		if (image1.width != image2.width || image1.height != image2.height) {
+			throw new Error("Canvases are different sizes!");
+		}
+
+		// Compare them pixel-at-a-time:
+		pixelIndex = 0;
+		for (var y = 0; y < image1.height; y++) {
+			for (var x = 0; x < image1.width; x++, pixelIndex += 4) {
+
+				// The value of RGB channels are only considered significant if they're not both 100% transparent:
+				if (image1.data[pixelIndex + CHANNEL_ALPHA] != 0 || image2.data[pixelIndex + CHANNEL_ALPHA] != 0) {
+
+					// Check all four of the RGBA channels for equality:
+					for (var i = 0; i < 4; i++) {
+						if (image1.data[pixelIndex + i] != image2.data[pixelIndex + i]) {
+							throw new Error(
+								"Images differ first at pixel (" + x + "," + y + ")\n\n" +
+								"Pixel in image1 is RGBA(" + image1.data[pixelIndex] + "," + image1.data[pixelIndex + 1] + "," + image1.data[pixelIndex + 2] + "," + image1.data[pixelIndex + 3] + ")\n" +
+								"Pixel in image2 is RGBA(" + image2.data[pixelIndex] + "," + image2.data[pixelIndex + 1] + "," + image2.data[pixelIndex + 2] + "," + image2.data[pixelIndex + 3] + ")"
+							);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function canvasFromImageData(imageData) {
+		var
+			result = document.createElement("canvas");
+
+		result.width = imageData.width;
+		result.height = imageData.height;
+
+		result.getContext("2d").putImageData(imageData, 0, 0);
+
+		return result;
+	}
+
+	function renderComparison(title, image1, image2) {
+		var
+            output = document.createElement("div"),
+            titleElem = document.createElement("h2"),
+            statusElem = document.createElement("p");
+
+		output.className = "comparison";
+
+		titleElem.textContent = title;
+
+		output.appendChild(titleElem);
+		output.appendChild(canvasFromImageData(image1));
+		output.appendChild(canvasFromImageData(image1));
+		output.appendChild(statusElem);
+
+		try {
+			assertImagesAreEqual(image1, image2);
+
+			statusElem.textContent = "Both canvases are identical!";
+		} catch (e) {
+			statusElem.textContent = "Canvases differ!\n\n" + e;
+		}
+
+		return output;
+    }
+
+	function test() {
+		var
+			affineTransform = [0.5, -0.05, 0.05, 0.5, 100, 50],
+
+			srcCanvas = document.createElement("canvas"),
+			reusedDestCanvas = document.createElement("canvas"),
+			freshDestCanvas = document.createElement("canvas"),
+
+			srcContext = srcCanvas.getContext("2d"),
+
+			transformed1, transformed2, transformed3,
+
+			output = document.getElementById("output");
+
+		reusedDestCanvas.width = 400;
+		reusedDestCanvas.height = 300;
+
+		freshDestCanvas.width = 400;
+		freshDestCanvas.height = 300;
+
+		srcCanvas.width = 200;
+		srcCanvas.height = 200;
+		srcContext.fillStyle = "#666";
+		srcContext.fillRect(0, 0, srcCanvas.width, srcCanvas.height);
+
+		// Transform srcCanvas onto the reusedDestCanvas twice and collect the resulting images:
+		transformed1 = transform(reusedDestCanvas, srcCanvas, affineTransform);
+		transformed2 = transform(reusedDestCanvas, srcCanvas, affineTransform);
+
+		// We expect the resulting images to be identical, but they differ!
+		output.appendChild(renderComparison("Clear the destination canvas and reuse it for generating the second image", transformed1, transformed2));
+
+		// Now transform srcCanvas onto a fresh canvas instead of re-using the same canvas:
+		transformed3 = transform(freshDestCanvas,  srcCanvas, affineTransform);
+
+		// This freshly transformed canvas turns out to be identical to the first one we transformed, as we had hoped!
+		output.appendChild(renderComparison("Create a brand new canvas for the second image", transformed1, transformed3));
+	}
+
+	test();
+</script>
