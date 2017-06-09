@@ -80,7 +80,7 @@ const
 					realAlpha = (alpha1 * 255 / newAlpha) | 0,
 					invAlpha = 255 - realAlpha;
 				
-				destColor = (color1 * realAlpha + color2 * invAlpha) / 255;
+				destColor = ((color1 * realAlpha + color2 * invAlpha) / 255) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -168,7 +168,7 @@ const
 				var
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = color2 >= color1 ? color2 : (color2 * invAlpha1 + color1 * alpha1) / 255;
+				destColor = color2 >= color1 ? color2 : ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				var
@@ -196,7 +196,7 @@ const
 				var
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = color2 >= color1 ? (color2 * invAlpha1 + color1 * alpha1) / 255 : color2;
+				destColor = color2 >= color1 ? ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0 : color2;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				var
@@ -540,7 +540,7 @@ const
 			var
 				realAlpha = alpha1 * alphaMix + 255 * invAlphaMix;
 
-			destColor = (color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix) / realAlpha;
+			destColor = ((color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix) / realAlpha) | 0;
 			destAlpha = realAlpha;
 		},
 
@@ -549,7 +549,7 @@ const
 				realAlpha = alpha1 * alphaMix + alpha2 * invAlphaMix;
 
 			// Effectively use pre-multiplied alpha so that fully transparent colors have no effect on the result
-			destColor = (color1 * alpha1 * alphaMix + color2 * alpha2 * invAlphaMix) / realAlpha;
+			destColor = ((color1 * alpha1 * alphaMix + color2 * alpha2 * invAlphaMix) / realAlpha) | 0;
 			destAlpha = realAlpha;
 		}
 	},
