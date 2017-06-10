@@ -103,9 +103,9 @@ function testMoveGroup(selectType, linkMask, expectGroupMaskToMove, expectChildr
 		pre: function () {
 			assert(artwork.getLayersRoot().layers.length == 1);
 			assert(group.layers.length == 1);
-			assert(TestUtil.bitmapsAreSimilar(group.mask, beforeGroupMask));
-			assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+			assert(TestUtil.bitmapsAreEqual(group.mask, beforeGroupMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
 		},
 		action: function () {
 			artwork.move(-1, 0, false);
@@ -113,9 +113,9 @@ function testMoveGroup(selectType, linkMask, expectGroupMaskToMove, expectChildr
 		post: function () {
 			assert(artwork.getLayersRoot().layers.length == 1);
 			assert(group.layers.length == 1);
-			assert(TestUtil.bitmapsAreSimilar(group.mask, expectedGroupMask));
-			assert(TestUtil.bitmapsAreSimilar(layer.image, expectedImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, expectedMask));
+			assert(TestUtil.bitmapsAreEqual(group.mask, expectedGroupMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, expectedImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, expectedMask));
 		},
 		testCompact: true
 	});
@@ -444,16 +444,16 @@ describe("CPArtwork", function() {
 				artwork: artwork,
 				pre: function () {
 					assert(artwork.getLayersRoot().layers.length == 1);
-					assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-					assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+					assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+					assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
 				},
 				action: function () {
 					artwork.move(-1, 0, true);
 				},
 				post: function () {
 					assert(artwork.getLayersRoot().layers.length == 1);
-					assert(TestUtil.bitmapsAreSimilar(layer.image, expectImage));
-					assert(TestUtil.bitmapsAreSimilar(layer.mask, expectMask));
+					assert(TestUtil.bitmapsAreEqual(layer.image, expectImage));
+					assert(TestUtil.bitmapsAreEqual(layer.mask, expectMask));
 				},
 				testCompact: true
 			});

@@ -1112,7 +1112,7 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
 			softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
 		}
 	}) + `
-	
+	    
 	CPBlend.LM_NORMAL = 0;
     CPBlend.LM_MULTIPLY = 1;
     CPBlend.LM_ADD = 2;
@@ -1129,6 +1129,9 @@ console.log(`// This file is generated, please see codegenerator/BlendGenerator.
     CPBlend.LM_LINEARLIGHT = 13;
     CPBlend.LM_PINLIGHT = 14;
     CPBlend.LM_PASSTHROUGH = 15;
+    
+    CPBlend.LM_FIRST = 0;
+    CPBlend.LM_LAST = 15;
     
     CPBlend.BLEND_MODE_CODENAMES = [
         "normal",

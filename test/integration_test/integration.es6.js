@@ -12,9 +12,20 @@ import CPTransform from "../../js/util/CPTransform";
 import CPPolygon from "../../js/util/CPPolygon";
 
 import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
+import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
 
+import Random from "random-js";
+
+let
+    pageURL = new URL(window.location),
+    randomSeed = pageURL.searchParams.get("seed") ? (parseInt(pageURL.searchParams.get("seed"), 10) | 0) : Random.int32(Random.engines.browserCrypto),
+    randomEngine = Random.engines.mt19937().seed(randomSeed);
+
+console.log("Using random seed " + randomSeed);
+
+// [0..max)
 function randInt(max) {
-	return Math.floor(Math.random() * max);
+	return Random.integer(0, max - 1)(randomEngine);
 }
 
 function pick(list) {
@@ -52,7 +63,7 @@ class Step {
 				case "paint":
 					this.parameters.pointIndex = this.parameters.pointIndex || 0;
 					
-					if (this.parameters.pointIndex == 0) {
+					if (this.parameters.pointIndex === 0) {
 						if (!artwork.beginStroke(this.parameters.points[0].x, this.parameters.points[0].y, 1.0)) {
 							return true;
 						}
@@ -71,7 +82,7 @@ class Step {
 				case "history":
 					this.parameters.actionIndex = this.parameters.actionIndex || 0;
 					
-					if (this.parameters.actionIndex == 0) {
+					if (this.parameters.actionIndex === 0) {
 						Object.defineProperty(this.parameters, "history", {
 							value: [artwork.fusionLayers().clone()],
 							enumerable: false, // Avoid JSON-serialization
@@ -225,7 +236,7 @@ class RandomTest extends Test {
 		
 		// Hold on to the step if it signals that it needs to run again
 		if (this.currentStep.perform(this.chickenPaint)) {
-			test.currentStep = null;
+			this.currentStep = null;
 		}
 	}
 	
@@ -269,8 +280,8 @@ class RandomTest extends Test {
 					switch (action) {
 						case "CPFloodFill":
 							let
-								x = Math.random() * (artwork.width + 100) - 50,
-								y = Math.random() * (artwork.height + 100) - 50;
+								x = Random.real(-50, artwork.width + 50)(randomEngine),
+								y = Random.real(-50, artwork.height + 50)(randomEngine);
 							
 							return new Step(null, {task: "floodFill", x, y});
 						
@@ -291,16 +302,17 @@ class RandomTest extends Test {
 					let
 						points = [],
 						numPoints = randInt(20) + 1,
-						x = Math.random() * (artwork.width + 100) - 50,
-						y = Math.random() * (artwork.height + 100) - 50;
+                        x = Random.real(-50, artwork.width + 50)(randomEngine),
+                        y = Random.real(-50, artwork.height + 50)(randomEngine),
+                        dist = Random.real(-0.1, 0.1);
 					
 					for (let i = 0; i < numPoints; i++) {
 						points.push({
 							x: x, y: y
 						});
 						
-						x += (Math.random() - 0.5) * artwork.width * 0.2;
-						y += (Math.random() - 0.5) * artwork.width * 0.2;
+						x += dist(randomEngine) * artwork.width;
+						y += dist(randomEngine) * artwork.width;
 					}
 					
 					return new Step(null, {task: "paint", points: points, pointIndex: 0});
@@ -319,7 +331,7 @@ class RandomTest extends Test {
 				function () {
 					switch (pick(["setColor", "setBrushSize"])) {
 						case "setColor":
-							return new Step(null, {task: "setColor", color: randInt(4294967296)});
+							return new Step(null, {task: "setColor", color: Random.int32(randomEngine)});
 						
 						case "setBrushSize":
 							return new Step(null, {task: "setBrushSize", size: randInt(100) + 1});
@@ -331,10 +343,10 @@ class RandomTest extends Test {
 				}),
 				function () {
 					const
-						x = Math.random() * (artwork.width + 100) - 50,
-						y = Math.random() * (artwork.height + 100) - 50,
-						width = Math.random() * artwork.width + 10,
-						height = Math.random() * artwork.height + 10;
+                        x = Random.real(-50, artwork.width + 50)(randomEngine),
+                        y = Random.real(-50, artwork.height + 50)(randomEngine),
+						width = Random.real(0, artwork.width * 1.1)(randomEngine),
+                        height = Random.real(0, artwork.height * 1.1)(randomEngine);
 					
 					return new Step(null, {
 						task: "setSelection",
@@ -348,11 +360,11 @@ class RandomTest extends Test {
 					const
 						selectionCenter = new CPPolygon(artwork.getSelectionAutoSelect().toPoints()).getCenter(),
 						transform = new CPTransform(),
-						hScale = Math.random() * 2 + 0.05,
-						vScale = Math.random() * 2 + 0.05;
+						hScale = Random.real(0.05, 3)(randomEngine),
+						vScale = Random.real(0.05, 3)(randomEngine);
 					
-					transform.translate(Math.random() * 300, Math.random() * 300);
-					transform.rotateAroundPoint(Math.random() * 2 * Math.PI, selectionCenter.x, selectionCenter.y);
+					transform.translate(Random.real(-150, 150)(randomEngine), Random.real(-150, 150)(randomEngine));
+					transform.rotateAroundPoint(Random.real(-2 * Math.PI, 2 * Math.PI)(randomEngine), selectionCenter.x, selectionCenter.y);
 					transform.scale(hScale, vScale);
 					
 					return new Step(null, {task: "affineTransform", transform: transform.m});
@@ -441,10 +453,125 @@ class JSONTest extends Test {
 	}
 }
 
+function clone(x) {
+	// obviously only for a very limited subset of objects
+	return JSON.parse(JSON.stringify(x));
+}
+
+function stepFromJSON(json) {
+	return new Step(json.action ? clone(json.action) : null, json.parameters ? clone(json.parameters) : null);
+}
+
+/**
+ * Take an array of drawing operations which causes an exception to be thrown when the final action is applied, and attempt
+ * to reduce it to a series of trailing operations from the array that will trigger the exception when applied to a
+ * saved/loaded drawing created from the prefix.
+ *
+ * @param {Object[]} steps - JSON array of step descriptions
+ */
+function minifyTestcase(steps) {
+	if (steps.length === 0) {
+		return steps;
+	}
+	
+	let
+		minPrefixLength = 0,
+		maxPrefixLength = steps.length - 1, // We want at least 1 operation in the suffix
+		mid,
+        lastException,
+		
+		attempt = function() {
+            // Find the longest prefix we can use that still triggers the exception
+			let
+                chickenPaint = new ChickenPaint({});
+
+            if (minPrefixLength < maxPrefixLength) {
+				mid = Math.ceil((minPrefixLength + maxPrefixLength) / 2);
+				
+				let
+					prefixSteps = steps.slice(0, mid).map(stepFromJSON),
+					postfixSteps = steps.slice(mid).map(stepFromJSON);
+				
+				if (postfixSteps.length === 0) {
+					throw "Postfix is empty";
+				}
+				
+				try {
+					for (let prefixStep of prefixSteps) {
+						prefixStep.perform(chickenPaint);
+                        chickenPaint.getArtwork().fusionLayers();
+                    }
+				} catch (e) {
+					throw "We received an error when evaluating a prefix of the operations, this shouldn't happen. " + e;
+				}
+				
+				return chiSave(chickenPaint.getArtwork())
+					.then(chiLoad)
+					.then(
+						artwork => {
+							try {
+								let
+									newChickenPaint = new ChickenPaint({
+										artwork: artwork
+									});
+
+                                for (let postfixStep of postfixSteps) {
+                                    postfixStep.perform(newChickenPaint);
+                                    artwork.fusionLayers();
+                                }
+                                /* We didn't get an exception, so the suffix needs to be longer to include the trigger
+                                 * for the fault (prefix has to be shorter)
+                                 */
+                                maxPrefixLength = mid - 1;
+							} catch (e) {
+							    console.error(e);
+								// This suffix size successfully caused an exception, so the prefix can be at least this long
+								minPrefixLength = mid;
+								lastException = e;
+							}
+                        },
+                        err => {
+							throw "Failed to save/reload the artwork " + err;
+						}
+					)
+					.then(attempt);
+			} else {
+                let
+                    prefixSteps = steps.slice(0, minPrefixLength).map(stepFromJSON),
+                    postfixSteps = steps.slice(minPrefixLength);
+
+                if (postfixSteps.length === 0) {
+                    throw "Postfix is empty";
+                }
+
+                try {
+                    for (let prefixStep of prefixSteps) {
+                        prefixStep.perform(chickenPaint);
+                        chickenPaint.getArtwork().fusionLayers();
+                    }
+                } catch (e) {
+                    throw "We received an error when evaluating a prefix of the operations, this shouldn't happen.";
+                }
+
+                return chiSave(chickenPaint.getArtwork())
+					.then(chibiBlob => {
+						console.log("Testcase reduced from " + steps.length + " steps to " + postfixSteps.length + " steps, to be applied to saved drawing testcase.chi");
+						window.saveAs(chibiBlob, "testcase.chi");
+						window.saveAs(new Blob([JSON.stringify(postfixSteps)], {type: "text/plain;charset=utf-8"}), "testcase.json");
+						console.log("Exception generated by the last step was ", lastException);
+					});
+			}
+		};
+	
+	return Promise.resolve().then(attempt);
+}
+
 export default function IntegrationTest() {
 	let
 		chickenPaint,
-		test;
+		test,
+		stepsJSON = [],
+		lastStep = null;
 	
 	function continueTest() {
 		if (test.done()) {
@@ -453,9 +580,21 @@ export default function IntegrationTest() {
 			let
 				step = test.peekNextStep();
 
-			// console.log(JSON.stringify(step));
+			if (step !== lastStep) {
+				stepsJSON.push(clone(step));
+				lastStep = step;
+			}
 			
-			test.performNextStep(chickenPaint);
+			try {
+				test.performNextStep(chickenPaint);
+			} catch (e) {
+				console.error("Test failed with error: " + e);
+                console.log(JSON.stringify(stepsJSON, null, 2));
+				throw e;
+
+				// console.error("Attempting to reduce testcase size...");
+				// minifyTestcase(stepsJSON);
+			}
 			
 			let
 				wasPaintOperation = step.parameters && step.parameters.task == "paint";
@@ -464,7 +603,9 @@ export default function IntegrationTest() {
 		}
 	}
 	
-	function startTests() {
+	function startTests(_chickenPaint) {
+		chickenPaint = _chickenPaint;
+		
 		test = new RandomTest(chickenPaint);
 		
 		// test = new JSONTest(chickenPaint, randomTestSeries);

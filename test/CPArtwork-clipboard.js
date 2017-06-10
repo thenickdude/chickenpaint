@@ -125,7 +125,7 @@ describe("CPArtwork", function() {
 					
 					pre,
 					post: function() {
-						assert(TestUtil.bitmapsAreSimilar(this.getClipboard().bmp, expectImageClipboard));
+						assert(TestUtil.bitmapsAreEqual(this.getClipboard().bmp, expectImageClipboard));
 						assert(this.getClipboard().x === 0);
 						assert(this.getClipboard().y === 0);
 					}
@@ -143,7 +143,7 @@ describe("CPArtwork", function() {
 					
 					pre,
 					post: function() {
-						assert(TestUtil.bitmapsAreSimilar(this.getClipboard().bmp, expectMaskClipboard));
+						assert(TestUtil.bitmapsAreEqual(this.getClipboard().bmp, expectMaskClipboard));
 						assert(this.getClipboard().x === 0);
 						assert(this.getClipboard().y === 0);
 					}
@@ -235,10 +235,10 @@ describe("CPArtwork", function() {
 				
 				artwork.copySelection();
 
-				assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-				assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+				assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+				assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
 				
-				assert(TestUtil.bitmapsAreSimilar(artwork.getClipboard().bmp, expectImageClipboard));
+				assert(TestUtil.bitmapsAreEqual(artwork.getClipboard().bmp, expectImageClipboard));
 				assert(artwork.getClipboard().x === 1);
 				assert(artwork.getClipboard().y === 1);
 			});
@@ -262,9 +262,9 @@ describe("CPArtwork", function() {
 				
 				artwork.copySelection();
 				
-				assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-				assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
-				assert(TestUtil.bitmapsAreSimilar(artwork.getClipboard().bmp, expectMaskClipboard));
+				assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+				assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
+				assert(TestUtil.bitmapsAreEqual(artwork.getClipboard().bmp, expectMaskClipboard));
 				assert(artwork.getClipboard().x === 1);
 				assert(artwork.getClipboard().y === 1);
 			});
@@ -362,7 +362,7 @@ describe("CPArtwork", function() {
 						assert(artwork.getActiveLayer() != oldLayer);
 						assert(!artwork.isEditingMask());
 						
-						assert(TestUtil.bitmapsAreSimilar(artwork.getActiveLayer().image, expectImage));
+						assert(TestUtil.bitmapsAreEqual(artwork.getActiveLayer().image, expectImage));
 					}
 				})
 			});
@@ -394,7 +394,7 @@ describe("CPArtwork", function() {
 						assert(artwork.getActiveLayer() != oldLayer);
 						assert(!artwork.isEditingMask());
 						
-						assert(TestUtil.bitmapsAreSimilar(artwork.getActiveLayer().image, expectMask));
+						assert(TestUtil.bitmapsAreEqual(artwork.getActiveLayer().image, expectMask));
 					}
 				})
 			});

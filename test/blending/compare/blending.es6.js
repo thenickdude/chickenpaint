@@ -24,15 +24,15 @@
  * Compare two blending engines against each other visually.
  */
 
-import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
+import {binaryStringToByteArray} from "../../../js/engine/CPResourceSaver";
 
-import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
-import CPColorBmp from "../../js/engine/CPColorBmp";
-import CPArtwork from "../../js/engine/CPArtwork";
-import CPImageLayer from "../../js/engine/CPImageLayer";
+import {save as chiSave} from "../../../js/engine/CPChibiFile";
+import CPColorBmp from "../../../js/engine/CPColorBmp";
+import CPArtwork from "../../../js/engine/CPArtwork";
+import CPImageLayer from "../../../js/engine/CPImageLayer";
 
-import CPBlend from "../../js/engine/CPBlend";
-import CPBlend2 from "../../js/engine/CPBlend2";
+import CPBlend from "../../../js/engine/CPBlend";
+import CPBlend2 from "../../../js/engine/CPBlend2";
 
 // HSV (1978) = H: Hue / S: Saturation / V: Value
 var Color = {

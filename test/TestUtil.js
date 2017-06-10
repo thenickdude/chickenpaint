@@ -24,6 +24,8 @@ import TestUtil from "./lib/TestUtil";
 
 import assert from "assert";
 
+// Here we actually test our test helper routines themselves!
+
 describe("TestUtil", function() {
 	describe("#colorBitmapFromString", function() {
 		it("should correctly create a bitmap with the specified values", function () {
@@ -70,7 +72,7 @@ describe("TestUtil", function() {
 				`),
 				testImage2 = testImage.clone();
 
-			assert(TestUtil.bitmapsAreSimilar(testImage, testImage2));
+			assert(TestUtil.bitmapsAreEqual(testImage, testImage2));
 		});
 
 		it("should correctly reject two different color bitmaps", function () {
@@ -84,7 +86,7 @@ describe("TestUtil", function() {
 					OO
 				`);
 
-			assert(!TestUtil.bitmapsAreSimilar(testImage, testImage2));
+			assert(!TestUtil.bitmapsAreEqual(testImage, testImage2));
 		});
 
 		it("should correctly match two identical grey bitmaps", function () {
@@ -95,7 +97,7 @@ describe("TestUtil", function() {
 				`),
 				testImage2 = testImage.clone();
 
-			assert(TestUtil.bitmapsAreSimilar(testImage, testImage2));
+			assert(TestUtil.bitmapsAreEqual(testImage, testImage2));
 		});
 
 		it("should correctly reject two different grey bitmaps", function () {
@@ -109,7 +111,7 @@ describe("TestUtil", function() {
 					OO
 				`);
 
-			assert(!TestUtil.bitmapsAreSimilar(testImage, testImage2));
+			assert(!TestUtil.bitmapsAreEqual(testImage, testImage2));
 		});
 	})
 });

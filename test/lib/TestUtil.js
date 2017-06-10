@@ -80,8 +80,33 @@ TestUtil.artworkUndoRedo = function(test) {
  * @param {(CPColorBmp|CPGreyBmp)} bitmap2
  * @returns {boolean}
  */
-TestUtil.bitmapsAreSimilar = function(bitmap1, bitmap2) {
+TestUtil.bitmapsAreEqual = function(bitmap1, bitmap2) {
 	return bitmap1.equals(bitmap2);
+};
+
+/**
+ *
+ * @param {CPColorBmp} bitmap1
+ * @param {CPColorBmp} bitmap2
+ * @returns {int}
+ */
+TestUtil.bitmapMaxDifference = function(bitmap1, bitmap2) {
+	let
+		max = 0;
+
+	for (let pixIndex = 0; pixIndex < bitmap1.data.length; pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+		for (let i = CPColorBmp.RED_BYTE_OFFSET; i <= CPColorBmp.GREEN_BYTE_OFFSET; i++) {
+		    let
+                difference = Math.abs(
+                    bitmap1.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] * bitmap1.data[pixIndex + i]
+                    - bitmap2.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] * bitmap2.data[pixIndex + i]
+                );
+
+			max = Math.max(max, difference);
+        }
+	}
+
+    return max;
 };
 
 const
@@ -322,15 +347,15 @@ TestUtil.testLayerPaintOperation = function(test) {
 	TestUtil.artworkUndoRedo({
 		artwork: artwork,
 		pre: function () {
-			assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
 		},
 		action: function () {
 			test.operation.call(artwork);
 		},
 		post: function () {
-			assert(TestUtil.bitmapsAreSimilar(layer.image, expectImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, expectMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, expectImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, expectMask));
 			
 			if (test.post) {
 				test.post.call(artwork);

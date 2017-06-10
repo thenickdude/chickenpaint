@@ -33,6 +33,29 @@ const
 	BYTES_PER_PIXEL = 4,
 	ALPHA_BYTE_OFFSET = 3;
 
+CPBlend.blendFunctionNameForParameters = function(fusionHasTransparency, imageAlpha, imageBlendMode, hasMask) {
+    var
+        funcName = CPBlend.BLEND_MODE_CODENAMES[imageBlendMode] + "Onto";
+
+    if (fusionHasTransparency) {
+        funcName += "TransparentFusion";
+    } else {
+        funcName += "OpaqueFusion";
+    }
+
+    if (imageAlpha == 100) {
+        funcName += "WithOpaqueLayer";
+    } else {
+        funcName += "WithTransparentLayer";
+    }
+
+    if (hasMask) {
+        funcName += "Masked";
+    }
+
+    return funcName;
+};
+
 /**
  * Blends the given image on top of the fusion.
  *
@@ -49,24 +72,8 @@ CPBlend.fuseImageOntoImage = function (fusion, fusionHasTransparency, image, ima
 		return;
 	}
 
-	var
-		funcName = CPBlend.BLEND_MODE_CODENAMES[imageBlendMode] + "Onto";
-
-	if (fusionHasTransparency) {
-		funcName += "TransparentFusion";
-	} else {
-		funcName += "OpaqueFusion";
-	}
-
-	if (imageAlpha == 100) {
-		funcName += "WithOpaqueLayer";
-	} else {
-		funcName += "WithTransparentLayer";
-	}
-
-	if (mask) {
-		funcName += "Masked";
-	}
+	let
+		funcName = CPBlend.blendFunctionNameForParameters(fusionHasTransparency, imageAlpha, imageBlendMode, mask != null);
 
 	rect = fusion.getBounds().clipTo(rect);
 

@@ -24,23 +24,26 @@ resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js
 resources/fonts/ChickenPaint-Symbols.less : resources/fonts/chickenpaint-symbols-source/*
 	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --less resources/fonts/ChickenPaint-Symbols.less --fonts resources/fonts
 
-test: blending-bench blending-test thumbnail-test integration-test
+test: thumbnail-test integration-test blending-test
 
-blending-bench: test/blending_bench/blending.js
-blending-test: test/blending_test/blending.js
+tools: blending-bench blending-compare
+
+blending-bench: test/blending/bench/blending.js
+blending-compare: test/blending/test/blending.js
+
 thumbnail-test: test/thumbnail_test/thumbnail.js
 integration-test: test/integration_test/integration.js
 
-test/blending_test/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test/blending_test/blending.es6.js $(ENGINE_SOURCE)
-	node_modules/.bin/browserify --standalone BlendingTest --outfile $@ -d -e test/blending_test/blending.es6.js -t babelify
+test/blending/compare/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test/blending/compare/blending.es6.js $(ENGINE_SOURCE)
+	node_modules/.bin/browserify --standalone BlendingTest --outfile $@ -d -e test/blending/compare/blending.es6.js -t babelify
 
-test/blending_bench/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test/blending_bench/blending.es6.js $(ENGINE_SOURCE)
-	node_modules/.bin/browserify --standalone BlendingBench --outfile $@ -d -e test/blending_bench/blending.es6.js -t babelify
+test/blending/bench/blending.js : js/engine/CPBlend.js js/engine/CPBlend2.js test/blending/bench/blending.es6.js $(ENGINE_SOURCE)
+	node_modules/.bin/browserify --standalone BlendingBench --outfile $@ -d -e test/blending/bench/blending.es6.js -t babelify
 
 test/thumbnail_test/thumbnail.js : js/engine/CPImageLayer.js js/engine/CPColorBmp.js test/thumbnail_test/thumbnail.es6.js $(ENGINE_SOURCE)
 	node_modules/.bin/browserify --standalone ThumbnailTest --outfile $@ -d -e test/thumbnail_test/thumbnail.es6.js -t babelify
 
-test/integration_test/integration.js : test/integration_test/integration.es6.js test/integration_test/testcase.js $(ENGINE_SOURCE)
+test/integration_test/integration.js : test/integration_test/integration.es6.js $(ENGINE_SOURCE)
 	node_modules/.bin/browserify --standalone IntegrationTest --outfile $@ -d -e test/integration_test/integration.es6.js -t babelify
 
 js/engine/CPBlend2.js :

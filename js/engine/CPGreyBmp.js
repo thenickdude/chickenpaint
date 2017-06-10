@@ -30,7 +30,7 @@ import {createImageData} from "../util/Canvas";
  *
  * @param {int} width
  * @param {int} height
- * @param {int} bitDepth
+ * @param {int} bitDepth - Bits per channel
  *
  * @constructor
  * @extends CPBitmap

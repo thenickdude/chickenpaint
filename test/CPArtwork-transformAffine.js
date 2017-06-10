@@ -104,9 +104,9 @@ function testTransformGroup(selectType, linkMask, expectGroupMaskToMove, expectC
 		pre: function () {
 			assert(artwork.getLayersRoot().layers.length == 1);
 			assert(group.layers.length == 1);
-			assert(TestUtil.bitmapsAreSimilar(group.mask, beforeGroupMask));
-			assert(TestUtil.bitmapsAreSimilar(layer.image, beforeImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, beforeMask));
+			assert(TestUtil.bitmapsAreEqual(group.mask, beforeGroupMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, beforeImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, beforeMask));
 		},
 		action: function () {
 			let
@@ -121,9 +121,9 @@ function testTransformGroup(selectType, linkMask, expectGroupMaskToMove, expectC
 		post: function () {
 			assert(artwork.getLayersRoot().layers.length == 1);
 			assert(group.layers.length == 1);
-			assert(TestUtil.bitmapsAreSimilar(group.mask, expectedGroupMask));
-			assert(TestUtil.bitmapsAreSimilar(layer.image, expectedImage));
-			assert(TestUtil.bitmapsAreSimilar(layer.mask, expectedMask));
+			assert(TestUtil.bitmapsAreEqual(group.mask, expectedGroupMask));
+			assert(TestUtil.bitmapsAreEqual(layer.image, expectedImage));
+			assert(TestUtil.bitmapsAreEqual(layer.mask, expectedMask));
 		},
 		testCompact: true
 	});
@@ -163,7 +163,7 @@ describe("CPArtwork", function() {
 			
 			artwork.transformAffineFinish();
 			
-			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImage));
+			assert(TestUtil.bitmapsAreEqual(layer.image, boxImage));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during redo (full layer)", function () {
@@ -193,7 +193,7 @@ describe("CPArtwork", function() {
 			// The non-transparent pixels in the source and destination regions should be updated
 			assert(updatedRegion.equals(new CPRect(1, 1, 5, 3)));
 			
-			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImageShifted));
+			assert(TestUtil.bitmapsAreEqual(layer.image, boxImageShifted));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during undo (full layer)", function () {
@@ -224,7 +224,7 @@ describe("CPArtwork", function() {
 			
 			assert(updatedRegion.equals(new CPRect(1, 1, 5, 3)));
 			
-			assert(TestUtil.bitmapsAreSimilar(layer.image, boxImage));
+			assert(TestUtil.bitmapsAreEqual(layer.image, boxImage));
 		});
 		
 		it("should call updateRegion() with the modified rectangle during redo (selection)", function () {
@@ -255,7 +255,7 @@ describe("CPArtwork", function() {
 			
 			assert(updatedRegion.equals(new CPRect(1, 0, 2, 2)));
 			
-			assert(TestUtil.bitmapsAreSimilar(layer.image, TestUtil.colorBitmapFromString(`
+			assert(TestUtil.bitmapsAreEqual(layer.image, TestUtil.colorBitmapFromString(`
 			   .O...
 			   ..OO.
 			   .OOO.
@@ -293,7 +293,7 @@ describe("CPArtwork", function() {
 			
 			assert(updatedRegion.equals(new CPRect(1, 0, 2, 2)));
 			
-			assert(TestUtil.bitmapsAreSimilar(layer.image, TestUtil.colorBitmapFromString(`
+			assert(TestUtil.bitmapsAreEqual(layer.image, TestUtil.colorBitmapFromString(`
 			   .....
 			   .OOO.
 			   .OOO.
