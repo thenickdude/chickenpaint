@@ -1,5 +1,4 @@
-import CPChibiFile from "./CPChibiFile";
-import CPArtwork from "./CPArtwork";
+import {save as chiSave} from "../../js/engine/CPChibiFile";
 import AdobeColorTable from "../util/AdobeColorTable";
 
 import EventEmitter from "wolfy87-eventemitter";
@@ -113,7 +112,7 @@ export default function CPResourceSaver(options) {
         if (options.artwork.isSimpleDrawing()) {
             serializeLayers = Promise.resolve(null);
         } else {
-            serializeLayers = (new CPChibiFile()).serialize(options.artwork);
+            serializeLayers = chiSave(options.artwork);
         }
         
         serializeLayers
@@ -177,7 +176,6 @@ export default function CPResourceSaver(options) {
             })
             .catch(function(e) {
                 that.emitEvent("savingFailure");
-                return;
             });
     };
     

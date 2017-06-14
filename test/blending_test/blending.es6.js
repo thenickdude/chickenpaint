@@ -26,7 +26,7 @@
 
 import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
 
-import CPChibiFile from "../../js/engine/CPChibiFile";
+import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
 import CPColorBmp from "../../js/engine/CPColorBmp";
 import CPArtwork from "../../js/engine/CPArtwork";
 import CPImageLayer from "../../js/engine/CPImageLayer";
@@ -222,13 +222,12 @@ function saveTestFiles(colorSphereLayer, lightMixLayer) {
 	window.saveAs(new Blob([binaryStringToByteArray(lightMixLayer.getAsPNG(0))], {type: "image/png"}), "over.png");
 
 	var
-		artwork = new CPArtwork(colorSphereLayer.width, colorSphereLayer.height),
-		chi = new CPChibiFile();
+		artwork = new CPArtwork(colorSphereLayer.width, colorSphereLayer.height);
 
 	artwork.addLayerObject(colorSphereLayer);
 	artwork.addLayerObject(lightMixLayer);
 
-	chi.serialize(artwork).then(function(chiData) {
+	chiSave(artwork).then(function(chiData) {
 		window.saveAs(chiData, "blendtest.chi");
 	});
 }

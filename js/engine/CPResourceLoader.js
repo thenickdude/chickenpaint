@@ -1,4 +1,4 @@
-import CPChibiFile from "./CPChibiFile";
+import {load as chiLoad} from "../../js/engine/CPChibiFile";
 import CPArtwork from "./CPArtwork";
 import CPColorBmp from "./CPColorBmp";
 import CPImageLayer from "./CPImageLayer";
@@ -47,61 +47,61 @@ export default function CPResourceLoader(options) {
         });
     }
 
+    /**
+     *
+     * @param resource
+     * @param resourceData
+     * @returns {Promise}
+     */
     function decodeResource(resource, resourceData) {
-        return new Promise(function(resolve, reject) {
-            var
-                reader;
-
-            switch (resource.name) {
-                case "flat":
-                    var 
+        switch (resource.name) {
+            case "flat":
+                return new Promise(function(resolve, reject) {
+                    let
                         blob = new Blob([resourceData], {type: "image/png"}),
                         imageUrl = window.URL.createObjectURL(blob);
-                    
+
                     if (imageUrl) {
-                        var 
+                        let
                             image = new Image();
-                        
-                        image.onload = function() {
-                            var
+
+                        image.onload = function () {
+                            let
                                 artwork = new CPArtwork(this.width, this.height),
                                 layer = new CPImageLayer(0, 0, "Layer 1");
-                            
+
                             layer.image = CPColorBmp.createFromImage(image);
                             artwork.addLayerObject(artwork.getLayersRoot(), layer);
-                            
+
                             image = null;
                             window.URL.revokeObjectURL(imageUrl);
-                            
+
                             resolve(artwork);
                         };
-                        
+
                         image.src = imageUrl;
                     } else {
-                        resolve(null);
+                        reject(null);
                     }
-                break;
-                case "swatches":
-                    reader = new AdobeColorTable();
+                });
 
-                    var
-                        colors = reader.read(resourceData);
-                    
-                    resolve(colors);
-                break;
-                case "layers":
-                    reader = new CPChibiFile();
-                    
-                    var
-                        artwork = reader.read(resourceData);
-    
-                    resolve(artwork);
-                break;
-                default:
-                    resolve(null);
-                break;
-            }
-        });
+            case "swatches":
+                let
+                    reader = new AdobeColorTable(),
+                    colors = reader.read(resourceData);
+
+                if (colors) {
+                    return Promise.resolve(colors);
+                } else {
+                    return Promise.reject(null);
+                }
+
+            case "layers":
+                return chiLoad(resourceData);
+
+            default:
+                return Promise.reject("Unexpected resource type '" + resource.name + "'");
+        }
     }
 
     function reportProgress(resource, progress) {
@@ -146,7 +146,7 @@ export default function CPResourceLoader(options) {
         
         xhr.addEventListener("load", function(evt) {
             if (this.status == 200) {
-                var
+                let
                     response = this.response;
                 
                 that.emitEvent("loadingProgress", [1.0, "Starting ChickenPaint..."]);
@@ -154,16 +154,17 @@ export default function CPResourceLoader(options) {
                 // Yield to the DOM to give it a chance to paint the loaded message before we begin decoding
                 setTimeout(
                     function() {
-                        decodeResource(resource, response).then(function(decoded) {
-                            if (decoded) {
+                        decodeResource(resource, response).then(
+                            function(decoded) {
                                 completed[resource.name] = decoded;
-                                
+
                                 // Move on to the next file
                                 that.load();
-                            } else {
+                            },
+                            function() {
                                 that.emitEvent("loadingFailure", ["Failed to read your " + resource.friendly]);
                             }
-                        });
+                        );
                     },
                     0
                 );

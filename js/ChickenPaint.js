@@ -253,31 +253,46 @@ function createDrawingTools() {
 }
 
 /**
- * Creates an instance of the ChickenPaint drawing app. Options is an object with these keys:
+ * @typedef {Object} ChickenPaintOptions
  *
- * uiElem       - DOM element to insert ChickenPaint into (required)
- * canvasWidth  - Width in pixels to use when creating blank canvases (defaults to 800)
- * canvasHeight - Height in pixels to use when creating blank canvases (defaults to 600)
- * rotation     - Integer from [0..3], number of 90 degree right rotations that should be applied to the canvas after
- *                loading
+ * @property {Element} uiElem   - DOM element to insert ChickenPaint into (required)
  *
- * saveUrl   - URL to POST the drawing to to save it
- * postUrl   - URL to navigate to after saving is successful and the user chooses to see/publish their finished product
- * exitUrl   - URL to navigate to after saving is successful and the user chooses to exit (optional)
- * testUrl   - URL that ChickenPaint can simulate a drawing upload to to test the user's permissions/connection (optional)
+ * @property {Function} onLoaded - Callback to call when artwork loading completes
  *
- * loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
- * loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
- * loadSwatchesUrl  - URL of an .aco palette to load (optional)
+ * @property {int} canvasWidth  - Width in pixels to use when creating blank canvases (defaults to 800)
+ * @property {int} canvasHeight - Height in pixels to use when creating blank canvases (defaults to 600)
+ * @property {int} rotation     - Integer from [0..3], number of 90 degree right rotations that should be applied to
+ *                                the canvas after loading
  *
- * allowMultipleSends - Allow the drawing to be sent to the server multiple times (saving does not immediately end drawing session).
- * allowDownload - Allow the drawing to be saved to the user's computer
- * allowFullScreen - Allow the drawing tool to enter "full screen" mode, where the rest of the page contents will be hidden
+ * @property {string} saveUrl   - URL to POST the drawing to to save it
+ * @property {string} postUrl   - URL to navigate to after saving is successful and the user chooses to see/publish
+ *                                their finished product
+ * @property {string} exitUrl   - URL to navigate to after saving is successful and the user chooses to exit (optional)
+ * @property {string} testUrl   - URL that ChickenPaint can simulate a drawing upload to to test the user's
+ *                                permissions/connection (optional)
  *
- * disableBootstrapAPI - Disable Bootstrap's data API on the root of the document. This speeds up things considerably.
- * 
- * resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the page that 
- *                 ChickenPaint is loaded on)
+ * @property {string} loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
+ * @property {string} loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
+ * @property {string} loadSwatchesUrl  - URL of an .aco palette to load (optional)
+ * @property {CPArtwork} artwork       - Artwork to load into ChickenPaint (if you've already created one)
+ *
+ * @property {boolean} allowMultipleSends - Allow the drawing to be sent to the server multiple times (saving does not
+ *                                          immediately end drawing session).
+ * @property {boolean} allowDownload      - Allow the drawing to be saved to the user's computer
+ * @property {boolean} allowFullScreen    - Allow the drawing tool to enter "full screen" mode, where the rest of the page
+ *                                          contents will be hidden
+ *
+ * @property {boolean} disableBootstrapAPI - Disable Bootstrap's data API on the root of the document. This speeds up
+ *                                           things considerably.
+ *
+ * @property {string} resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the
+ *                                    page that ChickenPaint is loaded on)
+ */
+
+/**
+ * Creates an instance of the ChickenPaint drawing app with the specified options.
+ *
+ * @param {ChickenPaintOptions} options
  *
  * @throws ChickenPaint.UnsupportedBrowserException if the web browser does not support ChickenPaint
  */
@@ -1214,6 +1229,10 @@ export default function ChickenPaint(options) {
     }
     
     function startMainGUI(swatches, initialRotation90) {
+        if (!uiElem) {
+            return;
+        }
+
         that.artwork.on("editModeChanged", onEditModeChanged);
 
         mainGUI = new CPMainGUI(that, uiElem);
@@ -1240,11 +1259,13 @@ export default function ChickenPaint(options) {
 
     checkBrowserSupport();
 
-    if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string" || /Presto/.test(navigator.userAgent)) {
-        uiElem.className += " no-flexbox";
-    }
+    if (uiElem) {
+        if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string" || /Presto/.test(navigator.userAgent)) {
+            uiElem.className += " no-flexbox";
+        }
 
-    uiElem.className += " chickenpaint";
+        uiElem.className += " chickenpaint";
+    }
 
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
 
@@ -1269,13 +1290,17 @@ export default function ChickenPaint(options) {
 
         loader.load();
     } else {
-        this.artwork = new CPArtwork(options.canvasWidth || 800, options.canvasHeight || 600);
-        this.artwork.addBackgroundLayer();
-        
+        if (options.artwork) {
+            this.artwork = options.artwork;
+        } else {
+            this.artwork = new CPArtwork(options.canvasWidth || 800, options.canvasHeight || 600);
+            this.artwork.addBackgroundLayer();
+        }
+
         startMainGUI();
-	    if (options.onLoaded) {
-		    options.onLoaded(this);
-	    }
+        if (options.onLoaded) {
+            options.onLoaded(this);
+        }
     }
 }
 
