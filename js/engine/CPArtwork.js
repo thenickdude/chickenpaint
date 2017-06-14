@@ -1141,7 +1141,7 @@ export default function CPArtwork(_width, _height) {
 
         if (undoList.length === 0 || !undoList[undoList.length - 1].merge(undo)) {
             if (undoList.length >= MAX_UNDO) {
-                undoList.unshift();
+                undoList.shift();
             }
             that.compactUndo();
             undoList.push(undo);
