@@ -22,7 +22,7 @@
 
 "use strict";
 
-var
+let
 	destColor = false, destAlpha = false, softLightLUTSquare, softLightLUTSquareRoot; // Dummies to silence IDE warnings
 
 const
@@ -49,7 +49,7 @@ const
 				destColor = (color2 - (color1 ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -68,14 +68,14 @@ const
 				if (alpha1 == 255) {
 					destColor = color1;
 				} else {
-					var
+					let
 						invAlpha1 = 255 - alpha1;
 					
 					destColor = ((color1 * alpha1 + color2 * invAlpha1) / 255) | 0;
 				}
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					realAlpha = (alpha1 * 255 / newAlpha) | 0,
 					invAlpha = 255 - realAlpha;
@@ -94,7 +94,7 @@ const
 				destColor = (color2 + alpha1 * color1 / 255) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
 				
 				// No need to clamp the color to 0...255 since we're writing to a clamped array anyway
@@ -112,7 +112,7 @@ const
 				destColor = (color2 + alpha1 * color1 / 255 - alpha1) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					alpha12 = alpha1 * alpha2;
 				
@@ -128,19 +128,19 @@ const
 			displayName: "screen",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = 0xFF ^ (
-						(
-							(color2 ^ 0xFF) * invAlpha1
-							+ (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
-						)
-						/ 255
-					);
+					(
+						(color2 ^ 0xFF) * invAlpha1
+						+ (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha1 / 255
+					)
+					/ 255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -148,13 +148,13 @@ const
 					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
 				
 				destColor = 0xFF ^ (
-						(
-							(color1 ^ 0xFF) * alpha1n2
-							+ (color2 ^ 0xFF) * alphan12
-							+ (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
-						)
-						/ newAlpha
-					);
+					(
+						(color1 ^ 0xFF) * alpha1n2
+						+ (color2 ^ 0xFF) * alphan12
+						+ (color1 ^ 0xFF) * (color2 ^ 0xFF) * alpha12 / 255
+					)
+					/ newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -165,13 +165,13 @@ const
 			displayName: "lighten",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = color2 >= color1 ? color2 : ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 				
 				// This alpha is used when color1 > color2
@@ -193,13 +193,13 @@ const
 			displayName: "darken",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = color2 >= color1 ? ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0 : color2;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 				
 				// This alpha is used when color1 > color2
@@ -220,30 +220,30 @@ const
 			displayName: "dodge",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = (
-						(
-							color2 * invAlpha1
-							+ alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
-						) / 255
-					) | 0;
+					(
+						color2 * invAlpha1
+						+ alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							(color1 * alpha1n2)
-							+ (color2 * alphan12)
-							+ alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
-						) / newAlpha
-					) | 0;
+					(
+						(color1 * alpha1n2)
+						+ (color2 * alphan12)
+						+ alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
+					) / newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -253,19 +253,19 @@ const
 			displayName: "burn",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = (
-						(
-							color2 * invAlpha1
-							+ alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
-						)
-						/ 255
-					) | 0;
+					(
+						color2 * invAlpha1
+						+ alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+					)
+					/ 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -273,13 +273,13 @@ const
 					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							color1 * alpha1n2
-							+ color2 * alphan12
-							+ alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
-						)
-						/ newAlpha
-					) | 0;
+					(
+						color1 * alpha1n2
+						+ color2 * alphan12
+						+ alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
+					)
+					/ newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -290,38 +290,38 @@ const
 			displayName: "overlay",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ (
-								color2 <= 127
-									? (alpha1 * 2 * color1 * color2 / 255)
-									: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-							)
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ (
+							color2 <= 127
+								? (alpha1 * 2 * color1 * color2 / 255)
+								: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+						)
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ (
-								color2 <= 127
-									? (alpha12 * 2 * color1 * color2 / 255)
-									: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-							)
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ (
+							color2 <= 127
+								? (alpha12 * 2 * color1 * color2 / 255)
+								: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+						)
+					) / newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -333,38 +333,38 @@ const
 			displayName: "hard light",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ (
-								color1 <= 127
-									? (alpha1 * 2 * color1 * color2 / 255)
-									: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-							)
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ (
+							color1 <= 127
+								? (alpha1 * 2 * color1 * color2 / 255)
+								: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+						)
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ (
-								color1 <= 127
-									? (alpha12 * 2 * color1 * color2 / 255)
-									: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-							)
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ (
+							color1 <= 127
+								? (alpha12 * 2 * color1 * color2 / 255)
+								: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
+						)
+					) / newAlpha
+				) | 0;
 				
 				destAlpha = newAlpha;
 			}
@@ -376,22 +376,22 @@ const
 			displayName: "soft light",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ alpha1 * (
-								color1 <= 127
-									? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
-									: ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
-							)
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ alpha1 * (
+							color1 <= 127
+								? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+								: ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+						)
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -399,16 +399,16 @@ const
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ (
-								color1 <= 127
-									? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
-									: alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
-							)
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ (
+							color1 <= 127
+								? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
+								: alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+						)
+					) / newAlpha
+				) | 0;
 				
 				destAlpha = newAlpha;
 			}
@@ -420,22 +420,22 @@ const
 			displayName: "vivid light",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ (
-								color1 <= 127
-									? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
-									: (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
-							)
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ (
+							color1 <= 127
+								? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+								: (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+						)
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -443,16 +443,16 @@ const
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ (
-								color1 <= 127
-									? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
-									: (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
-							)
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ (
+							color1 <= 127
+								? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
+								: (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+						)
+					) / newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -462,18 +462,18 @@ const
 			displayName: "linear light",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ alpha1 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ alpha1 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -481,12 +481,12 @@ const
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
+					) / newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		},
@@ -498,18 +498,18 @@ const
 			displayName: "pin light",
 			unroundedAlpha: false,
 			ontoOpaque: function (color1, color2, alpha1) {
-				var
+				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
 				destColor = (
-						(
-							invAlpha1 * color2
-							+ alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
-						) / 255
-					) | 0;
+					(
+						invAlpha1 * color2
+						+ alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+					) / 255
+				) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
-				var
+				let
 					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
@@ -517,12 +517,12 @@ const
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
 				
 				destColor = (
-						(
-							alpha1n2 * color1
-							+ alphan12 * color2
-							+ alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
-						) / newAlpha
-					) | 0;
+					(
+						alpha1n2 * color1
+						+ alphan12 * color2
+						+ alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
+					) / newAlpha
+				) | 0;
 				destAlpha = newAlpha;
 			}
 		}
@@ -537,7 +537,7 @@ const
 		 * contents of two layers based on the layer alpha parameter.
 		 */
 		ontoOpaque: function(color1, color2, alpha1, alphaMix, invAlphaMix) {
-			var
+			let
 				realAlpha = alpha1 * alphaMix + 255 * invAlphaMix;
 
 			destColor = ((color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix) / realAlpha) | 0;
@@ -545,7 +545,7 @@ const
 		},
 
 		ontoTransparent: function(color1, color2, alpha1, alpha2, alphaMix, invAlphaMix) {
-			var
+			let
 				realAlpha = alpha1 * alphaMix + alpha2 * invAlphaMix;
 
 			// Effectively use pre-multiplied alpha so that fully transparent colors have no effect on the result
@@ -582,21 +582,19 @@ function getAlphaMixExpressionForVariant(variant) {
 }
 
 function getLayerAlphaExpressionForVariant(alphaExpression, operation, variant) {
-	var
+	let
 		rounding = variant.unroundedAlpha ? "" : " | 0";
 
 	if (operation.customAlphaMix) {
 		return alphaExpression;
+	} else if (variant.masked && !variant.layerAlpha100) {
+		return `(((${alphaExpression}) * mask.data[maskIndex] * layerAlpha / 25500) ${rounding})`;
+	} else if (variant.masked) {
+		return `(((${alphaExpression}) * mask.data[maskIndex] / 255) ${rounding})`;
+	} else if (!variant.layerAlpha100) {
+		return `(((${alphaExpression}) * layerAlpha / 100) ${rounding})`;
 	} else {
-		if (variant.masked && !variant.layerAlpha100) {
-			return `(((${alphaExpression}) * mask.data[maskIndex] * layerAlpha / 25500) ${rounding})`;
-		} else if (variant.masked) {
-			return `(((${alphaExpression}) * mask.data[maskIndex] / 255) ${rounding})`;
-		} else if (!variant.layerAlpha100) {
-			return `(((${alphaExpression}) * layerAlpha / 100) ${rounding})`;
-		} else {
-			return alphaExpression;
-		}
+		return alphaExpression;
 	}
 }
 
@@ -609,53 +607,46 @@ function getFusionAlphaExpressionForVariant(alphaExpression, variant) {
 }
 
 function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar) {
-	
+	code = leftAlign(code);
+
 	/*
-	 * Transform assignments to destColor into a loop that evaluates the expression for each color channel
-	 * in the source and fusion colors, and assigns the result to the channels of the fusion.
+	 * Transform assignments to destColor into a series of assignments that evaluate the expression for each color
+	 * channel in the source, and stores the result to the channels of the fusion.
 	 */
 	code = code.replace(/^\s*destColor\s*=\s*([^;]+)\s*;/gm, function (match, destExpr) {
-		var
+		let
 			vectorCode = "",
 			addI;
 		
 		if (destExpr == "color1") {
 			// Special case where we just set the fusion to the layer's data with no changes
-			for (var i = 0; i < 3; i++) {
+			for (let i = 0; i < 3; i++) {
 				addI = i ? " + " + i : "";
 				
-				vectorCode += `
-                    fusion.data[${destPixIndexVar}${addI}] = layer.data[pixIndex${addI}];
-                `;
+				vectorCode += `fusion.data[${destPixIndexVar}${addI}] = layer.data[pixIndex${addI}];\n`;
 			}
 		} else {
-			for (var i = 0; i < 3; i++) {
+			for (let i = 0; i < 3; i++) {
 				addI = i ? " + " + i : "";
 				
-				var
+				let
 					thisLoopExpr = destExpr,
 					layerPixelExpr = `layer.data[pixIndex${addI}]`,
 					fusionPixelExpr = `fusion.data[${destPixIndexVar}${addI}]`;
 				
 				if (useColor1Var) {
-					vectorCode += `
-                        color1 = ${layerPixelExpr};
-                    `;
+					vectorCode += `color1 = ${layerPixelExpr};\n`;
 				} else {
 					thisLoopExpr = thisLoopExpr.replace(/color1/g, layerPixelExpr);
 				}
 
 				if (useColor2Var) {
-					vectorCode += `
-                        color2 = ${fusionPixelExpr};
-                    `;
+					vectorCode += `color2 = ${fusionPixelExpr};\n`;
 				} else {
 					thisLoopExpr = thisLoopExpr.replace(/color2/g, fusionPixelExpr);
 				}
 				
-				vectorCode += `
-                    ${fusionPixelExpr} = ${thisLoopExpr};
-                `;
+				vectorCode += `${fusionPixelExpr} = ${thisLoopExpr};\n`;
 			}
 		}
 		
@@ -663,9 +654,7 @@ function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, de
 	});
 	
 	code = code.replace(/^\s*destAlpha\s*=\s*([^;]+);/gm, function (match, destExpr) {
-		return `
-            fusion.data[${destPixIndexVar} + ALPHA_BYTE_OFFSET] = ${destExpr};
-        `;
+		return `fusion.data[${destPixIndexVar} + ALPHA_BYTE_OFFSET] = ${destExpr};\n`;
 	});
 	
 	return code;
@@ -676,17 +665,21 @@ function capitalizeFirst(string) {
 }
 
 function getFunctionBody(func) {
-	var
+	let
 		source = Function.prototype.toString.call(func);
 	
 	// Strip the enclosing function() {} declaration to just get the body
-	source = source.replace(/^\s*function\s*([^{]*)\([^)]*\)\s*\{([\s\S]+)\}\s*$/, '$2');
-	
-	return source;
+	source = source.match(/^\s*function\s*([^(]*)\([^)]*\)\s*{([\s\S]+)}\s*$/)[2];
+
+	// Remove trailing and leading empty lines
+    source = source.replace(/^(\s*\n)*/, "");
+	source = source.replace(/(\n\s*)*$/, "");
+
+    return source;
 }
 
 function presentVarList(vars) {
-	var
+	let
 		addComma = false,
 		varString = "";
 	
@@ -709,39 +702,34 @@ function presentVarList(vars) {
 }
 
 function formatBlockComment(comment) {
-	var
+	let
 		result = "/**\n";
 	
 	for (let line of comment.split("\n")) {
 		result += " * " + line + "\n";
 	}
 	
-	result += " */\n";
+	result += " */";
 	
 	return result;
 }
 
 function docCommentForVariant(operation, variant, parameters) {
-	var
+	let
 		comment = `Blend the given layer onto the fusion using the ${operation.displayName} blending operator.\n\n`;
 	
 	if (variant.layerAlpha100) {
 		comment += "The layer must have its layer alpha set to 100\n\n";
+	} else {
+		comment += "The layer alpha must be less than 100\n\n";
 	}
 
 	if (!operation.ignoresFusion) {
 		if (variant.fusionHasTransparency) {
-			comment += "Fusion can contain transparent pixels, ";
+			comment += "Fusion can contain transparent pixels.\n\n";
 		} else {
-			comment += "Fusion pixels must be opaque, ";
+			comment += "Fusion pixels must be opaque.\n\n";
 		}
-
-		if (variant.fusionHasTransparency) {
-			comment += "but ";
-		} else {
-			comment += "and ";
-		}
-		comment += "the fusion layer's opacity must be set to 100.\n\n";
 	}
 
 	if (variant.masked) {
@@ -749,7 +737,7 @@ function docCommentForVariant(operation, variant, parameters) {
 	}
 
 	if (variant.fusionDifferentSize) {
-		comment += "The destination's top left will be at destX, destY. The fusion can be a different size to\n"
+		comment += "The destination's top left will be at destX, destY. The fusion can be a different size to\n" +
 		"the layer.\n\n";
 	} else {
 		comment += "The destination co-ordinates will be the same as the source ones, so both fusion and layer\n" +
@@ -761,6 +749,79 @@ function docCommentForVariant(operation, variant, parameters) {
 	}
 	
 	return formatBlockComment(comment);
+}
+
+function repeatString(s, count) {
+	let
+		result = s;
+
+	while (count > 1) {
+		result += s;
+		count--;
+	}
+
+	return result;
+}
+
+/**
+ * Shift text to the left margin by removing common leading tabs.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function leftAlign(text) {
+	let
+		lines = text.split("\n"),
+		minIndent;
+
+	for (let i = 0; i < lines.length; i++) {
+		// Lines with nothing but whitespace do not tell us anything about indentation
+		if (lines[i].match(/\S/)) {
+			let
+				indent = lines[i].match(/^\t*/)[0].length;
+
+			if (minIndent === undefined || indent < minIndent) {
+				minIndent = indent;
+			}
+		}
+	}
+
+	if (minIndent > 0) {
+		let
+			leadingTabs = new RegExp("^\t{" + minIndent + "}");
+
+		for (let i = 0; i < lines.length; i++) {
+			lines[i] = lines[i].replace(leadingTabs, "");
+		}
+	}
+
+    return lines.join("\n");
+}
+
+/**
+ * Adjust the leading tabs on the given tab-indented block of text to make the minimum indent level "indent".
+ *
+ * @param {string} text
+ * @param {int} indent
+ * @param {boolean|undefined} includeFirstLine - If false, the first line will have no tabs added to the beginning of it.
+ * @returns {string}
+ */
+function tabIndentLines(text, indent, includeFirstLine) {
+	let
+		lines = leftAlign(text).split("\n");
+
+	for (let i = 0; i < lines.length; i++) {
+		let
+			line = lines[i];
+
+		if (includeFirstLine || i > 0) {
+			line = repeatString("\t", indent) + line;
+		}
+
+		lines[i] = line;
+	}
+
+	return lines.join("\n");
 }
 
 function makeBlendOperation(functionName, operation, variant) {
@@ -842,32 +903,25 @@ function makeBlendOperation(functionName, operation, variant) {
 		kernel = getFunctionBody(operation.ontoTransparent);
 		kernelPost = "";
 	} else {
+		// We'll only affect the fusion if the layer's alpha is more than nothing
+		kernelPre = "if (alpha1) {";
+
 		if (variant.fusionHasTransparency) {
 			innerVars.alpha2 = null;
 
-			// We'll only affect the fusion if the layer's alpha is more than nothing
-			kernelPre = `
-	            if (alpha1) {
-	                alpha2 = ${getFusionAlphaExpressionForVariant(`fusion.data[${destPixIndexVar} + ALPHA_BYTE_OFFSET]`, variant)};
-	        `;
+			kernelPre += `\n	alpha2 = ${getFusionAlphaExpressionForVariant(`fusion.data[${destPixIndexVar} + ALPHA_BYTE_OFFSET]`, variant)};`;
 
 			kernel = getFunctionBody(operation.ontoTransparent);
-
-			kernelPost = `
-	            }
-	        `;
 		} else {
-			// We'll only affect the fusion if the layer's alpha is more than nothing
-			kernelPre = `
-	            if (alpha1) {
-	        `;
-
 			kernel = getFunctionBody(operation.ontoOpaque);
 
-			kernelPost = `
-	            }
-	        `;
+			if (!variant.layerAlpha100) {
+				// alpha1 can't be 255 since layer alpha is < 100.
+				kernel = kernel.replace(/(\W)alpha1\s*==\s*255([^\d])/g, "$1false$2");
+			}
 		}
+
+		kernelPost = "}";
 	}
 
 	matches = kernel.match(/(\W|^)color1(\W|$)/g);
@@ -900,24 +954,36 @@ function makeBlendOperation(functionName, operation, variant) {
 		xIncrements.push("pixIndexDest += BYTES_PER_PIXEL");
 	}
 
-	return `
-        ${docCommentForVariant(operation, variant, parameters)}
-        CPBlend.${functionName} = function(${parameters.map(p => p.name).join(", ")}) {
-            var
-                ${presentVarList(outerVars)};
-                
-            for (var y = 0 ; y < h; ${yIncrements.join(", ")}) {
-                for (var x = 0; x < w; ${xIncrements.join(", ")}) {
-                    var
-                        ${presentVarList(innerVars)};
-                    
-                    ${kernelPre}
-                        ${kernel}
-                    ${kernelPost}
-                }
-            }
-        };
-    `;
+	let
+		result = `
+${docCommentForVariant(operation, variant, parameters)}
+CPBlend.${functionName} = function(${parameters.map(p => p.name).join(", ")}) {
+	let
+		${tabIndentLines(presentVarList(outerVars), 2)};
+		
+	for (let y = 0 ; y < h; ${yIncrements.join(", ")}) {
+		for (let x = 0; x < w; ${xIncrements.join(", ")}) {
+			let
+				${tabIndentLines(presentVarList(innerVars), 4)};
+			
+`;
+
+	if (kernelPre.length > 0) {
+        result +=
+			tabIndentLines(kernelPre, 3, true) + "\n"
+			+ tabIndentLines(kernel, 4, true) + "\n"
+			+ tabIndentLines(kernelPost, 3, true);
+    } else {
+        result += tabIndentLines(kernel, 3, true);
+	}
+
+	result += `
+		}
+	}
+};
+`;
+
+	return result;
 }
 
 function makeBlendOperations() {
@@ -985,7 +1051,7 @@ function makeBlendOperations() {
 			}
 		];
 
-	for (var opName in STANDARD_BLEND_OPS) {
+	for (let opName in STANDARD_BLEND_OPS) {
 		let
 			operation = STANDARD_BLEND_OPS[opName];
 		
@@ -1004,158 +1070,158 @@ function makeBlendOperations() {
 }
 
 console.log(`// This file is generated, please see codegenerator/BlendGenerator.js!
-    
-    import CPColorBmp from './CPColorBmp';
-    import CPGreyBmp from './CPGreyBmp';
-    import CPLayer from './CPLayer';
-    import CPRect from '../util/CPRect';
-    
-    export default function CPBlend() {
-    }
-    
-    const
-        BYTES_PER_PIXEL = 4,
-        ALPHA_BYTE_OFFSET = 3,
-        
-        softLightLUTSquare = new Array(256),
-        softLightLUTSquareRoot = new Array(256);
-    
-    ${makeBlendOperations()}
-    
-	// Blending operations with non-standard variants 
 	
-	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false
-	})}
+import CPColorBmp from './CPColorBmp';
+import CPGreyBmp from './CPGreyBmp';
+import CPLayer from './CPLayer';
+import CPRect from '../util/CPRect';
+
+export default function CPBlend() {
+}
+
+const
+	BYTES_PER_PIXEL = 4,
+	ALPHA_BYTE_OFFSET = 3,
 	
-	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayer = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayer;
-		
-	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: true,
-		layerAlpha100: false
-	})}
+	softLightLUTSquare = new Array(256),
+	softLightLUTSquareRoot = new Array(256);
+
+${makeBlendOperations()}
+
+// Blending operations with non-standard variants 
+
+${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+	fusionHasTransparency: false,
+	layerAlpha100: false
+})}
+
+CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayer = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayer;
 	
-	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayer = CPBlend.passthroughOntoTransparentFusionWithTransparentLayer;
+${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayer", PASSTHROUGH_OPERATION, {
+	fusionHasTransparency: true,
+	layerAlpha100: false
+})}
 
-	${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false,
-		masked:true
-	})}
+CPBlend.passthroughOntoTransparentFusionWithOpaqueLayer = CPBlend.passthroughOntoTransparentFusionWithTransparentLayer;
+
+${makeBlendOperation("passthroughOntoOpaqueFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
+	fusionHasTransparency: false,
+	layerAlpha100: false,
+	masked:true
+})}
+
+CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayerMasked;
 	
-	CPBlend.passthroughOntoOpaqueFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoOpaqueFusionWithTransparentLayerMasked;
-		
-	${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
-		fusionHasTransparency: true,
-		layerAlpha100: false,
-		masked: true
-	})}
+${makeBlendOperation("passthroughOntoTransparentFusionWithTransparentLayerMasked", PASSTHROUGH_OPERATION, {
+	fusionHasTransparency: true,
+	layerAlpha100: false,
+	masked: true
+})}
+
+CPBlend.passthroughOntoTransparentFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoTransparentFusionWithTransparentLayerMasked;
+
+// These "replace" routines disregard the original contents of the fusion, so we need not make both an opaque and transparent fusion variant
+
+${makeBlendOperation("replaceOntoFusionWithTransparentLayer", REPLACE_OPERATION, {
+	fusionHasTransparency: false,
+	layerAlpha100: false
+})}
+
+${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
+	layerAlpha100: true
+})}
+
+${makeBlendOperation("replaceOntoFusionWithTransparentLayerMasked", REPLACE_OPERATION, {
+	fusionHasTransparency: false,
+	layerAlpha100: false,
+	masked: true
+})}
+
+${makeBlendOperation("replaceOntoFusionWithOpaqueLayerMasked", REPLACE_OPERATION, {
+	layerAlpha100: true,
+	masked: true
+})}
+
+${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
+	layerAlpha100: false
+})}
 	
-	CPBlend.passthroughOntoTransparentFusionWithOpaqueLayerMasked = CPBlend.passthroughOntoTransparentFusionWithTransparentLayerMasked;
+${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
+	layerAlpha100: true
+})}
 
-	// These "replace" routines disregard the original contents of the fusion, so we need not make both an opaque and transparent fusion variant
+${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPHA_OPERATION, {
+	layerAlpha100: true,
+	masked: true
+})}
 
-	${makeBlendOperation("replaceOntoFusionWithTransparentLayer", REPLACE_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false
-	})}
+${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
+	layerAlpha100: true,
+	fusionDifferentSize: true,
+	fusionHasTransparency: true
+})}
 
-	${makeBlendOperation("replaceOntoFusionWithOpaqueLayer", REPLACE_OPERATION, {
-		layerAlpha100: true
-	})}
+` + Function.prototype.toString.call(function makeLookupTables() {
+	// V - V^2 table
+	for (let i = 0; i < 256; i++) {
+		let
+			v = i / 255;
 
-	${makeBlendOperation("replaceOntoFusionWithTransparentLayerMasked", REPLACE_OPERATION, {
-		fusionHasTransparency: false,
-		layerAlpha100: false,
-		masked: true
-	})}
+		softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
+	}
 
-	${makeBlendOperation("replaceOntoFusionWithOpaqueLayerMasked", REPLACE_OPERATION, {
-		layerAlpha100: true,
-		masked: true
-	})}
+	// sqrt(V) - V table
+	for (let i = 0; i < 256; i++) {
+		let
+			v = i / 255;
 
-	${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: false
-	})}
-		
-	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: true
-	})}
-
-	${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPHA_OPERATION, {
-		layerAlpha100: true,
-		masked: true
-	})}
-
-	${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
-		layerAlpha100: true,
-		fusionDifferentSize: true,
-		fusionHasTransparency: true
-	})}
+		softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
+	}
+}) + `
 	
-	` + Function.prototype.toString.call(function makeLookupTables() {
-		// V - V^2 table
-		for (let i = 0; i < 256; i++) {
-			let
-				v = i / 255;
+CPBlend.LM_NORMAL = 0;
+CPBlend.LM_MULTIPLY = 1;
+CPBlend.LM_ADD = 2;
+CPBlend.LM_SCREEN = 3;
+CPBlend.LM_LIGHTEN = 4;
+CPBlend.LM_DARKEN = 5;
+CPBlend.LM_SUBTRACT = 6;
+CPBlend.LM_DODGE = 7;
+CPBlend.LM_BURN = 8;
+CPBlend.LM_OVERLAY = 9;
+CPBlend.LM_HARDLIGHT = 10;
+CPBlend.LM_SOFTLIGHT = 11;
+CPBlend.LM_VIVIDLIGHT = 12;
+CPBlend.LM_LINEARLIGHT = 13;
+CPBlend.LM_PINLIGHT = 14;
+CPBlend.LM_PASSTHROUGH = 15;
 
-			softLightLUTSquare[i] = ((v - v * v) * 255) | 0;
-		}
+CPBlend.LM_FIRST = 0;
+CPBlend.LM_LAST = 15;
 
-		// sqrt(V) - V table
-		for (let i = 0; i < 256; i++) {
-			let
-				v = i / 255;
+CPBlend.BLEND_MODE_CODENAMES = [
+	"normal",
+	"multiply",
+	"add",
+	"screen",
+	"lighten",
+	"darken",
+	"subtract",
+	"dodge",
+	"burn",
+	"overlay",
+	"hardLight",
+	"softLight",
+	"vividLight",
+	"linearLight",
+	"pinLight",
+	"passthrough"
+];
 
-			softLightLUTSquareRoot[i] = ((Math.sqrt(v) - v) * 255) | 0;
-		}
-	}) + `
-	    
-	CPBlend.LM_NORMAL = 0;
-    CPBlend.LM_MULTIPLY = 1;
-    CPBlend.LM_ADD = 2;
-    CPBlend.LM_SCREEN = 3;
-    CPBlend.LM_LIGHTEN = 4;
-    CPBlend.LM_DARKEN = 5;
-    CPBlend.LM_SUBTRACT = 6;
-    CPBlend.LM_DODGE = 7;
-    CPBlend.LM_BURN = 8;
-    CPBlend.LM_OVERLAY = 9;
-    CPBlend.LM_HARDLIGHT = 10;
-    CPBlend.LM_SOFTLIGHT = 11;
-    CPBlend.LM_VIVIDLIGHT = 12;
-    CPBlend.LM_LINEARLIGHT = 13;
-    CPBlend.LM_PINLIGHT = 14;
-    CPBlend.LM_PASSTHROUGH = 15;
-    
-    CPBlend.LM_FIRST = 0;
-    CPBlend.LM_LAST = 15;
-    
-    CPBlend.BLEND_MODE_CODENAMES = [
-        "normal",
-        "multiply",
-        "add",
-        "screen",
-        "lighten",
-        "darken",
-        "subtract",
-        "dodge",
-        "burn",
-        "overlay",
-        "hardLight",
-        "softLight",
-        "vividLight",
-        "linearLight",
-        "pinLight",
-        "passthrough"
-    ];
-    
-    CPBlend.BLEND_MODE_DISPLAY_NAMES = [
-          "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
-          "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
-    ];
-    
-    makeLookupTables();
+CPBlend.BLEND_MODE_DISPLAY_NAMES = [
+	  "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
+	  "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
+];
+
+makeLookupTables();
 `);
