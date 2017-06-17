@@ -27,6 +27,8 @@ import ArrayDataStream from "../util/ArrayDataStream";
 import CPLayerGroup from "./CPLayerGroup";
 import CPGreyBmp from "./CPGreyBmp";
 
+import pako from "pako";
+
 /**
  * Concat two Uint8Arrays to make a new one and return it.
  *
@@ -714,7 +716,7 @@ function hasChibiMagicMarker(array) {
 module.exports.save = function(artwork) {
     return Promise.resolve().then(() => {
         let
-            deflator = new window.pako.Deflate({
+            deflator = new pako.Deflate({
                 level: 7
             }),
             blobParts = [],
@@ -774,7 +776,7 @@ module.exports.load = function(source) {
 		STATE_FATAL = 5;
 	
 	let
-		inflator = new window.pako.Inflate({}),
+		inflator = new pako.Inflate({}),
 		state = STATE_WAIT_FOR_CHUNK,
 		
 		/**
