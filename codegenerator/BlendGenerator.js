@@ -50,7 +50,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
@@ -76,7 +76,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					realAlpha = (alpha1 * 255 / newAlpha) | 0,
 					invAlpha = 255 - realAlpha;
 				
@@ -95,7 +95,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0;
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0;
 				
 				// No need to clamp the color to 0...255 since we're writing to a clamped array anyway
 				destColor = ((alpha2 * color2 + alpha1 * color1) / newAlpha) | 0;
@@ -113,7 +113,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					alpha12 = alpha1 * alpha2;
 				
 				// No need to clamp the color to 255 since we're writing to a clamped array anyway
@@ -141,7 +141,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
@@ -172,7 +172,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 				
 				// This alpha is used when color1 > color2
 					alpha12 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
@@ -200,7 +200,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 				
 				// This alpha is used when color1 > color2
 					alpha12 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
@@ -232,7 +232,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
@@ -266,7 +266,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
@@ -306,7 +306,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
@@ -349,7 +349,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
 					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
@@ -392,7 +392,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
@@ -436,7 +436,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
@@ -474,7 +474,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
@@ -510,7 +510,7 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - alpha1 * alpha2 / 255) | 0,
+					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
 					
 					alpha12 = (alpha1 * alpha2 / 255) | 0,
 					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
