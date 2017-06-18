@@ -23,13 +23,26 @@
 "use strict";
 
 let
-	destColor = false, destAlpha = false, softLightLUTSquare, softLightLUTSquareRoot; // Dummies to silence IDE warnings
+	destColor = false, destAlpha = false, softLightLUTSquare, softLightLUTSquareRoot, intDiv; // Dummies to silence IDE warnings
 
 const
 	CPRect = function() {}, // Dummy to silence IDE warnings
 
 	BYTES_PER_PIXEL = 4,
 	ALPHA_BYTE_OFFSET = 3,
+
+	FUNCTION_MACROS = {
+		/**
+		 * Take two integers and perform truncating division (like Java or C's integer division)
+		 *
+		 * @param {string} a - An expression which evaluates to an int
+		 * @param {string} b - An expression which evaluates to an int
+		 * @returns {string}
+		 */
+		"intDiv": function(a, b) {
+			return `(${parenthesizeExpression(a)} / ${parenthesizeExpression(b)} | 0)`;
+		}
+	},
 
 /*
  * Our blending operations. We'll use .toString() on these blending functions to get their source code, then
@@ -43,20 +56,19 @@ const
 		// C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
 		multiply: {
 			displayName: "multiply",
-			// Don't bother rounding alpha1/alpha2 before giving them to us:
-			unroundedAlpha: true,
+
 			ontoOpaque: function (color1, color2, alpha1) {
-				destColor = (color2 - (color1 ^ 0xFF) * color2 * alpha1 / (255 * 255)) | 0;
+				destColor = (color2 - intDiv((color1 ^ 0xFF) * color2 * alpha1, 255 * 255)) | 0;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = ((color1 * alpha1n2 + color2 * alphan12 + color1 * color2 * alpha12 / 255) / newAlpha) | 0;
+				destColor = intDiv(color1 * alpha1n2 + color2 * alphan12 + intDiv(color1 * color2 * alpha12, 255), newAlpha);
 				destAlpha = newAlpha;
 			}
 		},
@@ -71,16 +83,16 @@ const
 					let
 						invAlpha1 = 255 - alpha1;
 					
-					destColor = ((color1 * alpha1 + color2 * invAlpha1) / 255) | 0;
+					destColor = intDiv(color1 * alpha1 + color2 * invAlpha1, 255);
 				}
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
-					realAlpha = (alpha1 * 255 / newAlpha) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
+					realAlpha = intDiv(alpha1 * 255, newAlpha),
 					invAlpha = 255 - realAlpha;
 				
-				destColor = ((color1 * realAlpha + color2 * invAlpha) / 255) | 0;
+				destColor = intDiv(color1 * realAlpha + color2 * invAlpha, 255);
 				destAlpha = newAlpha;
 			}
 		},
@@ -95,10 +107,10 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0;
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0;
 				
 				// No need to clamp the color to 0...255 since we're writing to a clamped array anyway
-				destColor = ((alpha2 * color2 + alpha1 * color1) / newAlpha) | 0;
+				destColor = intDiv(alpha2 * color2 + alpha1 * color1, newAlpha);
 				destAlpha = newAlpha;
 			}
 		},
@@ -113,11 +125,11 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					alpha12 = alpha1 * alpha2;
 				
 				// No need to clamp the color to 255 since we're writing to a clamped array anyway
-				destColor = ((alpha2 * color2 + alpha1 * color1 - alpha12) / newAlpha) | 0;
+				destColor =intDiv(alpha2 * color2 + alpha1 * color1 - alpha12, newAlpha);
 				destAlpha = newAlpha;
 			}
 		},
@@ -141,11 +153,11 @@ const
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
 				destColor = 0xFF ^ (
 					(
@@ -168,19 +180,19 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = color2 >= color1 ? color2 : ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0;
+				destColor = color2 >= color1 ? color2 : intDiv(color2 * invAlpha1 + color1 * alpha1, 255);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 				
 				// This alpha is used when color1 > color2
-					alpha12 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
-					invAlpha12 = (alpha12 ^ 0xFF) | 0,
+					alpha12 = intDiv(alpha2 * (alpha1 ^ 0xFF), newAlpha),
+					invAlpha12 = alpha12 ^ 0xFF,
 				
 				// This alpha is used when color2 > color1
-					alpha21 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
-					invAlpha21 = (alpha21 ^ 0xFF) | 0;
+					alpha21 = intDiv(alpha1 * (alpha2 ^ 0xFF), newAlpha),
+					invAlpha21 = alpha21 ^ 0xFF;
 				
 				destColor = (((color2 >= color1) ? (color1 * alpha21 + color2 * invAlpha21) : (color2 * alpha12 + color1 * invAlpha12)) / 255) | 0;
 				destAlpha = newAlpha;
@@ -196,19 +208,19 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = color2 >= color1 ? ((color2 * invAlpha1 + color1 * alpha1) / 255) | 0 : color2;
+				destColor = color2 >= color1 ? intDiv(color2 * invAlpha1 + color1 * alpha1, 255) : color2;
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 				
 				// This alpha is used when color1 > color2
-					alpha12 = (alpha1 * (alpha2 ^ 0xFF) / newAlpha) | 0,
-					invAlpha12 = (alpha12 ^ 0xFF) | 0,
+					alpha12 = intDiv(alpha1 * (alpha2 ^ 0xFF), newAlpha),
+					invAlpha12 = alpha12 ^ 0xFF,
 				
 				// This alpha is used when color2 > color1
-					alpha21 = (alpha2 * (alpha1 ^ 0xFF) / newAlpha) | 0,
-					invAlpha21 = (alpha21 ^ 0xFF) | 0;
+					alpha21 = intDiv(alpha2 * (alpha1 ^ 0xFF), newAlpha),
+					invAlpha21 = alpha21 ^ 0xFF;
 				
 				destColor = (((color2 >= color1) ? (color2 * alpha21 + color1 * invAlpha21) : (color1 * alpha12 + color2 * invAlpha12)) / 255) | 0;
 				destAlpha = newAlpha;
@@ -223,27 +235,25 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = (
-					(
-						color2 * invAlpha1
-						+ alpha1 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
-					) / 255
-				) | 0;
+				destColor = intDiv(
+					color2 * invAlpha1
+						+ alpha1 * (color1 == 255 ? 255 : Math.min(255, intDiv(255 * color2, color1 ^ 0xFF))),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						(color1 * alpha1n2)
+				destColor = intDiv(
+					(color1 * alpha1n2)
 						+ (color2 * alphan12)
-						+ alpha12 * (color1 == 255 ? 255 : Math.min(255, (255 * color2 / (color1 ^ 0xFF)) | 0))
-					) / newAlpha
-				) | 0;
+						+ alpha12 * (color1 == 255 ? 255 : Math.min(255, intDiv(255 * color2, color1 ^ 0xFF))),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -256,30 +266,26 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = (
-					(
-						color2 * invAlpha1
-						+ alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
-					)
-					/ 255
-				) | 0;
+				destColor = intDiv(
+					color2 * invAlpha1
+						+ alpha1 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xFF) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xFF) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						color1 * alpha1n2
+				destColor = intDiv(
+					color1 * alpha1n2
 						+ color2 * alphan12
-						+ alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF)
-					)
-					/ newAlpha
-				) | 0;
+						+ alpha12 * (color1 == 0 ? 0 : Math.min(255, 255 * (color2 ^ 0xFF) / color1) ^ 0xFF),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -293,35 +299,33 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xFF;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
+				destColor = intDiv(
+					invAlpha1 * color2
 						+ (
 							color2 <= 127
 								? (alpha1 * 2 * color1 * color2 / 255)
 								: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-						)
-					) / 255
-				) | 0;
+						),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
 						+ (
 							color2 <= 127
 								? (alpha12 * 2 * color1 * color2 / 255)
 								: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-						)
-					) / newAlpha
-				) | 0;
+						),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -336,35 +340,33 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
+				destColor = intDiv(
+					invAlpha1 * color2
 						+ (
 							color1 <= 127
 								? (alpha1 * 2 * color1 * color2 / 255)
 								: (alpha1 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-						)
-					) / 255
-				) | 0;
+						),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
 						+ (
 							color1 <= 127
 								? (alpha12 * 2 * color1 * color2 / 255)
 								: (alpha12 * ((2 * (color1 ^ 0xff) * (color2 ^ 0xff) / 255) ^ 0xff))
-						)
-					) / newAlpha
-				) | 0;
+						),
+					newAlpha
+				);
 				
 				destAlpha = newAlpha;
 			}
@@ -379,36 +381,34 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
+				destColor = intDiv(
+					invAlpha1 * color2
 						+ alpha1 * (
 							color1 <= 127
 								? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
 								: ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
-						)
-					) / 255
-				) | 0;
+						),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
 						+ (
 							color1 <= 127
 								? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
 								: alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
-						)
-					) / newAlpha
-				) | 0;
+						),
+					newAlpha
+				);
 				
 				destAlpha = newAlpha;
 			}
@@ -423,36 +423,34 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
+				destColor = intDiv(
+					invAlpha1 * color2
 						+ (
 							color1 <= 127
 								? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
 								: (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
-						)
-					) / 255
-				) | 0;
+						),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
 						+ (
 							color1 <= 127
 								? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
 								: (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
-						)
-					) / newAlpha
-				) | 0;
+						),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -465,28 +463,26 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
-						+ alpha1 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
-					) / 255
-				) | 0;
+				destColor = intDiv(
+					invAlpha1 * color2
+						+ alpha1 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255)),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
-						+ alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255))
-					) / newAlpha
-				) | 0;
+						+ alpha12 * Math.min(255, Math.max(0, color2 + 2 * color1 - 255)),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		},
@@ -501,28 +497,26 @@ const
 				let
 					invAlpha1 = alpha1 ^ 0xff;
 				
-				destColor = (
-					(
-						invAlpha1 * color2
-						+ alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
-					) / 255
-				) | 0;
+				destColor = intDiv(
+					invAlpha1 * color2
+						+ alpha1 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2),
+					255
+				);
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
-					newAlpha = (alpha1 + alpha2 - ((alpha1 * alpha2 / 255) | 0)) | 0,
+					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
 					
-					alpha12 = (alpha1 * alpha2 / 255) | 0,
-					alpha1n2 = (alpha1 * (alpha2 ^ 0xff) / 255) | 0,
-					alphan12 = ((alpha1 ^ 0xff) * alpha2 / 255) | 0;
+					alpha12 = intDiv(alpha1 * alpha2, 255),
+					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
 				
-				destColor = (
-					(
-						alpha1n2 * color1
+				destColor = intDiv(
+					alpha1n2 * color1
 						+ alphan12 * color2
-						+ alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2)
-					) / newAlpha
-				) | 0;
+						+ alpha12 * ((color2 >= 2 * color1) ? (2 * color1) : (color2 <= 2 * color1 - 255) ? (2 * color1 - 255) : color2),
+					newAlpha
+				);
 				destAlpha = newAlpha;
 			}
 		}
@@ -540,7 +534,7 @@ const
 			let
 				realAlpha = alpha1 * alphaMix + 255 * invAlphaMix;
 
-			destColor = ((color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix) / realAlpha) | 0;
+			destColor = intDiv(color1 * alpha1 * alphaMix + color2 * 255 * invAlphaMix, realAlpha);
 			destAlpha = realAlpha;
 		},
 
@@ -549,7 +543,7 @@ const
 				realAlpha = alpha1 * alphaMix + alpha2 * invAlphaMix;
 
 			// Effectively use pre-multiplied alpha so that fully transparent colors have no effect on the result
-			destColor = ((color1 * alpha1 * alphaMix + color2 * alpha2 * invAlphaMix) / realAlpha) | 0;
+			destColor = intDiv(color1 * alpha1 * alphaMix + color2 * alpha2 * invAlphaMix, realAlpha);
 			destAlpha = realAlpha;
 		}
 	},
@@ -606,9 +600,101 @@ function getFusionAlphaExpressionForVariant(alphaExpression, variant) {
 	}
 }
 
-function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar) {
-	code = leftAlign(code);
+function applyFunctionMacro(code, macroName, macroFunc) {
+	let
+		macroStartPos;
 
+	while ((macroStartPos = code.indexOf(macroName)) !== -1) {
+		let
+			// Search for the parenthesised argument list after the name of the macro
+			codeToSearch = code.slice(macroStartPos + macroName.length),
+
+			splittingChars = /[(),]/g,
+			match,
+
+			nestingLevel = 0,
+			argumentStartPos,
+
+			macroArguments = [],
+			done = false,
+
+			finishArgument = function() {
+				// Finish the current argument
+				macroArguments.push(codeToSearch.slice(argumentStartPos, splittingChars.lastIndex - 1).trim());
+
+				// And start the next one
+				argumentStartPos = splittingChars.lastIndex;
+			},
+
+			finishMacro = function() {
+				let
+					macroEndPos = splittingChars.lastIndex,
+
+					macroResult = macroFunc.apply(null, macroArguments);
+
+				code = code.slice(0, macroStartPos) + macroResult + codeToSearch.slice(macroEndPos);
+			};
+
+		while (!done && (match = splittingChars.exec(codeToSearch)) !== null) {
+			switch (match[0]) {
+				case "(":
+					if (nestingLevel === 0) {
+						argumentStartPos = splittingChars.lastIndex;
+					}
+
+					nestingLevel++;
+
+					break;
+
+				case ")":
+					nestingLevel--;
+
+					if (nestingLevel === 0) {
+						finishArgument();
+						finishMacro();
+						done = true;
+					}
+				break;
+				case ",":
+					if (nestingLevel === 1) {
+						finishArgument();
+					}
+				break;
+			}
+		}
+	}
+
+	return code;
+}
+
+/**
+ * If a is a string representing a JavaScript expression which uses operators (not just a single value), wrap it in a
+ * set of parentheses.
+ *
+ * This way we can avoid adding extra parentheses around values who behavior in larger expressions won't change as a
+ * result of operator precedence rules (since we'll wrap anything that uses operators in parentheses).
+ *
+ * @param {String} exp
+ * @returns {String}
+ */
+function parenthesizeExpression(exp) {
+	if (exp.match(/[^\w\s]/)) {
+		return "(" + exp + ")";
+	}
+	return exp;
+}
+
+function applyMacros(code) {
+	for (let macroName in FUNCTION_MACROS) {
+		if (FUNCTION_MACROS.hasOwnProperty(macroName)) {
+			code = applyFunctionMacro(code, macroName, FUNCTION_MACROS[macroName]);
+		}
+	}
+
+	return code;
+}
+
+function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar) {
 	/*
 	 * Transform assignments to destColor into a series of assignments that evaluate the expression for each color
 	 * channel in the source, and stores the result to the channels of the fusion.
@@ -672,10 +758,10 @@ function getFunctionBody(func) {
 	source = source.match(/^\s*function\s*([^(]*)\([^)]*\)\s*{([\s\S]+)}\s*$/)[2];
 
 	// Remove trailing and leading empty lines
-    source = source.replace(/^(\s*\n)*/, "");
+	source = source.replace(/^(\s*\n)*/, "");
 	source = source.replace(/(\n\s*)*$/, "");
 
-    return source;
+	return source;
 }
 
 function presentVarList(vars) {
@@ -795,7 +881,7 @@ function leftAlign(text) {
 		}
 	}
 
-    return lines.join("\n");
+	return lines.join("\n");
 }
 
 /**
@@ -938,7 +1024,9 @@ function makeBlendOperation(functionName, operation, variant) {
 		innerVars.color2 = null;
 	}
 
+	kernel = leftAlign(kernel);
 	kernel = applyVectorAssignmentSubstitutions(kernel, useColor1Var, useColor2Var, destPixIndexVar);
+	kernel = applyMacros(kernel);
 
 	let
 		yIncrements = ["y++", "pixIndex += yStride"],
@@ -969,12 +1057,12 @@ CPBlend.${functionName} = function(${parameters.map(p => p.name).join(", ")}) {
 `;
 
 	if (kernelPre.length > 0) {
-        result +=
+		result +=
 			tabIndentLines(kernelPre, 3, true) + "\n"
 			+ tabIndentLines(kernel, 4, true) + "\n"
 			+ tabIndentLines(kernelPost, 3, true);
-    } else {
-        result += tabIndentLines(kernel, 3, true);
+	} else {
+		result += tabIndentLines(kernel, 3, true);
 	}
 
 	result += `
