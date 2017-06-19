@@ -383,6 +383,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 			this.resetTree();
 		} else {
 			layerNode.blendMode = layer.blendMode;
+			invalidateNodeRect(layerNode, new CPRect(0, 0, width, height));
 		}
 	};
 
