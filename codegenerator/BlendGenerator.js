@@ -385,8 +385,8 @@ const
 					invAlpha1 * color2
 						+ alpha1 * (
 							color1 <= 127
-								? ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
-								: ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+								? (intDiv((2 * color1 - 255) * softLightLUTSquare[color2], 255) + color2)
+								: (intDiv((2 * color1 - 255) * softLightLUTSquareRoot[color2], 255) + color2)
 						),
 					255
 				);
@@ -404,8 +404,8 @@ const
 						+ alphan12 * color2
 						+ (
 							color1 <= 127
-								? alpha12 * ((2 * color1 - 255) * softLightLUTSquare[color2] / 255 + color2)
-								: alpha12 * ((2 * color1 - 255) * softLightLUTSquareRoot[color2] / 255 + color2)
+								? alpha12 * (intDiv((2 * color1 - 255) * softLightLUTSquare[color2], 255) + color2)
+								: alpha12 * (intDiv((2 * color1 - 255) * softLightLUTSquareRoot[color2], 255) + color2)
 						),
 					newAlpha
 				);
@@ -427,8 +427,8 @@ const
 					invAlpha1 * color2
 						+ (
 							color1 <= 127
-								? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
-								: (alpha1 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+								? (alpha1 * ((color1 == 0) ? 0 : 255 - Math.min(255, intDiv((255 - color2) * 255, 2 * color1))))
+								: (alpha1 * (color1 == 255 ? 255 : Math.min(255, intDiv(color2 * 255, 2 * (255 - color1)))))
 						),
 					255
 				);
@@ -446,8 +446,8 @@ const
 						+ alphan12 * color2
 						+ (
 							color1 <= 127
-								? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, (255 - color2) * 255 / (2 * color1))))
-								: (alpha12 * (color1 == 255 ? 255 : Math.min(255, color2 * 255 / (2 * (255 - color1)))))
+								? (alpha12 * ((color1 == 0) ? 0 : 255 - Math.min(255, intDiv((255 - color2) * 255, 2 * color1))))
+								: (alpha12 * (color1 == 255 ? 255 : Math.min(255, intDiv(color2 * 255, 2 * (255 - color1)))))
 						),
 					newAlpha
 				);
