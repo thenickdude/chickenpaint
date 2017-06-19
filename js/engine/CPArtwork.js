@@ -707,7 +707,7 @@ export default function CPArtwork(_width, _height) {
 	};
 
     this.setLayerBlendMode = function(blendMode) {
-        if (curLayer.getBlendMode() != blendMode) {
+        if (curLayer.getBlendMode() != blendMode && (blendMode != CPBlend.LM_PASSTHROUGH || curLayer instanceof CPLayerGroup)) {
             addUndo(new CPActionChangeLayerMode(curLayer, blendMode));
         }
     };

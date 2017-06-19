@@ -1144,13 +1144,45 @@ export default function CPLayersPalette(controller) {
         });
     }
 
+    /**
+     * The Passthrough blending mode should only be available for layer groups.
+     */
+    function updateAvailableBlendModes() {
+        let
+            activeLayer = artwork.getActiveLayer(),
+            foundPassthroughOption = false;
+
+        for (let child of blendCombo.childNodes) {
+            if (parseInt(child.value,10) === CPBlend.LM_PASSTHROUGH) {
+                if (activeLayer instanceof CPImageLayer) {
+                    blendCombo.removeChild(child);
+                    break;
+                } else {
+                    foundPassthroughOption = true;
+                }
+            }
+        }
+
+        if (activeLayer instanceof CPLayerGroup && !foundPassthroughOption) {
+            let
+                option = document.createElement("option");
+
+            option.appendChild(document.createTextNode(CPBlend.BLEND_MODE_DISPLAY_NAMES[CPBlend.LM_PASSTHROUGH]));
+            option.value = CPBlend.LM_PASSTHROUGH;
+
+            blendCombo.appendChild(option);
+        }
+    }
+
     function updateActiveLayerControls() {
-        var
+        let
             activeLayer = artwork.getActiveLayer();
 
         if (activeLayer.getAlpha() != alphaSlider.value) {
             alphaSlider.setValue(activeLayer.getAlpha());
         }
+
+        updateAvailableBlendModes();
 
         if (activeLayer.getBlendMode() != parseInt(blendCombo.value, 10)) {
             blendCombo.value = activeLayer.getBlendMode();
