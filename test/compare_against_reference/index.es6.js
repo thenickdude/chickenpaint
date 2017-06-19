@@ -1,3 +1,5 @@
+// Compare ChickenPaint's rendering of a given series of .chi files against a .png exemplar (perhaps rendered by ChibiPaint)
+
 import {load as chiLoad} from "../../js/engine/CPChibiFile";
 import TestUtil from "../lib/TestUtil";
 import CPColorBmp from "../../js/engine/CPColorBmp";
@@ -88,7 +90,10 @@ function compareChickenPaintChiRenderingAgainstPNGs(chiFiles) {
 const
     testFiles = fs.readdirSync(testFilesDirectory),
 
-    // chi files to test will be extensionless or end in .chi
+    /*
+     * If no chi files are provided as arguments on the commandline, look for files that are extensionless or end in .chi
+     * in the test-images folder
+     */
     chiFiles = process.argv.length > 2 ? process.argv.slice(2) : testFiles.filter(filename => filename.match(/^[^.]+$|\.chi$/));
 
 compareChickenPaintChiRenderingAgainstPNGs(chiFiles).then(
