@@ -307,7 +307,9 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 				drawTree = new CPBlendNode(width, height, {
 					image: allocateBuffer(),
 					blendMode: CPBlend.LM_NORMAL,
-					alpha: 100
+					alpha: 100,
+					getEffectiveMask: () => null,
+					visible: true
 				});
 				drawTree.image.clearAll(0);
 			} else {
