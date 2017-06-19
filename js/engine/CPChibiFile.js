@@ -579,7 +579,7 @@ function serializeFileHeaderChunk(artwork, numLayers) {
 }
 
 /**
- * @returns Uint8Array
+ * @returns {Uint8Array}
  */
 function serializeEndChunk() {
     return allocateChunkStream(CHUNK_TAG_END, 0).getAsDataArray();
@@ -711,17 +711,23 @@ function hasChibiMagicMarker(array) {
  *
  * @param {CPArtwork} artwork
  *
- * @returns {Promise.<Blob>}
+ * @returns {Promise.<Blob|Uint8Array>} - Returns Blob when called in the browser, or a Uint8Array in Node.
  */
 module.exports.save = function(artwork) {
     return Promise.resolve().then(() => {
-        let
+        const
             deflator = new pako.Deflate({
                 level: 7
             }),
+            /**
+             * The fragments that make up the completed .chi file:
+             * @type {Uint8Array[]}
+             */
             blobParts = [],
             magic = new Uint8Array(CHI_MAGIC.length),
-            layers = artwork.getLayersRoot().getLinearizedLayerList(false),
+            layers = artwork.getLayersRoot().getLinearizedLayerList(false);
+
+        let
             layerWritePromise = Promise.resolve();
 
         // The magic file signature is not ZLIB compressed:
@@ -751,7 +757,26 @@ module.exports.save = function(artwork) {
 
             blobParts.push(deflator.result);
 
-            return new Blob(blobParts, {type: "application/octet-stream"});
+            if (typeof Blob !== "undefined") {
+                // In the browser
+                return new Blob(blobParts, {type: "application/octet-stream"});
+            } else {
+                // In Node.js
+                let
+                    totalSize = blobParts.map(part => part.byteLength).reduce((total, size) => {
+                        return total + size;
+                    }, 0),
+
+                    buffer = new Uint8Array(totalSize),
+                    offset = 0;
+
+                for (let part of blobParts) {
+                    buffer.set(part, offset);
+                    offset += part.byteLength;
+                }
+
+                return buffer;
+            }
         });
     });
 };
