@@ -97,6 +97,12 @@ export default function CPLayer(name) {
      * @type {?CPGreyBmp}
      */
     this.maskThumbnail = null;
+
+	/**
+     * True if this layer should use CPBlend.LM_MULTIPLY instead of CPBlend.LM_MULTIPLY2
+	 * @type {boolean}
+	 */
+	this.useLegacyMultiply = false;
 }
 
 /**
@@ -106,7 +112,8 @@ export default function CPLayer(name) {
 CPLayer.prototype.copyFrom = function(layer) {
     this.name = layer.name;
     this.blendMode = layer.blendMode;
-    this.alpha = layer.alpha;
+	this.useLegacyMultiply = layer.useLegacyMultiply;
+	this.alpha = layer.alpha;
     this.visible = layer.visible;
     this.parent = layer.parent;
     this.lockAlpha = layer.lockAlpha;
@@ -179,6 +186,15 @@ CPLayer.prototype.getName = function() {
 
 CPLayer.prototype.setBlendMode = function(blendMode) {
     this.blendMode = blendMode;
+
+    if (blendMode === CPBlend.LM_MULTIPLY) {
+        /* If the blend mode is ever set to this legacy one, we'll keep this flag set on the layer so that the
+         * user can change to a different blending mode, and still be able to change it back to the legacy one.
+         */
+        this.useLegacyMultiply = true;
+    } else if (blendMode === CPBlend.LM_MULTIPLY2) {
+        this.useLegacyMultiply = false;
+    }
 };
 
 CPLayer.prototype.getBlendMode = function() {

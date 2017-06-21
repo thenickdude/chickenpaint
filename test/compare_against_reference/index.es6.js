@@ -33,7 +33,7 @@ function compareChickenPaintChiRenderingAgainstPNGs(chiFiles) {
                 let
                     buffer = fs.readFileSync(chiName);
 
-                return chiLoad(nodeBufferToArrayBuffer(buffer));
+                return chiLoad(nodeBufferToArrayBuffer(buffer), {upgradeMultiplyLayers: true});
             }).then(artwork => new Promise((resolve, reject) => {
                 let
                     filenameRoot = chiName.replace(/\.chi$/, ""),

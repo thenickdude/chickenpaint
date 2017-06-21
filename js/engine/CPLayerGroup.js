@@ -107,6 +107,14 @@ CPLayerGroup.prototype.setLayerAtIndex = function(index, layer) {
 	return oldLayer;
 };
 
+CPLayerGroup.prototype.setExpanded = function(expanded) {
+	this.expanded = expanded;
+};
+
+CPLayerGroup.prototype.getExpanded = function() {
+	return this.expanded;
+};
+
 /**
  * Get the index of the given layer in this group, or -1 if the layer is not in the group.
  * 

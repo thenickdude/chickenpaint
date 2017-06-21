@@ -53,18 +53,6 @@ function createChickenPaintIcon(iconName) {
     return icon;
 }
 
-function fillCombobox(combo, optionNames) {
-    for (var i = 0; i < optionNames.length; i++) {
-        var
-            option = document.createElement("option");
-
-        option.appendChild(document.createTextNode(optionNames[i]));
-        option.value = i;
-
-        combo.appendChild(option);
-    }
-}
-
 function wrapCheckboxWithLabel(checkbox, title) {
     var
         div = document.createElement("div"),
@@ -1144,35 +1132,39 @@ export default function CPLayersPalette(controller) {
         });
     }
 
-    /**
-     * The Passthrough blending mode should only be available for layer groups.
-     */
     function updateAvailableBlendModes() {
-        let
-            activeLayer = artwork.getActiveLayer(),
-            foundPassthroughOption = false;
+		let
+			activeLayer = artwork.getActiveLayer();
 
-        for (let child of blendCombo.childNodes) {
-            if (parseInt(child.value,10) === CPBlend.LM_PASSTHROUGH) {
-                if (activeLayer instanceof CPImageLayer) {
-                    blendCombo.removeChild(child);
-                    break;
-                } else {
-                    foundPassthroughOption = true;
-                }
-            }
-        }
+		while (blendCombo.lastChild) {
+			blendCombo.removeChild(blendCombo.lastChild);
+		}
 
-        if (activeLayer instanceof CPLayerGroup && !foundPassthroughOption) {
-            let
-                option = document.createElement("option");
+		for (let blendMode = CPBlend.LM_FIRST; blendMode <= CPBlend.LM_LAST; blendMode++) {
+			if (
+			    blendMode != CPBlend.LM_MULTIPLY2 &&
+                (
+                    blendMode == activeLayer.blendMode
+				    || blendMode === CPBlend.LM_PASSTHROUGH && activeLayer instanceof CPLayerGroup
+				    || blendMode <= CPBlend.LM_LAST_CHIBIPAINT
+                )
+			) {
+				let
+					option = document.createElement("option");
 
-            option.appendChild(document.createTextNode(CPBlend.BLEND_MODE_DISPLAY_NAMES[CPBlend.LM_PASSTHROUGH]));
-            option.value = CPBlend.LM_PASSTHROUGH;
+				option.appendChild(document.createTextNode(CPBlend.BLEND_MODE_DISPLAY_NAMES[blendMode]));
 
-            blendCombo.appendChild(option);
-        }
-    }
+				// Should we use the new LM_MULTIPLY2 blend mode in this spot instead of the legacy one?
+				if (blendMode === CPBlend.LM_MULTIPLY && activeLayer.blendMode !== blendMode && !activeLayer.useLegacyMultiply) {
+					option.value = CPBlend.LM_MULTIPLY2;
+				} else {
+					option.value = blendMode;
+				}
+
+				blendCombo.appendChild(option);
+			}
+		}
+	}
 
     function updateActiveLayerControls() {
         let
@@ -1351,8 +1343,6 @@ export default function CPLayersPalette(controller) {
     blendCombo.addEventListener("change", function(e) {
         controller.actionPerformed({action: "CPSetLayerBlendMode", blendMode: parseInt(blendCombo.value, 10)});
     });
-    
-    fillCombobox(blendCombo, CPBlend.BLEND_MODE_DISPLAY_NAMES);
 
     body.appendChild(blendCombo);
     

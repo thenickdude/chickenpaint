@@ -53,21 +53,42 @@ const
  * input channels in turn (with new color1/color2 values).
  */
 	STANDARD_BLEND_OPS = {
+        // C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
+		// This legacy version produces different results for ontoTransparent and ontoOpaque when fusion is opaque.
+        multiply: {
+            displayName: "multiply",
+
+            ontoOpaque: function (color1, color2, alpha1) {
+				destColor = color2 - intDiv((color1 ^ 0xFF) * color2 * alpha1, 255 * 255);
+            },
+            ontoTransparent: function (color1, color2, alpha1, alpha2) {
+                let
+                    newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
+
+                    alpha12 = intDiv(alpha1 * alpha2, 255),
+                    alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
+                    alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
+
+                destColor = intDiv(color1 * alpha1n2 + color2 * alphan12 + intDiv(color1 * color2 * alpha12, 255), newAlpha);
+                destAlpha = newAlpha;
+            }
+        },
+
 		// C = (A*aa*(1-ab) + B*ab*(1-aa) + A*B*aa*ab) / (aa + ab - aa*ab)
-		multiply: {
+		multiply2: {
 			displayName: "multiply",
 
 			ontoOpaque: function (color1, color2, alpha1) {
-				destColor = (color2 - intDiv((color1 ^ 0xFF) * color2 * alpha1, 255 * 255)) | 0;
+				destColor = color2 - Math.ceil(((color1 ^ 0xFF) * color2 * alpha1) / (255 * 255));
 			},
 			ontoTransparent: function (color1, color2, alpha1, alpha2) {
 				let
 					newAlpha = (alpha1 + alpha2 - intDiv(alpha1 * alpha2, 255)) | 0,
-					
+
 					alpha12 = intDiv(alpha1 * alpha2, 255),
 					alpha1n2 = intDiv(alpha1 * (alpha2 ^ 0xFF), 255),
 					alphan12 = intDiv((alpha1 ^ 0xFF) * alpha2, 255);
-				
+
 				destColor = intDiv(color1 * alpha1n2 + color2 * alphan12 + intDiv(color1 * color2 * alpha12, 255), newAlpha);
 				destAlpha = newAlpha;
 			}
@@ -563,6 +584,30 @@ const
 		ontoTransparent: function (color1, color2, alpha1, alpha2) {
 			destAlpha = alpha1;
 		}
+	},
+
+	/**
+	 * The original multiply function (from ChibiPaint) did not produce the same results with the ontoOpaque and
+	 * ontoTransparent routines in the case that alpha2 == 255. If these routines don't produce the same results, then
+	 * our drawing optimizer's choice of blending routine could change the appearance of the layer during drawing depending
+	 * on whether the underlying layer is opaque or not!
+	 *
+	 * This new variant changes the rounding in ontoOpaque (from floor to ceil) to match ontoTransparent's results
+	 * in this case, so the image appearance no longer changes depending on which blending routine the blender
+	 * ends up selecting.
+	 *
+	 * In order to continue to render old paintings accurately, in cases where the old fusion algorithm would have
+	 * chosen the opaque blending routine, the color in the layer needs to be adjusted.
+	 */
+	UPGRADE_MULTIPLY_OPERATION = {
+		displayName: "multiplyUpgrade",
+		destinationIsLayer: true,
+		ontoOpaque: function (color1, color2, alpha1) {
+			// Legacy formula: color2 - Math.floor(((color1 ^ 0xFF) * color2 * alpha1) / (255 * 255))
+			// New formula:    color2 -  Math.ceil(((color1 ^ 0xFF) * color2 * alpha1) / (255 * 255))
+
+			destColor = color1 + Math.ceil((((255 - color1) * color2 * alpha1) % (255 * 255)) / (color2 * alpha1));
+		}
 	};
 
 function getAlphaMixExpressionForVariant(variant) {
@@ -694,32 +739,29 @@ function applyMacros(code) {
 	return code;
 }
 
-function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar) {
+function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, destPixIndexVar, destinationIsLayer) {
 	/*
 	 * Transform assignments to destColor into a series of assignments that evaluate the expression for each color
 	 * channel in the source, and stores the result to the channels of the fusion.
 	 */
-	code = code.replace(/^\s*destColor\s*=\s*([^;]+)\s*;/gm, function (match, destExpr) {
+	code = code.replace(/^\s*destColor\s*=\s*([^;]+)\s*;/gm, function (match, newValueExpr) {
 		let
-			vectorCode = "",
-			addI;
-		
-		if (destExpr == "color1") {
-			// Special case where we just set the fusion to the layer's data with no changes
-			for (let i = 0; i < 3; i++) {
-				addI = i ? " + " + i : "";
-				
-				vectorCode += `fusion.data[${destPixIndexVar}${addI}] = layer.data[pixIndex${addI}];\n`;
-			}
-		} else {
-			for (let i = 0; i < 3; i++) {
-				addI = i ? " + " + i : "";
-				
+			vectorCode = "";
+
+		for (let i = 0; i < 3; i++) {
+			let
+				addI = i ? " + " + i : "",
+				destPixelExpr = destinationIsLayer ? `layer.data[${destPixIndexVar}${addI}]` : `fusion.data[${destPixIndexVar}${addI}]`;
+
+			if (newValueExpr == "color1") {
+				// Special case where we just set the fusion to the layer's data with no changes
+				vectorCode += `${destPixelExpr} = layer.data[pixIndex${addI}];\n`;
+			} else {
 				let
-					thisLoopExpr = destExpr,
+					thisLoopExpr = newValueExpr,
 					layerPixelExpr = `layer.data[pixIndex${addI}]`,
 					fusionPixelExpr = `fusion.data[${destPixIndexVar}${addI}]`;
-				
+
 				if (useColor1Var) {
 					vectorCode += `color1 = ${layerPixelExpr};\n`;
 				} else {
@@ -731,8 +773,8 @@ function applyVectorAssignmentSubstitutions(code, useColor1Var, useColor2Var, de
 				} else {
 					thisLoopExpr = thisLoopExpr.replace(/color2/g, fusionPixelExpr);
 				}
-				
-				vectorCode += `${fusionPixelExpr} = ${thisLoopExpr};\n`;
+
+				vectorCode += `${destPixelExpr} = ${thisLoopExpr};\n`;
 			}
 		}
 		
@@ -802,7 +844,13 @@ function formatBlockComment(comment) {
 
 function docCommentForVariant(operation, variant, parameters) {
 	let
+		comment;
+
+	if (operation.destinationIsLayer) {
+		comment = `Modify the given layer using the ${operation.displayName} blending operator.\n\n`;
+	} else {
 		comment = `Blend the given layer onto the fusion using the ${operation.displayName} blending operator.\n\n`;
+	}
 	
 	if (variant.layerAlpha100) {
 		comment += "The layer must have its layer alpha set to 100\n\n";
@@ -1025,7 +1073,7 @@ function makeBlendOperation(functionName, operation, variant) {
 	}
 
 	kernel = leftAlign(kernel);
-	kernel = applyVectorAssignmentSubstitutions(kernel, useColor1Var, useColor2Var, destPixIndexVar);
+	kernel = applyVectorAssignmentSubstitutions(kernel, useColor1Var, useColor2Var, destPixIndexVar, operation.destinationIsLayer);
 	kernel = applyMacros(kernel);
 
 	let
@@ -1150,7 +1198,10 @@ function makeBlendOperations() {
 			let
 				functionName = opName + "Onto" + capitalizeFirst(variant.name);
 
-			functionStrings.push(makeBlendOperation(functionName, operation, variant));
+			if (variant.fusionHasTransparency && operation.ontoTransparent
+					|| !variant.fusionHasTransparency && operation.ontoOpaque) {
+				functionStrings.push(makeBlendOperation(functionName, operation, variant));
+			}
 		}
 	}
 	
@@ -1243,6 +1294,16 @@ ${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayerMasked", REPLACE_ALPH
 	masked: true
 })}
 
+${makeBlendOperation("upgradeMultiplyOfOpaqueLayer", UPGRADE_MULTIPLY_OPERATION, {
+	layerAlpha100: true,
+	fusionHasTransparency: false
+})}
+
+${makeBlendOperation("upgradeMultiplyOfTransparentLayer", UPGRADE_MULTIPLY_OPERATION, {
+	layerAlpha100: false,
+	fusionHasTransparency: false
+})}
+
 ${makeBlendOperation("_normalFuseImageOntoImageAtPosition", STANDARD_BLEND_OPS.normal, {
 	layerAlpha100: true,
 	fusionDifferentSize: true,
@@ -1282,10 +1343,13 @@ CPBlend.LM_SOFTLIGHT = 11;
 CPBlend.LM_VIVIDLIGHT = 12;
 CPBlend.LM_LINEARLIGHT = 13;
 CPBlend.LM_PINLIGHT = 14;
+
 CPBlend.LM_PASSTHROUGH = 15;
+CPBlend.LM_MULTIPLY2 = 16;
 
 CPBlend.LM_FIRST = 0;
-CPBlend.LM_LAST = 15;
+CPBlend.LM_LAST = 16;
+CPBlend.LM_LAST_CHIBIPAINT = CPBlend.LM_PINLIGHT;
 
 CPBlend.BLEND_MODE_CODENAMES = [
 	"normal",
@@ -1303,12 +1367,13 @@ CPBlend.BLEND_MODE_CODENAMES = [
 	"vividLight",
 	"linearLight",
 	"pinLight",
-	"passthrough"
+	"passthrough",
+	"multiply2"
 ];
 
 CPBlend.BLEND_MODE_DISPLAY_NAMES = [
 	  "Normal", "Multiply", "Add", "Screen", "Lighten", "Darken", "Subtract", "Dodge", "Burn",
-	  "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough"
+	  "Overlay", "Hard Light", "Soft Light", "Vivid Light", "Linear Light", "Pin Light", "Passthrough", "Multiply"
 ];
 
 makeLookupTables();

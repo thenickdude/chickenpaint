@@ -26,6 +26,7 @@ import CPColorBmp from "./CPColorBmp";
 import ArrayDataStream from "../util/ArrayDataStream";
 import CPLayerGroup from "./CPLayerGroup";
 import CPGreyBmp from "./CPGreyBmp";
+import CPBlend from "./CPBlend";
 
 import pako from "pako";
 
@@ -51,6 +52,19 @@ function concatBuffers(one, two) {
 
     return result;
 }
+
+const
+    OUR_MAJOR_VERSION = 0,
+    OUR_MINOR_VERSION = 10,
+
+	MAX_SUPPORTED_MAJOR_VERSION = OUR_MAJOR_VERSION,
+
+	CHI_MAGIC = "CHIBIOEK",
+
+    CHUNK_TAG_HEAD = "HEAD",
+    CHUNK_TAG_LAYER = "LAYR",
+    CHUNK_TAG_GROUP = "GRUP",
+    CHUNK_TAG_END = "ZEND";
 
 function CPChibiFileHeader(stream) {
     this.version = stream.readU32BE();
@@ -87,6 +101,8 @@ const
 	LAYER_FLAG_MASK_VISIBLE = 16,
 	LAYER_FLAG_EXPANDED     = 32,
     LAYER_FLAG_ALPHA_LOCKED = 64,
+	// Set if the LM_MULTIPLY2 blend mode should be used instead of the LM_MULTIPLY noted in the layer's blend mode
+    LAYER_FLAG_MULTIPLY2    = 128,
 
     LAYER_DECODE_STATE_FIXED_HEADER    = 0,
     LAYER_DECODE_STATE_VARIABLE_HEADER = 1,
@@ -132,6 +148,10 @@ class ChibiLayerDecoder {
 	    this.maskVisible = (layerFlags & LAYER_FLAG_MASK_VISIBLE) != 0;
 	    this.expanded = (layerFlags & LAYER_FLAG_EXPANDED) != 0;
         this.lockAlpha = (layerFlags & LAYER_FLAG_ALPHA_LOCKED) != 0;
+
+        if (this.blendMode === CPBlend.LM_MULTIPLY && (layerFlags & LAYER_FLAG_MULTIPLY2) !== 0) {
+            this.blendMode = CPBlend.LM_MULTIPLY2;
+        }
         
         this.nameLength = stream.readU32BE();
     }
@@ -278,15 +298,15 @@ class ChibiImageLayerDecoder extends ChibiLayerDecoder {
         let
             layer = new CPImageLayer(this.width, this.height, this.name);
         
-        layer.blendMode = this.blendMode;
-        layer.alpha = this.alpha;
+        layer.setBlendMode(this.blendMode);
+        layer.setAlpha(this.alpha);
         
-        layer.visible = this.visible;
-        layer.clip = this.clip;
+        layer.setVisible(this.visible);
+        layer.setClip(this.clip);
         
-        layer.maskLinked = this.maskLinked;
-        layer.maskVisible = this.maskVisible;
-        layer.lockAlpha = this.lockAlpha;
+        layer.setMaskLinked(this.maskLinked);
+        layer.setMaskVisible(this.maskVisible);
+        layer.setLockAlpha(this.lockAlpha);
         
         return layer;
     }
@@ -318,13 +338,13 @@ class ChibiLayerGroupDecoder extends ChibiLayerDecoder {
         let
             group = new CPLayerGroup(this.name, this.blendMode);
         
-        group.alpha = this.alpha;
+        group.setAlpha(this.alpha);
         
-        group.visible = this.visible;
-        group.expanded = this.expanded;
+        group.setVisible(this.visible);
+        group.setExpanded(this.expanded);
         
-        group.maskLinked = this.maskLinked;
-        group.maskVisible = this.maskVisible;
+        group.setMaskLinked(this.maskLinked);
+        group.setMaskVisible(this.maskVisible);
         
         return group;
     }
@@ -514,28 +534,17 @@ function makeChibiVersion(major, minor) {
  */
 function minimumVersionForArtwork(artwork) {
     for (let layer of artwork.getLayersRoot().getLinearizedLayerList(false)) {
-        if (layer instanceof CPLayerGroup || layer.mask || layer.clip) {
+        if (layer instanceof CPLayerGroup || layer.mask || layer.clip || layer.blendMode > CPBlend.LM_LAST_CHIBIPAINT || layer.blendMode === CPBlend.LM_MULTIPLY) {
             /*
              * We'll claim to be compatible with ChibiPaint (by not incrementing the major version number), since
              * ChibiPaint will at least be able to open the file, even though it'll lose information in doing so.
              */
-            return makeChibiVersion(0, 10);
+            return makeChibiVersion(OUR_MAJOR_VERSION, OUR_MINOR_VERSION);
         }
     }
     
     return makeChibiVersion(0, 0); // The version used by the original ChibiPaint
 }
-
-
-const
-    MAX_SUPPORTED_MAJOR_VERSION = 1,
-
-    CHI_MAGIC = "CHIBIOEK",
-
-    CHUNK_TAG_HEAD = "HEAD",
-    CHUNK_TAG_LAYER = "LAYR",
-    CHUNK_TAG_GROUP = "GRUP",
-    CHUNK_TAG_END = "ZEND";
 
 function writeChunkHeader(stream, tag, chunkSize) {
     stream.writeString(tag);
@@ -562,15 +571,16 @@ function allocateChunkStream(chunkTag, chunkBodySize) {
 
 /**
  * @param {CPArtwork} artwork
+ * @param {int} version
  * @param {int} numLayers
  *
  * @returns Uint8Array
  */
-function serializeFileHeaderChunk(artwork, numLayers) {
+function serializeFileHeaderChunk(artwork, version, numLayers) {
     let
         stream = allocateChunkStream(CHUNK_TAG_HEAD, CPChibiFileHeader.FIXED_HEADER_LENGTH);
     
-    stream.writeU32BE(minimumVersionForArtwork(artwork));
+    stream.writeU32BE(version);
     stream.writeU32BE(artwork.width);
     stream.writeU32BE(artwork.height);
     stream.writeU32BE(numLayers);
@@ -586,109 +596,87 @@ function serializeEndChunk() {
 }
 
 /**
- * Serialize an image layer's header and image data into a byte array buffer, and return it.
+ * Serialize an layer's header and image data into a byte array buffer, and return it.
  *
- * @param {CPImageLayer} layer
- * @returns {Uint8Array}
+ * @param {CPImageLayer|CPLayerGroup} layer
  */
-function serializeImageLayerChunk(layer) {
-    let
-        FIXED_HEADER_LENGTH = 4 * 5,
-        stream = allocateChunkStream(CHUNK_TAG_LAYER, FIXED_HEADER_LENGTH + layer.name.length + layer.image.data.length + (layer.mask ? layer.mask.data.length : 0));
+function serializeLayerChunk(layer) {
+	const
+        isImageLayer = layer instanceof CPImageLayer,
 
-    // Fixed length header portion
-    stream.writeU32BE(FIXED_HEADER_LENGTH + layer.name.length); // Offset to layer data from start of header
+		FIXED_HEADER_LENGTH = 4 * (isImageLayer ? 5 : 6),
+        VARIABLE_HEADER_LENGTH = layer.name.length,
+        COMBINED_HEADER_LENGTH = FIXED_HEADER_LENGTH + VARIABLE_HEADER_LENGTH,
 
-    stream.writeU32BE(layer.blendMode);
-    stream.writeU32BE(layer.alpha);
-    
-    let layerFlags = 0;
-    
-    if (layer.visible) {
-        layerFlags |= LAYER_FLAG_VISIBLE;
-    }
-    if (layer.clip) {
-        layerFlags |= LAYER_FLAG_CLIP;
-    }
-    if (layer.mask) {
-        layerFlags |= LAYER_FLAG_HAS_MASK;
-    }
-    if (layer.maskLinked) {
-        layerFlags |= LAYER_FLAG_MASK_LINKED;
-    }
-    if (layer.maskVisible) {
-        layerFlags |= LAYER_FLAG_MASK_VISIBLE;
-    }
-    if (layer.lockAlpha) {
-        layerFlags |= LAYER_FLAG_ALPHA_LOCKED;
-    }
+        PAYLOAD_LENGTH = (isImageLayer ? layer.image.data.length : 0) + (layer.mask ? layer.mask.data.length : 0),
 
-    stream.writeU32BE(layerFlags);
-    stream.writeU32BE(layer.name.length);
+		stream = allocateChunkStream(
+		    isImageLayer ? CHUNK_TAG_LAYER : CHUNK_TAG_GROUP,
+            FIXED_HEADER_LENGTH + VARIABLE_HEADER_LENGTH + PAYLOAD_LENGTH
+        );
 
-    // Variable length header portion
-    stream.writeString(layer.name);
+	let
+        layerFlags = 0,
+        blendMode;
 
-    // Payload data
-    writeColorBitmapToStream(stream, layer.image);
+	if (layer.visible) {
+		layerFlags |= LAYER_FLAG_VISIBLE;
+	}
+	if (isImageLayer && layer.clip) {
+		layerFlags |= LAYER_FLAG_CLIP;
+	}
+	if (layer.mask) {
+		layerFlags |= LAYER_FLAG_HAS_MASK;
+	}
+	if (layer.maskLinked) {
+		layerFlags |= LAYER_FLAG_MASK_LINKED;
+	}
+	if (layer.maskVisible) {
+		layerFlags |= LAYER_FLAG_MASK_VISIBLE;
+	}
+	if (layer.lockAlpha) {
+		layerFlags |= LAYER_FLAG_ALPHA_LOCKED;
+	}
+	if (!isImageLayer && layer.expanded) {
+		layerFlags |= LAYER_FLAG_EXPANDED;
+	}
 
-    if (layer.mask) {
-        writeMaskToStream(stream, layer.mask);
-    }
-
-    return stream.getAsDataArray();
-}
-
-/**
- * Serialize a layer group into a byte array buffer, and return it.
- *
- * @param {CPLayerGroup} group
- * @returns {Uint8Array}
- */
-function serializeLayerGroupChunk(group) {
-    const
-        FIXED_HEADER_LENGTH = 4 * 6,
-        stream = allocateChunkStream(CHUNK_TAG_GROUP, FIXED_HEADER_LENGTH + group.name.length + (group.mask ? group.mask.data.length : 0));
-
-    // Fixed-length header portion
-
-    // Offset to payload data from start of chunk
-    stream.writeU32BE(FIXED_HEADER_LENGTH + group.name.length);
-
-    stream.writeU32BE(group.blendMode);
-    stream.writeU32BE(group.alpha);
-
-    let groupFlags = 0;
-
-    if (group.visible) {
-        groupFlags |= LAYER_FLAG_VISIBLE;
-    }
-    if (group.mask) {
-        groupFlags |= LAYER_FLAG_HAS_MASK;
-    }
-    if (group.maskLinked) {
-        groupFlags |= LAYER_FLAG_MASK_LINKED;
-    }
-    if (group.maskVisible) {
-        groupFlags |= LAYER_FLAG_MASK_VISIBLE;
-    }
-    if (group.expanded) {
-        groupFlags |= LAYER_FLAG_EXPANDED;
+	if (layer.blendMode === CPBlend.LM_MULTIPLY2) {
+	    /* So that ChibiPaint can still open files that use our new blending routine, re-label it as the original
+	     * multiply mode, but add a flag so that we know it's supposed to use the new version.
+	     */
+	    blendMode = CPBlend.LM_MULTIPLY;
+	    layerFlags |= LAYER_FLAG_MULTIPLY2;
+    } else {
+	    blendMode = layer.blendMode;
     }
 
-    stream.writeU32BE(groupFlags);
-    stream.writeU32BE(group.name.length);
-    stream.writeU32BE(group.layers.length);
+	// Fixed length header portion
+	stream.writeU32BE(COMBINED_HEADER_LENGTH); // Offset to layer data from start of header
 
-    // Variable-length header portion
-    stream.writeString(group.name);
+	stream.writeU32BE(blendMode);
+	stream.writeU32BE(layer.alpha);
 
-    // Payload data
-    if (group.mask) {
-        writeMaskToStream(stream, group.mask);
+	stream.writeU32BE(layerFlags);
+	stream.writeU32BE(layer.name.length);
+
+	if (!isImageLayer) {
+		stream.writeU32BE(layer.layers.length);
+	}
+
+	// Variable length header portion
+	stream.writeString(layer.name);
+
+	// Payload:
+    if (isImageLayer) {
+		writeColorBitmapToStream(stream, layer.image);
     }
 
-    return stream.getAsDataArray();
+	if (layer.mask) {
+		writeMaskToStream(stream, layer.mask);
+	}
+
+	return stream.getAsDataArray();
 }
 
 /**
@@ -710,10 +698,14 @@ function hasChibiMagicMarker(array) {
  * Serialize the given artwork to Chibifile format.
  *
  * @param {CPArtwork} artwork
+ * @param {?Object} options
+ * @param {boolean} options.forceOldVersion - Mark this as a version 0.0 (ChibiPaint) drawing even if it uses new features
  *
  * @returns {Promise.<Blob|Uint8Array>} - Returns Blob when called in the browser, or a Uint8Array in Node.
  */
-module.exports.save = function(artwork) {
+module.exports.save = function(artwork, options) {
+    options = options || {};
+
     return Promise.resolve().then(() => {
         const
             deflator = new pako.Deflate({
@@ -725,10 +717,15 @@ module.exports.save = function(artwork) {
              */
             blobParts = [],
             magic = new Uint8Array(CHI_MAGIC.length),
-            layers = artwork.getLayersRoot().getLinearizedLayerList(false);
+            layers = artwork.getLayersRoot().getLinearizedLayerList(false),
+			version = options.forceOldVersion ? makeChibiVersion(0, 0) : minimumVersionForArtwork(artwork);
 
         let
             layerWritePromise = Promise.resolve();
+
+		deflator.onData = function(chunk) {
+			blobParts.push(chunk);
+		};
 
         // The magic file signature is not ZLIB compressed:
         for (let i = 0; i < CHI_MAGIC.length; i++) {
@@ -737,47 +734,47 @@ module.exports.save = function(artwork) {
         blobParts.push(magic);
 
         // The rest gets compressed
-        deflator.push(serializeFileHeaderChunk(artwork, layers.length), false);
+        deflator.push(serializeFileHeaderChunk(artwork, version, layers.length), false);
 
         for (let layer of layers) {
             layerWritePromise = layerWritePromise.then(() => new Promise(function(resolve) {
-                if (layer instanceof CPImageLayer) {
-                    deflator.push(serializeImageLayerChunk(layer), false);
-                } else if (layer instanceof CPLayerGroup) {
-                    deflator.push(serializeLayerGroupChunk(layer), false);
-                }
+                deflator.push(serializeLayerChunk(layer), false);
 
                 // Insert a setTimeout between each serialized layer, so we can maintain browser responsiveness
                 setTimeout(resolve, 10);
             }));
         }
 
-        return layerWritePromise.then(function() {
-            deflator.push(serializeEndChunk(), true);
+        return layerWritePromise.then(() => new Promise((resolve, reject) => {
+            deflator.onEnd = function(status) {
+                if (status === 0) {
+					if (typeof Blob !== "undefined") {
+						// In the browser
+						resolve(new Blob(blobParts, {type: "application/octet-stream"}));
+					} else {
+						// In Node.js
+						let
+							totalSize = blobParts.map(part => part.byteLength).reduce((total, size) => {
+								return total + size;
+							}, 0),
 
-            blobParts.push(deflator.result);
+							buffer = new Uint8Array(totalSize),
+							offset = 0;
 
-            if (typeof Blob !== "undefined") {
-                // In the browser
-                return new Blob(blobParts, {type: "application/octet-stream"});
-            } else {
-                // In Node.js
-                let
-                    totalSize = blobParts.map(part => part.byteLength).reduce((total, size) => {
-                        return total + size;
-                    }, 0),
+						for (let part of blobParts) {
+							buffer.set(part, offset);
+							offset += part.byteLength;
+						}
 
-                    buffer = new Uint8Array(totalSize),
-                    offset = 0;
-
-                for (let part of blobParts) {
-                    buffer.set(part, offset);
-                    offset += part.byteLength;
+						resolve(buffer);
+					}
+				} else {
+                    reject(status);
                 }
+            };
 
-                return buffer;
-            }
-        });
+            deflator.push(serializeEndChunk(), true);
+        }));
     });
 };
 
@@ -785,10 +782,16 @@ module.exports.save = function(artwork) {
  * Attempt to load a chibifile from the given source.
  *
  * @param {ArrayBuffer|Blob} source
+ * @param {?Object}        options
+ * @param {boolean|string} options.upgradeMultiplyLayers - false to leave all multiply layers alone, "bake" to modify
+ *                                                         pixel values to use LM_MULTIPLY2 blending. Anything else to
+ *                                                         set blendMode to LM_MULTIPLY or LM_MULTIPLY2 as needed.
  *
  * @returns {Promise.<CPArtwork>}
  */
-module.exports.load = function(source) {
+module.exports.load = function(source, options) {
+    options = options || {};
+
 	const
 		STATE_WAIT_FOR_CHUNK = 0,
 		
@@ -989,6 +992,7 @@ module.exports.load = function(source) {
         
 		if (!hasChibiMagicMarker(byteArray)) {
 			reject("This doesn't appear to be a ChibiPaint layers file, is it damaged?");
+			return;
 		}
 		
 		// Remove the magic header
@@ -998,15 +1002,19 @@ module.exports.load = function(source) {
 		
 		inflator.onEnd = function (status) {
 			if (status === 0 && state == STATE_SUCCESS) {
+			    if (options.upgradeMultiplyLayers !== false && fileHeader.version < makeChibiVersion(OUR_MAJOR_VERSION, OUR_MINOR_VERSION)) {
+					artwork.upgradeMultiplyLayers(options.upgradeMultiplyLayers);
+                }
+
 				artwork.selectTopmostVisibleLayer();
 				
 				resolve(artwork);
 			} else {
-				reject("Fatal error decoding ChibiFile");
+				reject("Fatal error decoding ChibiFile: " + status);
 			}
 		};
-		
+
 		// Begin decompression/decoding
-		inflator.push(byteArray);
+		inflator.push(byteArray, true);
 	}));
 };

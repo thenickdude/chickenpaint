@@ -24,6 +24,7 @@ import CPLayer from "./CPLayer";
 import CPImageLayer from "./CPImageLayer";
 import CPLayerGroup from "./CPLayerGroup";
 import CPBlend from "./CPBlend";
+import "./CPBlendAdditional";
 import CPGreyBmp from "./CPGreyBmp";
 import CPBlendTree from "./CPBlendTree";
 import CPMaskView from "./CPMaskView";
@@ -878,6 +879,92 @@ export default function CPArtwork(_width, _height) {
         fusion = blendTree.blendTree().image;
         
         return fusion;
+    };
+
+	/**
+     * Old ChibiPaint used a blending operator with a slightly different formula than us for blending onto opaque
+     * canvases. We can fix this in two ways:
+     *
+     * default - If it looks like the original layer would have used the old Opaque Multiply algorithm, keep using that
+     *           one, otherwise upgrade it to the new Multiply2 algorithm.
+     *
+     * bake - modify the pixels of Multiply layers in the document in order to bring their blended appearance to match what
+     *        the old multiply algorithm would have produced.
+     *
+     *        The resulting artwork is not really editable, because the baked-in corrections will only look correct when
+     *        the layers underneath the multiply layers are all the same as they originally were. Any change to layer
+     *        opacities will also ruin the result.
+     *
+     * Either way, this must not be called on new (ChickenPaint 0.10 format) artworks.
+     *
+     * @param {?string} mode
+	 */
+	this.upgradeMultiplyLayers = function(mode) {
+	    let
+            layers = this.getLayersRoot().getLinearizedLayerList(false, []),
+            lastMultiplyLayerIndex = -1;
+
+	    for (let i = 0; i < layers.length; i++) {
+	        let
+                layer = layers[i];
+
+			if (!(layer instanceof CPImageLayer) || layer.mask || layer.blendMode > CPBlend.LM_LAST_CHIBIPAINT) {
+				throw new Error("Bad layer type during multiply upgrade");
+			}
+
+	        if (layer.blendMode === CPBlend.LM_MULTIPLY) {
+	            lastMultiplyLayerIndex = i;
+            }
+        }
+
+	    if (lastMultiplyLayerIndex !== -1) {
+			let
+				fusion = new CPColorBmp(this.width, this.height),
+				hasTransparency = true, first = true,
+				blendRect = this.getBounds();
+
+			fusion.clearAll(blendRect, 0x00FFFFFF); // Transparent white
+
+			for (let i = 0; i <= lastMultiplyLayerIndex; i++) {
+			    let
+                    layer = layers[i];
+
+				if (!first) {
+					hasTransparency = hasTransparency && fusion.hasAlphaInRect(blendRect);
+				}
+
+				if (layer.blendMode === CPBlend.LM_MULTIPLY) {
+					switch (mode) {
+                        case "bake":
+							/* Don't make changes to hidden multiply layers, we won't support editing the resulting
+							 * artwork to reveal these layers later anyway.
+							 */
+							if (!hasTransparency && layer.getEffectiveAlpha() > 0) {
+								// The original drawing probably used the old Opaque blend mode, so let's fix it up
+								if (layer.alpha === 100) {
+									CPBlend.upgradeMultiplyOfOpaqueLayer(fusion, layer.image, 100, blendRect);
+								} else {
+									CPBlend.upgradeMultiplyOfTransparentLayer(fusion, layer.image, layer.alpha, blendRect);
+								}
+								layer.setBlendMode(CPBlend.LM_MULTIPLY2);
+							}
+							break;
+						default:
+							if (hasTransparency) {
+                                /* The original drawing probably wouldn't have used the old Opaque blend mode for this layer,
+                                 * so we can upgrade it.
+                                 */
+								layer.setBlendMode(CPBlend.LM_MULTIPLY2);
+							}
+					}
+				}
+
+                if (layer.getEffectiveAlpha() > 0) {
+					first = false;
+					CPBlend.fuseImageOntoImage(fusion, hasTransparency, layer.image, layer.alpha, layer.blendMode, blendRect, null);
+				}
+			}
+		}
     };
 
     this.isCreateClippingMaskAllowed = function() {
