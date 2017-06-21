@@ -13,13 +13,10 @@ import CPGreyBmp from "../js/engine/CPGreyBmp";
 const
     IMAGE_DIMENSION = 256,
 
-    translucentRandomImageBottom = generateRandomImage(IMAGE_DIMENSION, IMAGE_DIMENSION, 1234567),
-    translucentRandomImageTop = generateRandomImage(IMAGE_DIMENSION, IMAGE_DIMENSION, 145156),
+    [translucentRandomImageBottom, translucentRandomImageTop] = TestUtil.generateRandomImagePairForBlendTest(IMAGE_DIMENSION, IMAGE_DIMENSION, false, false, 1234567),
+    [transparentRandomImageBottom, transparentRandomImageTop] = TestUtil.generateRandomImagePairForBlendTest(IMAGE_DIMENSION, IMAGE_DIMENSION, 0, 0, 7654321),
 
-    transparentRandomImageBottom = generateImageWithRandomNoiseInColorChannels(IMAGE_DIMENSION, IMAGE_DIMENSION, 7654321, 0),
-    transparentRandomImageTop = generateImageWithRandomNoiseInColorChannels(IMAGE_DIMENSION, IMAGE_DIMENSION, 902384, 0),
-
-    opaqueRandomImageBottom = generateImageWithRandomNoiseInColorChannels(IMAGE_DIMENSION, IMAGE_DIMENSION, 1283714, 255),
+    opaqueRandomImageBottom = TestUtil.generateRandomImageForBlendTest(IMAGE_DIMENSION, IMAGE_DIMENSION, 255, 1283714),
 
     randomMask = generateRandomMask(IMAGE_DIMENSION, IMAGE_DIMENSION, 1234567),
     blackMask = new CPGreyBmp(IMAGE_DIMENSION, IMAGE_DIMENSION, 8),
@@ -27,35 +24,6 @@ const
 
 blackMask.clearAll(0);
 whiteMask.clearAll(255);
-
-function generateRandomImage(width, height, seed) {
-    const
-        layer = new CPColorBmp(width, height),
-        random = Random.engines.mt19937().seed(seed),
-        byteDistribution = Random.integer(0, 255);
-
-    for (let i = 0; i < layer.data.length; i++) {
-        layer.data[i] = byteDistribution(random);
-    }
-
-    return layer;
-}
-
-function generateImageWithRandomNoiseInColorChannels(width, height, seed, alpha) {
-    const
-        layer = new CPColorBmp(width, height),
-        random = Random.engines.mt19937().seed(seed),
-        byteDistribution = Random.integer(0, 255);
-
-    for (let i = 0; i < width * height * CPColorBmp.BYTES_PER_PIXEL; i += CPColorBmp.BYTES_PER_PIXEL) {
-        layer.data[i + CPColorBmp.RED_BYTE_OFFSET] = byteDistribution(random);
-        layer.data[i + CPColorBmp.GREEN_BYTE_OFFSET] = byteDistribution(random);
-        layer.data[i + CPColorBmp.BLUE_BYTE_OFFSET] = byteDistribution(random);
-        layer.data[i + CPColorBmp.ALPHA_BYTE_OFFSET] = alpha;
-    }
-
-    return layer;
-}
 
 function generateRandomMask(width, height, seed) {
     const
@@ -70,6 +38,12 @@ function generateRandomMask(width, height, seed) {
     return mask;
 }
 
+/**
+ *
+ * @param {boolean} fusionHasTransparency
+ * @param {int} imageAlpha
+ * @param {boolean} masked
+ */
 function testPassthroughBlendingOperation(fusionHasTransparency, imageAlpha, masked) {
     const
         fuse = function (bottom, top, mask) {
@@ -88,7 +62,7 @@ function testPassthroughBlendingOperation(fusionHasTransparency, imageAlpha, mas
             return bottom;
         };
 
-    if (imageAlpha == 0) {
+    if (imageAlpha === 0) {
         it("equals the bottom layer if layer alpha==0", function () {
             let
                 referenceImage = fusionHasTransparency ? translucentRandomImageBottom : opaqueRandomImageBottom;
@@ -145,6 +119,13 @@ function testPassthroughBlendingOperation(fusionHasTransparency, imageAlpha, mas
     }
 }
 
+/**
+ *
+ * @param {int} layerMode
+ * @param {boolean} fusionHasTransparency
+ * @param {int} imageAlpha
+ * @param {boolean} masked
+ */
 function testRegularBlendingOperation(layerMode, fusionHasTransparency, imageAlpha, masked) {
     const
         fuse = function(bottom, top, mask) {
@@ -177,15 +158,15 @@ function testRegularBlendingOperation(layerMode, fusionHasTransparency, imageAlp
         ));
     });
 
-    if (masked && imageAlpha != 0) {
+    if (masked && imageAlpha !== 0) {
         it("does not modify the bottom layer if the top layer (alpha " + imageAlpha + ") has a black mask", function () {
             let
-                referenceImage = fusionHasTransparency ? translucentRandomImageTop : opaqueRandomImageBottom;
+                referenceImage = fusionHasTransparency ? translucentRandomImageBottom : opaqueRandomImageBottom;
 
             assert(TestUtil.bitmapsAreEqual(
                 fuse(
                     referenceImage,
-                    translucentRandomImageBottom,
+                    translucentRandomImageTop,
                     blackMask
                 ),
                 referenceImage
@@ -236,7 +217,7 @@ function testRegularBlendingOperation(layerMode, fusionHasTransparency, imageAlp
         });
     }
 
-    if (!fusionHasTransparency && imageAlpha != 0) {
+    if (!fusionHasTransparency && imageAlpha !== 0) {
         it("gives the same result using both opaque and transparent fusion routines if bottom pixels are effectively opaque", function() {
             let
                 opaqueFusionResult,
@@ -263,10 +244,18 @@ function testRegularBlendingOperation(layerMode, fusionHasTransparency, imageAlp
 
             fusionHasTransparency = false;
 
-            assert(TestUtil.bitmapsAreEqual(
-                opaqueFusionResult,
-                transparentFusionResult
-            ));
+            let
+                result = TestUtil.bitmapsAreEqual(
+					opaqueFusionResult,
+					transparentFusionResult
+				);
+
+            if (layerMode === CPBlend.LM_MULTIPLY) {
+                // LM_MULTIPLY is broken in this way in the original ChibiPaint, so preserve the brokenness
+                assert(!result);
+            } else {
+				assert(result);
+			}
         });
     }
 }

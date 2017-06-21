@@ -28,18 +28,15 @@ function compareChickenPaintChiRenderingAgainstPNGs(chiFiles) {
         matches = 0, failures = 0;
 
     for (let chiName of chiFiles) {
-        const
-            chiPath = path.join(testFilesDirectory, chiName);
-
         promise = promise
             .then(() => {
                 let
-                    buffer = fs.readFileSync(chiPath);
+                    buffer = fs.readFileSync(chiName);
 
                 return chiLoad(nodeBufferToArrayBuffer(buffer));
             }).then(artwork => new Promise((resolve, reject) => {
                 let
-                    filenameRoot = chiPath.replace(/\.chi$/, ""),
+                    filenameRoot = chiName.replace(/\.chi$/, ""),
                     // A .png version of the image should be available for us to compare against
                     pngStream = fs.createReadStream(filenameRoot + ".png");
 
@@ -94,7 +91,11 @@ const
      * If no chi files are provided as arguments on the commandline, look for files that are extensionless or end in .chi
      * in the test-images folder
      */
-    chiFiles = process.argv.length > 2 ? process.argv.slice(2) : testFiles.filter(filename => filename.match(/^[^.]+$|\.chi$/));
+    chiFiles = process.argv.length > 2
+        ? process.argv.slice(2)
+        : testFiles
+            .filter(filename => filename.match(/^[^.]+$|\.chi$/))
+            .map(filename => path.join(testFilesDirectory, filename));
 
 compareChickenPaintChiRenderingAgainstPNGs(chiFiles).then(
     result => {

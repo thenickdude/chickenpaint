@@ -47,7 +47,7 @@ CPLayerGroup.prototype.constructor = CPLayerGroup;
  * Returns an array of layers in this group in display order, excluding this group itself.
  *
  * @param {boolean} respectCollapse - Set to true to omit the children of collapsed groups
- * @param {CPLayer[]=} list
+ * @param {CPLayer[]} list
  * @returns {CPLayer[]}
  */
 CPLayerGroup.prototype.getLinearizedLayerList = function(respectCollapse, list) {

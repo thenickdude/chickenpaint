@@ -60,6 +60,15 @@ export default function CPImageLayer(width, height, name) {
 CPImageLayer.prototype = Object.create(CPLayer.prototype);
 CPImageLayer.prototype.constructor = CPImageLayer;
 
+CPImageLayer.createFromImage = function(image, name) {
+	let
+		result = new CPImageLayer(0, 0, name);
+
+	result.image = image;
+
+	return result;
+};
+
 /**
  * Returns an independent copy of this layer.
  *

@@ -10,6 +10,7 @@ import CPRect from '../../js/util/CPRect.js';
 import CPLayerGroup from "../../js/engine/CPLayerGroup";
 import CPTransform from "../../js/util/CPTransform";
 import CPPolygon from "../../js/util/CPPolygon";
+import CPBlend from "../../js/engine/CPBlend";
 
 import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
 import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
@@ -41,6 +42,11 @@ function saveImage(image, name) {
 }
 
 class Step {
+	/**
+	 *
+	 * @param {Object} chickenPaintAction - An action that can be fed directly to ChickenPaint's actionPerformed routine
+	 * @param {Object} stepParameters - Additional parameters if we need to call the action ourselves
+	 */
 	constructor(chickenPaintAction, stepParameters) {
 		this.action = chickenPaintAction;
 		this.parameters = stepParameters;
@@ -368,6 +374,34 @@ class RandomTest extends Test {
 					transform.scale(hScale, vScale);
 					
 					return new Step(null, {task: "affineTransform", transform: transform.m});
+				},
+				function() {
+					const
+						action = pick(["CPSetLayerLockAlpha", "CPSetLayerAlpha", "CPSetLayerBlendMode"]);
+
+					switch (action) {
+						case "CPSetLayerLockAlpha":
+							return new Step({action: action, lock: Random.bool(randomEngine)}, {});
+
+						case "CPSetLayerAlpha":
+							let
+								alphaMode = randInt(3),
+								alpha;
+
+							// Bias heavily towards edge cases (0 and 100 alpha)
+							if (alphaMode === 0) {
+								alpha = 0;
+							} else if (alphaMode == 1) {
+								alpha = 100;
+							} else {
+								alpha = randInt(99) + 1;
+							}
+
+							return new Step({action: action, alpha: alpha}, {});
+
+						case "CPSetLayerBlendMode":
+							return new Step({action: action, blendMode: randInt(CPBlend.LM_LAST + 1)}, {});
+					}
 				},
 				function () {
 					const

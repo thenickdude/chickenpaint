@@ -25,6 +25,8 @@ import assert from "assert";
 import CPColorBmp from "../../js/engine/CPColorBmp";
 import CPGreyBmp from "../../js/engine/CPGreyBmp";
 import CPArtwork from "../../js/engine/CPArtwork";
+import CPImageLayer from "../../js/engine/CPImageLayer";
+import * as Random from "random-js";
 
 export default function TestUtil() {
 }
@@ -363,4 +365,121 @@ TestUtil.testLayerPaintOperation = function(test) {
 		},
 		testCompact: !!test.testCompact
 	});
+};
+
+/**
+ * Generate a pair of images with the given dimensions that are filled with random pixels for testing
+ * blending routines.
+ *
+ * @param {int} width
+ * @param {int} height
+ * @param {int|boolean} setAlpha - The alpha to set in the pixels, or false to generate a random alpha.
+ * @param {int} seed
+ * @returns {CPColorBmp}
+ */
+TestUtil.generateRandomImageForBlendTest = function(width, height, setAlpha, seed) {
+    const
+        pixelChannelEdgeCases = [
+            0, 1, 2, 127, 128, 129, 253, 254, 255
+        ],
+
+		image = new CPColorBmp(width, height),
+
+        randomByte = Random.integer(0, 255),
+        randomEngine = Random.engines.mt19937().seed(seed);
+
+    let
+		pixIndex = 0;
+
+    assert(Math.pow(pixelChannelEdgeCases.length, 4) <= width * height);
+
+    // Make sure we have some good "edge case" pixels for certain:
+	for (let color of pixelChannelEdgeCases) {
+		for (let alpha of setAlpha === false ? pixelChannelEdgeCases : [setAlpha]) {
+			image.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = alpha;
+			image.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = color;
+			image.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = color;
+			image.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = color;
+
+			pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+		}
+	}
+
+	// Fill any remaining space in the layer with random pixels:
+	for (; pixIndex < image.data.length; pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+		image.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = setAlpha === false ? randomByte(randomEngine) : setAlpha;
+		image.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET] = randomByte(randomEngine);
+		image.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = randomByte(randomEngine);
+		image.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET] = randomByte(randomEngine);
+	}
+
+	return image;
+};
+
+/**
+ * Generate a pair of images with the given dimensions that are filled with random pixels for testing
+ * blending routines.
+ *
+ * @param {int} width
+ * @param {int} height
+ * @param {int|boolean} setAlphaBottom - Pass an integer to force the alpha in this image, or false to use random values
+ * @param {int|boolean} setAlphaTop - Pass an integer to force the alpha in this image, or false to use random values
+ * @param {int} seed
+ * @returns {[CPColorBmp,CPColorBmp]} - An array [bottomImage, topImage]
+ */
+TestUtil.generateRandomImagePairForBlendTest = function(width, height, setAlphaBottom, setAlphaTop, seed) {
+    const
+		pixelChannelEdgeCases = [
+			0, 1, 2, 127, 128, 129, 253, 254, 255
+		],
+
+		randomByte = Random.integer(0, 255),
+        randomEngine = Random.engines.mt19937().seed(seed),
+
+		bottomImage = new CPColorBmp(width, height),
+		topImage = new CPColorBmp(width, height);
+
+    let
+		pixIndex = 0;
+
+    assert(Math.pow(pixelChannelEdgeCases.length, 4) <= width * height);
+
+    for (let bottomColor of pixelChannelEdgeCases) {
+        for (let bottomAlpha of setAlphaBottom === false ? pixelChannelEdgeCases : [setAlphaBottom]) {
+            for (let topColor of pixelChannelEdgeCases) {
+                for (let topAlpha of setAlphaTop === false ? pixelChannelEdgeCases : [setAlphaTop]) {
+					/*
+					 * Our blending operators treat each colour channel independently, so we can just use the same
+					 * value for all colour channels
+					 */
+                    bottomImage.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = bottomAlpha;
+                    bottomImage.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]   = bottomColor;
+                    bottomImage.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = bottomColor;
+                    bottomImage.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET]  = bottomColor;
+
+                    topImage.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = topAlpha;
+                    topImage.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]   = topColor;
+                    topImage.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = topColor;
+                    topImage.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET]  = topColor;
+
+                    pixIndex += CPColorBmp.BYTES_PER_PIXEL;
+                }
+            }
+        }
+    }
+
+    // Fill any remaining space in the layers with random pixels:
+    for (; pixIndex < bottomImage.data.length; pixIndex += CPColorBmp.BYTES_PER_PIXEL) {
+        bottomImage.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = setAlphaBottom === false ? randomByte(randomEngine) : setAlphaBottom;
+        bottomImage.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]   = randomByte(randomEngine);
+        bottomImage.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = randomByte(randomEngine);
+        bottomImage.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET]  = randomByte(randomEngine);
+
+        topImage.data[pixIndex + CPColorBmp.ALPHA_BYTE_OFFSET] = setAlphaTop === false ? randomByte(randomEngine) : setAlphaTop;
+        topImage.data[pixIndex + CPColorBmp.RED_BYTE_OFFSET]   = randomByte(randomEngine);
+        topImage.data[pixIndex + CPColorBmp.GREEN_BYTE_OFFSET] = randomByte(randomEngine);
+        topImage.data[pixIndex + CPColorBmp.BLUE_BYTE_OFFSET]  = randomByte(randomEngine);
+    }
+
+    return [bottomImage, topImage];
 };
