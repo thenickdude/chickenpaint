@@ -116,7 +116,7 @@ export default function CPResourceSaver(options) {
         }
         
         serializeLayers
-            .then(function(chibiBlob) {
+            .then(function(chibiResult) {
                 if (cancelled) {
                     that.emitEvent("savingFailure");
                     return;
@@ -132,20 +132,24 @@ export default function CPResourceSaver(options) {
                 }
 
                 if (options.url) {
-                    var
+                    let
                         marker = "This marker ensures the upload wasn't truncated",
                         formData = new FormData();
 
                     formData.append("beginMarker", marker);
 
-                    formData.append("picture", flatBlob);
+					formData.append("painter", "ChickenPaint v2.0");
+
+					formData.append("picture", flatBlob);
                     flatBlob = null;
 
-                    if (chibiBlob) {
-                        formData.append("chibifile", chibiBlob);
-                        chibiBlob = null;
+                    if (chibiResult) {
+						formData.append("chibifileFormat", chibiResult.version);
 
-                        // Layers will need to be rotated upon opening
+						formData.append("chibifile", chibiResult.bytes);
+                        chibiResult = null;
+
+						// Layers will need to be rotated upon opening
                         formData.append("rotation", "" + options.rotation);
                     } else {
                         /*
@@ -160,14 +164,14 @@ export default function CPResourceSaver(options) {
                         swatchesBlob = null;
                     }
 
-                    formData.append("endMarker", marker);
+					formData.append("endMarker", marker);
 
                     postDrawing(formData);
                 } else {
                     window.saveAs(flatBlob, "oekaki.png");
 
-                    if (chibiBlob) {
-                        window.saveAs(chibiBlob, "oekaki.chi");
+                    if (chibiResult) {
+                        window.saveAs(chibiResult.bytes, "oekaki.chi");
                     }
                     if (swatchesBlob) {
                         window.saveAs(swatchesBlob, "oekaki.aco");

@@ -227,8 +227,8 @@ function saveTestFiles(colorSphereLayer, lightMixLayer) {
 	artwork.addLayerObject(colorSphereLayer);
 	artwork.addLayerObject(lightMixLayer);
 
-	chiSave(artwork).then(function(chiData) {
-		window.saveAs(chiData, "blendtest.chi");
+	chiSave(artwork).then((result) => {
+		window.saveAs(result.bytes, "blendtest.chi");
 	});
 }
 

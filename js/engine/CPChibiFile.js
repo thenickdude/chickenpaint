@@ -525,6 +525,21 @@ function makeChibiVersion(major, minor) {
     return (major << 16) | minor;
 }
 
+function decomposeChibiVersion(version) {
+    return {major: (version >> 16) & 0xFFFF, minor: version & 0xFFFF};
+}
+
+function chibiVersionToString(version) {
+    let
+        decomposed = decomposeChibiVersion(version);
+
+    if (decomposed.major === 0 && decomposed.minor === 0) {
+        return "ChibiPaint v0.0";
+    } else {
+        return "ChickenPaint v" + decomposed.major + "." + decomposed.minor;
+    }
+}
+
 /**
  * Decides which Chibi file version will be required to support the features used by the given artwork, and returns
  * the corresponding version number header.
@@ -695,13 +710,19 @@ function hasChibiMagicMarker(array) {
 }
 
 /**
+ * @typedef {Object} SerializeResult
+ * @property {(Blob|Uint8Array)} SerializeResult.bytes - A Blob when called in the browser, or a Uint8Array in Node.
+ * @property {String} SerializeResult.version - Version string of created artwork, "ChibiPaint v0.0" or "ChickenPaint v0.10"
+ */
+
+/**
  * Serialize the given artwork to Chibifile format.
  *
  * @param {CPArtwork} artwork
  * @param {?Object} options
  * @param {boolean} options.forceOldVersion - Mark this as a version 0.0 (ChibiPaint) drawing even if it uses new features
  *
- * @returns {Promise.<Blob|Uint8Array>} - Returns Blob when called in the browser, or a Uint8Array in Node.
+ * @returns {Promise.<SerializeResult>}
  */
 module.exports.save = function(artwork, options) {
     options = options || {};
@@ -718,7 +739,8 @@ module.exports.save = function(artwork, options) {
             blobParts = [],
             magic = new Uint8Array(CHI_MAGIC.length),
             layers = artwork.getLayersRoot().getLinearizedLayerList(false),
-			version = options.forceOldVersion ? makeChibiVersion(0, 0) : minimumVersionForArtwork(artwork);
+			version = options.forceOldVersion ? makeChibiVersion(0, 0) : minimumVersionForArtwork(artwork),
+            versionString = chibiVersionToString(version);
 
         let
             layerWritePromise = Promise.resolve();
@@ -750,7 +772,7 @@ module.exports.save = function(artwork, options) {
                 if (status === 0) {
 					if (typeof Blob !== "undefined") {
 						// In the browser
-						resolve(new Blob(blobParts, {type: "application/octet-stream"}));
+						resolve({bytes: new Blob(blobParts, {type: "application/octet-stream"}), version: versionString});
 					} else {
 						// In Node.js
 						let
@@ -766,7 +788,7 @@ module.exports.save = function(artwork, options) {
 							offset += part.byteLength;
 						}
 
-						resolve(buffer);
+						resolve({bytes: buffer, version: versionString});
 					}
 				} else {
                     reject(status);
@@ -933,7 +955,7 @@ module.exports.load = function(source, options) {
 					stream = new ArrayDataStream(accumulator);
 					fileHeader = new CPChibiFileHeader(stream);
 					
-					if ((fileHeader.version >>> 16) > MAX_SUPPORTED_MAJOR_VERSION) {
+					if (decomposeChibiVersion(fileHeader.version).major > MAX_SUPPORTED_MAJOR_VERSION) {
 						state = STATE_FATAL; // the file version is higher than what we can deal with, bail out
 						break;
 					}

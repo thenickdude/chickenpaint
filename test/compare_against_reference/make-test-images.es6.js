@@ -94,8 +94,8 @@ function buildSingleLayerTests() {
 
         artwork.addLayerObject(artwork.getLayersRoot(), fusion);
 
-        promises.push(saveChi(artwork).then(uint8Array => {
-            fs.writeFileSync(path.join(outputDirectory, filename), new Buffer(uint8Array));
+        promises.push(saveChi(artwork).then(result => {
+            fs.writeFileSync(path.join(outputDirectory, filename), new Buffer(result.bytes));
             console.log(filename);
         }));
     }
