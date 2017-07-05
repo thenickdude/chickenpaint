@@ -336,7 +336,7 @@ export default function CPChibiFile() {
                         block = null;
                         
                         // Wait for whole chunk header to become available
-                        if (buffer.length < 8) {
+                        if (!buffer || buffer.length < 8) {
                             break;
                         }
                         
@@ -380,7 +380,7 @@ export default function CPChibiFile() {
                         block = null;
                         
                         // Wait for whole chunk to be available
-                        if (buffer.length < headerChunk.chunkSize) {
+                        if (!buffer || buffer.length < headerChunk.chunkSize) {
                             break;
                         }
                         
@@ -406,7 +406,7 @@ export default function CPChibiFile() {
                         block = null;
                         
                         // Wait for first part of header to arrive
-                        if (buffer.length < CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH) {
+                        if (!buffer || buffer.length < CPChibiLayerChunkHeader.FIXED_HEADER_LENGTH) {
                             break;
                         }
                         
@@ -425,7 +425,7 @@ export default function CPChibiFile() {
                         block = null;
                         
                         // Wait for variable part of header to arrive
-                        if (buffer.length < layerHeader.getVariableHeaderLen()) {
+                        if (!buffer || buffer.length < layerHeader.getVariableHeaderLen()) {
                             break;
                         }
                         
