@@ -95,7 +95,7 @@ export default function CPTabletDialog(parent) {
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-chrome"></span>
-                                        Chrome (coming soon)
+                                        Chrome
                                     </div>
                                 </div>
                                 <p class="chickenpaint-not-supported">
