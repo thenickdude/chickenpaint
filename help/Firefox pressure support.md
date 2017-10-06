@@ -8,9 +8,9 @@ release the mouse button after the new page loads, the browser will crash. This 
 those which have ChickenPaint embedded).
 
 If you're okay with this risk of crashing, you can enable the experimental built-in tablet support in Firefox
-by entering "about:config" into your address bar and pressing enter. Type "pointer" in the search box, then
-double click on "dom.w3c_pointer_events.enabled" to change the "Value" column for it to "true". You'll probably need to
-restart Firefox after that.
+by entering "about:config" into your address bar and pressing enter. Type "w3c" in the search box, then
+double click on "dom.w3c_pointer_events.enabled" to change the "Value" column for it to "true", and do the
+same with "dom.w3c_pointer_events_dispatch_by_pointer_messages". You'll probably need to restart Firefox after that.
 
 Hopefully Firefox fixes this bug soon so native pressure support can move out of experimental for everybody to use!
 

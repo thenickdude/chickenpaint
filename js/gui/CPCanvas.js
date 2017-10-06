@@ -2121,8 +2121,17 @@ export default function CPCanvas(controller) {
             isDragging = e.buttons != 0,
             pressure = getPointerPressure(e);
 
-        // Did any of our buttons change state?
+		// Did any of our buttons change state?
         if (((e.buttons & FLAG_PRIMARY) != 0) != mouseDown[BUTTON_PRIMARY]) {
+            if (e.mozPressure === 0.5) {
+                /* We received a Mozilla "click" level of pressure (0.5) as a pointer-move
+                 * before we received the actual mouseDown event (which carries the correct pressure).
+                 *
+                 * Observed on Firefox 56 on macOS High Sierra
+                 */
+                return; // Ignore!
+            }
+
             mouseDown[BUTTON_PRIMARY] = !mouseDown[BUTTON_PRIMARY];
 
             if (mouseDown[BUTTON_PRIMARY]) {
