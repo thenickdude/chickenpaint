@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "core-js": "^2.4.1",
-    "pako": "^1.0.5",
+    "pako": "1.0.5",
     "random-js": "^1.0.8",
     "wolfy87-eventemitter": "^5.1.0"
   },
