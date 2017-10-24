@@ -135,12 +135,15 @@ export default function CPResourceSaver(options) {
                     formData = new FormData();
 
                 formData.append("beginMarker", marker);
-                
-                formData.append("picture", flatBlob);
+
+				formData.append("painter", "ChickenPaint v1.0");
+
+				formData.append("picture", flatBlob);
                 flatBlob = null;
                 
                 if (chibiBlob) {
-                    formData.append("chibifile", chibiBlob);
+					formData.append("chibifileFormat", "ChickenPaint v0.0");
+					formData.append("chibifile", chibiBlob);
                     chibiBlob = null;
 
                     // Layers will need to be rotated upon opening
