@@ -492,9 +492,10 @@ class CPMaskDecoder {
         let
             // How many more pixels are we to read from this buffer?
             bytesRemain = Math.min(buffer.length, this.bytesTotal - this.bytesRead) | 0,
-            dstIndex = this.bytesRead;
+            dstIndex = this.bytesRead,
+            srcIndex;
         
-        for (let srcIndex = 0; srcIndex < bytesRemain; srcIndex++, dstIndex++) {
+        for (srcIndex = 0; srcIndex < bytesRemain; srcIndex++, dstIndex++) {
             this.output[dstIndex] = buffer[srcIndex];
         }
         

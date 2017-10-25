@@ -23,6 +23,7 @@
 import CPLayerGroup from "./CPLayerGroup";
 import CPBlend from './CPBlend';
 import CPGreyBmp from "./CPGreyBmp";
+import CPRect from "../util/CPRect";
 
 /**
  * @param {String} name
