@@ -531,12 +531,17 @@ export default function CPLayersPalette(controller) {
                 layerDiv.appendChild(iconsDiv);
             }
 
-            if (layer instanceof CPImageLayer) {
-                layerDiv.appendChild(createImageThumb(layer));
-            }
+            try {
+				if (layer instanceof CPImageLayer) {
+					layerDiv.appendChild(createImageThumb(layer));
+				}
 
-            if (layer.mask) {
-                layerDiv.appendChild(createMaskThumb(layer));
+				if (layer.mask) {
+					layerDiv.appendChild(createMaskThumb(layer));
+				}
+			} catch (e) {
+                // We don't expect this to ever happen but it'd be nice if everything keeps running if it does
+                console.log("Failed to create layer thumb");
             }
 
             let
@@ -823,7 +828,10 @@ export default function CPLayersPalette(controller) {
                 layerElem = $(getElemFromDisplayIndex(index));
 
             if (layerElem.length > 0) {
-                $("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).replaceWith(createImageThumb(layer));
+                try {
+					$("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).replaceWith(createImageThumb(layer));
+				} catch (e) {
+                }
             }
         };
 
@@ -839,7 +847,10 @@ export default function CPLayersPalette(controller) {
 
             if (layerElem.length > 0) {
                 if (layer.mask) {
-                    $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).replaceWith(createMaskThumb(layer));
+					try {
+						$("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).replaceWith(createMaskThumb(layer));
+					} catch (e) {
+                    }
                 } else {
                     $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).remove();
                 }
