@@ -323,6 +323,7 @@ CPColorBmp.prototype.createThumbnailFrom = function(that) {
     }
 
     const
+        // Uint16 means we can have up to 16 (since 16*16 ~= 65535/255) times scale reduction without overflow
         rowBuffer = new Uint16Array(this.width * 5 /* 4 bytes of RGBA plus one to record the max alpha of the samples */),
         srcRowByteLength = that.width * CPColorBmp.BYTES_PER_PIXEL,
 
@@ -1416,16 +1417,17 @@ CPColorBmp.prototype.getNonTransparentBounds = function(initialBounds) {
 /**
  * Returns a new canvas with a rotated version of the given canvas.
  *
- * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied.
+ * @param {HTMLCanvasElement} canvas
+ * @param {int} rotation - [0..3], selects a multiple of 90 degrees of clockwise rotation to be applied.
  */
-function getRotatedCanvas(canvas, rotation) {
+export function getRotatedCanvas(canvas, rotation) {
     rotation = rotation % 4;
 
     if (rotation == 0) {
         return canvas;
     }
 
-    var
+    let
         rotatedCanvas = createCanvas(0, 0),
         rotatedCanvasContext = rotatedCanvas.getContext("2d");
 

@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import EventEmitter from "wolfy87-eventemitter";
+
 import CPRect from "../util/CPRect";
 import CPTransform from "../util/CPTransform";
 import CPWacomTablet from "../util/CPWacomTablet";
@@ -1642,17 +1644,17 @@ export default function CPCanvas(controller) {
             const
                 ROTATE_SNAP_DEGREES = 5;
             
-            var 
+            let
                 nearest90 = Math.round(canvasRotation / (Math.PI / 2)) * Math.PI / 2;
             
             if (Math.abs(canvasRotation - nearest90) < ROTATE_SNAP_DEGREES / 180 * Math.PI) {
-                var 
+                let
                     deltaAngle = nearest90 - initAngle,
-                
+
                     center = {x: canvas.width / 2, y: canvas.height / 2},
 
                     rotTrans = new CPTransform();
-                
+
                 rotTrans.rotateAroundPoint(deltaAngle, center.x, center.y);
 
                 rotTrans.multiply(initTransform);
@@ -1662,6 +1664,8 @@ export default function CPCanvas(controller) {
                 
                 that.repaintAll();
             }
+
+            that.emitEvent("canvasRotated90", [that.getRotation90()]);
         }
         
         this.mouseUp = function(e, button, pressure) {
@@ -2063,6 +2067,7 @@ export default function CPCanvas(controller) {
 
         this.setOffset(~~rotTrans.getTranslateX(), ~~rotTrans.getTranslateY());
         this.setRotation(0);
+        that.emitEvent("canvasRotated90", [0]);
     };
     
     /**
@@ -2638,3 +2643,6 @@ export default function CPCanvas(controller) {
     
     controller.setCanvas(this);
 }
+
+CPCanvas.prototype = Object.create(EventEmitter.prototype);
+CPCanvas.prototype.constructor = CPCanvas;

@@ -1245,7 +1245,7 @@ export default function ChickenPaint(options) {
         }
         
         if (initialRotation90) {
-            mainGUI.setRotation(initialRotation90 * Math.PI / 2);
+            mainGUI.setRotation90(initialRotation90);
         }
         
         CPWacomTablet.getRef().detectTablet();

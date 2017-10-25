@@ -65,9 +65,14 @@ export default function CPMainGUI(controller, uiElem) {
     this.getPaletteManager = function() {
         return paletteManager;
     };
-    
-    this.setRotation = function(rotation) {
-        canvas.setRotation(rotation);
+
+    /**
+     *
+     * @param {int} rotation - in 90 degree increments
+     */
+    this.setRotation90 = function(rotation) {
+        canvas.setRotation(rotation * Math.PI / 2);
+        paletteManager.palettes.layers.setRotation90(rotation);
     };
 
     this.setFullScreenMode = function(value) {
@@ -101,6 +106,10 @@ export default function CPMainGUI(controller, uiElem) {
     lowerArea.appendChild(paletteManager.getElement());
     
     uiElem.appendChild(lowerArea);
+
+    canvas.on("canvasRotated90", function(newAngle) {
+        paletteManager.palettes.layers.setRotation90(newAngle);
+    });
 
     window.addEventListener("resize", this.resize.bind(this));
 

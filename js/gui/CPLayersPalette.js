@@ -76,7 +76,7 @@ export default function CPLayersPalette(controller) {
         BUTTON_WHEEL = 1,
         BUTTON_SECONDARY = 2;
 
-    var
+    let
         palette = this,
 
         artwork = controller.getArtwork(),
@@ -184,6 +184,11 @@ export default function CPLayersPalette(controller) {
 
             dropdownLayerMenu = createLayerDropdownMenu(),
             dropdownMousePos = {x: 0, y: 0},
+
+            /**
+             * @type {int} Rotation of image in 90 degree units
+             */
+            imageRotation = 0,
 
 	        /**
              * The layer we right-clicked on to open the dropdown
@@ -409,7 +414,7 @@ export default function CPLayersPalette(controller) {
         function createImageThumb(layer) {
             let
                 thumbnail = layer.getImageThumbnail(),
-                thumbCanvas = thumbnail.getAsCanvas(0);
+                thumbCanvas = thumbnail.getAsCanvas(imageRotation);
 
             thumbCanvas.title = "Image";
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_IMAGE_THUMBNAIL;
@@ -443,7 +448,7 @@ export default function CPLayersPalette(controller) {
         function createMaskThumb(layer) {
             let
                 thumbnail = layer.getMaskThumbnail(),
-                thumbCanvas = thumbnail.getAsCanvas();
+                thumbCanvas = thumbnail.getAsCanvas(imageRotation);
 
             thumbCanvas.title = "Layer mask";
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_MASK_THUMBNAIL;
@@ -817,20 +822,37 @@ export default function CPLayersPalette(controller) {
             }
         };
 
-        /**
-         * The thumbnail of the given layer has been updated.
-         *
-         * @param {CPImageLayer} layer
-         */
-        this.layerImageThumbChanged = function(layer) {
-            var
-                index = getDisplayIndexFromLayer(layer),
-                layerElem = $(getElemFromDisplayIndex(index));
+        function rebuildThumbnailForLayer(layerElem, layer, maskThumb) {
+			try {
+			    if (maskThumb) {
+                    $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).replaceWith(createMaskThumb(layer));
+                } else {
+                    $("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).replaceWith(createImageThumb(layer));
+                }
+			} catch (e) {
+			}
+        }
 
-            if (layerElem.length > 0) {
-                try {
-					$("." + CLASSNAME_LAYER_IMAGE_THUMBNAIL, layerElem).replaceWith(createImageThumb(layer));
-				} catch (e) {
+        /**
+         *
+         * @param {int} rotation - 90 degree increments
+         */
+        this.setRotation90 = function(rotation) {
+            if (imageRotation != rotation) {
+                imageRotation = rotation;
+
+                for (let i = 0; i < linearizedLayers.length; i++) {
+                    let
+                        layer = linearizedLayers[i],
+                        layerElem = $(getElemFromDisplayIndex(i));
+
+                    if (layerElem.length > 0) {
+                        rebuildThumbnailForLayer(layerElem, layer, false);
+
+                        if (layer.mask) {
+                            rebuildThumbnailForLayer(layerElem, layer, true);
+                        }
+                    }
                 }
             }
         };
@@ -840,17 +862,29 @@ export default function CPLayersPalette(controller) {
          *
          * @param {CPImageLayer} layer
          */
+        this.layerImageThumbChanged = function(layer) {
+            let
+                index = getDisplayIndexFromLayer(layer),
+                layerElem = $(getElemFromDisplayIndex(index));
+
+            if (layerElem.length > 0) {
+				rebuildThumbnailForLayer(layerElem, layer, false);
+            }
+        };
+
+        /**
+         * The thumbnail of the given layer has been updated.
+         *
+         * @param {CPImageLayer} layer
+         */
         this.layerMaskThumbChanged = function(layer) {
-            var
+            let
                 index = getDisplayIndexFromLayer(layer),
                 layerElem = $(getElemFromDisplayIndex(index));
 
             if (layerElem.length > 0) {
                 if (layer.mask) {
-					try {
-						$("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).replaceWith(createMaskThumb(layer));
-					} catch (e) {
-                    }
+					rebuildThumbnailForLayer(layerElem, layer, true);
                 } else {
                     $("." + CLASSNAME_LAYER_MASK_THUMBNAIL, layerElem).remove();
                 }
@@ -1347,6 +1381,15 @@ export default function CPLayersPalette(controller) {
         parentSetHeight.call(this, height);
 
         layerWidget.resize();
+    };
+
+    /**
+     * Set the rotation of the image thumbnails with respect to the underlying image data.
+     *
+     * @param {int} newRotation - 90 degree increments
+     */
+    this.setRotation90 = function(newRotation) {
+        layerWidget.setRotation90(newRotation);
     };
 
     blendCombo.className = "form-control";

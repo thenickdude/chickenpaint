@@ -24,6 +24,7 @@ import CPBitmap from "./CPBitmap";
 import CPRect from "../util/CPRect";
 import {createCanvas} from "../util/Canvas";
 import {createImageData} from "../util/Canvas";
+import {getRotatedCanvas} from "./CPColorBmp";
 
 /**
  * Create a new greyscale bitmap with the given parameters. The bitmap will be filled with black upon creation.
@@ -263,21 +264,21 @@ CPGreyBmp.prototype.createThumbnailFrom = function(that) {
         intersampleYByteSkip = intersampleYRowsSpacing * srcRowByteLength - sourceBytesBetweenOutputCols * this.width,
         interpixelYByteSkip = (sourceRowsBetweenOutputRows - intersampleYRowsSpacing * numSamples) * srcRowByteLength;
 
-    var
+    let
         srcPixIndex = 0, dstPixIndex = 0;
 
     // For each output thumbnail row...
-    for (var y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
-        var
+    for (let y = 0; y < this.height; y++, srcPixIndex += interpixelYByteSkip) {
+        let
             bufferIndex = 0;
 
         rowBuffer.fill(0);
 
         // Sum the contributions of the input rows that correspond to this output row
-        for (var y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
+        for (let y2 = 0; y2 < numSamples; y2++, srcPixIndex += intersampleYByteSkip) {
             bufferIndex = 0;
-            for (var x = 0; x < this.width; x++, bufferIndex++, srcPixIndex += interpixelXByteSkip) {
-                for (var x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
+            for (let x = 0; x < this.width; x++, bufferIndex++, srcPixIndex += interpixelXByteSkip) {
+                for (let x2 = 0; x2 < numSamples; x2++, srcPixIndex += intersampleXByteSpacing) {
                     rowBuffer[bufferIndex] += that.data[srcPixIndex];
                 }
             }
@@ -285,7 +286,7 @@ CPGreyBmp.prototype.createThumbnailFrom = function(that) {
 
         // Now this thumbnail row is complete and we can write the buffer to the output
         bufferIndex = 0;
-        for (var x = 0; x < this.width; x++, bufferIndex++, dstPixIndex++) {
+        for (let x = 0; x < this.width; x++, bufferIndex++, dstPixIndex++) {
             this.data[dstPixIndex] = rowBuffer[bufferIndex] / (numSamples * numSamples);
         }
     }
@@ -313,9 +314,10 @@ CPGreyBmp.prototype.applyLUT = function(lut) {
 /**
  * Get the image as Canvas.
  *
+ * @param {int?} imageRotation - 90 degree clockwise rotations to apply to image
  * @returns {HTMLCanvasElement}
  */
-CPGreyBmp.prototype.getAsCanvas = function() {
+CPGreyBmp.prototype.getAsCanvas = function(imageRotation) {
     var
         imageData = this.getImageData(0, 0, this.width, this.height),
 
@@ -324,7 +326,7 @@ CPGreyBmp.prototype.getAsCanvas = function() {
 
     context.putImageData(imageData, 0, 0);
 
-    return canvas;
+    return getRotatedCanvas(canvas, imageRotation || 0);
 };
 
 /**
