@@ -71,7 +71,7 @@ function CPBlendNode(width, height, layer) {
 	 * @type {?CPBlendNode}
 	 */
 	this.parent = null;
-	
+
 	/**
 	 * When true, we should clip the layers in this group to the bottom layer of the stack
 	 *
@@ -368,8 +368,9 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	 * Call when a property of the layer has changed (opacity, blendMode, visibility)
 	 *
 	 * @param {CPLayer} layer
+	 * @param {string} propertyName
 	 */
-	this.layerPropertyChanged = function(layer) {
+	this.layerPropertyChanged = function(layer, propertyName) {
 		var
 			layerNode = nodeForLayer.get(layer);
 
@@ -379,7 +380,8 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 		 */
 		if (!layerNode
 				|| layerNode.visible != layer.visible || layerNode.alpha != layer.alpha || (layerNode.mask == null) != (layer.getEffectiveMask() == null)
-				|| (layerNode.blendMode == CPBlend.LM_PASSTHROUGH) != (layer.blendMode == CPBlend.LM_PASSTHROUGH)) {
+				|| (layerNode.blendMode == CPBlend.LM_PASSTHROUGH) != (layer.blendMode == CPBlend.LM_PASSTHROUGH)
+				|| propertyName === "clip") {
 			this.resetTree();
 		} else {
 			layerNode.blendMode = layer.blendMode;

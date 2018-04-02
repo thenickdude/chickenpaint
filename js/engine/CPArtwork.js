@@ -331,15 +331,16 @@ export default function CPArtwork(_width, _height) {
      * Notify listeners that the properties of the given layer has changed (opacity, blendMode, etc).
      *
      * @param {CPLayer} layer
+	 * @param {string} propertyName
      * @param {boolean} noVisibleEffect - If true, notify listeners that the layer has changed but don't redraw anything.
      *                                    This is useful for properties like "expanded" and "name" which don't change the
      *                                    visual appearance of the layer on the canvas.
      */
-    function layerPropertyChanged(layer, noVisibleEffect) {
+    function layerPropertyChanged(layer, propertyName, noVisibleEffect) {
         that.emitEvent("changeLayer", [layer]);
 
         if (!noVisibleEffect) {
-            blendTree.layerPropertyChanged(layer);
+            blendTree.layerPropertyChanged(layer, propertyName);
 
             callListenersUpdateRegion(that.getBounds());
         }
@@ -680,7 +681,7 @@ export default function CPArtwork(_width, _height) {
                 this.setActiveLayer(group, false);
             }
 
-            layerPropertyChanged(group, true);
+            layerPropertyChanged(group, "expanded", true);
         }
     };
 
@@ -2412,15 +2413,15 @@ export default function CPArtwork(_width, _height) {
     CPActionRelocateLayer.prototype.constructor = CPActionRelocateLayer;
 
     function generateLayerPropertyChangeAction(propertyName, invalidatesLayer) {
-        propertyName = capitalizeFirst(propertyName);
-
         var
+			capitalPropertyName = capitalizeFirst(propertyName),
+
             ChangeAction = function(layers, newValue) {
                 if (!Array.isArray(layers)) {
                     layers = [layers];
                 }
                 this.layers = layers;
-                this.from = this.layers.map(layer => layer["get" + propertyName]());
+                this.from = this.layers.map(layer => layer["get" + capitalPropertyName]());
                 this.to = newValue;
 
                 this.redo();
@@ -2430,15 +2431,15 @@ export default function CPArtwork(_width, _height) {
         ChangeAction.prototype.constructor = ChangeAction;
 
         ChangeAction.prototype.undo = function () {
-            this.layers.forEach((layer, index) => layer["set" + propertyName](this.from[index]));
+            this.layers.forEach((layer, index) => layer["set" + capitalPropertyName](this.from[index]));
 
-            this.layers.forEach(layer => layerPropertyChanged(layer, !invalidatesLayer));
+            this.layers.forEach(layer => layerPropertyChanged(layer, propertyName, !invalidatesLayer));
         };
 
         ChangeAction.prototype.redo = function () {
-            this.layers.forEach(layer => layer["set" + propertyName](this.to));
+            this.layers.forEach(layer => layer["set" + capitalPropertyName](this.to));
 
-            this.layers.forEach(layer => layerPropertyChanged(layer, !invalidatesLayer));
+            this.layers.forEach(layer => layerPropertyChanged(layer, propertyName, !invalidatesLayer));
         };
 
         ChangeAction.prototype.merge = function (u) {
