@@ -91,7 +91,7 @@ export default function CPTabletDialog(parent) {
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-firefox"></span>
-                                        Firefox (<a href="https://github.com/thenickdude/chickenpaint/blob/master/help/Firefox pressure support.md" target="_blank">experimental <i class="glyphicon glyphicon-new-window"></i></a>)
+                                        Firefox (<a href="https://github.com/thenickdude/chickenpaint/blob/master/help/Firefox pressure support.md" target="_blank">help <i class="glyphicon glyphicon-new-window"></i></a>)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
                                         <span class="fa fa-chrome"></span>

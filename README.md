@@ -19,6 +19,9 @@ You can color-in to create your own version of this drawing using ChickenPaint [
 - Keyboard shortcuts
 - New gradient fill tool
 - New free-transform feature (rotate, scale, stretch)
+- Clipping mask for layers
+- Layer masks
+- Layer groups
 
 ## Supported browsers
 ChickenPaint is supported in IE10 and 11, Edge, Chrome, Safari, Firefox and Opera, though it runs fastest in Chrome.
@@ -26,9 +29,11 @@ ChickenPaint is supported in IE10 and 11, Edge, Chrome, Safari, Firefox and Oper
 Tablet pressure support by Wacom plugin is available for browsers that still support NPAPI plugins (IE 10, IE 11,
 Firefox 32-bit, Safari and Opera).
 
-Native pen pressure support via Pointer Events is available for IE and Edge on Windows 8 and 10 (Windows 7 does not 
-support it). Firefox and Chrome will be adding support shortly, with Firefox already offering it as an experimental
-option which you can enable in [about:config](https://hacks.mozilla.org/2015/08/pointer-events-now-in-firefox-nightly/).
+Native pen pressure support via Pointer Events is available for IE, Edge, Firefox and Chrome on Windows 8 and 10 (Windows 7 does not 
+support it), and macOS.
+
+In Firefox on Windows, you may need to set `dom.w3c_pointer_events.dispatch_by_pointer_messages` to `true` in [about:config]()
+to get pen pressure support working.
 
 ## Try it out
 ChickenPaint is used as the default painting tool on [Chicken Smoothie's Oekaki forum](http://www.chickensmoothie.com/Forum/viewforum.php?f=29)
