@@ -27,7 +27,7 @@ import CPLayerGroup from "../engine/CPLayerGroup";
 import CPImageLayer from "../engine/CPImageLayer";
 
 function wrapWithElem(e, wrapWithName) {
-    var
+    let
         parent = document.createElement(wrapWithName);
 
     parent.appendChild(e);
@@ -36,7 +36,7 @@ function wrapWithElem(e, wrapWithName) {
 }
 
 function createFontAwesomeIcon(iconName) {
-    var
+    let
         icon = document.createElement("span");
 
     icon.className = "fa " + iconName;
@@ -45,7 +45,7 @@ function createFontAwesomeIcon(iconName) {
 }
 
 function createChickenPaintIcon(iconName) {
-    var
+    let
         icon = document.createElement("span");
     
     icon.className = "chickenpaint-icon chickenpaint-icon-" + iconName;
@@ -54,7 +54,7 @@ function createChickenPaintIcon(iconName) {
 }
 
 function wrapCheckboxWithLabel(checkbox, title) {
-    var
+    let
         div = document.createElement("div"),
         label = document.createElement("label");
 
@@ -66,6 +66,22 @@ function wrapCheckboxWithLabel(checkbox, title) {
     div.appendChild(label);
 
     return div;
+}
+
+function computeLayerPredicates(layer) {
+    return {
+        "image-layer": layer instanceof CPImageLayer,
+        "layer-group": layer instanceof CPLayerGroup,
+
+        "clipping-mask": layer instanceof CPImageLayer && layer.clip,
+        "no-clipping-mask": layer instanceof CPImageLayer && !layer.clip,
+
+        "mask": layer && layer.mask !== null,
+        "no-mask": layer && layer.mask === null,
+
+        "mask-enabled": layer && layer.mask !== null && layer.maskVisible,
+        "mask-disabled": layer && layer.mask !== null && !layer.maskVisible
+    };
 }
 
 export default function CPLayersPalette(controller) {
@@ -102,11 +118,8 @@ export default function CPLayersPalette(controller) {
 
         cbSampleAllLayers = document.createElement("input"),
         cbLockAlpha = document.createElement("input"),
-        
-        addLayerButton = document.createElement("li"),
-        addFolderButton = document.createElement("li"),
-        addMaskButton = document.createElement("li"),
-        removeButton = document.createElement("li");
+
+        layerActionButtons;
 
     /**
      *
@@ -143,7 +156,7 @@ export default function CPLayersPalette(controller) {
             CLASSNAME_LAYER_MASK_THUMBNAIL = "chickenpaint-layer-mask-thumbnail",
             CLASSNAME_LAYER_THUMBNAIL = "chickenpaint-layer-thumbnail";
 
-        var
+        let
             // True while our mouse is down on a layer
             isDragging = false,
             // True when we have moved our mouse during mouse down (so dragging state is shown to user)
@@ -211,18 +224,18 @@ export default function CPLayersPalette(controller) {
          * @returns {HTMLElement}
          */
         function getElemFromDisplayIndex(displayIndex) {
-            var
+            let
                 elems = $(".chickenpaint-layer", layerContainer);
 
             return elems.get(elems.length - 1 - displayIndex);
         }
 
         function getDisplayIndexFromElem(elem) {
-            var
+            let
                 layer = $(elem).closest(".chickenpaint-layer");
 
             if (layer.length) {
-                var
+                let
                     elems = $(".chickenpaint-layer", layerContainer);
 
                 return elems.length - 1 - elems.index(layer);
@@ -250,11 +263,11 @@ export default function CPLayersPalette(controller) {
          * @returns {?CPDropTarget}
 	     */
         function getDropTargetFromClientPos(clientX, clientY) {
-            var
+            let
                 layerElems = $(".chickenpaint-layer", layerContainer),
                 target = {layer: linearizedLayers[linearizedLayers.length - 1], displayIndex: linearizedLayers.length - 1, direction: "over"};
 
-            for (var displayIndex = 0; displayIndex < layerElems.length; displayIndex++) {
+            for (let displayIndex = 0; displayIndex < layerElems.length; displayIndex++) {
                 let
                     targetElem = layerElems[layerElems.length - 1 - displayIndex],
                     rect = targetElem.getBoundingClientRect();
@@ -311,7 +324,7 @@ export default function CPLayersPalette(controller) {
              * same position it was already in.
              */
             if (target.layer.parent == draggingLayer.parent && (target.direction == "over" || target.direction == "under")) {
-                var
+                let
                     parentGroup = target.layer.parent,
                     targetIndex = parentGroup.indexOf(target.layer);
 
@@ -334,7 +347,7 @@ export default function CPLayersPalette(controller) {
 
         function updateDropMarker() {
             if (isDraggingReally) {
-                var
+                let
                     positionRootBounds = positionRoot.getBoundingClientRect(),
                     hideBetweenMarker = true,
                     hideIntoMarker = true;
@@ -342,7 +355,7 @@ export default function CPLayersPalette(controller) {
                 dropTarget = getDropTargetFromClientPos(draggingX, draggingY);
 
                 if (dropTarget) {
-                    var
+                    let
                         targetElem = getElemFromDisplayIndex(dropTarget.displayIndex);
 
                     switch (dropTarget.direction) {
@@ -362,7 +375,10 @@ export default function CPLayersPalette(controller) {
                             // Are we dropping below the layers in an expanded group? Extend the rect to enclose them
                             if (dropTarget.direction == "under" && dropTarget.layer instanceof CPLayerGroup && dropTarget.layer.expanded) {
                                 // Find the display index after this group
-                                for (var childIndex = dropTarget.displayIndex - 1; childIndex >= 0; childIndex--) {
+                                let
+                                    childIndex;
+
+                                for (childIndex = dropTarget.displayIndex - 1; childIndex >= 0; childIndex--) {
                                     if (!linearizedLayers[childIndex].hasAncestor(dropTarget.layer)) {
                                         break;
                                     }
@@ -384,7 +400,7 @@ export default function CPLayersPalette(controller) {
                             hideBetweenMarker = false;
                         break;
                         case "inside":
-                            var
+                            let
                                 layerElems = $(".chickenpaint-layer", layerContainer);
 
                             layerElems.each(function(index) {
@@ -468,11 +484,11 @@ export default function CPLayersPalette(controller) {
         /**
          * Create a DOM element for the given layer
          *
+         * @param {int} index
          * @param {CPLayer} layer
-         * @param {boolean} selected
          */
         function buildLayer(index, layer) {
-            var
+            let
                 layerDiv = document.createElement("div"),
                 eyeDiv = document.createElement("div"),
                 mainDiv = document.createElement("div"),
@@ -513,7 +529,7 @@ export default function CPLayersPalette(controller) {
                 }
                 
                 if (layer.lockAlpha) {
-                    var
+                    let
                         locked = createChickenPaintIcon("lock-alpha");
                     
                     locked.title = "Transparency locked";
@@ -577,29 +593,30 @@ export default function CPLayersPalette(controller) {
         function contextMenuShow(e) {
             e.preventDefault();
 
-            var
+            let
                 displayIndex = getDisplayIndexFromElem(e.target),
                 layer = artwork.getActiveLayer();
 
             if (displayIndex != -1) {
-                dropdownLayer = layer;
+                let
+                    facts = computeLayerPredicates(layer);
 
+                dropdownLayer = layer;
                 dropdownMousePos = {x : e.clientX, y: e.clientY};
 
-                $(".chickenpaint-action-require-image-layer", dropdownLayerMenu).toggle(layer instanceof CPImageLayer);
-                $(".chickenpaint-action-require-layer-group", dropdownLayerMenu).toggle(layer instanceof CPLayerGroup);
+                for (let requirement of ["image-layer", "layer-group", "clipping-mask", "no-clipping-mask", "no-mask"]) {
+                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(facts[requirement]);
+                }
 
-                $(".chickenpaint-action-create-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && !layer.clip);
-                $(".chickenpaint-action-release-clipping-mask", dropdownLayerMenu).toggle(layer instanceof CPImageLayer && layer.clip);
+                for (let requirement of ["mask", "mask-enabled", "mask-disabled"]) {
+                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(dropdownOnMask && facts[requirement]);
+                }
 
-                $(".chickenpaint-action-require-mask", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null);
-                $(".chickenpaint-action-require-no-mask", dropdownLayerMenu).toggle(!dropdownOnMask || layer.mask == null);
-	
-	            $(".chickenpaint-action-require-mask-enabled", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null && layer.maskVisible);
-	            $(".chickenpaint-action-require-mask-disabled", dropdownLayerMenu).toggle(dropdownOnMask && layer.mask != null && !layer.maskVisible);
-	
 	            $("[data-action]", dropdownLayerMenu).each(function() {
-                    $(this).parent().toggleClass("disabled", !controller.isActionAllowed(this.getAttribute("data-action")));
+	                let
+                        action = this.getAttribute("data-action");
+
+                    $(this).parent().toggleClass("disabled", action !== "CPRenameLayer" && !controller.isActionAllowed(action));
                 });
 
                 $(getElemFromDisplayIndex(displayIndex))
@@ -613,17 +630,22 @@ export default function CPLayersPalette(controller) {
             }
         }
 
+        function showRenameBoxForLayer(displayIndex) {
+            if (displayIndex > -1) {
+				let
+					layer = getLayerFromDisplayIndex(displayIndex),
+                    elem = getElemFromDisplayIndex(displayIndex);
+
+				if (layer && elem) {
+					renameField.show(layer, elem);
+				}
+			}
+        }
+
         function onDoubleClick(e) {
             // Make sure we didn't double-click on the layer eye...
             if ($(e.target).closest(".chickenpaint-layer-description").length > 0) {
-                var
-                    displayIndex = getDisplayIndexFromElem(e.target),
-                    layer = getLayerFromDisplayIndex(displayIndex);
-
-                renameField.show(
-                    layer,
-                    $(e.target).closest(".chickenpaint-layer")
-                );
+                showRenameBoxForLayer(getDisplayIndexFromElem(e.target));
 
                 e.preventDefault();
             }
@@ -766,7 +788,7 @@ export default function CPLayersPalette(controller) {
 
         function mouseDragged(e) {
             if (isDragging) {
-                var
+                let
                     newDragY = e.clientY;
 
                 if (!isDraggingReally && Math.abs(newDragY - draggingY) > LAYER_DRAG_START_THRESHOLD) {
@@ -787,14 +809,14 @@ export default function CPLayersPalette(controller) {
             // Cache the details of the layer structure
             linearizedLayers = artwork.getLayersRoot().getLinearizedLayerList(true);
 
-            var
+            let
                 layerElems = linearizedLayers.map((layer, index) => buildLayer(index, layer)),
 
                 layerFrag = document.createDocumentFragment();
 
             $(layerContainer).empty();
 
-            for (var i = layerElems.length - 1; i >= 0; i--) {
+            for (let i = layerElems.length - 1; i >= 0; i--) {
                 layerFrag.appendChild(layerElems[i]);
             }
 
@@ -809,7 +831,7 @@ export default function CPLayersPalette(controller) {
          * @param {CPLayer} layer
          */
         this.layerChanged = function(layer) {
-            var
+            let
                 index = getDisplayIndexFromLayer(layer),
                 layerElem = $(getElemFromDisplayIndex(index));
 
@@ -900,7 +922,7 @@ export default function CPLayersPalette(controller) {
         this.activeLayerChanged = function(newLayer, maskSelected) {
             $("." + CLASSNAME_LAYER_ACTIVE, layerContainer).removeClass(CLASSNAME_LAYER_ACTIVE);
 
-            var
+            let
                 layerElem = $(getElemFromDisplayIndex(getDisplayIndexFromLayer(newLayer)));
 
             layerElem.addClass(CLASSNAME_LAYER_ACTIVE);
@@ -973,13 +995,13 @@ export default function CPLayersPalette(controller) {
         function applyNotificationPlacement(offset, placement) {
             oldApplyPlacement.call(this, offset, placement);
 
-            var
+            let
                 $tip = this.tip(),
                 $arrow = this.arrow();
 
             switch (notificationLocation) {
                 case "layer":
-                    var
+                    let
                         layerPos = getElemFromDisplayIndex(notificationLayerIndex).getBoundingClientRect();
 
                     $tip.offset({
@@ -988,7 +1010,7 @@ export default function CPLayersPalette(controller) {
                     });
                 break;
                 case "opacity":
-                    var
+                    let
                         alphaSliderPos = alphaSlider.getElement().getBoundingClientRect();
 
                     $tip.offset({
@@ -1010,79 +1032,95 @@ export default function CPLayersPalette(controller) {
         }
 
         function createLayerDropdownMenu() {
-            var
+            const
                 menu = document.createElement("ul"),
-                mnuDeleteLayer = document.createElement("a"),
-                mnuCreateClippingMask  = document.createElement("a"),
-                mnuReleaseClippingMask  = document.createElement("a"),
-                mnuDeleteGroup = document.createElement("a"),
-                mnuMergeGroup = document.createElement("a"),
-                mnuCreateMask = document.createElement("a"),
-                mnuDeleteMask = document.createElement("a"),
-                mnuApplyMask = document.createElement("a"),
-                mnuEnableMask = document.createElement("a"),
-                mnuDisableMask = document.createElement("a");
 
-            mnuDeleteLayer.className = "chickenpaint-action-require-image-layer";
-            mnuDeleteLayer.href = "#";
-            mnuDeleteLayer.innerHTML = "Delete layer";
-            mnuDeleteLayer.setAttribute("data-action", "CPRemoveLayer");
+                actions = [
+                    {
+                        title: "Rename...",
+                        action: "CPRenameLayer"
+                    },
+                    {
+                        require: ["image-layer"],
+                        title: "Delete layer",
+                        action: "CPRemoveLayer"
+                    },
+                    {
+                        require: ["layer-group"],
+                        title: "Delete group",
+                        action: "CPRemoveLayer"
+                    },
+                    {
+                        require: ["image-layer", "no-clipping-mask"],
+                        title: "Clip to the layer below",
+                        action: "CPCreateClippingMask"
+                    },
+                    {
+                        require: ["image-layer", "clipping-mask"],
+                        title: "Unclip from the layer below",
+                        action: "CPReleaseClippingMask"
+                    },
+                    {
+                        require: ["no-mask"],
+                        title: "Add mask",
+                        action: "CPAddLayerMask"
+                    },
+                    {
+                        require: ["mask"],
+                        title: "Delete mask",
+                        action: "CPRemoveLayerMask"
+                    },
+                    {
+                        require: ["mask"],
+                        title: "Apply mask",
+                        action: "CPApplyLayerMask"
+                    },
+                    {
+                        require: ["layer-group"],
+                        title: "Merge group",
+                        action: "CPGroupMerge"
+                    },
+                    {
+                        require: ["mask-enabled"],
+                        title: "Disable mask",
+                        action: "CPSetMaskVisible",
+                        actionData: {
+                            visible: "false"
+                        }
+                    },
+                    {
+                        require: ["mask-disabled"],
+                        title: "Enable mask",
+                        action: "CPSetMaskVisible",
+                        actionData: {
+                            visible: "true"
+                        }
+                   }
+                ];
 
-            mnuDeleteGroup.className = "chickenpaint-action-require-layer-group";
-            mnuDeleteGroup.href = "#";
-            mnuDeleteGroup.innerHTML = "Delete group";
-            mnuDeleteGroup.setAttribute("data-action", "CPRemoveLayer");
+            menu.className = "dropdown-menu";
 
-            mnuCreateClippingMask.className = "chickenpaint-action-create-clipping-mask chickenpaint-action-require-image-layer";
-            mnuCreateClippingMask.href = "#";
-            mnuCreateClippingMask.innerHTML = "Clip to the layer below";
-            mnuCreateClippingMask.setAttribute("data-action", "CPCreateClippingMask");
+            for (let action of actions) {
+                let
+                    menuItemElem = document.createElement("a");
 
-            mnuReleaseClippingMask.className = "chickenpaint-action-release-clipping-mask chickenpaint-action-require-image-layer";
-            mnuReleaseClippingMask.href = "#";
-            mnuReleaseClippingMask.innerHTML = "Release the clipping mask";
-            mnuReleaseClippingMask.setAttribute("data-action", "CPReleaseClippingMask");
+                if (action.require) {
+                    menuItemElem.className = action.require.map(requirement => "chickenpaint-action-require-" + requirement).join(" ");
+                }
+                menuItemElem.href = "#";
+                menuItemElem.innerHTML = action.title;
+                menuItemElem.setAttribute("data-action", action.action);
 
-            mnuMergeGroup.className = "chickenpaint-action-require-layer-group";
-            mnuMergeGroup.href = "#";
-            mnuMergeGroup.innerHTML = "Merge group";
-            mnuMergeGroup.setAttribute("data-action", "CPGroupMerge");
+                if (action.actionData) {
+                    for (let key in action.actionData) {
+                        if (action.actionData.hasOwnProperty(key)) {
+                            menuItemElem.setAttribute("data-action-" + key, action.actionData[key]);
+                        }
+                    }
+                }
 
-            mnuCreateMask.className = "chickenpaint-action-create-mask chickenpaint-action-require-no-mask";
-            mnuCreateMask.href = "#";
-            mnuCreateMask.innerHTML = "Add mask";
-            mnuCreateMask.setAttribute("data-action", "CPAddLayerMask");
-
-            mnuDeleteMask.className = "chickenpaint-action-delete-mask chickenpaint-action-require-mask";
-            mnuDeleteMask.href = "#";
-            mnuDeleteMask.innerHTML = "Delete mask";
-            mnuDeleteMask.setAttribute("data-action", "CPRemoveLayerMask");
-
-            mnuApplyMask.className = "chickenpaint-action-apply-mask chickenpaint-action-require-mask";
-            mnuApplyMask.href = "#";
-            mnuApplyMask.innerHTML = "Apply mask";
-            mnuApplyMask.setAttribute("data-action", "CPApplyLayerMask");
-	
-	        mnuApplyMask.className = "chickenpaint-action-apply-mask chickenpaint-action-require-mask";
-	        mnuApplyMask.href = "#";
-	        mnuApplyMask.innerHTML = "Apply mask";
-	        mnuApplyMask.setAttribute("data-action", "CPApplyLayerMask");
-	
-	        mnuDisableMask.className = "chickenpaint-action-disable-mask chickenpaint-action-require-mask-enabled";
-	        mnuDisableMask.href = "#";
-	        mnuDisableMask.innerHTML = "Disable mask";
-	        mnuDisableMask.setAttribute("data-action", "CPSetMaskVisible");
-	        mnuDisableMask.setAttribute("data-action-visible", "false");
-	
-	        mnuEnableMask.className = "chickenpaint-action-enable-mask chickenpaint-action-require-mask-disabled";
-	        mnuEnableMask.href = "#";
-	        mnuEnableMask.innerHTML = "Enable mask";
-	        mnuEnableMask.setAttribute("data-action", "CPSetMaskVisible");
-	        mnuEnableMask.setAttribute("data-action-visible", "true");
-	
-	        menu.className = "dropdown-menu";
-
-            [mnuDeleteLayer, mnuDeleteGroup, mnuCreateClippingMask, mnuReleaseClippingMask, mnuDeleteMask, mnuApplyMask, mnuMergeGroup, mnuDisableMask, mnuEnableMask].forEach(menuItem => menu.appendChild(wrapWithElem(menuItem, "li")));
+                menu.appendChild(wrapWithElem(menuItemElem, "li"));
+            }
 
             return menu;
         }
@@ -1116,7 +1154,11 @@ export default function CPLayersPalette(controller) {
                     }
                 }
 
-                controller.actionPerformed(actionData);
+                if (action === "CPRenameLayer") {
+                    showRenameBoxForLayer(getDisplayIndexFromLayer(dropdownLayer));
+                } else {
+					controller.actionPerformed(actionData);
+				}
             }
         }
 
@@ -1143,7 +1185,7 @@ export default function CPLayersPalette(controller) {
                 container: palette.getElement()
             });
 
-        var
+        let
             popover = $(widgetContainer).data('bs.popover');
 
         // Save the old positioning routine so we can call it later
@@ -1162,7 +1204,7 @@ export default function CPLayersPalette(controller) {
              */
             $(document).one("click", clearDropDown);
 
-            var
+            let
                 layerElem = $(e.relatedTarget)[0],
                 $dropdownElem = $(dropdownParent).find(".dropdown-menu"),
 
@@ -1211,6 +1253,83 @@ export default function CPLayersPalette(controller) {
 		}
 	}
 
+
+    function createLayerActionButtons() {
+        const
+            buttons = [
+                {
+                    title: "Add layer",
+                    icon: createFontAwesomeIcon("fa-file"),
+                    action: "CPAddLayer"
+                },
+                {
+                    title: "Add group",
+                    icon: createFontAwesomeIcon("fa-folder"),
+                    action: "CPAddGroup"
+                },
+                {
+                    title: "Add layer mask",
+                    icon: createChickenPaintIcon("mask"),
+                    action: "CPAddLayerMask"
+                },
+                {
+                    title: "Clip to the layer below",
+                    icon: createFontAwesomeIcon("fa-level-down fa-flip-horizontal"),
+                    action: "CPCreateClippingMask",
+                    require: "no-clipping-mask"
+                },
+                {
+                    title: "Unclip from the layer below",
+                    icon: createFontAwesomeIcon("fa-level-down fa-flip-horizontal"),
+                    action: "CPReleaseClippingMask",
+                    require: "clipping-mask"
+                },
+                {
+                    title: "Delete layer",
+                    icon: createFontAwesomeIcon("fa-trash"),
+                    action: "CPRemoveLayer"
+                },
+            ],
+
+            layerButtonsList = document.createElement("ul");
+
+        layerButtonsList.className = 'chickenpaint-layer-buttons list-unstyled';
+
+        for (let button of buttons) {
+            let
+                elem = document.createElement("li");
+
+            elem.setAttribute("data-action", button.action);
+            elem.className = 'chickenpaint-small-toolbar-button ' + (button.require ? "chickenpaint-action-require-" + button.require : "");
+            elem.title = button.title;
+            elem.appendChild(button.icon);
+            elem.addEventListener("click", function () {
+                controller.actionPerformed({action: button.action});
+            });
+
+            layerButtonsList.appendChild(elem);
+        }
+
+        return layerButtonsList;
+    }
+
+    function updateActiveLayerActionButtons() {
+        let
+            activeLayer = artwork.getActiveLayer(),
+            facts = computeLayerPredicates(activeLayer);
+
+        for (let requirement of ["clipping-mask", "no-clipping-mask"]) {
+            $(".chickenpaint-action-require-" + requirement, layerActionButtons).css("display", facts[requirement] ? "inline-block" : "none");
+        }
+
+        $("[data-action]", layerActionButtons).each(function () {
+            let
+                action = this.getAttribute("data-action");
+
+            $(this).toggleClass("disabled", !controller.isActionAllowed(action));
+        });
+    }
+
     function updateActiveLayerControls() {
         let
             activeLayer = artwork.getActiveLayer();
@@ -1228,6 +1347,8 @@ export default function CPLayersPalette(controller) {
 	    if (activeLayer.getLockAlpha() != cbLockAlpha.checked) {
 		    cbLockAlpha.checked = activeLayer.getLockAlpha();
 	    }
+
+        updateActiveLayerActionButtons();
     }
 
     /**
@@ -1292,7 +1413,7 @@ export default function CPLayersPalette(controller) {
     }
 
     function CPRenameField() {
-        var
+        let
             layer = null,
             origName = "",
 
@@ -1303,7 +1424,7 @@ export default function CPLayersPalette(controller) {
         this.hide = function() {
             layer = null;
 
-            var
+            let
                 parentNameElem = $(textBox).parent();
 
             if (parentNameElem) {
@@ -1359,7 +1480,7 @@ export default function CPLayersPalette(controller) {
         });
     }
 
-    var
+    let
         parentSetSize = this.setSize,
         parentSetWidth = this.setWidth,
         parentSetHeight = this.setHeight;
@@ -1426,46 +1547,8 @@ export default function CPLayersPalette(controller) {
 
     body.appendChild(layerWidget.getElement());
 
-    // Add/Remove layer buttons
-    var
-        addRemoveContainer = document.createElement("ul");
-    
-    addRemoveContainer.className = 'chickenpaint-layer-buttons list-unstyled';
-    
-    addLayerButton.className = 'chickenpaint-small-toolbar-button';
-    addLayerButton.title = 'Add layer';
-    addLayerButton.appendChild(createFontAwesomeIcon("fa-file"));
-    addLayerButton.addEventListener("click", function() {
-        controller.actionPerformed({action: "CPAddLayer"});
-    });
-
-    addFolderButton.className = 'chickenpaint-small-toolbar-button';
-    addFolderButton.title = 'Add group';
-    addFolderButton.appendChild(createFontAwesomeIcon("fa-folder"));
-    addFolderButton.addEventListener("click", function() {
-        controller.actionPerformed({action: "CPAddGroup"});
-    });
-
-    addMaskButton.className = 'chickenpaint-small-toolbar-button';
-    addMaskButton.title = 'Add layer mask';
-    addMaskButton.appendChild(createChickenPaintIcon("mask"));
-    addMaskButton.addEventListener("click", function() {
-        controller.actionPerformed({action: "CPAddLayerMask"});
-    });
-    
-    removeButton.className = 'chickenpaint-small-toolbar-button';
-    removeButton.title = "Delete layer";
-    removeButton.appendChild(createFontAwesomeIcon("fa-trash"));
-    removeButton.addEventListener("click", function() {
-        controller.actionPerformed({action: "CPRemoveLayer"});
-    });
-    
-    addRemoveContainer.appendChild(addLayerButton);
-    addRemoveContainer.appendChild(addFolderButton);
-    addRemoveContainer.appendChild(addMaskButton);
-    addRemoveContainer.appendChild(removeButton);
-
-    body.appendChild(addRemoveContainer);
+    layerActionButtons = createLayerActionButtons();
+    body.appendChild(layerActionButtons);
 
     artwork.on("changeActiveLayer", onChangeActiveLayer);
     artwork.on("changeLayer", onChangeLayer);

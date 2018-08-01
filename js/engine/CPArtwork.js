@@ -460,17 +460,21 @@ export default function CPArtwork(_width, _height) {
         return hasUnsavedChanges;
     };
 
+    this.isAddLayerMaskAllowed = function() {
+        return !curLayer.mask
+    };
+
     /**
      * Add a layer mask to the current layer.
      */
     this.addLayerMask = function() {
-        if (!curLayer.mask) {
+        if (this.isAddLayerMaskAllowed()) {
             addUndo(new CPActionAddLayerMask(curLayer));
         }
     };
 
     this.isRemoveLayerMaskAllowed = function() {
-        return curLayer.mask != null;
+        return curLayer.mask !== null;
     };
 
     this.removeLayerMask = function() {
@@ -480,7 +484,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.isApplyLayerMaskAllowed = function() {
-        return curLayer.mask != null && curLayer instanceof CPImageLayer;
+        return curLayer.mask !== null && curLayer instanceof CPImageLayer;
     };
 
     this.applyLayerMask = function(apply) {

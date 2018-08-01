@@ -20,7 +20,7 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-var
+const
     MENU_ENTRIES = [
         {
             name: "File",
@@ -149,6 +149,37 @@ var
                     action: "CPLayerMergeAll",
                     mnemonic: "A",
                     title: "Merges all the layers"
+                },
+                {
+                    name: "-"
+                },
+                {
+                    hideIfNotAvailable: true,
+                    name: "Add layer mask",
+                    action: "CPAddLayerMask"
+                },
+                {
+                    hideIfNotAvailable: true,
+                    name: "Delete layer mask",
+                    action: "CPRemoveLayerMask"
+                },
+                {
+                    hideIfNotAvailable: true,
+                    name: "Apply layer mask",
+                    action: "CPApplyLayerMask"
+                },
+                {
+                    name: "-"
+                },
+                {
+                    hideIfNotAvailable: true,
+                    name: "Clip to the layer below",
+                    action: "CPCreateClippingMask"
+                },
+                {
+                    hideIfNotAvailable: true,
+                    name: "Unclip from the layer below",
+                    action: "CPReleaseClippingMask"
                 }
             ]
         },
@@ -387,7 +418,7 @@ var
     ];
 
 export default function CPMainMenu(controller, mainGUI) {
-    var
+    let
         bar = $(
             '<nav class="navbar navbar-default">'
                 + '<div class="container-fluid">'
@@ -402,7 +433,7 @@ export default function CPMainMenu(controller, mainGUI) {
         macPlatform = /^Mac/i.test(navigator.platform);
     
     function menuItemClicked(target) {
-        var
+        let
             action = target.data('action'),
             checkbox = target.data('checkbox'),
             selected;
@@ -442,18 +473,49 @@ export default function CPMainMenu(controller, mainGUI) {
         return shortcut;
     }
 
-    function updateDisabledStates(menuElem) {
+    function updateMenuStates(menuElem) {
         $("[data-action]", menuElem).each(function() {
-            var
-                action = this.getAttribute("data-action");
+            let
+                action = this.getAttribute("data-action"),
+                actionAllowed = controller.isActionAllowed(action),
+                li = $(this).parent();
 
-            $(this).parent().toggleClass("disabled", !controller.isActionAllowed(action));
-        })
+            li
+                .toggleClass("disabled", !actionAllowed)
+                .toggleClass("hidden", !actionAllowed && li.data("hideIfNotAvailable") === true);
+        });
+
+        // Hide dividers if all of the menu options in the section they delineate were hidden
+        $(".divider", menuElem).removeClass("hidden");
+
+        let
+            visibleElements = $("li:not(.hidden)", menuElem),
+            lastDivider = null;
+
+        for (let i = 0; i < visibleElements.length; i++) {
+            let
+                thisElement = $(visibleElements[i]);
+
+            if (thisElement.hasClass("divider")) {
+                if (i === 0 || lastDivider) {
+                    // This divider immediately follows a previous divider, so we don't need it
+                    thisElement.addClass("hidden");
+                } else {
+                    lastDivider = thisElement;
+                }
+            } else {
+                lastDivider = null;
+            }
+        }
+
+        if (lastDivider) {
+            lastDivider.addClass("hidden");
+        }
     }
     
     function recurseFillMenu(menuElem, entries) {
         menuElem.append(entries.map(function(entry) {
-            var 
+            let
                 entryElem;
             
             if (entry.action && !controller.isActionSupported(entry.action)) {
@@ -478,7 +540,7 @@ export default function CPMainMenu(controller, mainGUI) {
                 $(".dropdown-toggle", entryElem).dropdown();
 
                 entryElem.on("show.bs.dropdown", function() {
-                    updateDisabledStates(entryElem);
+                    updateMenuStates(entryElem);
 
                     /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
                      * document *while the menu is open!*
@@ -501,6 +563,9 @@ export default function CPMainMenu(controller, mainGUI) {
                         .data("checkbox", true)
                         .toggleClass("selected", !!entry.checked);
                 }
+                if (entry.hideIfNotAvailable) {
+                    entryElem.data("hideIfNotAvailable", true);
+                }
             }
             
             if (entry.title) {
@@ -508,7 +573,7 @@ export default function CPMainMenu(controller, mainGUI) {
             }
             
             if (entry.shortcut) {
-                var
+                let
                     menuLink = $("> a", entryElem),
                     shortcutDesc = document.createElement("small");
                 
@@ -551,7 +616,7 @@ export default function CPMainMenu(controller, mainGUI) {
     
     function onPaletteVisChange(paletteName, show) {
         // Toggle the tickbox of the corresponding menu entry to match the new palette visibility
-        var
+        let
             palMenuEntry = $('[data-action=\"CPPal' + paletteName.substring(0, 1).toUpperCase() + paletteName.substring(1) + '\"]', bar);
         
         palMenuEntry.toggleClass("selected", show);

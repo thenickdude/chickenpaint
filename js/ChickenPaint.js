@@ -688,7 +688,8 @@ export default function ChickenPaint(options) {
                 action: function() {
                     that.artwork.addLayerMask();
                 },
-                modifies: {document: true}
+                modifies: {document: true},
+                allowed: "isAddLayerMaskAllowed"
             },
             CPApplyLayerMask: {
                 action: function() {
