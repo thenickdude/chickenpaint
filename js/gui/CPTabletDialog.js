@@ -78,7 +78,8 @@ export default function CPTabletDialog(parent) {
                             </div>
                             <div class="chickenpaint-tablet-support chickenpaint-pointerevents-support">
                                 <h4>
-                                    Built-in support for most tablets <small>including Wacom tablets</small>
+                                    Built-in support for most tablets.
+                                    <small>macOS, Windows 8 or newer</small>
                                 </h4>
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
