@@ -45,6 +45,8 @@
  * @property {number} resat - 0-1.0, controls how much of the user's selected paint color is mixed into the brush while painting.
  * @property {number} bleed - 0-1.0, controls how much of the color from the canvas is picked up by the brush.
  *
+ * @property {boolean} isAA
+ *
  * @constructor
  */
 export default function CPBrushInfo(properties) {
@@ -128,6 +130,9 @@ CPBrushInfo.prototype.applyPressure = function(pressure) {
     if (this.curSize > 16) {
         this.curSize = Math.floor(this.curSize);
     }
+
+    // Don't allow brush size to exceed that supported by CPBrushManager
+    this.curSize = Math.min(this.curSize, 400);
 
     this.curAlpha = this.pressureAlpha ? Math.floor(this.alpha * Math.min(pressure, 1.0)) : this.alpha;
     this.curSqueeze = this.squeeze;

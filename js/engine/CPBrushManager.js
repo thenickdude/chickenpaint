@@ -31,7 +31,7 @@ const
  * @param {CPBrushInfo} brushInfo
  */
 function buildBrush(brush, brushInfo) {
-    var
+    let
         intSize = Math.ceil(brushInfo.curSize),
 
         center = intSize / 2.0,
@@ -43,9 +43,9 @@ function buildBrush(brush, brushInfo) {
 
         offset = 0;
 
-    for (var j = 0; j < intSize; j++) {
-        for (var i = 0; i < intSize; i++) {
-            var
+    for (let j = 0; j < intSize; j++) {
+        for (let i = 0; i < intSize; i++) {
+            let
                 x = (i + 0.5 - center),
                 y = (j + 0.5 - center),
                 dx = (x * cosA - y * sinA) * xFactor,
@@ -67,7 +67,7 @@ function buildBrush(brush, brushInfo) {
  * @param {CPBrushInfo} brushInfo
  */
 function buildBrushAA(brush, brushInfo) {
-    var
+    let
         intSize = Math.ceil(brushInfo.curSize),
 
         center = intSize / 2.0,
@@ -81,9 +81,9 @@ function buildBrushAA(brush, brushInfo) {
 
         offset = 0;
 
-    for (var j = 0; j < intSize; j++) {
-        for (var i = 0; i < intSize; i++) {
-            var
+    for (let j = 0; j < intSize; j++) {
+        for (let i = 0; i < intSize; i++) {
+            let
                 x = (i + 0.5 - center),
                 y = (j + 0.5 - center),
                 dx = (x * cosA - y * sinA) * xFactor,
@@ -96,11 +96,11 @@ function buildBrushAA(brush, brushInfo) {
             } else if (sqrDist > sqrRadiusOuter) {
                 brush[offset++] = 0;
             } else {
-                var
+                let
                     count = 0;
 
-                for (var oy = 0; oy < 4; oy++) {
-                    for (var ox = 0; ox < 4; ox++) {
+                for (let oy = 0; oy < 4; oy++) {
+                    for (let ox = 0; ox < 4; ox++) {
                         x = i + ox * (1.0 / 4.0) - center;
                         y = j + oy * (1.0 / 4.0) - center;
                         dx = (x * cosA - y * sinA) * xFactor;
@@ -123,7 +123,7 @@ function buildBrushAA(brush, brushInfo) {
  * @param {CPBrushInfo} brushInfo
  */
 function buildBrushSquare(brush, brushInfo) {
-    var
+    let
         intSize = Math.ceil(brushInfo.curSize),
         center = intSize / 2.0,
 
@@ -136,9 +136,9 @@ function buildBrushSquare(brush, brushInfo) {
 
         offset = 0;
 
-    for (var j = 0; j < intSize; j++) {
-        for (var i = 0; i < intSize; i++) {
-            var
+    for (let j = 0; j < intSize; j++) {
+        for (let i = 0; i < intSize; i++) {
+            let
                 x = (i + 0.5 - center),
                 y = (j + 0.5 - center),
                 dx = Math.abs(x * cosA - y * sinA),
@@ -158,7 +158,7 @@ function buildBrushSquare(brush, brushInfo) {
  * @param {CPBrushInfo} brushInfo
  */
 function buildBrushSquareAA(brush, brushInfo) {
-    var
+    let
         intSize = Math.ceil(brushInfo.curSize),
         center = intSize / 2.0,
 
@@ -177,9 +177,9 @@ function buildBrushSquareAA(brush, brushInfo) {
 
         offset = 0;
 
-    for (var j = 0; j < intSize; j++) {
-        for (var i = 0; i < intSize; i++) {
-            var
+    for (let j = 0; j < intSize; j++) {
+        for (let i = 0; i < intSize; i++) {
+            let
                 x = (i + 0.5 - center),
                 y = (j + 0.5 - center),
                 dx = Math.abs(x * cosA - y * sinA),
@@ -190,11 +190,11 @@ function buildBrushSquareAA(brush, brushInfo) {
             } else if (dx > sizeXOuter || dy > sizeYOuter) {
                 brush[offset++] = 0;
             } else {
-                var
+                let
                     count = 0;
 
-                for (var oy = 0; oy < 4; oy++) {
-                    for (var ox = 0; ox < 4; ox++) {
+                for (let oy = 0; oy < 4; oy++) {
+                    for (let ox = 0; ox < 4; ox++) {
                         x = i + ox * (1.0 / 4.0) - center;
                         y = j + oy * (1.0 / 4.0) - center;
                         dx = Math.abs(x * cosA - y * sinA);
@@ -217,7 +217,7 @@ function buildBrushSquareAA(brush, brushInfo) {
  * @param {CPBrushInfo} brushInfo
  */
 function buildBrushSoft(brush, brushInfo) {
-    var
+    let
         intSize = Math.ceil(brushInfo.curSize),
         center = intSize / 2.0,
         sqrRadius = (brushInfo.curSize / 2) * (brushInfo.curSize / 2),
@@ -228,9 +228,9 @@ function buildBrushSoft(brush, brushInfo) {
 
         offset = 0;
 
-    for (var j = 0; j < intSize; j++) {
-        for (var i = 0; i < intSize; i++) {
-            var
+    for (let j = 0; j < intSize; j++) {
+        for (let i = 0; i < intSize; i++) {
+            let
                 x = (i + 0.5 - center),
                 y = (j + 0.5 - center),
                 dx = (x * cosA - y * sinA) * xFactor,
@@ -268,10 +268,10 @@ function buildBrushSoft(brush, brushInfo) {
  */
 export default function CPBrushManager() {
     const
-        BRUSH_MAX_DIM = 201,
-        BRUSH_AA_MAX_DIM = 202;
+        BRUSH_MAX_DIM = 401,
+        BRUSH_AA_MAX_DIM = 402;
     
-    var
+    let
         brush = new Uint8Array(BRUSH_MAX_DIM * BRUSH_MAX_DIM),
         brushAA = new Uint8Array(BRUSH_AA_MAX_DIM * BRUSH_AA_MAX_DIM),
 
@@ -378,7 +378,7 @@ export default function CPBrushManager() {
      * @param {float} textureAmount
      */
     function applyTexture(dab, textureAmount) {
-        var 
+        let
             amount = Math.floor(textureAmount * 255),
             texture = that.texture,
             
@@ -396,12 +396,12 @@ export default function CPBrushManager() {
             textureY += texture.height;
         }
         
-        for (var y = 0; y < dab.height; y++) {
+        for (let y = 0; y < dab.height; y++) {
             texturePos = textureY * texture.width + textureX;
             textureEOL = textureY * texture.width + texture.width;
             
-            for (var x = 0; x < dab.width; x++) {
-                var 
+            for (let x = 0; x < dab.width; x++) {
+                let
                     brushValue = dab.brush[brushPos],
                     textureValue = texture.data[texturePos];
                 
@@ -433,7 +433,7 @@ export default function CPBrushManager() {
      * @returns {CPBrushDab}
      */
     this.getDab = function(x, y, brushInfo) {
-        var 
+        let
             dab = {
                 alpha: brushInfo.curAlpha,
                 width: Math.ceil(brushInfo.curSize),
@@ -460,7 +460,7 @@ export default function CPBrushManager() {
             dabYInt = Math.floor(dabY);
 
         if (useSubpixelShift) {
-            var
+            let
                 subpixelX = dabX - dabXInt,
                 subpixelY = dabY - dabYInt;
             

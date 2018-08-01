@@ -768,7 +768,7 @@ export default function CPArtwork(_width, _height) {
          */
         brushTool.paintDab(destImage, imageRect, sampleImage, curBrush, brushRect, dab, curColor);
 
-        if (!maskEditingMode && brushTool.noMergePhase && that.getLayerLockAlpha()) {
+        if (!maskEditingMode && brushTool.noMergePhase && curLayer.getLockAlpha()) {
             // This tool painted to the image during paintDab(), so we have to apply image alpha here instead of during merge
             restoreImageAlpha(destImage, imageRect);
         }
@@ -831,7 +831,7 @@ export default function CPArtwork(_width, _height) {
             } else {
                 var
                     destImage = curLayer.image,
-                    lockAlpha = that.getLayerLockAlpha();
+                    lockAlpha = curLayer.getLockAlpha();
 
                 if (curBrush.brushMode == CPBrushInfo.BRUSH_MODE_ERASE && lockAlpha) {
                     // We're erasing with locked alpha, so the only sensible thing to do is paint white...

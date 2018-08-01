@@ -212,7 +212,7 @@ export class CPBrushTool {
 	 * @param {CPRect} brushRect - Rectangle from brushShape array to paint
 	 * @param {CPRect} imageRect - Rectangle of the destination image that corresponds to brushRect
 	 * @param {Uint8Array} brushShape - An opacity mask for the brush tip shape
-	 * @param {int} brushWidth - Width of the brush buffer
+	 * @param {int} brushWidth - Width of the brush buffer (bytes per row)
 	 * @param {int} alpha - Alpha to apply to the brush (0-255)
 	 */
 	_paintFlow(brushRect, imageRect, brushShape, brushWidth, alpha) {
@@ -232,7 +232,7 @@ export class CPBrushTool {
 
 		for (let y = 0; y < dstHeight; y++, brushOffset += srcYStride, strokeOffset += dstYStride) {
 			for (let x = 0; x < dstWidth; x++, brushOffset++, strokeOffset++) {
-				var
+				let
 					brushAlpha = brushShape[brushOffset] * alpha;
 
 				if (brushAlpha != 0) {
