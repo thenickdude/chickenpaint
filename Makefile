@@ -1,10 +1,12 @@
-.PHONY: test blending-bench blending-test
+.PHONY: test blending-bench blending-test dist all min tools
 
 ENGINE_SOURCE = js/engine/* js/util/*
 
 OSASCRIPT := $(shell command -v osascript 2> /dev/null)
 
 all : resources/css/chickenpaint.css resources/js/chickenpaint.js
+
+dist: all min
 
 ifdef OSASCRIPT
 	osascript -e 'display notification "Build successful" with title "ChickenPaint build complete"'
@@ -56,4 +58,3 @@ clean :
 	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map
 	rm -f test/blending_bench/blending_test.js test/blending_bench/blending.js test/integration_test/integration.js js/engine/CPBlend.js
 	rm -f resources/fonts/ChickenPaint-Symbols.{less,ttf,woff,eot}
-	rm -rf dist/*
