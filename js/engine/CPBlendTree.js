@@ -92,7 +92,7 @@ CPBlendNode.prototype.addChildren = function(children) {
 
 			this.layers = this.layers.concat(children);
 		} else {
-			var
+			let
 				child = children;
 
 			child.parent = this;
@@ -117,7 +117,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	const
 		DEBUG = false;
 
-	var
+	let
 		/**
 		 * @type {CPBlendNode}
 		 */
@@ -160,7 +160,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 			 * Replace this group with the layer it contains (combine the alpha of the two layers)
 			 * At most one of the two layers may have a mask, so that we can use that mask for both of them.
 			 */
-			var
+			let
 				flattenedNode = groupNode.layers[0];
 
 			flattenedNode.alpha = Math.round(groupNode.alpha * flattenedNode.alpha / 100);
@@ -197,7 +197,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	 * @returns {CPBlendNode}
 	 */
 	function createNodeForLayer(layer) {
-		var
+		let
 			node = new CPBlendNode(width, height, layer);
 
 		nodeForLayer.set(layer, node);
@@ -216,7 +216,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 			return null;
 		}
 
-		var
+		let
 			treeNode = createNodeForLayer(layerGroup);
 
 		for (let i = 0; i < layerGroup.layers.length; i++) {
@@ -227,7 +227,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 			// Do we need to create a clipping group?
 			if (childLayer instanceof CPImageLayer && nextChild && nextChild.clip) {
 				let
-					clippingGroupNode = new CPBlendNode(width, height),
+					clippingGroupNode = new CPBlendNode(width, height, null),
 					j;
 
 				clippingGroupNode.blendMode = childLayer.blendMode;
@@ -254,10 +254,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 
 				// Skip the layers we just added
 				i = j - 1;
-				continue;
-			}
-
-			if (childLayer instanceof CPLayerGroup) {
+			} else if (childLayer instanceof CPLayerGroup) {
 				treeNode.addChildren(buildTreeInternal(childLayer));
 			} else if (childLayer.getEffectiveAlpha() > 0) {
 				treeNode.addChildren(createNodeForLayer(childLayer));
@@ -286,7 +283,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	 * @param {CPRect} rect
 	 */
 	this.invalidateLayerRect = function(layer, rect) {
-		var
+		let
 			node = nodeForLayer.get(layer);
 
 		invalidateNodeRect(node, rect);
@@ -318,7 +315,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 				 * a buffer for the merged children).
 				 */
 				if (Array.isArray(drawTree) || requireSimpleFusion && (drawTree.alpha < 100 || drawTree.mask)) {
-					var
+					let
 						oldNode = drawTree;
 
 					drawTree = new CPBlendNode(width, height);
@@ -371,7 +368,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 	 * @param {string} propertyName
 	 */
 	this.layerPropertyChanged = function(layer, propertyName) {
-		var
+		let
 			layerNode = nodeForLayer.get(layer);
 
 		/*
@@ -431,7 +428,7 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 			dest.copyPixelsFrom(source);
 		} else {
 			// Otherwise do some blending
-			var
+			let
 				routineName = "replaceOntoFusionWith";
 
 			if (sourceAlpha == 100) {
@@ -489,40 +486,54 @@ export default function CPBlendTree(drawingRootGroup, width, height, requireSimp
 
 		// Avoid using an iterator here because Chrome refuses to optimize when a "finally" clause is present (caused by Babel iterator codegen)
 		for (let i = 0; i < treeNode.layers.length; i++) {
+            let
+                child = treeNode.layers[i],
+                childNode = blendTreeInternal(child);
+
+            if (groupIsEmpty) {
+                // If the fusion is currently empty then there's nothing to blend, replace the fusion with the contents of the bottom layer instead
+
+                copyImageRect(treeNode.image, childNode.image, childNode.alpha, blendArea, childNode.mask);
+                groupIsEmpty = false;
+            } else {
+                fusionHasTransparency = fusionHasTransparency && treeNode.image.hasAlphaInRect(blendArea);
+
+                if (DEBUG) {
+                    console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, ${blendArea}, ${childNode.mask});`);
+                }
+
+                CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency, childNode.image, childNode.alpha, childNode.blendMode, blendArea, childNode.mask);
+            }
+        }
+
+		if (treeNode.clip) {
+			// Need to restore the original alpha from the base layer we're clipping onto
 			let
-				child = treeNode.layers[i],
-				childNode = blendTreeInternal(child);
-			
-			if (groupIsEmpty) {
-				// If the fusion is currently empty then there's nothing to blend, replace the fusion with the contents of the bottom layer instead
+				baseLayer = treeNode.layers[0];
 
-				copyImageRect(treeNode.image, childNode.image, childNode.alpha, blendArea, childNode.mask);
-				groupIsEmpty = false;
+			if (baseLayer.alpha < 100) {
+				if (baseLayer.mask) {
+                    if (DEBUG) {
+                        console.log(`CPBlend.replaceAlphaOntoFusionWithTransparentLayerMasked(treeNode.image, baseLayer.image, treeNode.layers[0].alpha == ${treeNode.layers[0].alpha}, ${blendArea});`);
+                    }
+                    CPBlend.replaceAlphaOntoFusionWithTransparentLayerMasked(treeNode.image, baseLayer.image, baseLayer.alpha, blendArea, baseLayer.mask);
+				} else {
+                    if (DEBUG) {
+                        console.log(`CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, treeNode.layers[0].alpha == ${treeNode.layers[0].alpha}, ${blendArea});`);
+                    }
+                    CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, baseLayer.alpha, blendArea);
+                }
 			} else {
-				fusionHasTransparency = fusionHasTransparency && treeNode.image.hasAlphaInRect(blendArea);
-
-				if (DEBUG) {
-					console.log(`CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency == ${fusionHasTransparency}, childNode.image, childNode.alpha == ${childNode.alpha}, childNode.blendMode == ${childNode.blendMode}, ${blendArea}, ${childNode.mask});`);
-				}
-
-				CPBlend.fuseImageOntoImage(treeNode.image, fusionHasTransparency, childNode.image, childNode.alpha, childNode.blendMode, blendArea, childNode.mask);
-				
-				if (treeNode.clip) {
-					// Need to restore the original alpha from the base layer we're clipping onto
-					var
-						baseLayer = treeNode.layers[0];
-
-					if (baseLayer.alpha < 100) {
-						if (DEBUG) {
-							console.log(`CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, treeNode.layers[0].alpha == ${treeNode.layers[0].alpha}, ${blendArea});`);
-						}
-						CPBlend.replaceAlphaOntoFusionWithTransparentLayer(treeNode.image, baseLayer.image, baseLayer.alpha, blendArea);
-					} else {
-						if (DEBUG) {
-							console.log(`CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, ${blendArea});`);
-						}
-						CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, blendArea);
-					}
+				if (baseLayer.mask) {
+                    if (DEBUG) {
+                        console.log(`CPBlend.replaceAlphaOntoFusionWithOpaqueLayerMasked(treeNode.image, baseLayer.image, 100, ${blendArea});`);
+                    }
+                    CPBlend.replaceAlphaOntoFusionWithOpaqueLayerMasked(treeNode.image, baseLayer.image, 100, blendArea, baseLayer.mask);
+                } else {
+                    if (DEBUG) {
+                        console.log(`CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, ${blendArea});`);
+                    }
+                    CPBlend.replaceAlphaOntoFusionWithOpaqueLayer(treeNode.image, baseLayer.image, 100, blendArea);
 				}
 			}
 		}

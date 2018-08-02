@@ -1284,6 +1284,11 @@ ${makeBlendOperation("replaceOntoFusionWithOpaqueLayerMasked", REPLACE_OPERATION
 ${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayer", REPLACE_ALPHA_OPERATION, {
 	layerAlpha100: false
 })}
+
+${makeBlendOperation("replaceAlphaOntoFusionWithTransparentLayerMasked", REPLACE_ALPHA_OPERATION, {
+    layerAlpha100: false,
+    masked: true
+})}
 	
 ${makeBlendOperation("replaceAlphaOntoFusionWithOpaqueLayer", REPLACE_ALPHA_OPERATION, {
 	layerAlpha100: true
