@@ -880,6 +880,12 @@ body.chickenpaint-full-screen {
     font-weight:normal;
 }
 
+.chickenpaint .chickenpaint-layers-widget .list-group-item.active,
+.chickenpaint .chickenpaint-layers-widget .list-group-item.active:hover,
+.chickenpaint .chickenpaint-layers-widget .list-group-item.active:focus {
+  z-index: auto; /* Avoid Bootstrap floating the active element to the top (breaks stacking with other palettes) */
+}
+
 @font-face {
     font-family: "ChickenPaint Symbols";
     src: url("../fonts/ChickenPaint-Symbols.eot");
