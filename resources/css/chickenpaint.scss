@@ -593,6 +593,10 @@ body.chickenpaint-full-screen {
     min-height:0;
     overflow-y:auto;
 
+    -ms-touch-action:none;
+    touch-action: none;
+    pen-action:none;
+
     display:-ms-flexbox;
     display:flex;
     -ms-flex-direction:column; /* I'd love to use column-reverse but Firefox/Edge won't scroll with that one https://bugzilla.mozilla.org/show_bug.cgi?id=1042151 */
@@ -600,6 +604,13 @@ body.chickenpaint-full-screen {
 
     -ms-flex:1 1 0px;
     flex-grow:1;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+.chickenpaint-layers-widget {
+    min-height:0; /* Fix nested flexbox + overflow bug in Firefox */
 }
 .chickenpaint-layers-widget .chickenpaint-layer {
     position:static; /* Avoid creating a new stacking context so our drop target marker can float above us */
@@ -948,8 +959,8 @@ body.chickenpaint-full-screen {
 }
 
 .chickenpaint .chickenpaint-layers-widget .list-group-item.active,
-.chickenpaint .chickenpaint-layers-widget .list-group-item.active:hover,
-.chickenpaint .chickenpaint-layers-widget .list-group-item.active:focus {
+.chickenpaint .chickenpaint-layers-widget .list-group-item:hover,
+.chickenpaint .chickenpaint-layers-widget .list-group-item:focus {
   z-index: auto; /* Avoid Bootstrap floating the active element to the top (breaks stacking with other palettes) */
 }
 

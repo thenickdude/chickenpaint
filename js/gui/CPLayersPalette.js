@@ -28,6 +28,11 @@ import CPSlider from "./CPSlider";
 import CPLayerGroup from "../engine/CPLayerGroup";
 import CPImageLayer from "../engine/CPImageLayer";
 
+function absorbTouch(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
 function createFontAwesomeIcon(iconName) {
     let
         icon = document.createElement("span");
@@ -164,38 +169,61 @@ export default function CPLayersPalette(controller) {
             CLASSNAME_LAYER_GROUP_TOGGLE = "chickenpaint-layer-group-toggle",
             CLASSNAME_LAYER_IMAGE_THUMBNAIL = "chickenpaint-layer-image-thumbnail",
             CLASSNAME_LAYER_MASK_THUMBNAIL = "chickenpaint-layer-mask-thumbnail",
-            CLASSNAME_LAYER_THUMBNAIL = "chickenpaint-layer-thumbnail";
+            CLASSNAME_LAYER_THUMBNAIL = "chickenpaint-layer-thumbnail",
+
+            DRAG_STATE_IDLE = 0,
+            DRAG_STATE_PRE_DRAG = 1, // If we've put our cursor down but we're not sure if we're dragging or clicking yet
+            DRAG_STATE_DRAGGING = 2, // When we're really dragging
+            DRAG_STATE_PRE_PAN = 3,  // Pen/touch is down, we could either click, drag or pan
+            DRAG_STATE_PANNING = 4,
+
+            LONG_PRESS_INTERVAL = 800;
 
         let
-            // True while our mouse is down on a layer
-            isDragging = false,
-            // True when we have moved our mouse during mouse down (so dragging state is shown to user)
-            isDraggingReally = false,
-            
-	        /**
-             * The image layer currently being dragged, or null if no drag is in progress.
-             * @type {?CPLayer}
-             */
-            draggingLayer = null,
+            drag = {
+                /**
+                 *
+                 * @type {int}
+                 */
+                state: DRAG_STATE_IDLE,
 
-            /**
-             * The element of the layer being dragged
-             *
-             * @type {HTMLElement}
-             */
-            draggingLayerElem,
+                /**
+                 * The image layer currently being dragged, or null if no drag is in progress.
+                 *
+                 * @type {?CPLayer}
+                 */
+                layer: null,
 
-	        /**
-             * @type {number}
-             */
-            draggingX, draggingY,
+                /**
+                 * The element of the layer being dragged
+                 *
+                 * @type {HTMLElement}
+                 */
+                layerElem: null,
 
-            dropTarget,
-            dropBetweenMarkerElem = null,
-            draggingFrameElem = null,
+                /**
+                 * @type {number}
+                 */
+                dragX: 0,
+
+                /**
+                 * @type {number}
+                 */
+                dragY: 0,
+
+                /**
+                 * @type {number}
+                 */
+                initialScrollTop: 0,
+
+                dropTarget : null,
+                dropBetweenMarkerElem: null,
+                frameElem: null,
+            },
 
             widgetContainer = document.createElement("div"),
             layerContainer = document.createElement("div"),
+            scrollContainer = layerContainer,
 
             dropdownLayerMenu = createLayerDropdownMenu(),
             dropdownMousePos = {x: 0, y: 0},
@@ -215,7 +243,18 @@ export default function CPLayersPalette(controller) {
              * True if we right-clicked on the mask of the layer for the dropdown.
              * @type {boolean}
              */
-            dropdownOnMask = false;
+            dropdownOnMask = false,
+
+            longPressTimer = null;
+
+        function onDismissDropdown(e) {
+            // Firefox wrongly fires click events for the right mouse button!
+            if (!("button" in e) || e.button === BUTTON_PRIMARY) {
+                clearDropDown();
+
+                $(this).off("click", onDismissDropdown);
+            }
+        }
 
 	    /**
          * Get the element that represents the layer with the given display index.
@@ -272,7 +311,7 @@ export default function CPLayersPalette(controller) {
                     targetElem = layerElems[layerElems.length - 1 - displayIndex],
                     rect = targetElem.getBoundingClientRect();
 
-                if (displayIndex == 0 && clientY > rect.bottom) {
+                if (displayIndex === 0 && clientY > rect.bottom) {
                     // Special support for positioning after the last element to help us escape the bottom of a group
                     let
                         lastLayer = artwork.getLayersRoot().layers[0];
@@ -323,14 +362,14 @@ export default function CPLayersPalette(controller) {
              * If we're dropping into the same container, make sure we don't offer to drop the layer back to the
              * same position it was already in.
              */
-            if (target.layer.parent == draggingLayer.parent && (target.direction == "over" || target.direction == "under")) {
+            if (target.layer.parent == drag.layer.parent && (target.direction == "over" || target.direction == "under")) {
                 let
                     parentGroup = target.layer.parent,
                     targetIndex = parentGroup.indexOf(target.layer);
 
-                if (target.direction == "over" && parentGroup.layers[targetIndex + 1] == draggingLayer
-                        || target.direction == "under" && parentGroup.layers[targetIndex - 1] == draggingLayer
-                        || target.layer == draggingLayer) {
+                if (target.direction == "over" && parentGroup.layers[targetIndex + 1] == drag.layer
+                        || target.direction == "under" && parentGroup.layers[targetIndex - 1] == drag.layer
+                        || target.layer == drag.layer) {
                     return null;
                 }
             }
@@ -338,7 +377,7 @@ export default function CPLayersPalette(controller) {
             /*
              * Make sure we don't try to drop a group as a child of itself, no group-ception!
              */
-            if (draggingLayer instanceof CPLayerGroup && (target.layer == draggingLayer && target.direction == "inside" || target.layer.hasAncestor(draggingLayer))) {
+            if (drag.layer instanceof CPLayerGroup && (target.layer == drag.layer && target.direction == "inside" || target.layer.hasAncestor(drag.layer))) {
                 return null;
             }
 
@@ -346,26 +385,26 @@ export default function CPLayersPalette(controller) {
         }
 
         function updateDropMarker() {
-            if (isDraggingReally) {
+            if (drag.state === DRAG_STATE_DRAGGING) {
                 let
                     positionRootBounds = positionRoot.getBoundingClientRect(),
                     hideBetweenMarker = true,
                     hideIntoMarker = true;
 
-                dropTarget = getDropTargetFromClientPos(draggingX, draggingY);
+                drag.dropTarget = getDropTargetFromClientPos(drag.dragX, drag.dragY);
 
-                if (dropTarget) {
+                if (drag.dropTarget) {
                     let
-                        targetElem = getElemFromDisplayIndex(dropTarget.displayIndex);
+                        targetElem = getElemFromDisplayIndex(drag.dropTarget.displayIndex);
 
-                    switch (dropTarget.direction) {
+                    switch (drag.dropTarget.direction) {
                         case "over":
                         case "under":
-                            layerContainer.appendChild(dropBetweenMarkerElem);
+                            layerContainer.appendChild(drag.dropBetweenMarkerElem);
 
                             let
                                 layerRect,
-                                markerDepth = dropTarget.layer.getDepth() - 1,
+                                markerDepth = drag.dropTarget.layer.getDepth() - 1,
                                 markerLeft,
                                 layerBottom;
 
@@ -373,13 +412,13 @@ export default function CPLayersPalette(controller) {
                             layerRect = targetElem.getBoundingClientRect();
 
                             // Are we dropping below the layers in an expanded group? Extend the rect to enclose them
-                            if (dropTarget.direction == "under" && dropTarget.layer instanceof CPLayerGroup && dropTarget.layer.expanded) {
+                            if (drag.dropTarget.direction == "under" && drag.dropTarget.layer instanceof CPLayerGroup && drag.dropTarget.layer.expanded) {
                                 // Find the display index after this group
                                 let
                                     childIndex;
 
-                                for (childIndex = dropTarget.displayIndex - 1; childIndex >= 0; childIndex--) {
-                                    if (!linearizedLayers[childIndex].hasAncestor(dropTarget.layer)) {
+                                for (childIndex = drag.dropTarget.displayIndex - 1; childIndex >= 0; childIndex--) {
+                                    if (!linearizedLayers[childIndex].hasAncestor(drag.dropTarget.layer)) {
                                         break;
                                     }
                                 }
@@ -391,9 +430,9 @@ export default function CPLayersPalette(controller) {
 
                             markerLeft = layerRect.left - positionRootBounds.left + (markerDepth > 0 ? 26 + LAYER_IN_GROUP_INDENT * markerDepth : 0);
 
-                            dropBetweenMarkerElem.style.left = markerLeft + "px";
-                            dropBetweenMarkerElem.style.width = (layerRect.right - positionRootBounds.left - markerLeft) + "px";
-                            dropBetweenMarkerElem.style.top = ((dropTarget.direction == "over" ? layerRect.top - 1 : layerBottom + 1) - positionRootBounds.top) + "px";
+                            drag.dropBetweenMarkerElem.style.left = markerLeft + "px";
+                            drag.dropBetweenMarkerElem.style.width = (layerRect.right - positionRootBounds.left - markerLeft) + "px";
+                            drag.dropBetweenMarkerElem.style.top = ((drag.dropTarget.direction == "over" ? layerRect.top - 1 : layerBottom + 1) - positionRootBounds.top) + "px";
 
                             $(".chickenpaint-layer-drop-target", layerContainer).removeClass("chickenpaint-layer-drop-target");
 
@@ -404,7 +443,7 @@ export default function CPLayersPalette(controller) {
                                 layerElems = $(".chickenpaint-layer", layerContainer);
 
                             layerElems.each(function(index) {
-                                $(this).toggleClass("chickenpaint-layer-drop-target", layerElems.length - 1 - index == dropTarget.displayIndex);
+                                $(this).toggleClass("chickenpaint-layer-drop-target", layerElems.length - 1 - index == drag.dropTarget.displayIndex);
                             });
 
                             hideIntoMarker = false;
@@ -417,13 +456,13 @@ export default function CPLayersPalette(controller) {
                 }
 
                 if (hideBetweenMarker) {
-                    $(dropBetweenMarkerElem).remove();
+                    $(drag.dropBetweenMarkerElem).remove();
                 }
 
-                draggingFrameElem.style.top = (draggingY - positionRootBounds.top - parseInt(draggingFrameElem.style.height, 10) / 2) + "px";
+                drag.frameElem.style.top = (drag.dragY - positionRootBounds.top - parseInt(drag.frameElem.style.height, 10) / 2) + "px";
             } else {
-                $(dropBetweenMarkerElem).remove();
-                $(draggingFrameElem).remove();
+                $(drag.dropBetweenMarkerElem).remove();
+                $(drag.frameElem).remove();
             }
         }
 
@@ -455,7 +494,7 @@ export default function CPLayersPalette(controller) {
 	        
 	        context.moveTo(X_INSET, Y_INSET);
 	        context.lineTo(canvas.width - X_INSET, canvas.height - Y_INSET);
-	
+
 	        context.moveTo(canvas.width - X_INSET, Y_INSET);
 	        context.lineTo(X_INSET, canvas.height - Y_INSET);
 	
@@ -591,46 +630,6 @@ export default function CPLayersPalette(controller) {
             return layerDiv;
         }
 
-        function contextMenuShow(e) {
-            e.preventDefault();
-
-            let
-                displayIndex = getDisplayIndexFromElem(e.target),
-                layer = artwork.getActiveLayer();
-
-            if (displayIndex != -1) {
-                let
-                    facts = computeLayerPredicates(layer);
-
-                dropdownLayer = layer;
-                dropdownMousePos = {x : e.clientX, y: e.clientY};
-
-                for (let requirement of ["image-layer", "layer-group", "clipping-mask", "no-clipping-mask", "no-mask"]) {
-                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(facts[requirement]);
-                }
-
-                for (let requirement of ["mask", "mask-enabled", "mask-disabled"]) {
-                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(dropdownOnMask && facts[requirement]);
-                }
-
-	            $("[data-action]", dropdownLayerMenu).each(function() {
-	                let
-                        action = this.getAttribute("data-action");
-
-                    $(this).toggleClass("disabled", action !== "CPRenameLayer" && !controller.isActionAllowed(action));
-                });
-
-                $(getElemFromDisplayIndex(displayIndex))
-                    .dropdown("toggle")
-                    .off("click.bs.dropdown");
-                
-                /* We don't want Bootstrap's default show or hide handlers, since they show the popup menu on left click,
-                 * and slow down all clicks on the document, respectively.
-                 */
-                $(document).off("click.bs.dropdown.data-api");
-            }
-        }
-
         function showRenameBoxForLayer(displayIndex) {
             if (displayIndex > -1) {
 				let
@@ -644,15 +643,55 @@ export default function CPLayersPalette(controller) {
         }
 
         function onDoubleClick(e) {
-            // Make sure we didn't double-click on the layer eye...
-            if ($(e.target).closest(".chickenpaint-layer-description").length > 0) {
+            if (e.button === BUTTON_PRIMARY && $(e.target).closest(".chickenpaint-layer-description").length > 0 && $(e.target).closest("input").length === 0) {
+                /* Double clicking the layer description should start editing it, but ignore double clicks inside
+                 * the rename textbox itself
+                 */
                 showRenameBoxForLayer(getDisplayIndexFromElem(e.target));
 
                 e.preventDefault();
             }
         }
 
-        function onMouseDown(e) {
+        function showContextMenu(e) {
+            let
+                displayIndex = getDisplayIndexFromElem(e.target);
+
+            if (displayIndex != -1) {
+                let
+                    layer = artwork.getActiveLayer(),
+                    facts = computeLayerPredicates(layer);
+
+                dropdownLayer = layer;
+                dropdownMousePos = {x: e.clientX, y: e.clientY};
+
+                for (let requirement of ["image-layer", "layer-group", "clipping-mask", "no-clipping-mask", "no-mask"]) {
+                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(facts[requirement]);
+                }
+
+                for (let requirement of ["mask", "mask-enabled", "mask-disabled"]) {
+                    $(".chickenpaint-action-require-" + requirement, dropdownLayerMenu).toggle(dropdownOnMask && facts[requirement]);
+                }
+
+                $("[data-action]", dropdownLayerMenu).each(function () {
+                    let
+                        action = this.getAttribute("data-action");
+
+                    $(this).parent().toggleClass("disabled", action !== "CPRenameLayer" && !controller.isActionAllowed(action));
+                });
+
+                $(getElemFromDisplayIndex(displayIndex))
+                    .dropdown("toggle")
+                    .off("click.bs.dropdown");
+
+                /* We don't want Bootstrap's default show or hide handlers, since they show the popup menu on left click,
+                 * and slow down all clicks on the document, respectively.
+                 */
+                $(document).off("click.bs.dropdown.data-api");
+            }
+        }
+
+        function onPointerDown(e) {
             let
                 layerElem = $(e.target).closest(".chickenpaint-layer")[0],
                 displayIndex = getDisplayIndexFromElem(layerElem);
@@ -678,7 +717,7 @@ export default function CPLayersPalette(controller) {
                         layerChanged = artwork.getActiveLayer() != layer;
                     
                     dropdownOnMask = $(e.target).closest("." + CLASSNAME_LAYER_MASK_THUMBNAIL).length > 0
-                        || (layer instanceof CPLayerGroup && layer.mask != null && layerChanged);
+                        || (layer instanceof CPLayerGroup && layer.mask !== null && layerChanged);
 
                     if (e.button == BUTTON_PRIMARY && e.shiftKey && dropdownOnMask) {
 	                    controller.actionPerformed({
@@ -714,92 +753,140 @@ export default function CPLayersPalette(controller) {
                             controller.actionPerformed({
                                 action: "CPToggleMaskView"
                             });
-                        }
-	
-	                    if (e.button == BUTTON_PRIMARY) {
-		                    isDragging = true;
-		                    dropTarget = null;
+                        } else if (e.button == BUTTON_PRIMARY) {
+	                        if (e.pointerType === "pen" || e.pointerType === "touch") {
+                                drag.state = DRAG_STATE_PRE_PAN;
+                                drag.initialScrollTop = scrollContainer.scrollTop;
+
+                                if (longPressTimer) {
+                                    clearTimeout(longPressTimer);
+                                }
+
+                                longPressTimer = setTimeout(() => {
+                                    if (drag.state === DRAG_STATE_PRE_PAN) {
+                                        startLayerDrag();
+                                        drag.dragY = e.clientY;
+                                        updateDropMarker();
+                                    }
+                                }, LONG_PRESS_INTERVAL);
+                            } else {
+                                drag.state = DRAG_STATE_PRE_DRAG;
+                            }
+
+		                    drag.dropTarget = null;
 		
-		                    draggingLayer = layer;
+		                    drag.layer = layer;
 		                    // We might have replaced the layer with a new element due to the CPSetActiveLayer, so fetch that again
-		                    draggingLayerElem = getElemFromDisplayIndex(displayIndex);
-		                    draggingX = e.clientX;
-		                    draggingY = e.clientY;
-		
-		                    window.addEventListener("mousemove", mouseDragged);
-		                    window.addEventListener("mouseup", mouseDragEnd);
-	                    }
+		                    drag.layerElem = getElemFromDisplayIndex(displayIndex);
+		                    drag.dragX = e.clientX;
+		                    drag.dragY = e.clientY;
+
+                            layerContainer.setPointerCapture(e.pointerId);
+
+                            layerContainer.addEventListener("pointermove", onPointerDragged);
+                            layerContainer.addEventListener("pointerup", onPointerUp);
+	                    } else if (e.button == BUTTON_SECONDARY) {
+	                        e.preventDefault();
+
+	                        showContextMenu(e);
+                        }
                     }
                 }
             }
         }
 
-        function mouseDragEnd(e) {
-            if (e.button == BUTTON_PRIMARY) {
-                isDragging = false;
+        function onPointerUp(e) {
+            switch (drag.state) {
+                case DRAG_STATE_DRAGGING:
+                    $(drag.layerElem).removeClass("chickenpaint-layer-dragging");
 
-                if (isDraggingReally) {
-                    isDraggingReally = false;
-
-                    $(draggingLayerElem).removeClass("chickenpaint-layer-dragging");
-
-                    if (dropTarget) {
-                        if (dropTarget.direction == "inside") {
+                    if (drag.dropTarget) {
+                        if (drag.dropTarget.direction == "inside") {
                             controller.actionPerformed({
                                 action: "CPRelocateLayer",
-                                layer: draggingLayer,
-                                toGroup: dropTarget.layer,
-                                toIndex: dropTarget.layer.layers.length
+                                layer: drag.layer,
+                                toGroup: drag.dropTarget.layer,
+                                toIndex: drag.dropTarget.layer.layers.length
                             });
                         } else {
                             controller.actionPerformed({
                                 action: "CPRelocateLayer",
-                                layer: draggingLayer,
-                                toGroup: dropTarget.layer.parent,
-                                toIndex: dropTarget.layer.parent.indexOf(dropTarget.layer) + (dropTarget.direction == "over" ? 1 : 0)
+                                layer: drag.layer,
+                                toGroup: drag.dropTarget.layer.parent,
+                                toIndex: drag.dropTarget.layer.parent.indexOf(drag.dropTarget.layer) + (drag.dropTarget.direction == "over" ? 1 : 0)
                             });
                         }
                     }
 
+                    drag.dropTarget = null;
+                    drag.state = DRAG_STATE_IDLE;
+
                     updateDropMarker();
+                    break;
 
-                    dropTarget = null;
-                }
-
-                window.removeEventListener("mousemove", mouseDragged);
-                window.removeEventListener("mouseup", mouseDragEnd);
+                default: // We didn't start the drag so there is no indicator to remove
+                    drag.state = DRAG_STATE_IDLE;
+                    break;
             }
+
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+
+            layerContainer.releasePointerCapture(e.pointerId);
+
+            layerContainer.removeEventListener("pointermove", onPointerDragged);
+            layerContainer.removeEventListener("pointerup", onPointerUp);
         }
 
-        function startMouseDrag() {
-            isDraggingReally = true; // We actually moved the mouse from the starting position
+        function startLayerDrag() {
+            drag.state = DRAG_STATE_DRAGGING;
 
-            draggingFrameElem = document.createElement("div");
-            draggingFrameElem.className = "chickenpaint-layer-drag-frame";
-            draggingFrameElem.style.width = $(draggingLayerElem).outerWidth(false) + "px";
-            draggingFrameElem.style.height = $(draggingLayerElem).outerHeight(false) + "px";
+            drag.frameElem = document.createElement("div");
+            drag.frameElem.className = "chickenpaint-layer-drag-frame";
+            drag.frameElem.style.width = $(drag.layerElem).outerWidth(false) + "px";
+            drag.frameElem.style.height = $(drag.layerElem).outerHeight(false) + "px";
 
-            dropBetweenMarkerElem = document.createElement("div");
-            dropBetweenMarkerElem.className = "chickenpaint-layer-drop-between-mark";
+            drag.dropBetweenMarkerElem = document.createElement("div");
+            drag.dropBetweenMarkerElem.className = "chickenpaint-layer-drop-between-mark";
 
-            draggingLayerElem.className += " chickenpaint-layer-dragging";
+            drag.layerElem.className += " chickenpaint-layer-dragging";
 
-            layerContainer.appendChild(draggingFrameElem);
+            layerContainer.appendChild(drag.frameElem);
         }
 
-        function mouseDragged(e) {
-            if (isDragging) {
-                let
-                    newDragY = e.clientY;
+        function onPointerDragged(e) {
+            let
+                newDragY = e.clientY;
 
-                if (!isDraggingReally && Math.abs(newDragY - draggingY) > LAYER_DRAG_START_THRESHOLD) {
-                    startMouseDrag();
-                }
+            switch (drag.state) {
+                case DRAG_STATE_PRE_PAN:
+                    if (Math.abs(newDragY - drag.dragY) > LAYER_DRAG_START_THRESHOLD) {
+                        drag.state = DRAG_STATE_PANNING;
 
-                if (isDraggingReally) {
-                    draggingY = newDragY;
+                        // Fall through
+                    } else {
+                        break;
+                    }
+
+                case DRAG_STATE_PANNING:
+                    scrollContainer.scrollTop = drag.initialScrollTop + drag.dragY - newDragY;
+                    break;
+
+                case DRAG_STATE_PRE_DRAG:
+                    if (Math.abs(newDragY - drag.dragY) > LAYER_DRAG_START_THRESHOLD) {
+                        startLayerDrag();
+
+                        // Fall through
+                    } else {
+                        break;
+                    }
+
+                case DRAG_STATE_DRAGGING:
+                    drag.dragY = newDragY;
                     updateDropMarker();
-                }
+                    break;
             }
         }
 
@@ -836,7 +923,7 @@ export default function CPLayersPalette(controller) {
                 index = getDisplayIndexFromLayer(layer),
                 layerElem = $(getElemFromDisplayIndex(index));
 
-            if (layerElem.length == 0 ||
+            if (layerElem.length === 0 ||
                     layer instanceof CPLayerGroup && (layer.expanded != $(layerElem).hasClass(CLASSNAME_LAYER_GROUP_EXPANDED) || layer.visible != $(layerElem).hasClass(CLASSNAME_LAYER_VISIBLE))) {
                 // When these properties change, we might have to rebuild the group's children too, so just rebuild everything
                 this.buildLayers();
@@ -953,15 +1040,15 @@ export default function CPLayersPalette(controller) {
                 layerRect = layerElem.getBoundingClientRect(),
                 containerRect = layerContainer.getBoundingClientRect();
 
-            layerContainer.scrollTop =
+            scrollContainer.scrollTop =
                 Math.max(
                     Math.min(
                         Math.max(
-                            layerContainer.scrollTop,
+                            scrollContainer.scrollTop,
                             // Scroll down to reveal the bottom of the layer
-                            layerContainer.scrollTop + layerRect.bottom - containerRect.bottom
+                            scrollContainer.scrollTop + layerRect.bottom - containerRect.bottom
                         ),
-                        layerContainer.scrollTop + layerRect.top - containerRect.top
+                        scrollContainer.scrollTop + layerRect.top - containerRect.top
                     ),
                     0
                 );
@@ -1081,6 +1168,8 @@ export default function CPLayersPalette(controller) {
                 return;
             }
 
+            e.preventDefault(); // Don't jump to anchor
+
             /* Bootstrap will call this for us anyway when the click propagates out to the root
              * of the document. However in the meantime we could have rebuilt the layer DOM nodes
              * from scratch, breaking Bootstrap's un-pop code.
@@ -1121,37 +1210,43 @@ export default function CPLayersPalette(controller) {
         dropdownParent.id = "chickenpaint-layer-pop";
 
         widgetContainer.className = "chickenpaint-layers-widget well";
-
-        widgetContainer.addEventListener("dblclick", onDoubleClick);
-        widgetContainer.addEventListener("mousedown", onMouseDown);
-        widgetContainer.addEventListener("contextmenu", contextMenuShow);
+        widgetContainer.addEventListener("contextmenu", e => e.preventDefault(), true /* Capture phase, prevent context menu on all children */);
 
         dropdownLayerMenu.addEventListener("click", onDropdownActionClick);
 
         layerContainer.className = "list-group";
-        widgetContainer.appendChild(layerContainer);
+        layerContainer.addEventListener("dblclick", onDoubleClick);
+        layerContainer.addEventListener("pointerdown", onPointerDown);
 
+        layerContainer.setAttribute("touch-action", "none");
+
+        for (let eventName of ["ontouchstart", "ontouchmove", "ontouchend", "ontouchcancel"]) {
+            layerContainer.addEventListener(eventName, absorbTouch);
+        }
+
+        widgetContainer.appendChild(layerContainer);
         widgetContainer.appendChild(dropdownLayerMenu);
 
-        $(dropdownParent).on("show.bs.dropdown", function(e) {
-            /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
-             * document *while the menu is open!*
-             */
-            $(document).one("click", clearDropDown);
+        $(dropdownParent)
+            .on("show.bs.dropdown", function(e) {
+                let
+                    layerElem = $(e.relatedTarget)[0],
+                    $dropdownElem = $(dropdownParent).find(".dropdown-menu"),
 
-            let
-                layerElem = $(e.relatedTarget)[0],
-                $dropdownElem = $(dropdownParent).find(".dropdown-menu"),
+                    layerPos = layerElem.getBoundingClientRect(),
+                    positionRootPos = dropdownParent.getBoundingClientRect();
 
-                layerPos = layerElem.getBoundingClientRect(),
-                positionRootPos = dropdownParent.getBoundingClientRect();
+                // Convert the offset to palette-relative coordinates (since that's its offset parent)
+                $dropdownElem.css({
+                    left: (dropdownMousePos.x - $dropdownElem.outerWidth(true) - positionRootPos.left + 1) + "px",
+                    top: ((layerPos.top - $dropdownElem.outerHeight(true) / 2) - positionRootPos.top) + "px"
+                });
 
-            // Convert the offset to palette-relative coordinates (since that's its offset parent)
-            $dropdownElem.css({
-                left: (dropdownMousePos.x - $dropdownElem.outerWidth(true) - positionRootPos.left + 1) + "px",
-                top: ((layerPos.top - $dropdownElem.outerHeight(true) / 2) - positionRootPos.top) + "px"
+                /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
+                 * document *while the menu is open!*
+                 */
+                $(document).on("click", onDismissDropdown);
             });
-        });
     }
 
     function updateAvailableBlendModes() {
@@ -1369,13 +1464,13 @@ export default function CPLayersPalette(controller) {
         };
 
         this.renameAndHide = function() {
-            if (layer.name != textBox.value) {
+            if (layer && layer.name != textBox.value) {
                 controller.actionPerformed({action: "CPSetLayerName", layer: layer, name: textBox.value});
             }
 
             this.hide();
         };
-        
+
         this.show = function(_layer, _layerElem) {
             layer = _layer;
             origName = layer.name;
