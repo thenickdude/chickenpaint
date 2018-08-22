@@ -293,12 +293,16 @@ CPGreyBmp.prototype.createThumbnailFrom = function(that) {
 };
 
 CPGreyBmp.prototype.mirrorHorizontally = function() {
-    var
-        newData = new Uint8Array(width * height);
+    let
+        width = this.width,
+        height = this.height,
+        newData = new Uint8Array(width * height),
+        dstOffset = 0,
+        srcOffset = width;
 
-    for (var y = 0; y < height; y++) {
-        for (var x = 0; x < width; x++) {
-            newData[y * width + x] = this.data[y * width + width - x - 1];
+    for (let y = 0; y < height; y++, srcOffset += width + width) {
+        for (let x = 0; x < width; x++) {
+            newData[dstOffset++] = this.data[--srcOffset];
         }
     }
 
