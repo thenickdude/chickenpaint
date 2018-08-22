@@ -20,8 +20,9 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPPalette from './CPPalette';
+import $ from "jquery";
 
+import CPPalette from './CPPalette';
 import CPBrushInfo from '../engine/CPBrushInfo';
 
 export default function CPStrokePalette(cpController) {

@@ -1,32 +1,40 @@
 {
   "name": "chickenpaint",
   "main": "dist/chickenpaint.js",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thenickdude/chickenpaint.git"
+  },
   "devDependencies": {
     "babel-cli": "^6.9.0",
-    "babel-core": "^6.10.4",
-    "babel-istanbul": "^0.11.0",
+    "babel-core": "^6.26.3",
+    "babel-istanbul": "^0.12.2",
     "babel-plugin-add-module-exports": "~0.2.1",
     "babel-preset-es2015": "^6.16.0",
     "babel-register": "^6.9.0",
-    "babelify": "~7.3.0",
-    "browserify": "^13.1.0",
-    "canvas": "^1.4.0",
+    "babelify": "^8.0.0",
+    "browserify": "^16.2.2",
+    "canvas": "^1.6.11",
     "icomoon-build": "^0.2.8",
-    "less": "^2.7.1",
-    "mocha": "^3.1.2",
-    "multipipe": "^1.0.2",
+    "mocha": "^5.2.0",
+    "multipipe": "^2.0.3",
     "node-png": "^0.4.3",
-    "uglify-js": "^2.7.3"
+    "sass": "^1.13.0",
+    "uglify-js": "^3.4.7"
   },
   "scripts": {
     "test": "babel-node node_modules/.bin/_mocha -- test/*.js",
     "coverage": "babel-node node_modules/.bin/babel-istanbul cover _mocha -- test/*.js"
   },
   "dependencies": {
-    "core-js": "^2.4.1",
-    "pako": "1.0.5",
+    "bootstrap": "^4.1.3",
+    "core-js": "^2.5.7",
+    "jquery": "^3.3.1",
+    "pako": "1.0.6",
+    "popper.js": "^1.14.4",
     "random-js": "^1.0.8",
-    "wolfy87-eventemitter": "^5.1.0"
+    "wolfy87-eventemitter": "^5.2.5"
   },
   "browser": {
     "./js/util/Canvas.js": "./js/browser/util/Canvas.js"

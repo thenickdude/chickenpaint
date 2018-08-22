@@ -20,43 +20,45 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPWacomTablet from "../util/CPWacomTablet";
 
 export default function CPTabletDialog(parent) {
-    var
+    let
         dialog = 
             $(`<div class="modal fade" tabindex="-1" role="dialog">
-                <div class="modal-dialog">
+                <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
+                            <h5 class="modal-title">Drawing tablet support</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Drawing tablet support</h4>
                         </div>
                         <div class="modal-body">
                             <p class="chickenpaint-tablet-there-are-two-options">
                                 There are two ways you could use your tablet's pen pressure support with ChickenPaint.
                             </p>
                             <div class="chickenpaint-tablet-support chickenpaint-wacom-support">
-                                <h4>
+                                <h5>
                                     Plugin for Wacom tablets
-                                </h4>
+                                </h5>
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-internet-explorer"></span>
+                                        <span class="fab fa-internet-explorer"></span>
                                         IE 10, 11
                                     </div>
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-firefox"></span>
+                                        <span class="fab fa-firefox"></span>
                                         Firefox (32-bit only)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-safari"></span>
+                                        <span class="fab fa-safari"></span>
                                         Safari
                                     </div>
                                         <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-opera"></span>
+                                        <span class="fab fa-opera"></span>
                                         Opera
                                     </div>
                                 </div>
@@ -77,25 +79,25 @@ export default function CPTabletDialog(parent) {
                                 </p>
                             </div>
                             <div class="chickenpaint-tablet-support chickenpaint-pointerevents-support">
-                                <h4>
+                                <h5>
                                     Built-in support for most tablets.
                                     <small>macOS, Windows 8 or newer</small>
-                                </h4>
+                                </h5>
                                 <div class="chickenpaint-supported-browsers">
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-internet-explorer"></span>
+                                        <span class="fab fa-internet-explorer"></span>
                                         IE (Windows 8)
                                     </div>
                                         <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-edge"></span>
+                                        <span class="fab fa-edge"></span>
                                         Edge (Windows 10)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-firefox"></span>
-                                        Firefox (<a href="https://github.com/thenickdude/chickenpaint/blob/master/help/Firefox pressure support.md" target="_blank">help <i class="glyphicon glyphicon-new-window"></i></a>)
+                                        <span class="fab fa-firefox"></span>
+                                        Firefox (<a href="https://github.com/thenickdude/chickenpaint/blob/master/help/Firefox pressure support.md" target="_blank">help <i class="fa fa-external-link-alt"></i></a>)
                                     </div>
                                     <div class="chickenpaint-supported-browser">
-                                        <span class="fa fa-chrome"></span>
+                                        <span class="fab fa-chrome"></span>
                                         Chrome
                                     </div>
                                 </div>
@@ -113,7 +115,7 @@ export default function CPTabletDialog(parent) {
             </div>
        `);
     
-    var
+    let
         wacomSupportElem = $(".chickenpaint-wacom-support", dialog),
         peSupportElem = $(".chickenpaint-pointerevents-support", dialog),
         bothOptionsElem = $(".chickenpaint-tablet-there-are-two-options", dialog),

@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPPalette from './CPPalette';
 
 import CPColor from '../util/CPColor';
@@ -32,15 +34,6 @@ function padLeft(string, padding, len) {
     return string;
 }
 
-function wrapWithElem(e, wrapWithName) {
-    var
-        parent = document.createElement(wrapWithName);
-
-    parent.appendChild(e);
-
-    return parent;
-}
-
 function fileAPIsSupported() {
     return window.File && window.FileReader && window.FileList && window.Blob;
 }
@@ -48,7 +41,7 @@ function fileAPIsSupported() {
 export default function CPSwatchesPalette(controller) {
     CPPalette.call(this, controller, "swatches", "Color swatches");
     
-    var
+    let
         INIT_COLORS = [0xffffff, 0x000000, 0xff0000, 0x00ff00, 0x0000ff, 0xffff00],
         
         modified = false,
@@ -60,7 +53,7 @@ export default function CPSwatchesPalette(controller) {
         that = this;
 
     function CPColorSwatch(color) {
-        var
+        let
             wrapper = document.createElement("div"),
             swatchElem = document.createElement("a"),
             swatchMenu = document.createElement("ul"),
@@ -84,7 +77,8 @@ export default function CPSwatchesPalette(controller) {
         swatchElem.href = "#";
         swatchElem.className = "chickenpaint-color-swatch dropdown-toggle";
         swatchElem.setAttribute("data-toggle", "dropdown");
-        
+
+        mnuRemove.className = "dropdown-item";
         mnuRemove.href = "#";
         mnuRemove.innerHTML = "Remove";
         
@@ -94,7 +88,8 @@ export default function CPSwatchesPalette(controller) {
 
             modified = true;
         });
-            
+
+        mnuSetToCurrent.className = "dropdown-item";
         mnuSetToCurrent.href = "#";
         mnuSetToCurrent.innerHTML = "Replace with current color";
         
@@ -108,15 +103,15 @@ export default function CPSwatchesPalette(controller) {
         
         swatchMenu.className = "dropdown-menu";
         
-        swatchMenu.appendChild(wrapWithElem(mnuRemove, "li"));
-        swatchMenu.appendChild(wrapWithElem(mnuSetToCurrent, "li"));
+        swatchMenu.appendChild(mnuRemove);
+        swatchMenu.appendChild(mnuSetToCurrent);
         
         wrapper.className = "chickenpaint-color-swatch-wrapper";
         wrapper.appendChild(swatchElem);
         wrapper.appendChild(swatchMenu);
         
         $(wrapper).on("show.bs.dropdown", function() {
-            var 
+            let
                 $btnDropDown = $(this).find(".dropdown-toggle"),
                 $listHolder = $(this).find(".dropdown-menu");
             
@@ -134,7 +129,7 @@ export default function CPSwatchesPalette(controller) {
     }
 
     function addSwatch(color) {
-        var
+        let
             swatch = new CPColorSwatch(color);
 
         swatchPanel.appendChild(swatch.getElement());
@@ -144,11 +139,11 @@ export default function CPSwatchesPalette(controller) {
      * Returns an array of colors in RGB 32-bit integer format
      */
     this.getSwatches = function() {
-        var
+        let
             swatches = $(".chickenpaint-color-swatch", swatchPanel),
             colors = new Array(swatches.length);
 
-        for (var i = 0; i < swatches.length; i++) {
+        for (let i = 0; i < swatches.length; i++) {
             colors[i] = parseInt(swatches.get(i).getAttribute("data-color"), 10);
         }
 
@@ -158,7 +153,7 @@ export default function CPSwatchesPalette(controller) {
     this.setSwatches = function(swatches) {
         clearSwatches();
 
-        for (var i = 0; i < swatches.length; i++) {
+        for (let i = 0; i < swatches.length; i++) {
             addSwatch(swatches[i]);
         }
         
@@ -171,18 +166,18 @@ export default function CPSwatchesPalette(controller) {
     
     function loadSwatches() {
         fileInput.onchange = function() {
-            var 
+            let
                 fileList = this.files;
             
             if (fileList.length < 1)
                 return;
             
-            var
+            let
                 file = fileList[0],
                 reader = new FileReader();
             
             reader.onload = function() {
-                var
+                let
                     swatches = new AdobeColorTable().read(this.result);
                 
                 if (swatches != null && swatches.length > 0) {
@@ -193,13 +188,13 @@ export default function CPSwatchesPalette(controller) {
             };
             
             reader.readAsArrayBuffer(file);
-        }
+        };
         
         fileInput.click();
     }
     
     function saveSwatches() {
-        var
+        let
             aco = new AdobeColorTable().write(that.getSwatches()),
             blob = new Blob([aco], {type: "application/octet-stream"});
         
@@ -209,12 +204,12 @@ export default function CPSwatchesPalette(controller) {
     function initSwatchPanel() {
         swatchPanel.className = "chickenpaint-color-swatches list-unstyled";
         
-        for (var i = 0; i < INIT_COLORS.length; i++) {
+        for (let i = 0; i < INIT_COLORS.length; i++) {
             swatchPanel.appendChild(new CPColorSwatch(INIT_COLORS[i]).getElement());
         }
         
         swatchPanel.addEventListener("click", function(e) {
-            var
+            let
                 swatch = e.target;
             
             if (!/chickenpaint-color-swatch/.test(swatch.className)) {
@@ -229,7 +224,7 @@ export default function CPSwatchesPalette(controller) {
         });
         
         swatchPanel.addEventListener("contextmenu", function(e) {
-            var
+            let
                 swatch = e.target;
             
             if (!/chickenpaint-color-swatch/.test(swatch.className)) {
@@ -241,37 +236,53 @@ export default function CPSwatchesPalette(controller) {
             $(swatch)
                 .dropdown("toggle")
                 .off("click.bs.dropdown"); // Remove Bootstrap's left-click handler installed by toggle
+
+            let
+                onDismissSwatchMenu = function(e) {
+                    // Firefox wrongly fires click events for the right mouse button!
+                    if (!("button" in e) || e.button === 0) {
+                        if ($(swatch).closest(".chickenpaint-color-swatch-wrapper").hasClass("show")) {
+                            $(swatch).closest(".dropdown-toggle").dropdown("toggle");
+                        }
+
+                        $(this).off("click", onDismissSwatchMenu);
+                    }
+                };
+
+            $(document).on("click", onDismissSwatchMenu);
         });
     }
 
     function createIcon(iconName) {
-        var
+        let
             icon = document.createElement("span");
 
         icon.className = "fa fa-" + iconName;
 
         return icon;
     }
-    
+
     function initButtonsPanel() {
-        var
-            btnSettings = document.createElement("div"), 
-            btnAdd = document.createElement("div"),
+        let
+            btnSettings = document.createElement("button"),
+            btnAdd = document.createElement("button"),
             
-            settingsMenu = document.createElement("ul"),
+            settingsMenu = document.createElement("div"),
             
             mnuSave = document.createElement("a"),
             mnuLoad  = document.createElement("a");
-        
+
+        btnAdd.type = "button";
         btnAdd.title = "Add the current brush color as a new swatch";
-        btnAdd.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
+        btnAdd.className = "btn chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
         btnAdd.appendChild(createIcon("plus"));
 
-        btnSettings.className = "chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";
+        btnSettings.type = "button";
+        btnSettings.className = "btn dropdown-toggle chickenpaint-small-toolbar-button chickenpaint-color-swatch-settings";
         btnSettings.setAttribute("data-toggle", "dropdown");
         btnSettings.appendChild(createIcon("cog"));
-        $(btnSettings).dropdown();
 
+        mnuSave.className = "dropdown-item";
         mnuSave.href = "#";
         mnuSave.innerHTML = "Save swatches to your computer...";
         mnuSave.addEventListener("click", function(e) {
@@ -279,7 +290,8 @@ export default function CPSwatchesPalette(controller) {
             
             saveSwatches();
         });
-            
+
+        mnuLoad.className = "dropdown-item";
         mnuLoad.href = "#";
         mnuLoad.innerHTML = "Load swatches from your computer...";
         mnuLoad.addEventListener("click", function(e) {
@@ -288,27 +300,38 @@ export default function CPSwatchesPalette(controller) {
             loadSwatches();
         });
         
-        settingsMenu.className = "dropdown-menu dropdown-menu-right";
+        settingsMenu.className = "dropdown-menu";
         
-        settingsMenu.appendChild(wrapWithElem(mnuSave, "li"));
-        settingsMenu.appendChild(wrapWithElem(mnuLoad, "li"));
+        settingsMenu.appendChild(mnuSave);
+        settingsMenu.appendChild(mnuLoad);
         
-        var
+        let
             btnSettingsContainer = document.createElement("div");
         
-        btnSettingsContainer.className = 'dropdown';
+        btnSettingsContainer.className = "btn-group dropright";
         btnSettingsContainer.appendChild(btnSettings);
         btnSettingsContainer.appendChild(settingsMenu);
+
+        $(btnSettings).dropdown();
+
+        let
+            onDismissSettingsMenu = function(e) {
+                // Firefox wrongly fires click events for the right mouse button!
+                if (!("button" in e) || e.button === 0) {
+                    if ($(btnSettingsContainer).hasClass("show")) {
+                        $(btnSettings).dropdown("toggle");
+                    }
+
+                    $(this).off("click", onDismissSettingsMenu);
+                }
+            };
 
         $(btnSettingsContainer).on("show.bs.dropdown", function() {
             /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
              * document *while the menu is open!*
              */
-            $(document).one("click", function() {
-                if ($(btnSettingsContainer).hasClass("open")) {
-                    $(btnSettings).dropdown("toggle");
-                }
-            });
+
+            $(document).on("click", onDismissSettingsMenu);
         });
 
         btnAdd.addEventListener("click", function(e) {

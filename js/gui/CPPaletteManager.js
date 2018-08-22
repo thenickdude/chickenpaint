@@ -20,6 +20,9 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+import EventEmitter from "wolfy87-eventemitter";
+
 import CPToolPalette from "./CPToolPalette";
 import CPMiscPalette from "./CPMiscPalette";
 import CPStrokePalette from "./CPStrokePalette";
@@ -28,8 +31,6 @@ import CPBrushPalette from "./CPBrushPalette";
 import CPLayersPalette from "./CPLayersPalette";
 import CPTexturePalette from "./CPTexturePalette";
 import CPSwatchesPalette from "./CPSwatchesPalette";
-
-import EventEmitter from "wolfy87-eventemitter";
 
 export default function CPPaletteManager(cpController) {
     var

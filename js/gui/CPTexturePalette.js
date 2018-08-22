@@ -20,52 +20,66 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+import EventEmitter from "wolfy87-eventemitter";
+
 import CPGreyBmp from '../engine/CPGreyBmp';
 import CPLookUpTable from '../engine/CPLookUpTable';
 
 import CPPalette from './CPPalette';
 import CPSlider from './CPSlider';
 
-import EventEmitter from "wolfy87-eventemitter";
-
-function wrapCheckboxWithLabel(checkbox, title) {
-    var
+/**
+ *
+ * @param {HTMLInputElement} checkbox - Must have a unique ID set
+ * @param {string} title
+ *
+ * @returns {HTMLElement}
+ */
+function wrapBootstrapCheckbox(checkbox, title) {
+    let
         div = document.createElement("div"),
         label = document.createElement("label");
 
-    div.className = "checkbox";
-    
+    div.className = "form-check";
+
+    checkbox.className = "form-check-input";
+
+    label.className = "form-check-label";
+    label.setAttribute("for", checkbox.id);
+
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(title));
-    
+
+    div.appendChild(checkbox);
     div.appendChild(label);
-    
+
     return div;
 }
 
 function loadTextures(textureFilename, width, height, textureCount, then) {
-    var
+    let
         img = new Image(),
         textures = [];
     
     img.onload = function() {
-        var
+        let
             canvas = document.createElement("canvas"),
             canvasContext = canvas.getContext("2d");
         
         canvas.width = img.width;
         canvas.height = img.height;
         
-        for (var i = 0; i < textureCount; i++) {
+        for (let i = 0; i < textureCount; i++) {
             canvasContext.drawImage(img, 0, i * height, width, height, 0, 0, width, height);
             
             try {
-                var
+                let
                     imageData = canvasContext.getImageData(0, 0, width, height),
-                    texture = new CPGreyBmp(width, height);
+                    texture = new CPGreyBmp(width, height, 8);
                 
                 // Take just the red channel from the image to form the new grayscale texture
-                for (var j = 0; j < width * height; j++) {
+                for (let j = 0; j < width * height; j++) {
                     texture.data[j] = imageData.data[j * 4];
                 }
                 
@@ -85,14 +99,9 @@ function loadTextures(textureFilename, width, height, textureCount, then) {
 export default function CPTexturePalette(controller) {
     CPPalette.call(this, controller, "textures", "Textures");
     
-    var
+    let
         TEXTURE_PREVIEW_SIZE = 64,
         TEXTURE_SWATCH_BUTTON_SIZE = 32,
-
-	    /**
-         * @type {CPGreyBmp[]}
-         */
-        textures = [], // Array of CPGreyBmp
 
         /**
          * @type {CPGreyBmp}
@@ -116,13 +125,9 @@ export default function CPTexturePalette(controller) {
      * Add an array of textures to the global texture list, and add swatches for them to the UI.
      */
     function addTextures(newTextures) {
-        for (var i = 0; i < newTextures.length; i++) {
-            var
-                texture = newTextures[i];
-            
-            textures.push(texture);
-    
-            var
+        for (let i = 0; i < newTextures.length; i++) {
+            let
+                texture = newTextures[i],
                 button = new CPTextureSwatch(texture, TEXTURE_SWATCH_BUTTON_SIZE, TEXTURE_SWATCH_BUTTON_SIZE);
             
             button.on("click", function() {
@@ -140,11 +145,11 @@ export default function CPTexturePalette(controller) {
      * @returns CPGreyBmp[]
      */
     function makeProceduralTextures() {
-        var
+        let
             result = [null];
         
-        var
-            texture = new CPGreyBmp(2, 2);
+        let
+            texture = new CPGreyBmp(2, 2, 8);
         texture.data[0] = 0xFF;
         texture.data[3] = 0xFF;
         result.push(texture);
@@ -175,10 +180,10 @@ export default function CPTexturePalette(controller) {
      * @returns CPGreyBmp
      */
     function makeDotTexture(size) {
-        var
-            texture = new CPGreyBmp(size, size);
+        let
+            texture = new CPGreyBmp(size, size, 8);
         
-        for (var i = 1; i < size * size; i++) {
+        for (let i = 1; i < size * size; i++) {
             texture.data[i] = 0xFF;
         }
         return texture;
@@ -192,12 +197,12 @@ export default function CPTexturePalette(controller) {
      * @returns CPGreyBmp
      */
     function makeCheckerBoardTexture(size) {
-        var
+        let
             textureSize = 2 * size,
-            texture = new CPGreyBmp(textureSize, textureSize);
+            texture = new CPGreyBmp(textureSize, textureSize, 8);
         
-        for (var i = 0; i < textureSize; i++) {
-            for (var j = 0; j < textureSize; j++) {
+        for (let i = 0; i < textureSize; i++) {
+            for (let j = 0; j < textureSize; j++) {
                 texture.data[i + j * textureSize] = ((~~(i / size) + ~~(j / size)) % 2 == 0) ? 0 : 0xFF;
             }
         }
@@ -214,10 +219,10 @@ export default function CPTexturePalette(controller) {
       * @returns CPGreyBmp
       */
      function makeVertLinesTexture(lineSize, size) {
-        var
-            texture = new CPGreyBmp(size, size);
+        let
+            texture = new CPGreyBmp(size, size, 8);
         
-        for (var i = 0; i < size * size; i++) {
+        for (let i = 0; i < size * size; i++) {
             if (~~(i % size) >= lineSize) {
                 texture.data[i] = 0xFF;
             }
@@ -235,10 +240,10 @@ export default function CPTexturePalette(controller) {
       * @returns CPGreyBmp
       */
     function makeHorizLinesTexture(lineSize, size) {
-        var
-            texture = new CPGreyBmp(size, size);
+        let
+            texture = new CPGreyBmp(size, size, 8);
         
-        for (var i = 0; i < size * size; i++) {
+        for (let i = 0; i < size * size; i++) {
             if (i / size >= lineSize) {
                 texture.data[i] = 0xFF;
             }
@@ -255,7 +260,7 @@ export default function CPTexturePalette(controller) {
                 processedTexture.mirrorHorizontally();
             }
 
-            var
+            let
                 lut = new CPLookUpTable();
             
             lut.loadBrightnessContrast(brightness, contrast);
@@ -277,7 +282,7 @@ export default function CPTexturePalette(controller) {
     }
     
     function CPTextureOptionsPanel() {
-        var
+        let
             panel = document.createElement("div"),
         
             cbInverse = document.createElement("input"),
@@ -300,24 +305,28 @@ export default function CPTexturePalette(controller) {
         }
         
         function buildTextureControlsPanel() {
-            var
+            let
                 panel = document.createElement("div");
 
+            panel.className = "chickenpaint-texture-controls";
+
+            cbInverse.id = "chickenpaint-chk-texture-invert";
             cbInverse.type = "checkbox";
             cbInverse.addEventListener("click", function(e) {
                 inverse = this.checked;
                 updateSelectedTexture();
             });
             
-            panel.appendChild(wrapCheckboxWithLabel(cbInverse, "Inverse"));
+            panel.appendChild(wrapBootstrapCheckbox(cbInverse, "Inverse"));
 
+            cbMirror.id = "chickenpaint-chk-texture-mirror";
             cbMirror.type = "checkbox";
             cbMirror.addEventListener("click", function(e) {
                 mirror = this.checked;
                 updateSelectedTexture();
             });
             
-            panel.appendChild(wrapCheckboxWithLabel(cbMirror, "Mirror"));
+            panel.appendChild(wrapBootstrapCheckbox(cbMirror, "Mirror"));
 
             slBrightness.title = function(value) {
                 return "Brightness: " + (value - 100) + "%";
@@ -343,7 +352,7 @@ export default function CPTexturePalette(controller) {
 
             panel.appendChild(slContrast.getElement());
 
-            var
+            let
                 okayButton = document.createElement("button"),
                 resetButton = document.createElement("button");
             
@@ -359,7 +368,7 @@ export default function CPTexturePalette(controller) {
             panel.appendChild(document.createTextNode(" "));
             
             resetButton.innerHTML = "Reset";
-            resetButton.className = "btn btn-default btn-sm";
+            resetButton.className = "btn btn-secondary btn-sm";
             resetButton.type = "button";
 
             resetButton.addEventListener("click", function(e) {
@@ -371,7 +380,7 @@ export default function CPTexturePalette(controller) {
                 updatePopoverControls();
                 updateSelectedTexture();
             });
-            
+
             panel.appendChild(resetButton);
             
             updatePopoverControls();
@@ -387,13 +396,13 @@ export default function CPTexturePalette(controller) {
         
         this.getElement = function() {
             return panel;
-        }
+        };
 
         panel.className = "chickenpaint-texture-options";
         panel.appendChild(sampleSwatch.getElement());
 
         btnCustomize.type = "button";
-        btnCustomize.className = "btn btn-default btn-sm";
+        btnCustomize.className = "btn btn-light btn-sm";
         btnCustomize.innerHTML = "Customize";
 
         textureControlsPanel = buildTextureControlsPanel();
@@ -401,10 +410,9 @@ export default function CPTexturePalette(controller) {
         $(btnCustomize)
             .popover({
                 html: true,
-                content: function() {
-                    return textureControlsPanel;
-                },
-                trigger: "manual"
+                content: () => textureControlsPanel,
+                trigger: "manual",
+                container: body
             }).
             on("click", function() {
                 $(this).popover("toggle");
@@ -423,7 +431,7 @@ export default function CPTexturePalette(controller) {
      * @constructor
      */
     function CPTextureSwatch(texture, width, height) {
-        var
+        let
             canvas = document.createElement("canvas"),
             canvasContext = canvas.getContext("2d"),
             
@@ -464,7 +472,7 @@ export default function CPTexturePalette(controller) {
     CPTextureSwatch.prototype = Object.create(EventEmitter.prototype);
     CPTextureSwatch.prototype.constructor = CPTextureSwatch;
     
-    optionsPanel = new CPTextureOptionsPanel()
+    optionsPanel = new CPTextureOptionsPanel();
     
     body.appendChild(optionsPanel.getElement());
 

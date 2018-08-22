@@ -20,6 +20,7 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
 import CPPalette from './CPPalette';
 
 export default function CPMiscPalette(cpController) {

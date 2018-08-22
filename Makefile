@@ -14,17 +14,17 @@ endif
 
 min : resources/js/chickenpaint.min.js
 
-resources/css/chickenpaint.css : resources/css/chickenpaint.less resources/fonts/ChickenPaint-Symbols.less
-	node_modules/.bin/lessc $< > $@
+resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss
+	node_modules/.bin/sass $< > $@
 
 resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
-	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --screw-ie8 --source-map chickenpaint.min.js.map --source-map-url chickenpaint.min.js.map --output chickenpaint.min.js chickenpaint.js 
+	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --source-map "filename='chickenpaint.min.js.map',url='chickenpaint.min.js.map',root='./'" --output chickenpaint.min.js -- chickenpaint.js
 
 resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js js/engine/CPBlend.js
 	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
 
-resources/fonts/ChickenPaint-Symbols.less : resources/fonts/chickenpaint-symbols-source/*
-	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --less resources/fonts/ChickenPaint-Symbols.less --fonts resources/fonts
+resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*
+	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --scss resources/fonts/ChickenPaint-Symbols.scss --fonts resources/fonts
 
 test: thumbnail-test integration-test blending-test
 
@@ -57,4 +57,4 @@ js/engine/CPBlend.js : codegenerator/BlendGenerator.js
 clean :
 	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map
 	rm -f test/blending_bench/blending_test.js test/blending_bench/blending.js test/integration_test/integration.js js/engine/CPBlend.js
-	rm -f resources/fonts/ChickenPaint-Symbols.{less,ttf,woff,eot}
+	rm -f resources/fonts/ChickenPaint-Symbols.{scss,ttf,woff,eot}

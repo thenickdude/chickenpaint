@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPCanvas from "./CPCanvas";
 import CPPaletteManager from "./CPPaletteManager";
 import CPMainMenu from "./CPMainMenu";

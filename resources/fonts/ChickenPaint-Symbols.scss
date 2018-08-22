@@ -1,0 +1,9 @@
+// Script-generated file, do not modify by hand
+
+$chickenpaint-icon-mask-content: "\e900";
+$chickenpaint-icon-lock-alpha-content: "\e901";
+
+@mixin chickenpaint-icon-classes {
+    .chickenpaint-icon-mask:before { content: $chickenpaint-icon-mask-content; }
+    .chickenpaint-icon-lock-alpha:before { content: $chickenpaint-icon-lock-alpha-content; }
+}

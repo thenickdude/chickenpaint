@@ -20,6 +20,7 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
@@ -28,7 +29,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     this.resizeVert = resizeVert || false;
     this.resizeHorz = resizeHorz || false;
     
-    var
+    let
         containerElement = document.createElement("div"),
         headElement = document.createElement("div"),
         closeButton = document.createElement("button"),
@@ -175,15 +176,20 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     
     headElement.className = "chickenpaint-palette-head";
 
-    var
-        headTitle = document.createElement("h4");
-    
-    headTitle.className = 'modal-title';
-    headTitle.appendChild(document.createTextNode(this.title));
-    
-    headElement.appendChild(closeButton);
-    headElement.appendChild(headTitle);
-    
+    let
+        titleContainer = document.createElement("div"),
+        titleElem = document.createElement("h5");
+
+    titleContainer.className = 'modal-header';
+
+    titleElem.className = 'modal-title';
+    titleElem.appendChild(document.createTextNode(this.title));
+
+    titleContainer.appendChild(titleElem);
+    titleContainer.appendChild(closeButton);
+
+    headElement.appendChild(titleContainer);
+
     bodyElement.className = "chickenpaint-palette-body";
     
     containerElement.appendChild(headElement);

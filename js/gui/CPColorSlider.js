@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPColor from "../util/CPColor";
 import CPColorBmp from "../engine/CPColorBmp";
 

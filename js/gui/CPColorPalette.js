@@ -29,7 +29,7 @@ import CPColor from "../util/CPColor";
 export default function CPColorPalette(cpController) {
     CPPalette.call(this, cpController, "color", "Color");
     
-    var 
+    let
         colorSelect = new CPColorSelect(cpController),
         colorSlider = new CPColorSlider(cpController, colorSelect),
         colorShow = new CPColorShow(cpController),
@@ -47,7 +47,7 @@ export default function CPColorPalette(cpController) {
 }
 
 function CPColorShow(controller) {
-    var
+    let
         color = 0,
         
         element = document.createElement("div");
@@ -66,7 +66,7 @@ function CPColorShow(controller) {
     function mouseClick(e) {
         e.preventDefault();
         
-        var 
+        let
             colHex = "#" + padLeft(Number(color).toString(16), "0", 6);
 
         colHex = window.prompt("Please enter a color in hex format", colHex);
@@ -77,7 +77,7 @@ function CPColorShow(controller) {
                     colHex = colHex.substring(1);
                 }
 
-                var 
+                let
                     newColor = parseInt(colHex, 16);
 
                 controller.setCurColor(new CPColor(newColor));

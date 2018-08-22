@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 export default function CPAboutDialog(parent) {
     var
         dialog = 
@@ -27,13 +29,13 @@ export default function CPAboutDialog(parent) {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
+                            <h5 class="modal-title">About ChickenPaint</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">About ChickenPaint</h4>
                         </div>
                         <div class="modal-body">
-                            <a class="chickenpaint-on-github" target="_blank" href="https://github.com/thenickdude/chickenpaint"><span class="fa fa-github"></span> ChickenPaint on GitHub</a>
+                            <a class="chickenpaint-on-github" target="_blank" href="https://github.com/thenickdude/chickenpaint"><span class="fab fa-github"></span> ChickenPaint on GitHub</a>
                             
                             <p>
                                 ChickenPaint is a translation of <a href="http://www.chibipaint.com/" target="_blank">ChibiPaint</a>

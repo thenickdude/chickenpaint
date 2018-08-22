@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 const
     MENU_ENTRIES = [
         {
@@ -420,14 +422,10 @@ const
 export default function CPMainMenu(controller, mainGUI) {
     let
         bar = $(
-            '<nav class="navbar navbar-default">'
-                + '<div class="container-fluid">'
-                    + '<div class="navbar-header">'
-                        + '<a class="navbar-brand" href="#">ChickenPaint</a>'
-                    + '</div>'
-                    + '<ul class="nav navbar-nav">'
-                    + '</ul>'
-                + '</div>'
+            '<nav class="navbar navbar-expand-lg navbar-light bg-light">'
+                + '<a class="navbar-brand" href="#">ChickenPaint</a>'
+                + '<ul class="navbar-nav">'
+                + '</ul>'
             + '</nav>'
         ),
         macPlatform = /^Mac/i.test(navigator.platform);
@@ -476,27 +474,27 @@ export default function CPMainMenu(controller, mainGUI) {
     function updateMenuStates(menuElem) {
         $("[data-action]", menuElem).each(function() {
             let
+                thisElem = $(this),
                 action = this.getAttribute("data-action"),
-                actionAllowed = controller.isActionAllowed(action),
-                li = $(this).parent();
+                actionAllowed = controller.isActionAllowed(action);
 
-            li
+            thisElem
                 .toggleClass("disabled", !actionAllowed)
-                .toggleClass("hidden", !actionAllowed && li.data("hideIfNotAvailable") === true);
+                .toggleClass("hidden", !actionAllowed && thisElem.data("hideIfNotAvailable") === true);
         });
 
         // Hide dividers if all of the menu options in the section they delineate were hidden
-        $(".divider", menuElem).removeClass("hidden");
+        $(".dropdown-divider", menuElem).removeClass("hidden");
 
         let
-            visibleElements = $("li:not(.hidden)", menuElem),
+            visibleElements = $(".dropdown-item:not(.hidden),.dropdown-divider:not(.hidden)", menuElem),
             lastDivider = null;
 
         for (let i = 0; i < visibleElements.length; i++) {
             let
                 thisElement = $(visibleElements[i]);
 
-            if (thisElement.hasClass("divider")) {
+            if (thisElement.hasClass("dropdown-divider")) {
                 if (i === 0 || lastDivider) {
                     // This divider immediately follows a previous divider, so we don't need it
                     thisElement.addClass("hidden");
@@ -513,93 +511,99 @@ export default function CPMainMenu(controller, mainGUI) {
         }
     }
     
-    function recurseFillMenu(menuElem, entries) {
-        menuElem.append(entries.map(function(entry) {
+    function fillMenu(menuElem, entries) {
+        menuElem.append(entries.map(topLevelMenuEntry => {
             let
-                entryElem;
-            
-            if (entry.action && !controller.isActionSupported(entry.action)) {
-                return;
-            }
-            
-            if (entry.action == "CPSend" && !controller.isActionSupported("CPContinue")) {
-                // User won't be able to come back after saving, so make it sound more final
-                entry.name = "Post Oekaki";
-                entry.shortcut = "ctrl+p";
-            }
-
-            if (entry.children) {
-                entryElem = $(
-                    '<li class="dropdown">'
-                        + '<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + entry.name + ' <span class="caret"></span></a>'
-                        + '<ul class="dropdown-menu">'
-                        + '</ul>'
+                topLevelMenuElem = $(
+                    '<li class="nav-item dropdown">'
+                        + '<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + topLevelMenuEntry.name + '</a>'
+                        + '<div class="dropdown-menu">'
+                        + '</div>'
                     + '</li>'
                 );
 
-                $(".dropdown-toggle", entryElem).dropdown();
+            $(".dropdown-toggle", topLevelMenuElem).dropdown();
 
-                entryElem.on("show.bs.dropdown", function() {
-                    updateMenuStates(entryElem);
+            topLevelMenuElem.on("show.bs.dropdown", function () {
+                updateMenuStates(topLevelMenuElem);
 
-                    /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
-                     * document *while the menu is open!*
-                     */
-                    $(document).one("click", function() {
-                        if (entryElem.hasClass("open")) {
-                            $(".dropdown-toggle", entryElem).dropdown("toggle");
-                        }
-                    });
+                /* Instead of Bootstrap's extremely expensive data API, we'll only listen for dismiss clicks on the
+                 * document *while the menu is open!*
+                 */
+                $(document).one("click", function () {
+                    if (topLevelMenuElem.hasClass("show")) {
+                        $(".dropdown-toggle", topLevelMenuElem).dropdown("toggle");
+                    }
                 });
-                
-                recurseFillMenu($(".dropdown-menu", entryElem), entry.children);
-            } else if (entry.name == '-') {
-                entryElem = $('<li role="separator" class="divider"></li>');
-            } else {
-                entryElem = $('<li><a href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a></li>');
-                
-                if (entry.checkbox) {
-                    $("a", entryElem)
-                        .data("checkbox", true)
-                        .toggleClass("selected", !!entry.checked);
+            });
+
+            $(".dropdown-menu", topLevelMenuElem).append(topLevelMenuEntry.children.map(entry => {
+                if (entry.action && !controller.isActionSupported(entry.action)) {
+                    return;
                 }
-                if (entry.hideIfNotAvailable) {
-                    entryElem.data("hideIfNotAvailable", true);
+
+                if (entry.action == "CPSend" && !controller.isActionSupported("CPContinue")) {
+                    // User won't be able to come back after saving, so make it sound more final
+                    entry.name = "Post Oekaki";
+                    entry.shortcut = "ctrl+p";
                 }
-            }
-            
-            if (entry.title) {
-                entryElem.attr('title', entry.title);
-            }
-            
-            if (entry.shortcut) {
+
                 let
-                    menuLink = $("> a", entryElem),
-                    shortcutDesc = document.createElement("small");
-                
-                // Rewrite the shortcuts to Mac-style
-                if (macPlatform) {
-                    entry.shortcut = entry.shortcut.replace(/SHIFT/im, "⇧");
-                    entry.shortcut = entry.shortcut.replace(/ALT/im, "⌥");
-                    entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
+                    entryElem;
+
+                if (entry.name == '-') {
+                    entryElem = $('<div class="dropdown-divider"></div>');
+                } else {
+                    entryElem = $(
+                        '<a class="dropdown-item" href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a>'
+                    );
+
+                    if (entry.checkbox) {
+                        $(entryElem)
+                            .data("checkbox", true)
+                            .toggleClass("selected", !!entry.checked);
+                    }
+                    if (entry.hideIfNotAvailable) {
+                        entryElem.data("hideIfNotAvailable", true);
+                    }
                 }
-                
-                shortcutDesc.className = "chickenpaint-shortcut";
-                shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
-                
-                menuLink.append(shortcutDesc);
-                
-                key(entry.shortcut, function(e) {
-                    menuItemClicked(menuLink);
 
-                    e.preventDefault();
-                    e.stopPropagation();
 
-                    return false;
-                });
-            }
-            
-            return entryElem;
+                if (entry.title) {
+                    entryElem.attr('title', entry.title);
+                }
+
+                if (entry.shortcut) {
+                    let
+                        menuLink = entryElem,
+                        shortcutDesc = document.createElement("small");
+
+                    // Rewrite the shortcuts to Mac-style
+                    if (macPlatform) {
+                        entry.shortcut = entry.shortcut.replace(/SHIFT/im, "⇧");
+                        entry.shortcut = entry.shortcut.replace(/ALT/im, "⌥");
+                        entry.shortcut = entry.shortcut.replace(/CTRL/im, "⌘");
+                    }
+
+                    shortcutDesc.className = "chickenpaint-shortcut";
+                    shortcutDesc.innerHTML = presentShortcutText(entry.shortcut);
+
+                    menuLink.append(shortcutDesc);
+
+                    key(entry.shortcut, function (e) {
+                        menuItemClicked(menuLink);
+
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        return false;
+                    });
+                }
+
+                return entryElem;
+            }));
+
+            return topLevelMenuElem;
         }));
     }
     
@@ -607,7 +611,7 @@ export default function CPMainMenu(controller, mainGUI) {
         return bar[0];
     };
     
-    recurseFillMenu($(".navbar-nav", bar), MENU_ENTRIES);
+    fillMenu($(".navbar-nav", bar), MENU_ENTRIES);
 
     $(bar).on('click', 'a:not(.dropdown-toggle)', function(e) {
         menuItemClicked($(this));

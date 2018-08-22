@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 export default function CPGridDialog(parent, canvas) {
     var
         dialog = 
@@ -27,10 +29,10 @@ export default function CPGridDialog(parent, canvas) {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
+                            <h5 class="modal-title">Grid options</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Grid options</h4>
                         </div>
                         <div class="modal-body">
                             <form>
@@ -41,7 +43,7 @@ export default function CPGridDialog(parent, canvas) {
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
                             <button type="button" class="btn btn-primary chickenpaint-apply-grid-settings" data-dismiss="modal">Ok</button>
                         </div>
                     </div>

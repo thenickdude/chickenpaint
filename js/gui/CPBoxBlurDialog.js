@@ -20,6 +20,8 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 export default function CPBoxBlurDialog(parent, controller) {
     var
         dialog = 
@@ -27,10 +29,10 @@ export default function CPBoxBlurDialog(parent, controller) {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
+                            <h5 class="modal-title">Box blur</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Box blur</h4>
                         </div>
                         <div class="modal-body">
                             <form>
@@ -45,7 +47,7 @@ export default function CPBoxBlurDialog(parent, controller) {
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
                             <button type="button" class="btn btn-primary chickenpaint-apply-box-blur" data-dismiss="modal">Ok</button>
                         </div>
                     </div>

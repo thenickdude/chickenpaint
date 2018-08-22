@@ -30,6 +30,10 @@ import "core-js/fn/array/iterator";
 import "core-js/fn/array/fill";
 import "core-js/fn/string/ends-with";
 
+import $ from "jquery";
+
+import "bootstrap";
+
 import CPBrushInfo from "./engine/CPBrushInfo";
 import CPArtwork from "./engine/CPArtwork";
 import CPResourceLoader from "./engine/CPResourceLoader";
@@ -55,7 +59,7 @@ import CPRect from "./util/CPRect";
 import EventEmitter from "wolfy87-eventemitter";
 
 function checkBrowserSupport() {
-    var
+    let
         supportsAPIs = isCanvasSupported() && "Uint8Array" in window;
 
     if (!supportsAPIs) {
@@ -63,7 +67,7 @@ function checkBrowserSupport() {
     }
 
     // iOS 8.0.0 Safari can't upload files
-    var
+    let
         isIOS8_0_0 = (navigator.userAgent.indexOf("iPad") != -1 || navigator.userAgent.indexOf("iPod") != -1 || navigator.userAgent.indexOf("iPhone") != -1)
             && navigator.userAgent.indexOf(" OS 8_0 ") != -1,
         isSafari = navigator.userAgent.indexOf("CriOS") == -1 && navigator.userAgent.indexOf("Safari") != -1;
@@ -77,7 +81,7 @@ function checkBrowserSupport() {
 }
 
 function createDrawingTools() {
-    var
+    let
         tools = new Array(ChickenPaint.T_MAX);
 
     tools[ChickenPaint.T_PENCIL] = new CPBrushInfo({
@@ -297,7 +301,7 @@ function createDrawingTools() {
  * @throws ChickenPaint.UnsupportedBrowserException if the web browser does not support ChickenPaint
  */
 export default function ChickenPaint(options) {
-    var
+    let
         that = this,
 
         uiElem = options.uiElem,
@@ -422,9 +426,9 @@ export default function ChickenPaint(options) {
 
             CPTransform: {
                 action: function () {
-                    var
+                    let
                         layer = that.artwork.getActiveLayer();
-                    
+
                     if (!layer.visible) {
                         that.showLayerNotification(layer, "Whoops! This layer is currently hidden", "layer");
                     } else if (layer.alpha == 0) {
@@ -740,7 +744,7 @@ export default function ChickenPaint(options) {
                     if (e.mask && e.layer.mask && !e.layer.maskVisible) {
                         that.artwork.setLayerMaskVisible(e.layer, true);
                     }
-                    
+
                     that.artwork.setActiveLayer(e.layer, e.mask);
 
                     // Since this is a slow GUI operation, this is a good chance to get the canvas ready for drawing
@@ -750,9 +754,9 @@ export default function ChickenPaint(options) {
             },
             CPToggleMaskView: {
                 action: function() {
-                    var
+                    let
                         newView = that.artwork.toggleMaskView();
-                    
+
                     if (newView) {
                         that.emitEvent("maskViewOpened", [newView]);
                     }
@@ -903,9 +907,9 @@ export default function ChickenPaint(options) {
 
         that.emitEvent("colorModeChange", [newMode == CPArtwork.EDITING_MODE_IMAGE ? "rgb" : "greyscale"]);
 
-        var 
+        let
             newColor;
-        
+
         switch (colorMode) {
             case ChickenPaint.COLOR_MODE_RGB:
                 newColor = curColor.clone();
@@ -984,11 +988,11 @@ export default function ChickenPaint(options) {
                 }
             break;
             case ChickenPaint.COLOR_MODE_GREYSCALE:
-                var 
+                let
                     grey = color.getValue();
 
                 if (curMaskColor != grey) {
-                    var
+                    let
                         greyRGB = CPColor.greyToRGB(grey);
 
                     this.artwork.setForegroundColor(greyRGB);
@@ -1071,13 +1075,13 @@ export default function ChickenPaint(options) {
     };
     
     function saveDrawing() {
-        var
+        let
             saver = new CPResourceSaver({
                 artwork: that.getArtwork(),
                 rotation: canvas.getRotation90(),
                 swatches: mainGUI.getSwatches()
             });
-        
+
         saver.on("savingComplete", function() {
             that.artwork.setHasUnsavedChanges(false);
         });
@@ -1093,8 +1097,8 @@ export default function ChickenPaint(options) {
         if (!that.isActionSupported("CPContinue") && !confirm('Are you sure you want to send your drawing to the server and finish drawing now?')) {
             return;
         }
-        
-        var
+
+        let
             saver = new CPResourceSaver({
                 artwork: that.getArtwork(),
                 rotation: canvas.getRotation90(),
@@ -1102,7 +1106,7 @@ export default function ChickenPaint(options) {
                 url: options.saveUrl
             }),
             sendDialog = new CPSendDialog(that, uiElem, saver);
-        
+
         saver.on("savingComplete", function() {
             that.artwork.setHasUnsavedChanges(false);
             
@@ -1133,7 +1137,7 @@ export default function ChickenPaint(options) {
      */
     this.isActionSupported = function(actionName) {
         if (actions[actionName]) {
-            var
+            let
                 supportedType = typeof actions[actionName].isSupported;
 
             if (supportedType == "function") {
@@ -1155,9 +1159,9 @@ export default function ChickenPaint(options) {
      * @param actionName
      */
     this.isActionAllowed = function(actionName) {
-        var 
+        let
             action = actions[actionName];
-        
+
         if (!action) {
             return false;
         } else if (typeof action.allowed == "function") {
@@ -1178,7 +1182,7 @@ export default function ChickenPaint(options) {
             return; // this shouldn't happen, but just in case
         }
 
-        var
+        let
             action = actions[e.action];
 
         if (action) {
@@ -1190,7 +1194,7 @@ export default function ChickenPaint(options) {
                     // You're already transforming the selection!
                 } else {
                     // Prompt the user to finish their transform before starting something else
-                    var
+                    let
                         dialog = new CPConfirmTransformDialog(uiElem, this);
 
                     /* If they decide to finish up with the transform, we can apply the original action they
@@ -1213,7 +1217,7 @@ export default function ChickenPaint(options) {
         if (isEventSupported("onbeforeunload")) {
             window.addEventListener("beforeunload", function(e) {
                 if (that.artwork.getHasUnsavedChanges()) {
-                    var
+                    let
                         confirmMessage = "Your drawing has unsaved changes!";
                     e.returnValue = confirmMessage;
                     return confirmMessage;
@@ -1275,9 +1279,9 @@ export default function ChickenPaint(options) {
     }
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
-        var
+        let
             loader = new CPResourceLoader(options);
-        
+
         new CPSplashScreen(uiElem, loader, options.resourcesRoot);
 
         loader.on("loadingComplete", function(resources) {
@@ -1313,7 +1317,7 @@ ChickenPaint.UnsupportedBrowserException = function(message) {
 };
 
 ChickenPaint.UnsupportedBrowserException.prototype.toString = function() {
-    var
+    let
         msg = "Sorry, your web browser does not support ChickenPaint.";
 
     if (this.message) {

@@ -20,13 +20,15 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPPalette from './CPPalette';
 import ChickenPaint from '../ChickenPaint';
 
 export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");
     
-    var 
+    let
         that = this,
 
         buttons = [
@@ -158,7 +160,7 @@ export default function CPToolPalette(cpController) {
     
     function buttonClicked(e) {
         if (this.nodeName == "LI") {
-            var
+            let
                 button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
 
             cpController.actionPerformed({action: button.command});
@@ -166,14 +168,14 @@ export default function CPToolPalette(cpController) {
     }
 
     function buildButtons() {
-        var
+        let
             body = that.getBodyElement();
         
         listElem.className = "chickenpaint-tools list-unstyled";
         
-        for (var i in buttons) {
+        for (let i in buttons) {
             (function(i) {
-                var 
+                let
                     button = buttons[i],
                     buttonElem = document.createElement("li"),
                     buttonIcon = document.createElement("div");
@@ -212,7 +214,7 @@ export default function CPToolPalette(cpController) {
         $(listElem)
             .on("click", "li", buttonClicked)
             .on("dblclick", "li", function(e) {
-                var
+                let
                     button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 if (button.commandDoubleClick) {
@@ -224,7 +226,7 @@ export default function CPToolPalette(cpController) {
     }
 
     cpController.on("modeChange", function(newMode) {
-        var
+        let
             body = that.getBodyElement();
 
         $("li", body).removeClass("selected");
@@ -237,7 +239,7 @@ export default function CPToolPalette(cpController) {
     });
 
     cpController.on("toolChange", function(newTool) {
-        var
+        let
             body = that.getBodyElement();
 
         if (cpController.getCurMode() == ChickenPaint.M_DRAW) {

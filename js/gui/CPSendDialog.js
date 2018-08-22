@@ -20,20 +20,20 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
 export default function CPSendDialog(controller, parent, resourceSaver) {
     var
         dialog = 
-            $(`<div class="modal fade" tabindex="-1" role="dialog">
+            $(`<div class="modal fade chickenpaint-send-dialog" tabindex="-1" role="dialog">
                 <div class="modal-dialog">
-                
                     <div class="modal-content" data-stage="saving">
                         <div class="modal-header">
+                            <h5 class="modal-title">Saving drawing...</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Saving drawing...</h4>
                         </div>
                         <div class="modal-body">
                             <p class="chickenpaint-saving-progress-message">Preparing your drawing to be saved, please wait...</p>
@@ -43,46 +43,46 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-default chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-light chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-not-previously-posted" style="display:none">
                         <div class="modal-header">
+                            <h5 class="modal-title">Drawing saved!</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Drawing saved!</h4>
                         </div>
                         <div class="modal-body">
                             <p>Your drawing has been saved, would you like to post it to the forum now?</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
-                            <button type="button" class="btn btn-default chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
-                            <button type="button" class="btn btn-default chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
+                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-light chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-already-posted" style="display:none">
                         <div class="modal-header">
+                            <h5 class="modal-title">Drawing saved!</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Drawing saved!</h4>
                         </div>
                         <div class="modal-body">
                             <p>Your drawing has been saved, would you like to view it on the forum now?</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, view the post</button>
-                            <button type="button" class="btn btn-default chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-redirect" style="display:none">
                         <div class="modal-header">
+                            <h5 class="modal-title">Drawing saved!</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                            <h4 class="modal-title">Drawing saved!</h4>
                         </div>
                         <div class="modal-body">
                             <p>Your drawing has been saved, redirecting you to view your new post now...</p>

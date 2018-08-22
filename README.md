@@ -59,11 +59,9 @@ Add something like this to your &lt;head> to load the required libraries in:
 </script>
 
 <script src="lib/raf.js"></script>
-<script src="lib/jquery-2.2.4.min.js"></script>
 <script src="lib/pep.min.js"></script>
 <script src="lib/keymaster.js"></script>
 <script src="lib/FileSaver.min.js"></script>
-<script src="lib/bootstrap.min.js"></script>
 ```
 
 Then include ChibiPaint's main JS and CSS files:

@@ -1,4 +1,4 @@
-$(document).ready(function() {
+document.addEventListener("DOMContentLoaded", function() {
     new ChickenPaint({
         uiElem: document.getElementById("chickenpaint-parent"),
         //loadImageUrl: "./uploaded.png",
@@ -7,6 +7,7 @@ $(document).ready(function() {
         postUrl: "posting.php",
         exitUrl: "forum.php",
         allowSave: true,
-        resourcesRoot: "../resources/"
+        resourcesRoot: "../resources/",
+        disableBootstrapAPI: true
     });
 });

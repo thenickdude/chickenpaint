@@ -20,20 +20,13 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
+import $ from "jquery";
+
 import CPPalette from "./CPPalette";
 import CPBlend from "../engine/CPBlend";
 import CPSlider from "./CPSlider";
 import CPLayerGroup from "../engine/CPLayerGroup";
 import CPImageLayer from "../engine/CPImageLayer";
-
-function wrapWithElem(e, wrapWithName) {
-    let
-        parent = document.createElement(wrapWithName);
-
-    parent.appendChild(e);
-
-    return parent;
-}
 
 function createFontAwesomeIcon(iconName) {
     let
@@ -53,16 +46,29 @@ function createChickenPaintIcon(iconName) {
     return icon;
 }
 
-function wrapCheckboxWithLabel(checkbox, title) {
+/**
+ *
+ * @param {HTMLInputElement} checkbox - Must have a unique ID set
+ * @param {string} title
+ *
+ * @returns {HTMLElement}
+ */
+function wrapBootstrapCheckbox(checkbox, title) {
     let
         div = document.createElement("div"),
         label = document.createElement("label");
 
-    div.className = "checkbox";
+    div.className = "form-check";
+
+    checkbox.className = "form-check-input";
+
+    label.className = "form-check-label";
+    label.setAttribute("for", checkbox.id);
 
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(title));
 
+    div.appendChild(checkbox);
     div.appendChild(label);
 
     return div;
@@ -75,6 +81,7 @@ function computeLayerPredicates(layer) {
 
         "clipping-mask": layer instanceof CPImageLayer && layer.clip,
         "no-clipping-mask": layer instanceof CPImageLayer && !layer.clip,
+        "no-clipping-mask-or-is-group": !(layer instanceof CPImageLayer) || !layer.clip,
 
         "mask": layer && layer.mask !== null,
         "no-mask": layer && layer.mask === null,
@@ -88,6 +95,9 @@ export default function CPLayersPalette(controller) {
     CPPalette.call(this, controller, "layers", "Layers", true, true);
 
     const
+        NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,
+        NOTIFICATION_HIDE_DELAY_MIN = 3000,
+
         BUTTON_PRIMARY = 0,
         BUTTON_WHEEL = 1,
         BUTTON_SECONDARY = 2;
@@ -119,6 +129,8 @@ export default function CPLayersPalette(controller) {
         cbSampleAllLayers = document.createElement("input"),
         cbLockAlpha = document.createElement("input"),
 
+        notificationDismissTimer = false,
+
         layerActionButtons;
 
     /**
@@ -141,8 +153,6 @@ export default function CPLayersPalette(controller) {
 
     function CPLayerWidget() {
         const
-            NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,
-            NOTIFICATION_HIDE_DELAY_MIN = 3000,
             LAYER_DRAG_START_THRESHOLD = 5, // Pixels we have to move a layer before it shows as "dragging"
             LAYER_IN_GROUP_INDENT = 16,
 
@@ -187,14 +197,6 @@ export default function CPLayersPalette(controller) {
             widgetContainer = document.createElement("div"),
             layerContainer = document.createElement("div"),
 
-            oldApplyPlacement,
-            notificationMessage = "",
-            notificationLayer = null,
-            notificationLayerIndex = -1,
-            notificationLocation = "",
-
-            dismissTimer = false,
-
             dropdownLayerMenu = createLayerDropdownMenu(),
             dropdownMousePos = {x: 0, y: 0},
 
@@ -213,9 +215,7 @@ export default function CPLayersPalette(controller) {
              * True if we right-clicked on the mask of the layer for the dropdown.
              * @type {boolean}
              */
-            dropdownOnMask = false,
-
-            that = this;
+            dropdownOnMask = false;
 
 	    /**
          * Get the element that represents the layer with the given display index.
@@ -445,6 +445,7 @@ export default function CPLayersPalette(controller) {
         function drawRedX(canvas) {
             const
 	            X_INSET = 5,
+                Y_INSET = 5,
                 X_LINE_THICKNESS = 3,
                 
 		        context = canvas.getContext("2d");
@@ -452,11 +453,11 @@ export default function CPLayersPalette(controller) {
 	        context.strokeStyle = "red";
 	        context.lineWidth = X_LINE_THICKNESS;
 	        
-	        context.moveTo(X_INSET, X_INSET);
-	        context.lineTo(canvas.width - X_INSET, canvas.height - X_INSET);
+	        context.moveTo(X_INSET, Y_INSET);
+	        context.lineTo(canvas.width - X_INSET, canvas.height - Y_INSET);
 	
-	        context.moveTo(canvas.width - X_INSET, X_INSET);
-	        context.lineTo(X_INSET, canvas.height - X_INSET);
+	        context.moveTo(canvas.width - X_INSET, Y_INSET);
+	        context.lineTo(X_INSET, canvas.height - Y_INSET);
 	
 	        context.stroke();
         }
@@ -525,7 +526,7 @@ export default function CPLayersPalette(controller) {
             if (layer instanceof CPImageLayer) {
                 if (layer.clip) {
                     layerDiv.className += " chickenpaint-layer-clipped";
-                    iconsDiv.appendChild(createFontAwesomeIcon("fa-level-down fa-flip-horizontal"))
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-level-down-alt fa-flip-horizontal"))
                 }
                 
                 if (layer.lockAlpha) {
@@ -540,10 +541,10 @@ export default function CPLayersPalette(controller) {
 
                 if (layer.expanded) {
                     layerDiv.className += " " + CLASSNAME_LAYER_GROUP_EXPANDED;
-                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder-open-o chickenpaint-layer-group-toggle"));
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder-open chickenpaint-layer-group-toggle"));
                 } else {
                     layerDiv.className += " " + CLASSNAME_LAYER_GROUP_COLLAPSED;
-                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder-o chickenpaint-layer-group-toggle"));
+                    iconsDiv.appendChild(createFontAwesomeIcon("fa-folder chickenpaint-layer-group-toggle"));
                 }
             }
 
@@ -583,7 +584,7 @@ export default function CPLayersPalette(controller) {
             statusDiv.className = "chickenpaint-layer-status";
             layerDiv.appendChild(statusDiv);
             
-            layerDiv.setAttribute("data-display-index", index);
+            layerDiv.setAttribute("data-display-index", "" + index);
             layerDiv.setAttribute("data-toggle", "dropdown");
             layerDiv.setAttribute("data-target", "#chickenpaint-layer-pop");
 
@@ -616,7 +617,7 @@ export default function CPLayersPalette(controller) {
 	                let
                         action = this.getAttribute("data-action");
 
-                    $(this).parent().toggleClass("disabled", action !== "CPRenameLayer" && !controller.isActionAllowed(action));
+                    $(this).toggleClass("disabled", action !== "CPRenameLayer" && !controller.isActionAllowed(action));
                 });
 
                 $(getElemFromDisplayIndex(displayIndex))
@@ -932,8 +933,8 @@ export default function CPLayersPalette(controller) {
         };
 
         this.resize = function() {
+            palette.dismissNotification();
             this.buildLayers();
-            this.dismissNotification();
         };
         
         this.getElement = function() {
@@ -941,13 +942,15 @@ export default function CPLayersPalette(controller) {
         };
 
         /**
-         * Scroll the layer widget until the layer with the given index is fully visible.
+         * Scroll the layer widget until the layer with the given index is fully visible, and return
+         * the element for that layer.
          *
          * @param {int} displayIndex
          */
-        function revealLayer(displayIndex) {
+        this.revealLayer = function(displayIndex) {
             let
-                layerRect = getElemFromDisplayIndex(displayIndex).getBoundingClientRect(),
+                layerElem = getElemFromDisplayIndex(displayIndex),
+                layerRect = layerElem.getBoundingClientRect(),
                 containerRect = layerContainer.getBoundingClientRect();
 
             layerContainer.scrollTop =
@@ -962,69 +965,12 @@ export default function CPLayersPalette(controller) {
                     ),
                     0
                 );
-        }
 
-        this.dismissNotification = function() {
-            $(widgetContainer).popover('hide');
+            return layerElem;
         };
 
-        this.showNotification = function(layer, message, where) {
-            notificationMessage = message;
-            notificationLayer = layer;
-            notificationLayerIndex = getDisplayIndexFromLayer(layer);
-
-            if (artwork.getActiveLayer() == layer && where == "opacity") {
-                notificationLocation = "opacity";
-            } else {
-                notificationLocation = "layer";
-                revealLayer(notificationLayerIndex);
-            }
-
-            $(widgetContainer).popover("show");
-
-            if (dismissTimer) {
-                clearTimeout(dismissTimer);
-            }
-            dismissTimer = setTimeout(function() {
-                dismissTimer = false;
-                that.dismissNotification()
-            }, Math.max(Math.round(notificationMessage.length * NOTIFICATION_HIDE_DELAY_MS_PER_CHAR), NOTIFICATION_HIDE_DELAY_MIN));
-        };
-
-        /* Reposition the popover to the layer/location that the notification applies to */
-        function applyNotificationPlacement(offset, placement) {
-            oldApplyPlacement.call(this, offset, placement);
-
-            let
-                $tip = this.tip(),
-                $arrow = this.arrow();
-
-            switch (notificationLocation) {
-                case "layer":
-                    let
-                        layerPos = getElemFromDisplayIndex(notificationLayerIndex).getBoundingClientRect();
-
-                    $tip.offset({
-                        top: document.body.scrollTop + (layerPos.top + layerPos.bottom - $tip.height()) / 2,
-                        left: document.body.scrollLeft + (layerPos.left - $tip.outerWidth() - $arrow.outerWidth())
-                    });
-                break;
-                case "opacity":
-                    let
-                        alphaSliderPos = alphaSlider.getElement().getBoundingClientRect();
-
-                    $tip.offset({
-                        top: (alphaSliderPos.top + alphaSliderPos.bottom - $tip.height()) / 2 + document.body.scrollTop,
-                        left: alphaSliderPos.left - $tip.outerWidth() - $arrow.outerWidth()
-                    });
-                break;
-            }
-
-            $arrow.css("top", "50%");
-        }
-    
         function clearDropDown() {
-            if ($(dropdownParent).hasClass("open")) {
+            if ($(dropdownParent).hasClass("show")) {
                 $(dropdownParent)
                     .dropdown("toggle")
                     .off("click.bs.dropdown");
@@ -1033,7 +979,7 @@ export default function CPLayersPalette(controller) {
 
         function createLayerDropdownMenu() {
             const
-                menu = document.createElement("ul"),
+                menu = document.createElement("div"),
 
                 actions = [
                     {
@@ -1104,8 +1050,10 @@ export default function CPLayersPalette(controller) {
                 let
                     menuItemElem = document.createElement("a");
 
+                menuItemElem.className = "dropdown-item";
+
                 if (action.require) {
-                    menuItemElem.className = action.require.map(requirement => "chickenpaint-action-require-" + requirement).join(" ");
+                    menuItemElem.className = menuItemElem.className + " " + action.require.map(requirement => "chickenpaint-action-require-" + requirement).join(" ");
                 }
                 menuItemElem.href = "#";
                 menuItemElem.innerHTML = action.title;
@@ -1119,7 +1067,7 @@ export default function CPLayersPalette(controller) {
                     }
                 }
 
-                menu.appendChild(wrapWithElem(menuItemElem, "li"));
+                menu.appendChild(menuItemElem);
             }
 
             return menu;
@@ -1129,36 +1077,44 @@ export default function CPLayersPalette(controller) {
             let
                 action = e.target.getAttribute("data-action");
 
-            if (action) {
-                e.preventDefault();
-	
-	            controller.actionPerformed({
-		            action: "CPSetActiveLayer",
-		            layer: dropdownLayer,
-		            mask: artwork.isEditingMask()
-	            });
-                
-                let
-                    actionData = {
-                        action: action,
-                        layer: dropdownLayer
-                    },
-                    attributes = e.target.attributes;
-                
-                for (let i = 0; i < attributes.length; i++) {
-                    let
-                        matches = attributes[i].name.match(/^data-action-(.+)/);
-                    
-                    if (matches) {
-                        actionData[matches[1]] = JSON.parse(attributes[i].value);
-                    }
-                }
+            if (!action) {
+                return;
+            }
 
-                if (action === "CPRenameLayer") {
-                    showRenameBoxForLayer(getDisplayIndexFromLayer(dropdownLayer));
-                } else {
-					controller.actionPerformed(actionData);
-				}
+            /* Bootstrap will call this for us anyway when the click propagates out to the root
+             * of the document. However in the meantime we could have rebuilt the layer DOM nodes
+             * from scratch, breaking Bootstrap's un-pop code.
+             *
+             * So clear it up front now.
+             */
+            clearDropDown();
+
+            controller.actionPerformed({
+                action: "CPSetActiveLayer",
+                layer: dropdownLayer,
+                mask: artwork.isEditingMask()
+            });
+
+            let
+                actionData = {
+                    action: action,
+                    layer: dropdownLayer
+                },
+                attributes = e.target.attributes;
+
+            for (let i = 0; i < attributes.length; i++) {
+                let
+                    matches = attributes[i].name.match(/^data-action-(.+)/);
+
+                if (matches) {
+                    actionData[matches[1]] = JSON.parse(attributes[i].value);
+                }
+            }
+
+            if (action === "CPRenameLayer") {
+                showRenameBoxForLayer(getDisplayIndexFromLayer(dropdownLayer));
+            } else {
+                controller.actionPerformed(actionData);
             }
         }
 
@@ -1171,27 +1127,6 @@ export default function CPLayersPalette(controller) {
         widgetContainer.addEventListener("contextmenu", contextMenuShow);
 
         dropdownLayerMenu.addEventListener("click", onDropdownActionClick);
-
-        controller.on("layerNotification", this.showNotification.bind(this));
-
-        $(widgetContainer)
-            .popover({
-                html: false,
-                content: function() {
-                    return notificationMessage;
-                },
-                placement: "left",
-                trigger: "manual",
-                container: palette.getElement()
-            });
-
-        let
-            popover = $(widgetContainer).data('bs.popover');
-
-        // Save the old positioning routine so we can call it later
-        oldApplyPlacement = popover.applyPlacement;
-
-        popover.applyPlacement = applyNotificationPlacement;
 
         layerContainer.className = "list-group";
         widgetContainer.appendChild(layerContainer);
@@ -1274,13 +1209,13 @@ export default function CPLayersPalette(controller) {
                 },
                 {
                     title: "Clip to the layer below",
-                    icon: createFontAwesomeIcon("fa-level-down fa-flip-horizontal"),
+                    icon: createFontAwesomeIcon("fa-level-down-alt fa-flip-horizontal"),
                     action: "CPCreateClippingMask",
-                    require: "no-clipping-mask"
+                    require: "no-clipping-mask-or-is-group"
                 },
                 {
                     title: "Unclip from the layer below",
-                    icon: createFontAwesomeIcon("fa-level-down fa-flip-horizontal"),
+                    icon: createFontAwesomeIcon("fa-level-down-alt fa-flip-horizontal"),
                     action: "CPReleaseClippingMask",
                     require: "clipping-mask"
                 },
@@ -1318,7 +1253,7 @@ export default function CPLayersPalette(controller) {
             activeLayer = artwork.getActiveLayer(),
             facts = computeLayerPredicates(activeLayer);
 
-        for (let requirement of ["clipping-mask", "no-clipping-mask"]) {
+        for (let requirement of ["clipping-mask", "no-clipping-mask-or-is-group"]) {
             $(".chickenpaint-action-require-" + requirement, layerActionButtons).css("display", facts[requirement] ? "inline-block" : "none");
         }
 
@@ -1371,8 +1306,8 @@ export default function CPLayersPalette(controller) {
     function onChangeLayer(layer) {
         artwork = this;
 
+        palette.dismissNotification();
         layerWidget.layerChanged(layer);
-        layerWidget.dismissNotification();
 
         updateActiveLayerControls();
     }
@@ -1488,7 +1423,7 @@ export default function CPLayersPalette(controller) {
     this.setSize = function(w, h) {
         parentSetSize.call(this, w, h);
 
-        layerWidget.dismissNotification();
+        this.dismissNotification();
         alphaSlider.resize();
     };
     
@@ -1513,7 +1448,54 @@ export default function CPLayersPalette(controller) {
         layerWidget.setRotation90(newRotation);
     };
 
-    blendCombo.className = "form-control";
+    this.dismissNotification = function() {
+        $(".chickenpaint-layer[aria-describedby],.chickenpaint-slider[aria-describedby]", body)
+            .each((index, elem) => {
+                elem = $(elem);
+
+                if (elem.data('bs.popover')) {
+                    elem.popover("dispose");
+                }
+            });
+
+        if (notificationDismissTimer) {
+            clearTimeout(notificationDismissTimer);
+            notificationDismissTimer = false;
+        }
+    };
+
+    this.showNotification = (layer, message, where) => {
+        let
+            notificationLayerIndex = getDisplayIndexFromLayer(layer),
+            target;
+
+        if (artwork.getActiveLayer() == layer && where == "opacity") {
+            target = alphaSlider.getElement();
+        } else {
+            target = layerWidget.revealLayer(notificationLayerIndex);
+        }
+
+        this.dismissNotification();
+
+        $(target)
+            .popover({
+                html: false,
+                content: message,
+                placement: "left",
+                trigger: "manual",
+                fallbackPlacement: [],
+                boundary: "window",
+                container: palette.getElement()
+            })
+            .popover("show");
+
+        notificationDismissTimer = setTimeout(() => {
+            notificationDismissTimer = false;
+            this.dismissNotification();
+        }, Math.max(Math.round(message.length * NOTIFICATION_HIDE_DELAY_MS_PER_CHAR), NOTIFICATION_HIDE_DELAY_MIN));
+    };
+
+    blendCombo.className = "form-control form-control-sm";
     blendCombo.title = "Layer blending mode";
     blendCombo.addEventListener("change", function(e) {
         controller.actionPerformed({action: "CPSetLayerBlendMode", blendMode: parseInt(blendCombo.value, 10)});
@@ -1531,19 +1513,21 @@ export default function CPLayersPalette(controller) {
     
     body.appendChild(alphaSlider.getElement());
 
+    cbSampleAllLayers.id = "chickenpaint-chk-sample-all-layers";
     cbSampleAllLayers.type = "checkbox";
     cbSampleAllLayers.addEventListener("click", function(e) {
         artwork.setSampleAllLayers(cbSampleAllLayers.checked);
     });
     
-    body.appendChild(wrapCheckboxWithLabel(cbSampleAllLayers, "Sample all layers"));
-    
+    body.appendChild(wrapBootstrapCheckbox(cbSampleAllLayers, "Sample all layers"));
+
+    cbLockAlpha.id = "chickenpaint-chk-lock-alpha";
     cbLockAlpha.type = "checkbox";
     cbLockAlpha.addEventListener("click", function(e) {
         controller.actionPerformed({action: "CPSetLayerLockAlpha", lock: cbLockAlpha.checked});
     });
         
-    body.appendChild(wrapCheckboxWithLabel(cbLockAlpha, "Lock transparency"));
+    body.appendChild(wrapBootstrapCheckbox(cbLockAlpha, "Lock transparency"));
 
     body.appendChild(layerWidget.getElement());
 
@@ -1555,6 +1539,8 @@ export default function CPLayersPalette(controller) {
     artwork.on("changeStructure", onChangeStructure);
     artwork.on("changeLayerMaskThumb", onChangeLayerMaskThumb);
     artwork.on("changeLayerImageThumb", onChangeLayerImageThumb);
+
+    controller.on("layerNotification", this.showNotification.bind(this));
 
     // Set initial values
     onChangeStructure.call(artwork);

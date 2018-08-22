@@ -33,6 +33,8 @@ import CPColorBmp from "../engine/CPColorBmp";
 import CPColor from "../util/CPColor";
 import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
 
+import $ from "jquery";
+
 function sliderCheckboxGroup(checkbox, slider) {
     var
         group = document.createElement("div");
@@ -264,7 +266,7 @@ function CPBrushPanel(controller) {
         controller.getBrushInfo().tip = parseInt(tipCombo.value, 10);
     });
 
-    tipCombo.className = 'form-control';
+    tipCombo.className = "form-control form-control-sm";
     fillCombobox(tipCombo, TIP_NAMES);
 
     panel.appendChild(tipCombo);
@@ -511,7 +513,7 @@ function CPTransformPanel(controller) {
     rejectButton.type = "button";
 
     acceptButton.className = "btn btn-primary btn-block";
-    rejectButton.className = "btn btn-default btn-block";
+    rejectButton.className = "btn btn-light btn-block";
 
     acceptButton.innerHTML = "Apply transform";
     rejectButton.innerHTML = "Cancel";
