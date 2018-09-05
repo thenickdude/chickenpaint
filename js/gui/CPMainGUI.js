@@ -88,13 +88,17 @@ export default function CPMainGUI(controller, uiElem) {
         let
             newHeight;
 
+        let
+            windowHeight = $(window).height(),
+            menuBarHeight = $(menuBar.getElement()).outerHeight();
+
         if (fullScreenMode) {
-            newHeight = $(window).height() - $(menuBar.getElement()).height();
+            newHeight = windowHeight - menuBarHeight;
         } else {
-            newHeight = Math.min(Math.max(($(window).height() - $(menuBar.getElement()).height() - 65), 500), 850);
+            newHeight = Math.min(Math.max((windowHeight - menuBarHeight - 65), 500), 850);
         }
 
-        canvas.resize(newHeight);
+        canvas.resize(newHeight, false);
         that.constrainPalettes();
     };
 
