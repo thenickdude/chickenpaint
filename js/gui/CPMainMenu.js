@@ -422,14 +422,19 @@ const
 export default function CPMainMenu(controller, mainGUI) {
     let
         bar = $(
-            '<nav class="navbar navbar-expand-lg navbar-light bg-light">'
+            '<nav class="navbar navbar-expand-md navbar-light bg-light">'
                 + '<a class="navbar-brand" href="#">ChickenPaint</a>'
-                + '<ul class="navbar-nav">'
-                + '</ul>'
+                + '<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#chickenpaint-main-menu-content" aria-controls="chickenpaint-main-menu-content" aria-expanded="false" aria-label="Toggle main menu">'
+                    + '<span class="navbar-toggler-icon"></span>'
+                + '</button>'
+                + '<div class="collapse navbar-collapse" id="chickenpaint-main-menu-content">'
+                    + '<ul class="navbar-nav mr-auto">'
+                    + '</ul>'
+                + '</div>'
             + '</nav>'
         ),
         macPlatform = /^Mac/i.test(navigator.platform);
-    
+
     function menuItemClicked(target) {
         let
             action = target.data('action'),
@@ -617,7 +622,13 @@ export default function CPMainMenu(controller, mainGUI) {
         menuItemClicked($(this));
         e.preventDefault();
     });
-    
+
+    // Since we don't use the data-api
+    $(".navbar-toggler", bar).click(e => {
+        $('.collapse', bar).collapse('toggle');
+        e.preventDefault();
+    });
+
     function onPaletteVisChange(paletteName, show) {
         // Toggle the tickbox of the corresponding menu entry to match the new palette visibility
         let

@@ -29,7 +29,7 @@ import CPMainMenu from "./CPMainMenu";
 import EventEmitter from "wolfy87-eventemitter";
 
 export default function CPMainGUI(controller, uiElem) {
-    var
+    let
         lowerArea = document.createElement("div"),
         canvas = new CPCanvas(controller),
         paletteManager = new CPPaletteManager(controller),
@@ -85,7 +85,7 @@ export default function CPMainGUI(controller, uiElem) {
     };
 
     this.resize = function() {
-        var
+        let
             newHeight;
 
         if (fullScreenMode) {
@@ -101,7 +101,7 @@ export default function CPMainGUI(controller, uiElem) {
     menuBar = new CPMainMenu(controller, this);
 
     uiElem.appendChild(menuBar.getElement());
-    
+
     lowerArea.className = 'chickenpaint-main-section';
     
     lowerArea.appendChild(canvas.getElement());
