@@ -175,6 +175,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     containerElement.className = "chickenpaint-palette chickenpaint-palette-" + className;
     
     headElement.className = "chickenpaint-palette-head";
+    headElement.setAttribute("touch-action", "none");
 
     let
         titleContainer = document.createElement("div"),
