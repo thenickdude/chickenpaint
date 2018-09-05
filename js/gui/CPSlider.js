@@ -29,15 +29,19 @@ import EventEmitter from "wolfy87-eventemitter";
 export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     const
         PRECISE_DRAG_SCALE = 4,
-        EXP_MODE_FACTOR = 1.5;
+        EXP_MODE_FACTOR = 1.5,
 
-    var 
+        DRAG_MODE_IDLE = 0,
+        DRAG_MODE_NORMAL = 1,
+        DRAG_MODE_PRECISE = 2;
+
+    let
         canvas = document.createElement("canvas"),
         canvasContext = canvas.getContext("2d"),
         
         valueRange = maxValue - minValue,
         
-        dragNormal = false, dragPrecise = false,
+        dragMode = DRAG_MODE_IDLE,
         dragPreciseX,
         
         doneInitialPaint = false,
@@ -58,7 +62,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     centerMode = centerMode || false;
 
     function paint() {
-        var
+        let
             width = canvas.width,
             height = canvas.height,
             title = typeof that.title === "string" ? that.title : that.title(that.value),
@@ -91,7 +95,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
             
             canvasContext.restore();
         } else {
-            var
+            let
                 barProp = (that.value - minValue) / valueRange,
                 barWidth;
 
@@ -134,7 +138,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     }
 
     function mouseSelect(e) {
-        var 
+        let
             width = $(canvas).width(),
             left = $(canvas).offset().left,
 
@@ -148,40 +152,53 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
         that.setValue(proportion * valueRange + minValue);
     }
         
-    function mouseDragged(e) {
-        if (dragNormal) {
-            mouseSelect(e);
-        } else if (dragPrecise) {
-            var
-                diff = (e.pageX - dragPreciseX) / PRECISE_DRAG_SCALE;
-            
-            if (diff != 0) {
-                var
-                    unrounded = that.value + diff,
-                    rounded = unrounded | 0;
+    function pointerDragged(e) {
+        switch (dragMode) {
+            case DRAG_MODE_NORMAL:
+                mouseSelect(e);
+            break;
+            case DRAG_MODE_PRECISE:
+                let
+                    diff = (e.pageX - dragPreciseX) / PRECISE_DRAG_SCALE;
 
-                that.setValue(rounded);
+                if (diff !== 0) {
+                    let
+                        unrounded = that.value + diff,
+                        rounded = unrounded | 0;
 
-                /* Tweak the "old mouseX" position such that the fractional part of the value we were unable to set
-                 * will be accumulated
-                 */
-                dragPreciseX = e.pageX - (unrounded - rounded) * PRECISE_DRAG_SCALE;
-            }
+                    that.setValue(rounded);
+
+                    /* Tweak the "old mouseX" position such that the fractional part of the value we were unable to set
+                     * will be accumulated
+                     */
+                    dragPreciseX = e.pageX - (unrounded - rounded) * PRECISE_DRAG_SCALE;
+                }
+            break;
         }
     }
 
-    function mouseUp(e) {
-        if (dragNormal && e.button == 0) {
-            dragNormal = false;
-        } else if (dragPrecise && e.button == 2) {
-            dragPrecise = false;
-        } else {
-            return;
-        }
+    function pointerUp(e) {
+        if (dragMode !== DRAG_MODE_IDLE) {
+            switch (dragMode) {
+                case DRAG_MODE_NORMAL:
+                    if (e.button === 0) {
+                        dragMode = DRAG_MODE_IDLE;
+                    }
+                    break;
+                case DRAG_MODE_PRECISE:
+                    if (e.button == 2) {
+                        dragMode = DRAG_MODE_IDLE;
+                    }
+                    break;
+                default:
+                    return;
+            }
 
-        canvas.releasePointerCapture(e.pointerId);
-        canvas.removeEventListener("pointerup", mouseUp);
-        canvas.removeEventListener("pointermove", mouseDragged);
+            if (dragMode === DRAG_MODE_IDLE) {
+                canvas.releasePointerCapture(e.pointerId);
+                canvas.removeEventListener("pointermove", pointerDragged);
+            }
+        }
     }
     
     this.setValue = function(_value) {
@@ -228,39 +245,35 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
     };
     
     canvas.addEventListener("pointerdown", function(e) {
-        var
-            dragging = dragNormal || dragPrecise;
-        
-        if (!dragging) {
-            canvas.setPointerCapture(e.pointerId);
-            
+        if (dragMode === DRAG_MODE_IDLE) {
             switch (e.button) {
                 case 0: // Left
-                    dragNormal = true;
+                    dragMode = DRAG_MODE_NORMAL;
                     mouseSelect(e);
                 break;
                 case 2: // Right
-                    dragPrecise = true;
+                    dragMode = DRAG_MODE_PRECISE;
                     dragPreciseX = e.pageX;
                 break;
                 default:
                     return;
             }
-            
-            canvas.addEventListener("pointerup", mouseUp);
-            canvas.addEventListener("pointermove", mouseDragged);
+
+            canvas.setPointerCapture(e.pointerId);
+            canvas.addEventListener("pointermove", pointerDragged);
         }
     });
-    
+
+    canvas.addEventListener("pointerup", pointerUp);
+
     canvas.addEventListener("contextmenu", function(e) {
-        e.preventDefault()
+        e.preventDefault();
     });
 
     canvas.setAttribute("touch-action", "none");
-
     canvas.className = 'chickenpaint-slider';
     
-    if (!window.devicePixelRatio) {
+    if (!("devicePixelRatio" in window)) {
         // Old browsers
         window.devicePixelRatio = 1.0;
     }
