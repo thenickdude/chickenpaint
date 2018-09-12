@@ -26,6 +26,7 @@ import CPPalette from "./CPPalette";
 import CPBlend from "../engine/CPBlend";
 import CPSlider from "./CPSlider";
 import CPLayerGroup from "../engine/CPLayerGroup";
+import CPLayer from "../engine/CPLayer";
 import CPImageLayer from "../engine/CPImageLayer";
 
 function absorbTouch(e) {
@@ -474,6 +475,9 @@ export default function CPLayersPalette(controller) {
             thumbCanvas.title = "Image";
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_IMAGE_THUMBNAIL;
 
+            // Thumbnails are actually displayed at 25px high, set the display width appropriately for the aspect ratio
+            thumbCanvas.style.maxWidth = (thumbCanvas.width / thumbCanvas.height * 25) + "px";
+
             if (layer == artwork.getActiveLayer() && !artwork.isEditingMask()) {
                 thumbCanvas.className += " active";
             }
@@ -508,6 +512,9 @@ export default function CPLayersPalette(controller) {
 
             thumbCanvas.title = "Layer mask";
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_MASK_THUMBNAIL;
+
+            // Thumbnails are actually displayed at 25px high, set the display width appropriately for the aspect ratio
+            thumbCanvas.style.maxWidth = (thumbCanvas.width / thumbCanvas.height * 25) + "px";
 
             if (layer == artwork.getActiveLayer() && artwork.isEditingMask()) {
                 thumbCanvas.className += " active";

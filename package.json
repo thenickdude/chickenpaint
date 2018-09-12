@@ -7,25 +7,25 @@
     "url": "https://github.com/thenickdude/chickenpaint.git"
   },
   "devDependencies": {
-    "babel-cli": "^6.9.0",
-    "babel-core": "^6.26.3",
-    "babel-istanbul": "^0.12.2",
-    "babel-plugin-add-module-exports": "~0.2.1",
-    "babel-preset-es2015": "^6.16.0",
-    "babel-register": "^6.9.0",
-    "babelify": "^8.0.0",
+    "@babel/core": "^7.0.1",
+    "autoprefixer": "^9.1.5",
+    "@babel/cli": "^7.0.0",
+    "babel-plugin-add-module-exports": "^1.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/register": "^7.0.0",
+    "babelify": "^10.0.0",
     "browserify": "^16.2.2",
-    "canvas": "^1.6.11",
+    "canvas": "^1.6.12",
     "icomoon-build": "^0.2.8",
     "mocha": "^5.2.0",
     "multipipe": "^2.0.3",
     "node-png": "^0.4.3",
-    "sass": "^1.13.0",
-    "uglify-js": "^3.4.7"
+    "postcss-cli": "^6.0.0",
+    "sass": "^1.13.4",
+    "uglify-js": "^3.4.9"
   },
   "scripts": {
-    "test": "babel-node node_modules/.bin/_mocha -- test/*.js",
-    "coverage": "babel-node node_modules/.bin/babel-istanbul cover _mocha -- test/*.js"
+    "test": "babel-node node_modules/.bin/_mocha -- test/*.js"
   },
   "dependencies": {
     "bootstrap": "^4.1.3",

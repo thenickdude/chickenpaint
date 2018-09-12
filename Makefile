@@ -16,6 +16,7 @@ min : resources/js/chickenpaint.min.js
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss
 	node_modules/.bin/sass $< > $@
+	node_modules/.bin/postcss --replace $@
 
 resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
 	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --source-map "filename='chickenpaint.min.js.map',url='chickenpaint.min.js.map',root='./'" --output chickenpaint.min.js -- chickenpaint.js
