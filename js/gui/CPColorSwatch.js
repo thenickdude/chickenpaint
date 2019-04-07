@@ -49,10 +49,6 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
         element.style.backgroundColor = '#' + padLeft(Number(color.getRgb()).toString(16), "0", 6);
     }
 
-    function mouseClick(e) {
-        e.preventDefault();
-    }
-
     this.getElement = function() {
         return element;
     };
@@ -123,7 +119,6 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
 
     element.className = 'chickenpaint-color-pick-swatch';
 
-    element.addEventListener("click", mouseClick);
 
     if (initialColor) {
         color.copyFrom(initialColor);
@@ -151,7 +146,8 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
             trigger: "manual",
             placement: "bottom"
         })
-        .on("click", function() {
+        .on("click", function(e) {
+            e.preventDefault();
             $(this).popover("toggle");
         })
         .on("hidden.bs.popover", function() {
