@@ -239,6 +239,10 @@
 .chickenpaint .chickenpaint-palette-head .modal-header {
     padding:0
 }
+.chickenpaint .modal-header .close {
+    padding: 0.25rem;
+    margin: -0.25rem -0.25rem -0.25rem auto;
+}
 .chickenpaint-palette-head {
     font-size: 14px;
 }
