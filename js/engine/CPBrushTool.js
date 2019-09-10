@@ -101,7 +101,7 @@ export class CPBrushTool {
 	 */
 	paintDab(destImage, imageRect, sampleImage, brushConfig, brushRect, dab, color) {
 		let
-			alpha = Math.max(1, dab.alpha * brushConfig.alphaScale);
+			alpha = Math.max(1, Math.ceil(dab.alpha * brushConfig.alphaScale));
 
 		switch (brushConfig.paintMode) {
 			case CPBrushInfo.PAINT_MODE_FLOW:
@@ -145,7 +145,7 @@ export class CPBrushTool {
 		for (let y = 0; y < height; y++, srcOffset += srcYStride, dstOffset += dstYStride) {
 			for (let x = 0; x < width; x++, srcOffset++, dstOffset += CPColorBmp.BYTES_PER_PIXEL) {
 				let
-					strokeAlpha = (strokeData[srcOffset] / 255) | 0;
+					strokeAlpha = (strokeData[srcOffset] / 255 + 0.5) | 0; // Round nearest so it's easier to achieve 255 opacity
 
 				if (strokeAlpha > 0) {
 					let

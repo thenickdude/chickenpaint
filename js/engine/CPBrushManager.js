@@ -274,6 +274,7 @@ export default function CPBrushManager() {
     let
         brush = new Uint8Array(BRUSH_MAX_DIM * BRUSH_MAX_DIM),
         brushAA = new Uint8Array(BRUSH_AA_MAX_DIM * BRUSH_AA_MAX_DIM),
+        brushAARows = [new Float32Array(BRUSH_AA_MAX_DIM), new Float32Array(BRUSH_AA_MAX_DIM)],
 
         cacheBrush = null,
         cacheSize, cacheSqueeze, cacheAngle, cacheTip,
@@ -298,10 +299,6 @@ export default function CPBrushManager() {
             intSize = Math.ceil(brushInfo.curSize),
             intSizeAA = Math.ceil(brushInfo.curSize) + 1;
 
-        for (let x = 0; x < intSizeAA * intSizeAA; x++) {
-            brushAA[x] = 0;
-        }
-
         let
             invdx_invdy = (1 - dx) * (1 - dy),
             dx_invdy = dx * (1 - dy),
@@ -311,10 +308,19 @@ export default function CPBrushManager() {
             srcIndex = 0,
             dstIndex = 0,
 
-            dstYSkip = intSizeAA - intSize;
+            curRow = brushAARows[0],
+            nextRow = brushAARows[1],
+            swap;
 
-        for (let y = 0; y < intSize; y++, dstIndex += dstYSkip) {
-            for (let x = 0; x < intSize; x++, srcIndex++, dstIndex++) {
+        curRow.fill(0); // Since it will be dirty from a previous call
+
+        for (let y = 0; y < intSize; y++) {
+            let x;
+
+            nextRow[0] = 0; // We overwrite all the subsequent values in the loop, but we do need to clear this one for the first iteration's benefit
+
+            // For all the source pixels in the row:
+            for (x = 0; x < intSize; x++, srcIndex++, dstIndex++) {
                 let
                     brushAlpha = nonAABrush[srcIndex];
 
@@ -322,11 +328,26 @@ export default function CPBrushManager() {
                  * Use a weighted sum to shift the source pixels's position by a sub-pixel amount dx, dy and accumulate
                  * it into the final brushAA array.
                  */
-                brushAA[dstIndex] += ~~(brushAlpha * invdx_invdy);
-                brushAA[dstIndex + 1] += ~~(brushAlpha * dx_invdy);
-                brushAA[dstIndex + 1 + intSizeAA] += ~~(brushAlpha * dx_dy);
-                brushAA[dstIndex + intSizeAA] += ~~(brushAlpha * invdx_dy);
+
+                // We have the contribution from our previous 3 neighbours now so we can complete this output pixel
+                brushAA[dstIndex] = (curRow[x] + (brushAlpha * invdx_invdy) + 0.5) | 0;
+
+                curRow[x + 1]  += brushAlpha * dx_invdy;
+                nextRow[x]     += brushAlpha * invdx_dy;
+                nextRow[x + 1] = brushAlpha * dx_dy; // We're the first iteration that writes to this pixel so we needn't +=
             }
+
+            // The final output pixel of the row doesn't have a source pixel of its own (it just gets the contribution from the previous ones)
+            brushAA[dstIndex++] = (curRow[x] + 0.5) | 0;
+
+            swap = curRow;
+            curRow = nextRow;
+            nextRow = swap;
+        }
+
+        // Output final residual row
+        for (let x = 0; x < intSizeAA; x++, dstIndex++) {
+            brushAA[dstIndex] = (curRow[x] + 0.5) | 0;
         }
 
         return brushAA;
