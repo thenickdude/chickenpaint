@@ -662,18 +662,22 @@ export default function CPCanvas(controller) {
     function CPBezierMode() {
         const
             BEZIER_POINTS = 500,
-            BEZIER_POINTS_PREVIEW = 100;
+            BEZIER_POINTS_PREVIEW = 100,
 
-        var
-            dragBezierMode = 0, // 0 Initial drag, 1 first control point, 2 second point
+            BEZIER_STATE_INITIAL = 0,
+            BEZIER_STATE_POINT_1 = 1,
+            BEZIER_STATE_POINT_2 = 2;
+
+        let
+            dragBezierMode = BEZIER_STATE_INITIAL,
             dragBezierP0, dragBezierP1, dragBezierP2, dragBezierP3;
 
         this.mouseDown = function(e, button, pressure) {
             if (!this.capture && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && shouldDrawToThisLayer()) {
-                var
+                let
                     p = coordToDocument({x: mouseX, y: mouseY});
 
-                dragBezierMode = 0;
+                dragBezierMode = BEZIER_STATE_INITIAL;
                 dragBezierP0 = dragBezierP1 = dragBezierP2 = dragBezierP3 = p;
                 this.capture = true;
 
@@ -685,8 +689,8 @@ export default function CPCanvas(controller) {
 
         // Handles the first part of the Bezier where the user drags out a straight line
         this.mouseDrag = function(e) {
-            if (this.capture && dragBezierMode == 0) {
-                var
+            if (this.capture && dragBezierMode === BEZIER_STATE_INITIAL) {
+                let
                     p = coordToDocument({x: mouseX, y: mouseY});
 
                 dragBezierP2 = dragBezierP3 = p;
@@ -701,42 +705,45 @@ export default function CPCanvas(controller) {
 
         this.mouseUp = function(e, button, pressure) {
             if (this.capture && button == BUTTON_PRIMARY) {
-                if (dragBezierMode == 0) {
-                    dragBezierMode = 1;
-                } else if (dragBezierMode == 1) {
-                    dragBezierMode = 2;
-                } else if (dragBezierMode == 2) {
-                    this.capture = false;
+                switch (dragBezierMode) {
+                    case BEZIER_STATE_INITIAL:
+                        dragBezierMode = BEZIER_STATE_POINT_1;
+                        break;
+                    case BEZIER_STATE_POINT_1:
+                        dragBezierMode = BEZIER_STATE_POINT_2;
+                        break;
+                    case BEZIER_STATE_POINT_2:
+                        this.capture = false;
 
-                    var 
-                        p0 = dragBezierP0,
-                        p1 = dragBezierP1,
-                        p2 = dragBezierP2,
-                        p3 = dragBezierP3,
+                        let
+                            p0 = dragBezierP0,
+                            p1 = dragBezierP1,
+                            p2 = dragBezierP2,
+                            p3 = dragBezierP3,
 
-                        bezier = new CPBezier();
-                    
-                    bezier.x0 = p0.x;
-                    bezier.y0 = p0.y;
-                    bezier.x1 = p1.x;
-                    bezier.y1 = p1.y;
-                    bezier.x2 = p2.x;
-                    bezier.y2 = p2.y;
-                    bezier.x3 = p3.x;
-                    bezier.y3 = p3.y;
+                            bezier = new CPBezier();
 
-                    var 
-                        x = new Array(BEZIER_POINTS),
-                        y = new Array(BEZIER_POINTS);
+                        bezier.x0 = p0.x;
+                        bezier.y0 = p0.y;
+                        bezier.x1 = p1.x;
+                        bezier.y1 = p1.y;
+                        bezier.x2 = p2.x;
+                        bezier.y2 = p2.y;
+                        bezier.x3 = p3.x;
+                        bezier.y3 = p3.y;
 
-                    bezier.compute(x, y, BEZIER_POINTS);
+                        let
+                            x = new Array(BEZIER_POINTS),
+                            y = new Array(BEZIER_POINTS);
 
-                    artwork.beginStroke(x[0], y[0], 1);
-                    for (var i = 1; i < BEZIER_POINTS; i++) {
-                        artwork.continueStroke(x[i], y[i], 1);
-                    }
-                    artwork.endStroke();
-                    that.repaintAll();
+                        bezier.compute(x, y, BEZIER_POINTS);
+
+                        artwork.beginStroke(x[0], y[0], 1);
+                        for (let i = 1; i < BEZIER_POINTS; i++) {
+                            artwork.continueStroke(x[i], y[i], 1);
+                        }
+                        artwork.endStroke();
+                        that.repaintAll();
                 }
 
                 return true;
@@ -745,12 +752,12 @@ export default function CPCanvas(controller) {
 
         this.mouseMove = function(e, pressure) {
             if (this.capture) {
-                var
+                let
                     p = coordToDocument({x: mouseX, y: mouseY});
 
-                if (dragBezierMode == 1) {
+                if (dragBezierMode == BEZIER_STATE_POINT_1) {
                     dragBezierP1 = p;
-                } else if (dragBezierMode == 2) {
+                } else if (dragBezierMode == BEZIER_STATE_POINT_2) {
                     dragBezierP2 = p;
                 }
                 that.repaintAll(); // FIXME: repaint only the bezier region
@@ -764,7 +771,7 @@ export default function CPCanvas(controller) {
 
         this.paint = function() {
             if (this.capture) {
-                var
+                let
                     bezier = new CPBezier(),
 
                     p0 = coordToDisplay(dragBezierP0),
@@ -781,7 +788,7 @@ export default function CPCanvas(controller) {
                 bezier.x3 = p3.x;
                 bezier.y3 = p3.y;
 
-                var
+                let
                     x = new Array(BEZIER_POINTS_PREVIEW),
                     y = new Array(BEZIER_POINTS_PREVIEW);
                     
@@ -790,7 +797,7 @@ export default function CPCanvas(controller) {
                 canvasContext.beginPath();
                 
                 canvasContext.moveTo(x[0], y[0]);
-                for (var i = 1; i < BEZIER_POINTS_PREVIEW; i++) {
+                for (let i = 1; i < BEZIER_POINTS_PREVIEW; i++) {
                     canvasContext.lineTo(x[i], y[i]);
                 }
                 
