@@ -30,8 +30,8 @@ import CPColorSlider from './CPColorSlider';
 
 import EventEmitter from "wolfy87-eventemitter";
 
-export default function CPColorSwatch(initialColor, initialAlpha) {
-    var
+export default function CPColorSwatch(initialColor, initialAlpha, containerElement) {
+    let
         that = this,
         color = new CPColor(0),
         alpha = 255,
@@ -84,7 +84,7 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
     this.setCurColor = this.setColor;
 
     function buildColorEditPanel() {
-        var
+        const
             panel = document.createElement("div"),
             group = document.createElement("div"),
             select = new CPColorSelect(that, color),
@@ -129,11 +129,11 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
     }
 
     // Clicking outside the popover will dismiss it
-    function closeClickHandler(e) {
+    const closeClickHandler = function(e) {
         if ($(e.target).closest(".popover").length == 0 && $(e.target).closest(".chickenpaint-color-pick-swatch")[0] != element) {
             $(element).popover("hide");
         }
-    }
+    };
 
     $(element)
         .popover({
@@ -144,7 +144,8 @@ export default function CPColorSwatch(initialColor, initialAlpha) {
                 return buildColorEditPanel();
             },
             trigger: "manual",
-            placement: "bottom"
+            placement: "bottom",
+            container: containerElement || false // Popover requires boolean for empty, not "undefined"
         })
         .on("click", function(e) {
             e.preventDefault();

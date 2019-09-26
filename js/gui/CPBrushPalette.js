@@ -36,7 +36,7 @@ import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
 import $ from "jquery";
 
 function sliderCheckboxGroup(checkbox, slider) {
-    var
+    let
         group = document.createElement("div");
 
     group.className = "chickenpaint-checkbox-slider-group";
@@ -48,8 +48,8 @@ function sliderCheckboxGroup(checkbox, slider) {
 }
 
 function fillCombobox(combo, optionNames) {
-    for (var key in optionNames) {
-        var
+    for (let key in optionNames) {
+        let
             option = document.createElement("option");
 
         option.appendChild(document.createTextNode(optionNames[key]));
@@ -60,7 +60,7 @@ function fillCombobox(combo, optionNames) {
 }
 
 function CPGradientPreview(controller) {
-    var
+    let
         w = 150, h = 32,
 
         canvas = document.createElement("canvas"),
@@ -105,7 +105,7 @@ function CPGradientPreview(controller) {
 export default function CPBrushPalette(controller) {
     CPPalette.call(this, controller, "brush", "Tool options");
 
-    var
+    let
         brushPanel = new CPBrushPanel(controller),
         gradientPanel = new CPGradientPanel(controller),
         transformPanel = new CPTransformPanel(controller),
@@ -143,7 +143,7 @@ function CPBrushPanel(controller) {
         TIP_NAMES = ["Round Pixelated", "Round Hard Edge", "Round Soft", "Square Pixelated", "Square Hard Edge"],
         BRUSH_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200];
 
-    var
+    let
         panel = document.createElement("div"),
 
         tipCombo = document.createElement("select"),
@@ -313,7 +313,7 @@ function CPBrushPanel(controller) {
     });
 
     key("1,2,3,4,5,6,7,8,9,0", function(event, handler) {
-        var
+        let
             shortcut = parseInt(handler.shortcut, 10);
 
         if (shortcut == 0) {
@@ -324,10 +324,10 @@ function CPBrushPanel(controller) {
     });
 
     key("{,[", function() {
-        var
+        let
             size = controller.getBrushSize();
 
-        for (var i = BRUSH_SIZES.length - 1; i >= 0; i--) {
+        for (let i = BRUSH_SIZES.length - 1; i >= 0; i--) {
             if (size > BRUSH_SIZES[i]) {
                 controller.setBrushSize(BRUSH_SIZES[i]);
                 break;
@@ -336,10 +336,10 @@ function CPBrushPanel(controller) {
     });
 
     key("},]", function() {
-        var
+        let
             size = controller.getBrushSize();
 
-        for (var i = 0; i < BRUSH_SIZES.length; i++) {
+        for (let i = 0; i < BRUSH_SIZES.length; i++) {
             if (size < BRUSH_SIZES[i]) {
                 controller.setBrushSize(BRUSH_SIZES[i]);
                 break;
@@ -349,7 +349,7 @@ function CPBrushPanel(controller) {
 }
 
 CPBrushPalette.CPBrushPreview = function(controller) {
-    var
+    let
         size = 16,
         
         canvas = document.createElement("canvas"),
@@ -366,7 +366,7 @@ CPBrushPalette.CPBrushPreview = function(controller) {
     }
     
     function handleMouseDrag(e) {
-        var 
+        let
             offset = $(canvas).offset(),
             
             pt = {x: e.pageX - offset.left, y: e.pageY - offset.top},
@@ -432,20 +432,20 @@ CPBrushPalette.CPBrushPreview = function(controller) {
 };
 
 function CPGradientPanel(controller) {
-    var
+    const
         gradientPanel = document.createElement("div"),
 
         gradientPreview = new CPGradientPreview(controller),
 
-        gradientStartSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[0] & 0xFFFFFF)),
-        gradientEndSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[1] & 0xFFFFFF));
+        gradientStartSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[0] & 0xFFFFFF), controller.getCurGradient()[0] >>> 24, gradientPanel),
+        gradientEndSwatch = new CPColorSwatch(new CPColor(controller.getCurGradient()[1] & 0xFFFFFF), controller.getCurGradient()[1] >>> 24, gradientPanel);
 
     function updateGradient() {
-        var
-            gradient = new Array(2);
-
-        gradient[0] = (gradientStartSwatch.getAlpha() << 24) | gradientStartSwatch.getColorRgb();
-        gradient[1] = (gradientEndSwatch.getAlpha() << 24) |  gradientEndSwatch.getColorRgb();
+        const
+            gradient = [
+                (gradientStartSwatch.getAlpha() << 24) | gradientStartSwatch.getColorRgb(),
+                (gradientEndSwatch.getAlpha() << 24)   | gradientEndSwatch.getColorRgb()
+            ];
 
         controller.setCurGradient(gradient);
     }
@@ -462,7 +462,7 @@ function CPGradientPanel(controller) {
     gradientEndSwatch.on("colorChange", updateGradient);
     gradientEndSwatch.on("alphaChange", updateGradient);
 
-    var
+    let
         title, colorsGroup, colorGroup;
 
     title = document.createElement("p");
@@ -495,7 +495,7 @@ function CPTransformPanel(controller) {
     const
         TRANSFORM_INTERPOLATION = {smooth: "Smooth", sharp: "Sharp"};
 
-    var
+    let
         panel = document.createElement("div"),
 
         acceptButton = document.createElement("button"),
@@ -526,7 +526,7 @@ function CPTransformPanel(controller) {
     fillCombobox(interpCombo, TRANSFORM_INTERPOLATION);
 
     if (isCanvasInterpolationSupported()) {
-        var
+        let
             interpGroup = document.createElement("div"),
             interpLabel = document.createElement("label");
 
@@ -539,7 +539,7 @@ function CPTransformPanel(controller) {
         panel.appendChild(interpGroup);
     }
 
-    var
+    let
         buttonGroup = document.createElement("div");
 
     buttonGroup.appendChild(acceptButton);
