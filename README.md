@@ -35,16 +35,33 @@ support it), and macOS.
 In Firefox on Windows, you may need to set `dom.w3c_pointer_events.dispatch_by_pointer_messages` to `true` in [about:config]()
 to get pen pressure support working.
 
-## Try it out
+## Try it out online
 ChickenPaint is used as the default painting tool on [Chicken Smoothie's Oekaki forum](http://www.chickensmoothie.com/Forum/viewforum.php?f=29)
 if you're using the Google Chrome or Microsoft Edge web browsers (a free account is required).
 
 ## Building
-Building ChickenPaint requires [Node](https://nodejs.org/en/) to be installed (I'm using v4.4 LTS) along with GNU Make.
+Building ChickenPaint requires [Node](https://nodejs.org/en/) to be installed (I'm using v10 LTS) along with GNU Make.
 
-In the root of ChickenPaint, run `npm install` to install required dependencies. Then run `make all` to build ChickenPaint.
+In the root of ChickenPaint, run `npm install` to install required dependencies. 
+
+One of the development dependencies is `node-canvas`, which has some required system packages like `libcairo2`. 
+[Check out the full list of packages on their site](https://github.com/Automattic/node-canvas). You'll need to install 
+these for `npm install` to succeed.
+
+Then run `make all` to build ChickenPaint.
 The resulting `chickenpaint.js` file will be written to `resources/js`, and `chickenpaint.css` will be written to `resources/css`.
 You can use `make min` to build a minified version.
+
+## Running locally
+Run `npm start` to start a local webserver for testing. Open the resulting link in your browser and the `example/index.html` 
+page should open.
+
+For testing the PHP image upload example `example/save.php` you can run `php -S 127.0.0.1:5000 .` in the root of this package 
+instead. Then browse to `http://localhost:5000/example/` and you should be able to "post" your drawing, where it'll be
+saved as `uploaded.chi`/`uploaded.png`. 
+
+To edit the saved drawing you'll need to uncomment the `loadChibiFileUrl`/`loadImageUrl`
+lines in `example/index.js`.
 
 ## Usage
 
@@ -64,7 +81,7 @@ Add something like this to your &lt;head> to load the required libraries in:
 <script src="lib/FileSaver.min.js"></script>
 ```
 
-Then include ChibiPaint's main JS and CSS files:
+Then include ChickenPaint's main JS and CSS files:
 
 ```html
 <script src="chickenpaint/js/chickenpaint.js"></script>
@@ -90,7 +107,7 @@ new ChickenPaint({
 ```
 
 The possible options, including additional options for loading saved .chi or .png files for editing, are described
-in the comments for the constructor of the ChickenPaint object in `/js/ChickenPaint.js`.
+in the typedef comment for the ChickenPaintOptions object in `/js/ChickenPaint.js`.
 
 See `/example/index.html` for a complete example of a page that hosts ChickenPaint.
 
@@ -98,10 +115,12 @@ Your `saveUrl` will receive the uploaded .chi layer file (if the drawing had mul
 and .aco color palette (if the user edited it), which would arrive in PHP as `$_FILES["picture"]`, `$_FILES["chibifile"]`
 and `$_FILES["swatches"]`. For an example of an upload script, see `/example/save.php`.
 
-ChickenPaint's saving workflow has been customised for use on Chicken Smoothie. The user can save their drawing, and
-then either continue editing the drawing, publish their completed drawing to the forum, or exit their drawing session
-and come back and finish it later. The ability to create a new drawing and then save it multiple times before
-publishing it to the forum effectively requires that the saveUrl contains a unique session ID in it. This way each
-`POST` to the saveUrl can be associated with the same drawing session..
+ChickenPaint's saving workflow has been customised for use on Chicken Smoothie by setting `allowMultipleSends` to `true`
+in the options in the constructor. On CS, the user can save their drawing, and then either continue editing the drawing, 
+publish their completed drawing to the forum, or exit their drawing session and come back and finish it later. The 
+ability to create a new drawing and then save it multiple times before publishing it to the forum effectively requires 
+that the saveUrl contains a unique session ID in it. This way each `POST` to the saveUrl can be associated with the same
+drawing session.
 
-You might want to tweak that saving flow in `/js/gui/CPSendDialog.js` for your own forum.
+By default, `allowMultipleSends` is disabled, and the user will only have the option to post their drawing immediately.
+This allows a simpler image upload script.

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Thumbnail test</title>
+
+<script src="../../lib/FileSaver.js"></script>
+<script src="thumbnail.js"></script>
+<style type="text/css">
+    canvas, .test-original {
+        border:1px solid black;
+        margin:5px;
+        display:block;
+    }
+    .thumbnail {
+        /* width:50px; */
+        height:auto;
+    }
+</style>
+</head>
+<body>
+    <h1>Thumbnail test</h1>
+    <div class="test">
+        <div>
+            Original image
+            <img class="test-original" src="lineart.png">
+        </div>
+        <div class="test-result">
+
+        </div>
+    </div>
+    <div class="test">
+        <div>
+            Original image
+            <img class="test-original" src="full.png">
+        </div>
+        <div class="test-result">
+
+        </div>
+    </div>
+    <script>
+        new ThumbnailTest();
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 /test/blending/bench/blending.js
 /test/blending/compare/blending.js
 /test/integration_test/integration.js
+/test/thumbnail_test/thumbnail.js
 /.idea
 /coverage
 /test/compare_against_reference/test-images

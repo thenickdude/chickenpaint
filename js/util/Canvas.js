@@ -22,16 +22,6 @@
 
 // This version is used when running under Node, the browser uses /js/browser/util/Canvas.js instead
 
-import Canvas from 'canvas';
+import {createCanvas, createImageData} from 'canvas';
 
-export function createCanvas(width, height) {
-	return new Canvas(width, height);
-}
-
-export function createImageData(width, height) {
-	var
-		canvas = new Canvas(),
-		context = canvas.getContext("2d");
-	
-	return context.createImageData(width, height);
-}
+export {createCanvas, createImageData};

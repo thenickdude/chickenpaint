@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function() {
         saveUrl: "save.php",
         postUrl: "posting.php",
         exitUrl: "forum.php",
-        allowSave: true,
+        allowDownload: true,
         resourcesRoot: "../resources/",
         disableBootstrapAPI: true
     });

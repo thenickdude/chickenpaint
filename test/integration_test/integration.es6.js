@@ -16,6 +16,7 @@ import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
 import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
 
 import Random from "random-js";
+import $ from "jquery";
 
 let
     pageURL = new URL(window.location),
@@ -653,7 +654,7 @@ export default function IntegrationTest() {
 			saveUrl: "save.php",
 			postUrl: "posting.php",
 			exitUrl: "forum.php",
-			allowSave: true,
+			allowDownload: true,
 			resourcesRoot: "../../resources/",
 			onLoaded: startTests
 		});
