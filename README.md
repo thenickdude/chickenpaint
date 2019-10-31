@@ -56,7 +56,7 @@ You can use `make min` to build a minified version.
 Run `npm start` to start a local webserver for testing. Open the resulting link in your browser and the `example/index.html` 
 page should open.
 
-For testing the PHP image upload example `example/save.php` you can run `php -S 127.0.0.1:5000 .` in the root of this package 
+For testing the PHP image upload example `example/save.php` you can run `php -S 127.0.0.1:5000` in the root of this package 
 instead. Then browse to `http://localhost:5000/example/` and you should be able to "post" your drawing, where it'll be
 saved as `uploaded.chi`/`uploaded.png`. 
 
