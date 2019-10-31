@@ -65,23 +65,7 @@ lines in `example/index.js`.
 
 ## Usage
 
-Add something like this to your &lt;head> to load the required libraries in:
-
-```html
-<script type="text/javascript">
-	/* Check for native pointer event support before PEP adds its polyfill */
-	if (window.PointerEvent) {
-	    window.hasNativePointerEvents = true;
-	}
-</script>
-
-<script src="lib/raf.js"></script>
-<script src="lib/pep.min.js"></script>
-<script src="lib/keymaster.js"></script>
-<script src="lib/FileSaver.min.js"></script>
-```
-
-Then include ChickenPaint's main JS and CSS files:
+Include ChickenPaint's main JS and CSS files:
 
 ```html
 <script src="chickenpaint/js/chickenpaint.js"></script>

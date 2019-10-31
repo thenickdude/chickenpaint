@@ -34,6 +34,8 @@ import CPImageLayer from "../../../js/engine/CPImageLayer";
 import CPBlend from "../../../js/engine/CPBlend";
 import CPBlend2 from "../../../js/engine/CPBlend2";
 
+import FileSaver from "file-saver";
+
 // HSV (1978) = H: Hue / S: Saturation / V: Value
 var Color = {
 	HSV_RGB: function (o) {
@@ -218,8 +220,8 @@ function capitalizeFirst(string) {
 
 function saveTestFiles(colorSphereLayer, lightMixLayer) {
 	//Save the test layers to disk so we can try them in Photoshop
-	window.saveAs(new Blob([binaryStringToByteArray(colorSphereLayer.getAsPNG(0))], {type: "image/png"}), "under.png");
-	window.saveAs(new Blob([binaryStringToByteArray(lightMixLayer.getAsPNG(0))], {type: "image/png"}), "over.png");
+	FileSaver.saveAs(new Blob([binaryStringToByteArray(colorSphereLayer.getAsPNG(0))], {type: "image/png"}), "under.png");
+	FileSaver.saveAs(new Blob([binaryStringToByteArray(lightMixLayer.getAsPNG(0))], {type: "image/png"}), "over.png");
 
 	var
 		artwork = new CPArtwork(colorSphereLayer.width, colorSphereLayer.height);
@@ -228,7 +230,7 @@ function saveTestFiles(colorSphereLayer, lightMixLayer) {
 	artwork.addLayerObject(lightMixLayer);
 
 	chiSave(artwork).then((result) => {
-		window.saveAs(result.bytes, "blendtest.chi");
+		FileSaver.saveAs(result.bytes, "blendtest.chi");
 	});
 }
 

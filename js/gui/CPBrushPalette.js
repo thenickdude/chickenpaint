@@ -34,6 +34,7 @@ import CPColor from "../util/CPColor";
 import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
 
 import $ from "jquery";
+import key from "../../lib/keymaster";
 
 function sliderCheckboxGroup(checkbox, slider) {
     let

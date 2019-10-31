@@ -34,6 +34,8 @@ import $ from "jquery";
 
 import "bootstrap";
 
+import "../lib/raf.js";
+
 import CPBrushInfo from "./engine/CPBrushInfo";
 import CPArtwork from "./engine/CPArtwork";
 import CPResourceLoader from "./engine/CPResourceLoader";
@@ -57,6 +59,13 @@ import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
 
 import EventEmitter from "wolfy87-eventemitter";
+
+/* Check for native pointer event support before PEP adds its polyfill */
+if (window.PointerEvent) {
+    window.hasNativePointerEvents = true;
+}
+
+require("pepjs"); // Needs to use require() instead of import so we can run code before it
 
 function checkBrowserSupport() {
     let

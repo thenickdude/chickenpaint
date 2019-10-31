@@ -22,6 +22,7 @@
 
 import EventEmitter from "wolfy87-eventemitter";
 import $ from "jquery";
+import key from "../../lib/keymaster";
 
 import CPRect from "../util/CPRect";
 import CPTransform from "../util/CPTransform";

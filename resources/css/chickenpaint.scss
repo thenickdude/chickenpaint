@@ -842,8 +842,13 @@ body.chickenpaint-full-screen {
 }
 
 .chickenpaint-about-dialog .modal-dialog {
-    width:750px;
     line-height:1.5;
+}
+@media only screen and (min-width: 1024px) {
+    .chickenpaint-about-dialog .modal-dialog {
+        max-width: 750px;
+        width: 750px;
+    }
 }
 .chickenpaint-third-party-licenses {
     margin-top:1.5em;

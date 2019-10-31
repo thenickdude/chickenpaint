@@ -21,6 +21,7 @@
 */
 
 import $ from "jquery";
+import key from "../../lib/keymaster";
 
 import CPPalette from './CPPalette';
 import ChickenPaint from '../ChickenPaint';

@@ -1,6 +1,6 @@
 {
   "name": "chickenpaint",
-  "main": "dist/chickenpaint.js",
+  "main": "resources/js/chickenpaint.js",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
@@ -35,8 +35,10 @@
   "dependencies": {
     "bootstrap": "^4.3.1",
     "core-js": "^2.6.9",
+    "file-saver": "^2.0.2",
     "jquery": "^3.4.1",
     "pako": "^1.0.10",
+    "pepjs": "=0.4.3",
     "popper.js": "^1.15.0",
     "random-js": "^1.0.8",
     "wolfy87-eventemitter": "^5.2.8"

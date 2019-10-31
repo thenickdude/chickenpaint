@@ -21,7 +21,7 @@ resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts
 resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
 	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --source-map "filename='chickenpaint.min.js.map',url='chickenpaint.min.js.map',root='./'" --output chickenpaint.min.js -- chickenpaint.js
 
-resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js js/engine/CPBlend.js
+resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js js/engine/CPBlend.js lib/*
 	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
 
 resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*

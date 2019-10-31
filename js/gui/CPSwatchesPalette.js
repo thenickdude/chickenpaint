@@ -22,6 +22,8 @@
 
 import $ from "jquery";
 
+import FileSaver from "file-saver";
+
 import CPPalette from './CPPalette';
 
 import CPColor from '../util/CPColor';
@@ -198,7 +200,7 @@ export default function CPSwatchesPalette(controller) {
             aco = new AdobeColorTable().write(that.getSwatches()),
             blob = new Blob([aco], {type: "application/octet-stream"});
         
-        window.saveAs(blob, "oekakiswatches.aco");
+        FileSaver.saveAs(blob, "oekakiswatches.aco");
     }
     
     function initSwatchPanel() {

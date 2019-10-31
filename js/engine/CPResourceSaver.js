@@ -1,7 +1,7 @@
 import {save as chiSave} from "../../js/engine/CPChibiFile";
 import AdobeColorTable from "../util/AdobeColorTable";
-
 import EventEmitter from "wolfy87-eventemitter";
+import FileSaver from "file-saver";
 
 /**
  * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
@@ -168,13 +168,13 @@ export default function CPResourceSaver(options) {
 
                     postDrawing(formData);
                 } else {
-                    window.saveAs(flatBlob, "oekaki.png");
+                    FileSaver.saveAs(flatBlob, "oekaki.png");
 
                     if (chibiResult) {
-                        window.saveAs(chibiResult.bytes, "oekaki.chi");
+                        FileSaver.saveAs(chibiResult.bytes, "oekaki.chi");
                     }
                     if (swatchesBlob) {
-                        window.saveAs(swatchesBlob, "oekaki.aco");
+                        FileSaver.saveAs(swatchesBlob, "oekaki.aco");
                     }
                 }
             })

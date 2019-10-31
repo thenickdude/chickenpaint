@@ -21,6 +21,7 @@
 */
 
 import $ from "jquery";
+import key from "../../lib/keymaster";
 
 const
     MENU_ENTRIES = [
