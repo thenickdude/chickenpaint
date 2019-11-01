@@ -53,7 +53,7 @@ import CPTabletDialog from "./gui/CPTabletDialog";
 import CPGridDialog from "./gui/CPGridDialog";
 import CPSendDialog from "./gui/CPSendDialog";
 
-import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported} from "./util/CPPolyfill";
+import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported, isFlexboxSupported} from "./util/CPPolyfill";
 import CPColor from "./util/CPColor";
 import CPWacomTablet from "./util/CPWacomTablet";
 import CPRect from "./util/CPRect";
@@ -84,7 +84,6 @@ function checkBrowserSupport() {
     if (isIOS8_0_0 && isSafari) {
         throw new ChickenPaint.UnsupportedBrowserException("You are using Safari 8.0.0, which is unable to upload drawings. That bug was fixed in the iOS 8.0.2 update, or in Chrome for iOS.");
     }
-
 
     return true;
 }
@@ -1274,7 +1273,7 @@ export default function ChickenPaint(options) {
     checkBrowserSupport();
 
     if (uiElem) {
-        if (typeof document.body.style.flexBasis != "string" && typeof document.body.style.msFlexDirection != "string" || /Presto/.test(navigator.userAgent)) {
+        if (!isFlexboxSupported()) {
             uiElem.className += " no-flexbox";
         }
 

@@ -172,7 +172,7 @@ export default function CPArtwork(_width, _height) {
 
         that = this;
 
-    var
+    let
         paintingModes = [],
 
 	    /**
@@ -217,9 +217,21 @@ export default function CPArtwork(_width, _height) {
         rnd = new CPRandom(),
 
         previewOperation = null,
-        
-        clipboard = null, // A CPClip
-        undoList = [], redoList = [],
+
+        /**
+         * @type {?CPClip}
+         */
+        clipboard = null,
+
+        /**
+         * @type {CPUndo[]}
+         */
+        undoList = [],
+
+        /**
+         * @type {CPUndo[]}
+         */
+        redoList = [],
 
 	    /**
          * @type {?CPBrushInfo}
@@ -2416,8 +2428,14 @@ export default function CPArtwork(_width, _height) {
     CPActionRelocateLayer.prototype = Object.create(CPUndo.prototype);
     CPActionRelocateLayer.prototype.constructor = CPActionRelocateLayer;
 
+    /**
+     * @param {string} propertyName
+     * @param {boolean} invalidatesLayer
+     *
+     * @returns {CPUndo}
+     */
     function generateLayerPropertyChangeAction(propertyName, invalidatesLayer) {
-        var
+        let
 			capitalPropertyName = capitalizeFirst(propertyName),
 
             ChangeAction = function(layers, newValue) {

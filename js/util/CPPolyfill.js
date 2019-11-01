@@ -76,3 +76,7 @@ export function isCanvasSupported(){
 	
 	return !!(elem.getContext && elem.getContext('2d'));
 }
+
+export function isFlexboxSupported() {
+	return (typeof document.body.style.flexBasis == "string" || typeof document.body.style.msFlexDirection == "string") && !/Presto/.test(navigator.userAgent);
+}
