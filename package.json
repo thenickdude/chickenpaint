@@ -4,7 +4,7 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/thenickdude/chickenpaint.git"
+    "url": "https://github.com/hazashami/hzsm-oekaki.git"
   },
   "devDependencies": {
     "@babel/cli": "^7.6.2",

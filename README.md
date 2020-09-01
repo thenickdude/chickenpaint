@@ -1,4 +1,6 @@
-# ChickenPaint
+# HZSM-Oekaki (ChickenPaint)
+
+## This is a fork of ["ChickenPaint"](https://github.com/hazashami/chickenpaint.git)
 
 ChickenPaint is an HTML5 port of Marc Schefer's excellent multi-layer drawing Oekaki Java applet
 [ChibiPaint](http://www.chibipaint.com/). I decided to port it to JavaScript because Java applet support in browsers 
