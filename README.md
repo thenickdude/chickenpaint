@@ -1,7 +1,7 @@
 # ChickenPaint
 
 ChickenPaint is an HTML5 port of Marc Schefer's excellent multi-layer drawing Oekaki Java applet
-[ChibiPaint](http://www.chibipaint.com/). I decided to port it to JavaScript because Java applet support in browsers 
+[ChibiPaint](https://github.com/thenickdude/chibipaint). I decided to port it to JavaScript because Java applet support in browsers 
 has been dropping continuously, while JavaScript support continues to strengthen. Like the original, it is licensed
 under GPLv3.
 
