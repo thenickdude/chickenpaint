@@ -17,6 +17,7 @@
     "babelify": "^10.0.0",
     "browserify": "^17.0.0",
     "canvas": "^2.7.0",
+    "exorcist": "^2.0.0",
     "icomoon-build": "^0.2.8",
     "mocha": "^8.4.0",
     "multipipe": "^2.0.3",

@@ -23,11 +23,12 @@ resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts
 	node_modules/.bin/sass $< > $@
 	node_modules/.bin/postcss --replace $@
 
-resources/js/chickenpaint.min.js : resources/js/chickenpaint.js
-	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle --source-map "filename='chickenpaint.min.js.map',url='chickenpaint.min.js.map',root='./'" --output chickenpaint.min.js -- chickenpaint.js
+resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map : resources/js/chickenpaint.js
+	cd resources/js && ../../node_modules/.bin/uglifyjs --compress --mangle \
+		--source-map "content='chickenpaint.js.map',filename='chickenpaint.min.js.map',url='chickenpaint.min.js.map',root='./'" --output chickenpaint.min.js -- chickenpaint.js
 
 resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/ChickenPaint.js js/engine/CPBlend.js lib/*
-	node_modules/.bin/browserify --standalone ChickenPaint --outfile $@ -d -e js/ChickenPaint.js -t babelify
+	node_modules/.bin/browserify --standalone ChickenPaint --debug --entry js/ChickenPaint.js --transform babelify | node_modules/.bin/exorcist $@.map > $@
 
 resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*
 	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --scss resources/fonts/ChickenPaint-Symbols.scss --fonts resources/fonts
@@ -61,7 +62,7 @@ js/engine/CPBlend.js : codegenerator/BlendGenerator.js
 	node codegenerator/BlendGenerator.js > js/engine/CPBlend.js
 
 clean :
-	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map
+	rm -f resources/css/chickenpaint.css resources/js/chickenpaint{.js,.js.map} resources/js/chickenpaint.min{.js,.js.map}
 	rm -f test/blending_bench/blending_test.js test/blending_bench/blending.js test/integration_test/integration.js js/engine/CPBlend.js
 	rm -f resources/fonts/ChickenPaint-Symbols.{scss,ttf,woff,eot}
 	rm -f chickenpaint.zip
