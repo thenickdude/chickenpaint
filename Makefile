@@ -6,13 +6,18 @@ OSASCRIPT := $(shell command -v osascript 2> /dev/null)
 
 all : resources/css/chickenpaint.css resources/js/chickenpaint.js
 
-dist: all min
-
+dist: all min chickenpaint.zip
+	
 ifdef OSASCRIPT
 	osascript -e 'display notification "Build successful" with title "ChickenPaint build complete"'
 endif
 
 min : resources/js/chickenpaint.min.js
+
+chickenpaint.zip: resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map js/engine/CPBlend.js
+	rm -f $@
+	git archive -o $@ HEAD
+	zip $@ $^
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss
 	node_modules/.bin/sass $< > $@
@@ -59,3 +64,4 @@ clean :
 	rm -f resources/css/chickenpaint.css resources/js/chickenpaint.js resources/js/chickenpaint.min.js resources/js/chickenpaint.min.js.map
 	rm -f test/blending_bench/blending_test.js test/blending_bench/blending.js test/integration_test/integration.js js/engine/CPBlend.js
 	rm -f resources/fonts/ChickenPaint-Symbols.{scss,ttf,woff,eot}
+	rm -f chickenpaint.zip
