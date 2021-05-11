@@ -21,10 +21,10 @@
 */
 
 import $ from "jquery";
-import key from "../../lib/keymaster";
+import key from "../../lib/keymaster.js";
 
-import CPPalette from './CPPalette';
-import ChickenPaint from '../ChickenPaint';
+import CPPalette from './CPPalette.js';
+import ChickenPaint from '../ChickenPaint.js';
 
 export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");

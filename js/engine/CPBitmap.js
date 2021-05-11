@@ -20,7 +20,7 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPRect from "../util/CPRect";
+import CPRect from "../util/CPRect.js";
 
 /**
  * 

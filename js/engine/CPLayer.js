@@ -20,10 +20,10 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPLayerGroup from "./CPLayerGroup";
-import CPBlend from './CPBlend';
-import CPGreyBmp from "./CPGreyBmp";
-import CPRect from "../util/CPRect";
+import CPLayerGroup from "./CPLayerGroup.js";
+import CPBlend from './CPBlend.js';
+import CPGreyBmp from "./CPGreyBmp.js";
+import CPRect from "../util/CPRect.js";
 
 /**
  * @param {String} name

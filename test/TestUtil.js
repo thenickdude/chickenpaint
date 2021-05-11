@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import TestUtil from "./lib/TestUtil";
+import TestUtil from "./lib/TestUtil.js";
 
 import assert from "assert";
 

@@ -22,7 +22,7 @@
 
 import $ from "jquery";
 
-import CPWacomTablet from "../util/CPWacomTablet";
+import CPWacomTablet from "../util/CPWacomTablet.js";
 
 export default function CPTabletDialog(parent) {
     let

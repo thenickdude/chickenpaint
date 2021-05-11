@@ -1,8 +1,8 @@
-import {load as chiLoad} from "../../js/engine/CPChibiFile";
-import CPArtwork from "./CPArtwork";
-import CPColorBmp from "./CPColorBmp";
-import CPImageLayer from "./CPImageLayer";
-import AdobeColorTable from "../util/AdobeColorTable";
+import {load as chiLoad} from "../../js/engine/CPChibiFile.js";
+import CPArtwork from "./CPArtwork.js";
+import CPColorBmp from "./CPColorBmp.js";
+import CPImageLayer from "./CPImageLayer.js";
+import AdobeColorTable from "../util/AdobeColorTable.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 

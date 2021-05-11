@@ -24,10 +24,10 @@
  * Extra functions for CPBlend that don't need to be generated dynamically.
  */
 
-import CPBlend from './CPBlend';
-import CPRect from '../util/CPRect';
-import CPColorBmp from "./CPColorBmp";
-import CPGreyBmp from "./CPGreyBmp";
+import CPBlend from './CPBlend.js';
+import CPRect from '../util/CPRect.js';
+import CPColorBmp from "./CPColorBmp.js";
+import CPGreyBmp from "./CPGreyBmp.js";
 
 const
 	BYTES_PER_PIXEL = 4,

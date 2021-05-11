@@ -22,9 +22,9 @@
 
 import $ from "jquery";
 
-import CPColor from "../util/CPColor";
-import CPColorBmp from "../engine/CPColorBmp";
-import {setContrastingDrawStyle} from "./CPGUIUtils";
+import CPColor from "../util/CPColor.js";
+import CPColorBmp from "../engine/CPColorBmp.js";
+import {setContrastingDrawStyle} from "./CPGUIUtils.js";
 
 /**
  *

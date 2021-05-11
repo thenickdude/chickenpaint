@@ -20,8 +20,8 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPColorBmp from "../../js/engine/CPColorBmp";
-import CPImageLayer from "../../js/engine/CPImageLayer";
+import CPColorBmp from "../../js/engine/CPColorBmp.js";
+import CPImageLayer from "../../js/engine/CPImageLayer.js";
 
 import $ from "jquery";
 

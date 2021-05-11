@@ -4,7 +4,7 @@
  * Released under the WTFPLv2 https://en.wikipedia.org/wiki/WTFPL
  */
 
-import ArrayDataStream from "./ArrayDataStream";
+import ArrayDataStream from "./ArrayDataStream.js";
 
 var 
     ACO_COLORSPACE_RGB = 0,

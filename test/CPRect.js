@@ -24,7 +24,7 @@ import CPRect from "../js/util/CPRect.js";
 
 import assert from "assert";
 
-import Random from "random-js";
+import {MersenneTwister19937, Random} from "random-js";
 
 /**
  * Get an array of randomly generated rectangles, of maximum length 20 units (width or height).
@@ -164,12 +164,12 @@ function testSubtractFull(seed) {
 		TEST_AREA_SIZE = 400;
 
 	let
-		engine = Random.engines.mt19937();
+		engine = MersenneTwister19937;
 
 	if (seed === undefined) {
-		engine.autoSeed();
+		engine = engine.autoSeed();
 	} else {
-		engine.seed(seed);
+		engine = engine.seed(seed);
 	}
 
 	let
@@ -195,14 +195,14 @@ function testUnionFull(seed) {
 	const
 		NUM_TEST_RECTS = 80,
 		TEST_AREA_SIZE = 400;
-	
+
 	let
-		engine = Random.engines.mt19937();
-	
+		engine = MersenneTwister19937;
+
 	if (seed === undefined) {
-		engine.autoSeed();
+		engine = engine.autoSeed();
 	} else {
-		engine.seed(seed);
+		engine = engine.seed(seed);
 	}
 	
 	let
@@ -241,12 +241,12 @@ function testSubtractIterative(seed) {
 		setA = [],
 		setB = [],
 
-		engine = Random.engines.mt19937();
+		engine = MersenneTwister19937;
 
 	if (seed === undefined) {
-		engine.autoSeed();
+		engine = engine.autoSeed();
 	} else {
-		engine.seed(seed);
+		engine = engine.seed(seed);
 	}
 
 	let

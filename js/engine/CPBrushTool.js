@@ -20,11 +20,11 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPColorBmp from "./CPColorBmp";
-import CPGreyBmp from "./CPGreyBmp";
-import CPBrushInfo from "./CPBrushInfo";
+import CPColorBmp from "./CPColorBmp.js";
+import CPGreyBmp from "./CPGreyBmp.js";
+import CPBrushInfo from "./CPBrushInfo.js";
 
-import CPColorFloat from "../util/CPColorFloat";
+import CPColorFloat from "../util/CPColorFloat.js";
 
 /**
  * @param {number[]} array

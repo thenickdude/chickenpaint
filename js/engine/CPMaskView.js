@@ -20,9 +20,9 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPRect from "../util/CPRect";
-import CPColorBmp from "./CPColorBmp";
-import CPGreyBmp from "./CPGreyBmp";
+import CPRect from "../util/CPRect.js";
+import CPColorBmp from "./CPColorBmp.js";
+import CPGreyBmp from "./CPGreyBmp.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 

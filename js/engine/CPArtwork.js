@@ -20,30 +20,30 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPLayer from "./CPLayer";
-import CPImageLayer from "./CPImageLayer";
-import CPLayerGroup from "./CPLayerGroup";
-import CPBlend from "./CPBlend";
-import "./CPBlendAdditional";
-import CPGreyBmp from "./CPGreyBmp";
-import CPBlendTree from "./CPBlendTree";
-import CPMaskView from "./CPMaskView";
-import CPColorBmp from "./CPColorBmp";
-import CPBrushManager from "./CPBrushManager";
-import CPBrushInfo from "./CPBrushInfo";
-import CPUndo from "./CPUndo";
-import CPClip from "./CPClip";
+import CPLayer from "./CPLayer.js";
+import CPImageLayer from "./CPImageLayer.js";
+import CPLayerGroup from "./CPLayerGroup.js";
+import CPBlend from "./CPBlend.js";
+import "./CPBlendAdditional.js";
+import CPGreyBmp from "./CPGreyBmp.js";
+import CPBlendTree from "./CPBlendTree.js";
+import CPMaskView from "./CPMaskView.js";
+import CPColorBmp from "./CPColorBmp.js";
+import CPBrushManager from "./CPBrushManager.js";
+import CPBrushInfo from "./CPBrushInfo.js";
+import CPUndo from "./CPUndo.js";
+import CPClip from "./CPClip.js";
 
-import CPColor from "../util/CPColor";
-import CPRect from "../util/CPRect";
-import CPRandom from "../util/CPRandom";
-import CPTransform from "../util/CPTransform";
-import {setCanvasInterpolation} from "../util/CPPolyfill";
-import {createCanvas} from "../util/Canvas";
+import CPColor from "../util/CPColor.js";
+import CPRect from "../util/CPRect.js";
+import CPRandom from "../util/CPRandom.js";
+import CPTransform from "../util/CPTransform.js";
+import {setCanvasInterpolation} from "../util/CPPolyfill.js";
+import {createCanvas} from "../util/Canvas.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 import {CPBrushTool,CPBrushToolEraser,CPBrushToolDodge,CPBrushToolBurn,CPBrushToolWatercolor,
-    CPBrushToolBlur,CPBrushToolSmudge,CPBrushToolOil} from "./CPBrushTool";
+    CPBrushToolBlur,CPBrushToolSmudge,CPBrushToolOil} from "./CPBrushTool.js";
 
 /**
  * Capitalize the first letter of the string.

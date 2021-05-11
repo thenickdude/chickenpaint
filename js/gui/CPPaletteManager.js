@@ -23,14 +23,14 @@
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
-import CPToolPalette from "./CPToolPalette";
-import CPMiscPalette from "./CPMiscPalette";
-import CPStrokePalette from "./CPStrokePalette";
-import CPColorPalette from "./CPColorPalette";
-import CPBrushPalette from "./CPBrushPalette";
-import CPLayersPalette from "./CPLayersPalette";
-import CPTexturePalette from "./CPTexturePalette";
-import CPSwatchesPalette from "./CPSwatchesPalette";
+import CPToolPalette from "./CPToolPalette.js";
+import CPMiscPalette from "./CPMiscPalette.js";
+import CPStrokePalette from "./CPStrokePalette.js";
+import CPColorPalette from "./CPColorPalette.js";
+import CPBrushPalette from "./CPBrushPalette.js";
+import CPLayersPalette from "./CPLayersPalette.js";
+import CPTexturePalette from "./CPTexturePalette.js";
+import CPSwatchesPalette from "./CPSwatchesPalette.js";
 
 export default function CPPaletteManager(cpController) {
     var

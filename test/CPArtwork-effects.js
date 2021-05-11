@@ -20,12 +20,12 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPArtwork from "../js/engine/CPArtwork";
-import CPBlend from "../js/engine/CPBlend";
+import CPArtwork from "../js/engine/CPArtwork.js";
+import CPBlend from "../js/engine/CPBlend.js";
 
 import assert from "assert";
 import TestUtil from "./lib/TestUtil.js";
-import CPImageLayer from "../js/engine/CPImageLayer";
+import CPImageLayer from "../js/engine/CPImageLayer.js";
 
 /**
  * @type CPArtwork

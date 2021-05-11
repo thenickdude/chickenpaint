@@ -21,14 +21,14 @@
 */
 
 // core-js Polyfills for the features we use
-import "core-js/es6/symbol";
-import "core-js/es6/promise";
-import "core-js/es6/map";
-import "core-js/es6/set";
-import "core-js/es6/typed"; // For TypedArray.slice
-import "core-js/fn/array/iterator";
-import "core-js/fn/array/fill";
-import "core-js/fn/string/ends-with";
+import "core-js/stable/symbol/index.js";
+import "core-js/stable/promise/index.js";
+import "core-js/stable/map/index.js";
+import "core-js/stable/set/index.js";
+import "core-js/stable/typed-array/slice.js";
+import "core-js/stable/array/iterator.js";
+import "core-js/stable/array/fill.js";
+import "core-js/stable/string/ends-with.js";
 
 import $ from "jquery";
 
@@ -36,27 +36,27 @@ import "bootstrap";
 
 import "../lib/raf.js";
 
-import CPBrushInfo from "./engine/CPBrushInfo";
-import CPArtwork from "./engine/CPArtwork";
-import CPResourceLoader from "./engine/CPResourceLoader";
-import CPResourceSaver from "./engine/CPResourceSaver";
+import CPBrushInfo from "./engine/CPBrushInfo.js";
+import CPArtwork from "./engine/CPArtwork.js";
+import CPResourceLoader from "./engine/CPResourceLoader.js";
+import CPResourceSaver from "./engine/CPResourceSaver.js";
 
 import CPSplashScreen from "./gui/CPSplashScreen.js";
 
-import CPMainGUI from "./gui/CPMainGUI";
+import CPMainGUI from "./gui/CPMainGUI.js";
 
-import CPAboutDialog from "./gui/CPAboutDialog";
-import CPConfirmTransformDialog from "./gui/CPConfirmTransformDialog";
-import CPShortcutsDialog from "./gui/CPShortcutsDialog";
-import CPBoxBlurDialog from "./gui/CPBoxBlurDialog";
-import CPTabletDialog from "./gui/CPTabletDialog";
-import CPGridDialog from "./gui/CPGridDialog";
-import CPSendDialog from "./gui/CPSendDialog";
+import CPAboutDialog from "./gui/CPAboutDialog.js";
+import CPConfirmTransformDialog from "./gui/CPConfirmTransformDialog.js";
+import CPShortcutsDialog from "./gui/CPShortcutsDialog.js";
+import CPBoxBlurDialog from "./gui/CPBoxBlurDialog.js";
+import CPTabletDialog from "./gui/CPTabletDialog.js";
+import CPGridDialog from "./gui/CPGridDialog.js";
+import CPSendDialog from "./gui/CPSendDialog.js";
 
-import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported, isFlexboxSupported} from "./util/CPPolyfill";
-import CPColor from "./util/CPColor";
-import CPWacomTablet from "./util/CPWacomTablet";
-import CPRect from "./util/CPRect";
+import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported, isFlexboxSupported} from "./util/CPPolyfill.js";
+import CPColor from "./util/CPColor.js";
+import CPWacomTablet from "./util/CPWacomTablet.js";
+import CPRect from "./util/CPRect.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 

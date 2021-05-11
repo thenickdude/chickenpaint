@@ -21,7 +21,7 @@
 */
 
 import $ from "jquery";
-import CPPalette from './CPPalette';
+import CPPalette from './CPPalette.js';
 
 export default function CPMiscPalette(cpController) {
     CPPalette.call(this, cpController, "misc", "Misc");

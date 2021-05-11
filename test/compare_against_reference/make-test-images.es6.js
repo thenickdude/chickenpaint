@@ -1,10 +1,10 @@
 "use strict";
 
-import CPBlend from "../../js/engine/CPBlend";
-import CPArtwork from "../../js/engine/CPArtwork";
-import CPImageLayer from "../../js/engine/CPImageLayer";
-import {save as saveChi} from "../../js/engine/CPChibiFile";
-import TestUtil from "../lib/TestUtil";
+import CPBlend from "../../js/engine/CPBlend.js";
+import CPArtwork from "../../js/engine/CPArtwork.js";
+import CPImageLayer from "../../js/engine/CPImageLayer.js";
+import {save as saveChi} from "../../js/engine/CPChibiFile.js";
+import TestUtil from "../lib/TestUtil.js";
 
 const
     assert = require("assert"),

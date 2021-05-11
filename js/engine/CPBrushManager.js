@@ -20,7 +20,7 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPBrushInfo from "./CPBrushInfo";
+import CPBrushInfo from "./CPBrushInfo.js";
 
 const
     MAX_SQUEEZE = 10;

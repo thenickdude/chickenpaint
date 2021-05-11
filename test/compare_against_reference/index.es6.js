@@ -1,8 +1,8 @@
 // Compare ChickenPaint's rendering of a given series of .chi files against a .png exemplar (perhaps rendered by ChibiPaint)
 
-import {load as chiLoad} from "../../js/engine/CPChibiFile";
-import TestUtil from "../lib/TestUtil";
-import CPColorBmp from "../../js/engine/CPColorBmp";
+import {load as chiLoad} from "../../js/engine/CPChibiFile.js";
+import TestUtil from "../lib/TestUtil.js";
+import CPColorBmp from "../../js/engine/CPColorBmp.js";
 
 import pipe from "multipipe";
 

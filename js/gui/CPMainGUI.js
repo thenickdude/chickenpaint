@@ -22,9 +22,9 @@
 
 import $ from "jquery";
 
-import CPCanvas from "./CPCanvas";
-import CPPaletteManager from "./CPPaletteManager";
-import CPMainMenu from "./CPMainMenu";
+import CPCanvas from "./CPCanvas.js";
+import CPPaletteManager from "./CPPaletteManager.js";
+import CPMainMenu from "./CPMainMenu.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 

@@ -23,11 +23,11 @@
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
-import CPGreyBmp from '../engine/CPGreyBmp';
-import CPLookUpTable from '../engine/CPLookUpTable';
+import CPGreyBmp from '../engine/CPGreyBmp.js';
+import CPLookUpTable from '../engine/CPLookUpTable.js';
 
-import CPPalette from './CPPalette';
-import CPSlider from './CPSlider';
+import CPPalette from './CPPalette.js';
+import CPSlider from './CPSlider.js';
 
 /**
  *

@@ -20,10 +20,10 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPBitmap from "./CPBitmap";
-import CPRect from "../util/CPRect";
-import {createCanvas} from "../util/Canvas";
-import {createImageData} from "../util/Canvas";
+import CPBitmap from "./CPBitmap.js";
+import CPRect from "../util/CPRect.js";
+import {createCanvas} from "../util/Canvas.js";
+import {createImageData} from "../util/Canvas.js";
 
 /**
  * A 32bpp bitmap class (one byte per channel in RGBA order)

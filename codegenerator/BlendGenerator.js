@@ -1210,10 +1210,10 @@ function makeBlendOperations() {
 
 console.log(`// This file is generated, please see codegenerator/BlendGenerator.js!
 	
-import CPColorBmp from './CPColorBmp';
-import CPGreyBmp from './CPGreyBmp';
-import CPLayer from './CPLayer';
-import CPRect from '../util/CPRect';
+import CPColorBmp from './CPColorBmp.js';
+import CPGreyBmp from './CPGreyBmp.js';
+import CPLayer from './CPLayer.js';
+import CPRect from '../util/CPRect.js';
 
 export default function CPBlend() {
 }

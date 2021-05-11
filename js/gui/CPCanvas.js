@@ -22,27 +22,27 @@
 
 import EventEmitter from "wolfy87-eventemitter";
 import $ from "jquery";
-import key from "../../lib/keymaster";
+import key from "../../lib/keymaster.js";
 
-import CPRect from "../util/CPRect";
-import CPTransform from "../util/CPTransform";
-import CPWacomTablet from "../util/CPWacomTablet";
-import CPBezier from "../util/CPBezier";
+import CPRect from "../util/CPRect.js";
+import CPTransform from "../util/CPTransform.js";
+import CPWacomTablet from "../util/CPWacomTablet.js";
+import CPBezier from "../util/CPBezier.js";
 import {throttle} from "../util/throttle-debounce";
-import CPPolygon from "../util/CPPolygon";
-import {setCanvasInterpolation} from "../util/CPPolyfill";
-import CPVector from "../util/CPVector";
+import CPPolygon from "../util/CPPolygon.js";
+import {setCanvasInterpolation} from "../util/CPPolyfill.js";
+import CPVector from "../util/CPVector.js";
 
-import ChickenPaint from "../ChickenPaint";
+import ChickenPaint from "../ChickenPaint.js";
 
-import CPBrushInfo from "../engine/CPBrushInfo";
-import CPLayerGroup from "../engine/CPLayerGroup";
-import CPMaskView from "../engine/CPMaskView";
+import CPBrushInfo from "../engine/CPBrushInfo.js";
+import CPLayerGroup from "../engine/CPLayerGroup.js";
+import CPMaskView from "../engine/CPMaskView.js";
 
-import {createCheckerboardPattern} from "./CPGUIUtils";
-import CPScrollbar from "./CPScrollbar";
-import CPColor from "../util/CPColor";
-import {setContrastingDrawStyle} from "./CPGUIUtils";
+import {createCheckerboardPattern} from "./CPGUIUtils.js";
+import CPScrollbar from "./CPScrollbar.js";
+import CPColor from "../util/CPColor.js";
+import {setContrastingDrawStyle} from "./CPGUIUtils.js";
 
 function CPModeStack() {
     this.modes = [];

@@ -20,8 +20,8 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPLayer from './CPLayer';
-import CPRect from "../util/CPRect";
+import CPLayer from './CPLayer.js';
+import CPRect from "../util/CPRect.js";
 
 /**
  *

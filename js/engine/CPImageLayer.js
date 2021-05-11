@@ -20,9 +20,9 @@
  along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import CPColorBmp from './CPColorBmp';
-import CPLayer from './CPLayer';
-import CPRect from "../util/CPRect";
+import CPColorBmp from './CPColorBmp.js';
+import CPLayer from './CPLayer.js';
+import CPRect from "../util/CPRect.js";
 
 /**
  * Note layer image data is not cleared to any specific values upon creation, use layer.image.clearAll().

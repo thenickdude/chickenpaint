@@ -22,12 +22,12 @@
 
 import $ from "jquery";
 
-import CPPalette from "./CPPalette";
-import CPBlend from "../engine/CPBlend";
-import CPSlider from "./CPSlider";
-import CPLayerGroup from "../engine/CPLayerGroup";
-import CPLayer from "../engine/CPLayer";
-import CPImageLayer from "../engine/CPImageLayer";
+import CPPalette from "./CPPalette.js";
+import CPBlend from "../engine/CPBlend.js";
+import CPSlider from "./CPSlider.js";
+import CPLayerGroup from "../engine/CPLayerGroup.js";
+import CPLayer from "../engine/CPLayer.js";
+import CPImageLayer from "../engine/CPImageLayer.js";
 
 function absorbTouch(e) {
     e.preventDefault();

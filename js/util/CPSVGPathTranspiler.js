@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPVector from './CPVector';
+import CPVector from './CPVector.js';
 
 /**
  * Convert a SVG path (within a fairly restricted subset of SVG commands) into a JS function which draws that path

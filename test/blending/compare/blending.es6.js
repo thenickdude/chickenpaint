@@ -24,15 +24,15 @@
  * Compare two blending engines against each other visually.
  */
 
-import {binaryStringToByteArray} from "../../../js/engine/CPResourceSaver";
+import {binaryStringToByteArray} from "../../../js/engine/CPResourceSaver.js";
 
-import {save as chiSave} from "../../../js/engine/CPChibiFile";
-import CPColorBmp from "../../../js/engine/CPColorBmp";
-import CPArtwork from "../../../js/engine/CPArtwork";
-import CPImageLayer from "../../../js/engine/CPImageLayer";
+import {save as chiSave} from "../../../js/engine/CPChibiFile.js";
+import CPColorBmp from "../../../js/engine/CPColorBmp.js";
+import CPArtwork from "../../../js/engine/CPArtwork.js";
+import CPImageLayer from "../../../js/engine/CPImageLayer.js";
 
-import CPBlend from "../../../js/engine/CPBlend";
-import CPBlend2 from "../../../js/engine/CPBlend2";
+import CPBlend from "../../../js/engine/CPBlend.js";
+import CPBlend2 from "../../../js/engine/CPBlend2.js";
 
 import FileSaver from "file-saver";
 

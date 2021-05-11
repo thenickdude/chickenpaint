@@ -24,10 +24,10 @@ import $ from "jquery";
 
 import FileSaver from "file-saver";
 
-import CPPalette from './CPPalette';
+import CPPalette from './CPPalette.js';
 
-import CPColor from '../util/CPColor';
-import AdobeColorTable from '../util/AdobeColorTable';
+import CPColor from '../util/CPColor.js';
+import AdobeColorTable from '../util/AdobeColorTable.js';
 
 function padLeft(string, padding, len) {
     while (string.length < len) {

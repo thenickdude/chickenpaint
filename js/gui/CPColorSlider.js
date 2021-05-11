@@ -22,8 +22,8 @@
 
 import $ from "jquery";
 
-import CPColor from "../util/CPColor";
-import CPColorBmp from "../engine/CPColorBmp";
+import CPColor from "../util/CPColor.js";
+import CPColorBmp from "../engine/CPColorBmp.js";
 
 export default function CPColorSlider(controller, selecter, initialHue) {
     const

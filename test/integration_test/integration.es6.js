@@ -7,28 +7,28 @@
 import ChickenPaint from '../../js/ChickenPaint.js';
 import CPColor from '../../js/util/CPColor.js';
 import CPRect from '../../js/util/CPRect.js';
-import CPLayerGroup from "../../js/engine/CPLayerGroup";
-import CPTransform from "../../js/util/CPTransform";
-import CPPolygon from "../../js/util/CPPolygon";
-import CPBlend from "../../js/engine/CPBlend";
+import CPLayerGroup from "../../js/engine/CPLayerGroup.js";
+import CPTransform from "../../js/util/CPTransform.js";
+import CPPolygon from "../../js/util/CPPolygon.js";
+import CPBlend from "../../js/engine/CPBlend.js";
 
-import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver";
-import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile";
+import {binaryStringToByteArray} from "../../js/engine/CPResourceSaver.js";
+import {save as chiSave, load as chiLoad} from "../../js/engine/CPChibiFile.js";
 
-import Random from "random-js";
+import {MersenneTwister19937, Random, integer as randomInteger} from "random-js";
 import $ from "jquery";
 import FileSaver from "file-saver";
 
 let
     pageURL = new URL(window.location),
     randomSeed = pageURL.searchParams.get("seed") ? (parseInt(pageURL.searchParams.get("seed"), 10) | 0) : Random.int32(Random.engines.browserCrypto),
-    randomEngine = Random.engines.mt19937().seed(randomSeed);
+    randomEngine = MersenneTwister19937.seed(randomSeed);
 
 console.log("Using random seed " + randomSeed);
 
 // [0..max)
 function randInt(max) {
-	return Random.integer(0, max - 1)(randomEngine);
+	return randomInteger(0, max - 1)(randomEngine);
 }
 
 function pick(list) {

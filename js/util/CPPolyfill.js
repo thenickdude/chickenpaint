@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import {createCanvas} from "./Canvas";
+import {createCanvas} from "./Canvas.js";
 
 function getCanvasInterpolationPropName(canvasContext) {
 	var

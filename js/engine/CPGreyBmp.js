@@ -20,11 +20,10 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPBitmap from "./CPBitmap";
-import CPRect from "../util/CPRect";
-import {createCanvas} from "../util/Canvas";
-import {createImageData} from "../util/Canvas";
-import {getRotatedCanvas} from "./CPColorBmp";
+import CPBitmap from "./CPBitmap.js";
+import CPRect from "../util/CPRect.js";
+import {createCanvas, createImageData} from "../util/Canvas.js";
+import {getRotatedCanvas} from "./CPColorBmp.js";
 
 /**
  * Create a new greyscale bitmap with the given parameters. The bitmap will be filled with black upon creation.

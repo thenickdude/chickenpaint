@@ -22,11 +22,11 @@
 
 import $ from "jquery";
 
-import CPColor from '../util/CPColor';
+import CPColor from '../util/CPColor.js';
 
-import CPSlider from './CPSlider';
-import CPColorSelect from './CPColorSelect';
-import CPColorSlider from './CPColorSlider';
+import CPSlider from './CPSlider.js';
+import CPColorSelect from './CPColorSelect.js';
+import CPColorSlider from './CPColorSlider.js';
 
 import EventEmitter from "wolfy87-eventemitter";
 

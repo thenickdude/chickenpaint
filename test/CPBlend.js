@@ -1,14 +1,14 @@
 "use strict";
 
-import CPColorBmp from "../js/engine/CPColorBmp";
-import CPBlend from "../js/engine/CPBlend";
-import CPBlendAdditional from "../js/engine/CPBlendAdditional";
-import TestUtil from "./lib/TestUtil";
+import CPColorBmp from "../js/engine/CPColorBmp.js";
+import CPBlend from "../js/engine/CPBlend.js";
+import "../js/engine/CPBlendAdditional.js";
+import TestUtil from "./lib/TestUtil.js";
 
-import Random from "random-js";
+import {MersenneTwister19937, integer as randomInteger} from "random-js";
 
 import assert from "assert";
-import CPGreyBmp from "../js/engine/CPGreyBmp";
+import CPGreyBmp from "../js/engine/CPGreyBmp.js";
 
 const
     IMAGE_DIMENSION = 256,
@@ -28,8 +28,8 @@ whiteMask.clearAll(255);
 function generateRandomMask(width, height, seed) {
     const
         mask = new CPGreyBmp(width, height, 8),
-        random = Random.engines.mt19937().seed(seed),
-        byteDistribution = Random.integer(0, 255);
+        random = MersenneTwister19937.seed(seed),
+        byteDistribution = randomInteger(0, 255);
 
     for (let i = 0; i < mask.data.length; i ++) {
         mask.data[i] = byteDistribution(random);

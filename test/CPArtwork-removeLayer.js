@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPArtwork from '../js/engine/CPArtwork';
+import CPArtwork from '../js/engine/CPArtwork.js';
 
 import assert from 'assert';
 import TestUtil from './lib/TestUtil.js';

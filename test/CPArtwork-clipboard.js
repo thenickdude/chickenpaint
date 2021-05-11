@@ -20,17 +20,16 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPArtwork from "../js/engine/CPArtwork";
-import CPColorBmp from "../js/engine/CPColorBmp";
+import CPArtwork from "../js/engine/CPArtwork.js";
 
 import TestUtil from "./lib/TestUtil.js";
-import CPRect from "../js/util/CPRect";
+import CPRect from "../js/util/CPRect.js";
 
 import assert from "assert";
 
-import "core-js/es6/symbol";
-import "core-js/fn/array/iterator";
-import CPClip from "../js/engine/CPClip";
+import "core-js/stable/symbol/index.js";
+import "core-js/stable/array/iterator.js";
+import CPClip from "../js/engine/CPClip.js";
 
 describe("CPArtwork", function() {
 	describe("#cutSelection", function() {

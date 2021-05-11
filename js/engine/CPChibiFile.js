@@ -20,13 +20,13 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPArtwork from "./CPArtwork";
-import CPImageLayer from "./CPImageLayer";
-import CPColorBmp from "./CPColorBmp";
-import ArrayDataStream from "../util/ArrayDataStream";
-import CPLayerGroup from "./CPLayerGroup";
-import CPGreyBmp from "./CPGreyBmp";
-import CPBlend from "./CPBlend";
+import CPArtwork from "./CPArtwork.js";
+import CPImageLayer from "./CPImageLayer.js";
+import CPColorBmp from "./CPColorBmp.js";
+import ArrayDataStream from "../util/ArrayDataStream.js";
+import CPLayerGroup from "./CPLayerGroup.js";
+import CPGreyBmp from "./CPGreyBmp.js";
+import CPBlend from "./CPBlend.js";
 
 import pako from "pako";
 
@@ -725,7 +725,7 @@ function hasChibiMagicMarker(array) {
  *
  * @returns {Promise.<SerializeResult>}
  */
-module.exports.save = function(artwork, options) {
+export function save(artwork, options) {
     options = options || {};
 
     return Promise.resolve().then(() => {
@@ -812,7 +812,7 @@ module.exports.save = function(artwork, options) {
  *
  * @returns {Promise.<CPArtwork>}
  */
-module.exports.load = function(source, options) {
+export function load(source, options) {
     options = options || {};
 
 	const

@@ -22,11 +22,11 @@
 
 import assert from "assert";
 
-import CPColorBmp from "../../js/engine/CPColorBmp";
-import CPGreyBmp from "../../js/engine/CPGreyBmp";
-import CPArtwork from "../../js/engine/CPArtwork";
-import CPImageLayer from "../../js/engine/CPImageLayer";
-import * as Random from "random-js";
+import CPColorBmp from "../../js/engine/CPColorBmp.js";
+import CPGreyBmp from "../../js/engine/CPGreyBmp.js";
+import CPArtwork from "../../js/engine/CPArtwork.js";
+import CPImageLayer from "../../js/engine/CPImageLayer.js";
+import { MersenneTwister19937, integer as randomInteger } from "random-js";
 
 export default function TestUtil() {
 }
@@ -385,8 +385,8 @@ TestUtil.generateRandomImageForBlendTest = function(width, height, setAlpha, see
 
 		image = new CPColorBmp(width, height),
 
-        randomByte = Random.integer(0, 255),
-        randomEngine = Random.engines.mt19937().seed(seed);
+        randomByte = randomInteger(0, 255),
+        randomEngine = MersenneTwister19937.seed(seed);
 
     let
 		pixIndex = 0;
@@ -432,9 +432,9 @@ TestUtil.generateRandomImagePairForBlendTest = function(width, height, setAlphaB
 		pixelChannelEdgeCases = [
 			0, 1, 2, 127, 128, 129, 253, 254, 255
 		],
-
-		randomByte = Random.integer(0, 255),
-        randomEngine = Random.engines.mt19937().seed(seed),
+		
+		randomByte = randomInteger(0, 255),
+        randomEngine = MersenneTwister19937.seed(seed),
 
 		bottomImage = new CPColorBmp(width, height),
 		topImage = new CPColorBmp(width, height);

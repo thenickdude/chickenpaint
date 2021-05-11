@@ -20,21 +20,21 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import ChickenPaint from "../ChickenPaint";
+import ChickenPaint from "../ChickenPaint.js";
 
-import CPPalette from "./CPPalette";
-import CPCheckbox from "./CPCheckbox";
-import CPColorSwatch from "./CPColorSwatch";
-import CPSlider from "./CPSlider";
-import {createCheckerboardPattern} from "./CPGUIUtils";
+import CPPalette from "./CPPalette.js";
+import CPCheckbox from "./CPCheckbox.js";
+import CPColorSwatch from "./CPColorSwatch.js";
+import CPSlider from "./CPSlider.js";
+import {createCheckerboardPattern} from "./CPGUIUtils.js";
 
-import CPColorBmp from "../engine/CPColorBmp";
+import CPColorBmp from "../engine/CPColorBmp.js";
 
-import CPColor from "../util/CPColor";
-import {isCanvasInterpolationSupported} from "../util/CPPolyfill";
+import CPColor from "../util/CPColor.js";
+import {isCanvasInterpolationSupported} from "../util/CPPolyfill.js";
 
 import $ from "jquery";
-import key from "../../lib/keymaster";
+import key from "../../lib/keymaster.js";
 
 function sliderCheckboxGroup(checkbox, slider) {
     let

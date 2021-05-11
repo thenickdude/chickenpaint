@@ -22,6 +22,10 @@
 
 // This version is used when running under Node, the browser uses /js/browser/util/Canvas.js instead
 
-import {createCanvas, createImageData} from 'canvas';
+import pkg from 'canvas';
+
+const
+    createCanvas = pkg.createCanvas,
+    createImageData = pkg.createImageData;
 
 export {createCanvas, createImageData};

@@ -24,10 +24,10 @@
  * Benchmark two blending engines against each other, and check them for consistency.
  */
 
-import CPImageLayer from "../../../js/engine/CPImageLayer";
+import CPImageLayer from "../../../js/engine/CPImageLayer.js";
 
-import CPBlend from "../../../js/engine/CPBlend";
-import CPBlend2 from "../../../js/engine/CPBlend2";
+import CPBlend from "../../../js/engine/CPBlend.js";
+import CPBlend2 from "../../../js/engine/CPBlend2.js";
 
 function checkImagesAreSimilar(fusion1, fusion2) {
     for (var pix = 0; pix < fusion1.width * fusion1.height * 4; pix++) {

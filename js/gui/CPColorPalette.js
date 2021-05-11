@@ -20,11 +20,11 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPPalette from './CPPalette';
-import CPColorSelect from './CPColorSelect';
-import CPColorSlider from './CPColorSlider';
+import CPPalette from './CPPalette.js';
+import CPColorSelect from './CPColorSelect.js';
+import CPColorSlider from './CPColorSlider.js';
 
-import CPColor from "../util/CPColor";
+import CPColor from "../util/CPColor.js";
 
 export default function CPColorPalette(cpController) {
     CPPalette.call(this, cpController, "color", "Color");

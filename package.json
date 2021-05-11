@@ -33,15 +33,16 @@
     "install": "make",
     "build": "make"
   },
+  "type": "module",
   "dependencies": {
     "bootstrap": "^4.3.1",
-    "core-js": "^2.6.9",
+    "core-js": "^3.12.1",
     "file-saver": "^2.0.5",
     "jquery": "^3.5.1",
     "pako": "^1.0.11",
     "pepjs": "=0.4.3",
     "popper.js": "^1.15.0",
-    "random-js": "^1.0.8",
+    "random-js": "^2.1.0",
     "wolfy87-eventemitter": "^5.2.9"
   },
   "browser": {

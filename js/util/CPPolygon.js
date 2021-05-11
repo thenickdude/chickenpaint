@@ -20,7 +20,7 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPTransform from './CPTransform';
+import CPTransform from './CPTransform.js';
 
 export default function CPPolygon(points) {
 	this.points = points || [];

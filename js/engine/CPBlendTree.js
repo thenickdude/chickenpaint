@@ -20,13 +20,13 @@
 	along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPBlend from './CPBlend';
-import './CPBlendAdditional';
-import CPLayer from './CPLayer';
-import CPLayerGroup from './CPLayerGroup';
-import CPColorBmp from "./CPColorBmp";
-import CPImageLayer from "./CPImageLayer";
-import CPRect from "../util/CPRect";
+import CPBlend from './CPBlend.js';
+import './CPBlendAdditional.js';
+import CPLayer from './CPLayer.js';
+import CPLayerGroup from './CPLayerGroup.js';
+import CPColorBmp from "./CPColorBmp.js";
+import CPImageLayer from "./CPImageLayer.js";
+import CPRect from "../util/CPRect.js";
 
 /**
  *
