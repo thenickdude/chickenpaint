@@ -19,7 +19,10 @@ chickenpaint.zip: resources/css/chickenpaint.css resources/js/chickenpaint.js re
 	git archive -o $@ HEAD
 	zip $@ $^
 
-resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss
+node_modules/.bin/sass node_modules/.bin/browserify node_modules/.bin/icomoon-build :
+	npm install
+
+resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss node_modules/.bin/sass
 	node_modules/.bin/sass $< > $@
 	node_modules/.bin/postcss --replace $@
 
