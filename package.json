@@ -6,6 +6,7 @@
     "type": "git",
     "url": "https://github.com/thenickdude/chickenpaint.git"
   },
+  "version": "0.1.0",
   "devDependencies": {
     "@babel/cli": "^7.13.16",
     "@babel/core": "^7.14.0",
