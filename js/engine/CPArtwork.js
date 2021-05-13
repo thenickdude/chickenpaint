@@ -1830,6 +1830,20 @@ export default function CPArtwork(_width, _height) {
         
         return fusion.getAsPNG(rotation);
     };
+
+    /**
+     * Get the artwork as a single flat PNG image.
+     *
+     * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied to the drawing before
+     * saving.
+     *
+     * @return {Buffer}
+     */
+    this.getFlatPNGBuffer = function(rotation) {
+        this.fusionLayers();
+
+        return fusion.getAsPNGBuffer(rotation);
+    };
     
     /**
      * Returns true if this artwork can be exactly represented as a simple transparent PNG (i.e. doesn't have multiple 

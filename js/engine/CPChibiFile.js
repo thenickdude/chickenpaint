@@ -799,7 +799,7 @@ export function save(artwork, options) {
             deflator.push(serializeEndChunk(), true);
         }));
     });
-};
+}
 
 /**
  * Attempt to load a chibifile from the given source.
@@ -1040,4 +1040,4 @@ export function load(source, options) {
 		// Begin decompression/decoding
 		inflator.push(byteArray, true);
 	}));
-};
+}

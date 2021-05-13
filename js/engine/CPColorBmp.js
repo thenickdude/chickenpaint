@@ -1497,13 +1497,30 @@ CPColorBmp.prototype.getAsCanvas = function(rotation) {
  * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied, or 0 to leave
  * unrotated.
  *
- * @returns {string}
+ * @returns {string} - "Binary string" representation of the PNG file
  */
 CPColorBmp.prototype.getAsPNG = function(rotation) {
-    var
+    let
         canvas = this.getAsCanvas(rotation);
 
     return decodeBase64PNGDataURL(canvas.toDataURL('image/png'));
+};
+
+
+/**
+ * Get the image as a PNG image.
+ *
+ * Rotation is [0..3] and selects a multiple of 90 degrees of clockwise rotation to be applied, or 0 to leave
+ * unrotated.
+ *
+ * @returns {Buffer}
+ */
+CPColorBmp.prototype.getAsPNGBuffer = function(rotation) {
+    let
+        canvas = this.getAsCanvas(rotation);
+
+    // API provided by node-canvas for running on Node (browsers don't support this)
+    return canvas.toBuffer('image/png');
 };
 
 /**
