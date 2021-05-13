@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/thenickdude/chickenpaint.git"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "devDependencies": {
     "@babel/cli": "^7.13.16",
     "@babel/core": "^7.14.0",
@@ -29,10 +29,9 @@
     "uglify-js": "=3.4.8"
   },
   "scripts": {
-    "start": "make && serve",
+    "start": "serve",
     "test": "babel-node node_modules/.bin/_mocha -- test/*.js",
-    "install": "make",
-    "build": "make"
+    "prepare": "make all min"
   },
   "type": "module",
   "dependencies": {
