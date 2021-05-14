@@ -161,7 +161,7 @@
     pen-action:none;
 
     cursor:default;
-    
+
     /* For mobile safari, prevent the canvas being highlighted grey on touch */
     -webkit-tap-highlight-color:transparent;
     -webkit-touch-callout: none;
@@ -213,7 +213,7 @@
     border: 1px solid #ddd;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    
+
     display:flex;
     flex-direction:column;
     position:absolute;
@@ -1009,6 +1009,58 @@ body.chickenpaint-full-screen {
     .chickenpaint .checkbox label {
         padding:0;
         padding-left:12px;
+    }
+}
+
+/* Style adjustments for portrait mode */
+@media all and (orientation:portrait) {
+    .chickenpaint-tools {
+        width:70px;
+    }
+
+    .chickenpaint-toolbar-button {
+        margin: 0;
+        padding:0;
+    }
+
+    .chickenpaint-palette-body {
+        max-height: 80vh;
+    }
+
+    .chickenpaint .navbar {
+        min-height: 20px;
+        padding: 0.4rem;
+    }
+
+    .chickenpaint .navbar-nav > li > a {
+        padding-top: 3px;
+        padding-bottom: 3px;
+    }
+
+    .chickenpaint .navbar-brand {
+        padding-top: 3px;
+        padding-bottom: 3px;
+        height: 20px;
+        font-size: 0.9rem;
+    }
+
+    .chickenpaint .navbar-toggler{
+        padding: 0;
+        font-size: 0.9rem;
+    }
+
+    .chickenpaint-palette-body {
+        padding: 0;
+    }
+
+    .chickenpaint-palette-textures .chickenpaint-palette-body {
+        flex-direction: column;
+    }
+
+    .chickenpaint-texture-swatches {
+        flex-basis: unset;
+        flex-shrink: unset;
+        flex-grow: unset;
     }
 }
 
