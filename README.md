@@ -39,6 +39,9 @@ to get pen pressure support working.
 ChickenPaint is used as the default painting tool on [Chicken Smoothie's Oekaki forum](http://www.chickensmoothie.com/Forum/viewforum.php?f=29)
 if you're using the Google Chrome or Microsoft Edge web browsers (a free account is required).
 
+You can try it without an account [on the ChickenPaint Integration Example page](https://thenickdude.github.io/chickenpaint-example/),
+which shows how ChickenPaint can be fetched using NPM and loaded into your page.
+
 ## Building
 Building ChickenPaint requires [Node](https://nodejs.org/en/) to be installed (I'm using v10 LTS) along with GNU Make.
 
