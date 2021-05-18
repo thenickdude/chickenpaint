@@ -154,5 +154,26 @@
   "Cancel": "キャンセル",
   "Ok": "OK",
   "Okay": "OK",
-  "OK": "OK"
+  "OK": "OK",
+
+  "Are you sure you want to send your drawing to the server and finish drawing now?": "お絵かきをサーバーへ送信し、終了してもよろしいですか？",
+  "Your drawing has unsaved changes! Are you sure to want to navigate away?": "お絵かきに未保存の変更がございます、終了してもよろしいですか？",
+          
+  "Save Oekaki": "保存",
+  
+  "Saving drawing...": "お絵かきを保存中…",
+  "Preparing your drawing to be saved, please wait...": "お絵かきを保存する準備をしています。しばらくお待ちください…",
+  "Drawing saved!": "お絵かきを保存しました！",
+
+  "Your drawing has been saved, would you like to post it to the forum now?": "お絵かきが保存されました。フォーラムへアップされますか？",
+  "Yes, post it now": "アップする",
+  "No, keep drawing": "まだ絵を描く",
+  "No, quit and I'll finish it later": "アプリを終了し続きを後で描く",
+
+  "Your drawing has been saved, would you like to view it on the forum now?": "お絵かきが保存されました。フォーラムへアップされますか？",
+  "Yes, view the post": "ポストをチェックする",
+
+  "Your drawing has been saved, redirecting you to view your new post now...": "お絵かきが保存されました。新しい投稿へリダイレクト中。",
+
+  "Sorry, your drawing could not be saved, please try again later.": "お絵かきが保存できませんでした。もう一度お試しください。"
 }
