@@ -21,6 +21,7 @@
 */
 
 import $ from "jquery";
+import {_} from "../languages/lang.js";
 
 export default function CPGridDialog(parent, canvas) {
     var
@@ -29,7 +30,7 @@ export default function CPGridDialog(parent, canvas) {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Grid options</h5>
+                            <h5 class="modal-title">${_("Grid options")}</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -37,14 +38,14 @@ export default function CPGridDialog(parent, canvas) {
                         <div class="modal-body">
                             <form>
                                 <div class="form-group">
-                                    <label>Grid size</label>
+                                    <label>${_("Grid size")}</label>
                                     <input type="text" class="form-control chickenpaint-grid-size" value="" autofocus>
                                 </div>
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary chickenpaint-apply-grid-settings" data-dismiss="modal">Ok</button>
+                            <button type="button" class="btn btn-light" data-dismiss="modal">${_("Cancel")}</button>
+                            <button type="button" class="btn btn-primary chickenpaint-apply-grid-settings" data-dismiss="modal">${_("Ok")}</button>
                         </div>
                     </div>
                 </div>

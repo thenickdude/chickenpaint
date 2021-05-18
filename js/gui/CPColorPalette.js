@@ -23,8 +23,8 @@
 import CPPalette from './CPPalette.js';
 import CPColorSelect from './CPColorSelect.js';
 import CPColorSlider from './CPColorSlider.js';
-
 import CPColor from "../util/CPColor.js";
+import {_} from "../languages/lang";
 
 export default function CPColorPalette(cpController) {
     CPPalette.call(this, cpController, "color", "Color");
@@ -69,7 +69,7 @@ function CPColorShow(controller) {
         let
             colHex = "#" + padLeft(Number(color).toString(16), "0", 6);
 
-        colHex = window.prompt("Please enter a color in hex format", colHex);
+        colHex = window.prompt(_("Please enter a color in hex format"), colHex);
         
         if (colHex != null) {
             try {

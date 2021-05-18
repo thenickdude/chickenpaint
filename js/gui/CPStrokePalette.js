@@ -24,48 +24,50 @@ import $ from "jquery";
 
 import CPPalette from './CPPalette.js';
 import CPBrushInfo from '../engine/CPBrushInfo.js';
+import {_} from "../languages/lang";
 
 export default function CPStrokePalette(cpController) {
     CPPalette.call(this, cpController, "stroke", "Stroke");
     
-    var 
+    let 
         that = this,
 
         buttons = [
             {
                 className: "chickenpaint-tool-freehand",
                 command: "CPFreeHand",
-                toolTip: "Free-hand",
+                toolTip: _("Free-hand"),
                 selected: true
             },
             {
                 className: "chickenpaint-tool-line",
                 command: "CPLine",
-                toolTip: "Straight line"
+                toolTip: _("Straight line")
             },
             {
                 className: "chickenpaint-tool-bezier",
                 command: "CPBezier",
-                toolTip: "Bezier curve"
+                toolTip: _("Bezier curve")
             }
         ],
 
         body = that.getBodyElement();
 
     function buildButtons() {
-        var
+        let
             listElem = document.createElement("ul");
         
         listElem.className = "chickenpaint-stroke-tools list-unstyled";
         
-        for (var i in buttons) {
-            var 
+        for (let i in buttons) {
+            let
                 button = buttons[i],
                 buttonElem = document.createElement("li"),
                 buttonIcon = document.createElement("div");
             
             buttonElem.className = "chickenpaint-toolbar-button " + button.className;
             buttonElem.setAttribute("data-buttonIndex", i);
+            buttonElem.setAttribute("title", button.toolTip);
             
             if (button.selected) {
                 buttonElem.className = buttonElem.className + " selected";
@@ -79,7 +81,7 @@ export default function CPStrokePalette(cpController) {
 
         $(listElem)
             .on("click", "li", function(e) {
-                var
+                let
                     button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 $("li", listElem).removeClass("selected");

@@ -36,6 +36,8 @@ import {isCanvasInterpolationSupported} from "../util/CPPolyfill.js";
 import $ from "jquery";
 import key from "../../lib/keymaster.js";
 
+import {_} from "../languages/lang";
+
 function sliderCheckboxGroup(checkbox, slider) {
     let
         group = document.createElement("div");
@@ -50,13 +52,15 @@ function sliderCheckboxGroup(checkbox, slider) {
 
 function fillCombobox(combo, optionNames) {
     for (let key in optionNames) {
-        let
-            option = document.createElement("option");
+        if (optionNames.hasOwnProperty(key)) {
+            let
+                option = document.createElement("option");
 
-        option.appendChild(document.createTextNode(optionNames[key]));
-        option.value = key;
+            option.appendChild(document.createTextNode(_(optionNames[key])));
+            option.value = key;
 
-        combo.appendChild(option);
+            combo.appendChild(option);
+        }
     }
 }
 
@@ -149,13 +153,13 @@ function CPBrushPanel(controller) {
 
         tipCombo = document.createElement("select"),
 
-        alphaCB = new CPCheckbox(false, "Control brush opacity with pen pressure"),
+        alphaCB = new CPCheckbox(false, _("Control brush opacity with pen pressure")),
         alphaSlider = new CPSlider(1, 255),
 
-        sizeCB = new CPCheckbox(true, "Control brush size with pen pressure"),
+        sizeCB = new CPCheckbox(true, _("Control brush size with pen pressure")),
         sizeSlider = new CPSlider(1, 200, false, true),
 
-        scatteringCB  = new CPCheckbox(false, "Control brush scattering with pen pressure"),
+        scatteringCB  = new CPCheckbox(false, _("Control brush scattering with pen pressure")),
         scatteringSlider = new CPSlider(0, 1000, false, true),
 
         resatSlider = new CPSlider(0, 100, false, true),
@@ -188,7 +192,7 @@ function CPBrushPanel(controller) {
     };
 
     alphaSlider.title = function (value) {
-        return "Opacity: " + value;
+        return _("Opacity") + ": " + value;
     };
 
     alphaSlider.on('valueChange', function (value) {
@@ -196,7 +200,7 @@ function CPBrushPanel(controller) {
     });
 
     sizeSlider.title = function (value) {
-        return "Brush size: " + value;
+        return _("Brush size") + ": " + value;
     };
 
     sizeSlider.on('valueChange', function (value) {
@@ -204,7 +208,7 @@ function CPBrushPanel(controller) {
     });
 
     resatSlider.title = function (value) {
-        return "Color: " + value + "%";
+        return _("Color") + ": " + value + "%";
     };
 
     resatSlider.on('valueChange', function (value) {
@@ -213,7 +217,7 @@ function CPBrushPanel(controller) {
     });
 
     bleedSlider.title = function (value) {
-        return "Blend: " + value + "%";
+        return _("Blend") + ": " + value + "%";
     };
 
     bleedSlider.on('valueChange', function (value) {
@@ -222,7 +226,7 @@ function CPBrushPanel(controller) {
     });
 
     spacingSlider.title = function (value) {
-        return "Spacing: " + value + "%";
+        return _("Spacing") + ": " + value + "%";
     };
 
     spacingSlider.on('valueChange', function (value) {
@@ -231,7 +235,7 @@ function CPBrushPanel(controller) {
     });
 
     scatteringSlider.title = function (value) {
-        return "Scattering: " + value + "%";
+        return _("Scattering") + ": " + value + "%";
     };
 
     scatteringSlider.on('valueChange', function (value) {
@@ -240,7 +244,7 @@ function CPBrushPanel(controller) {
     });
 
     smoothingSlider.title = function (value) {
-        return "Smoothing: " + value + "%";
+        return _("Smoothing") + ": " + value + "%";
     };
 
     smoothingSlider.on('valueChange', function (value) {

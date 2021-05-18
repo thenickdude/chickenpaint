@@ -29,6 +29,8 @@ import CPLookUpTable from '../engine/CPLookUpTable.js';
 import CPPalette from './CPPalette.js';
 import CPSlider from './CPSlider.js';
 
+import {_} from "../languages/lang";
+
 /**
  *
  * @param {HTMLInputElement} checkbox - Must have a unique ID set
@@ -317,7 +319,7 @@ export default function CPTexturePalette(controller) {
                 updateSelectedTexture();
             });
             
-            panel.appendChild(wrapBootstrapCheckbox(cbInverse, "Inverse"));
+            panel.appendChild(wrapBootstrapCheckbox(cbInverse, _("Inverse")));
 
             cbMirror.id = "chickenpaint-chk-texture-mirror";
             cbMirror.type = "checkbox";
@@ -326,10 +328,10 @@ export default function CPTexturePalette(controller) {
                 updateSelectedTexture();
             });
             
-            panel.appendChild(wrapBootstrapCheckbox(cbMirror, "Mirror"));
+            panel.appendChild(wrapBootstrapCheckbox(cbMirror, _("Mirror")));
 
             slBrightness.title = function(value) {
-                return "Brightness: " + (value - 100) + "%";
+                return _("Brightness") + ": " + (value - 100) + "%";
             };
             
             slBrightness.on("valueChange", function(value) {
@@ -341,7 +343,7 @@ export default function CPTexturePalette(controller) {
             panel.appendChild(slBrightness.getElement());
 
             slContrast.title = function(value) {
-                return "Contrast: " + (value - 100) + "%";
+                return _("Contrast") + ": " + (value - 100) + "%";
             };
             
             slContrast.on("valueChange", function(value) {
@@ -403,7 +405,7 @@ export default function CPTexturePalette(controller) {
 
         btnCustomize.type = "button";
         btnCustomize.className = "btn btn-light btn-sm";
-        btnCustomize.innerHTML = "Customize";
+        btnCustomize.innerHTML = _("Customize");
 
         textureControlsPanel = buildTextureControlsPanel();
         

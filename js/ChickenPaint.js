@@ -59,6 +59,7 @@ import CPWacomTablet from "./util/CPWacomTablet.js";
 import CPRect from "./util/CPRect.js";
 
 import EventEmitter from "wolfy87-eventemitter";
+import {currentLanguage, guessLanguage, setLanguage, _} from "./languages/lang.js";
 
 /* Check for native pointer event support before PEP adds its polyfill */
 if (window.PointerEvent) {
@@ -299,6 +300,10 @@ function createDrawingTools() {
  *
  * @property {string} resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the
  *                                    page that ChickenPaint is loaded on)
+ *                                    
+ * @property {string} language - Provide an explicit ISO language code here (e.g. "ja_JP") to override the guessed browser language
+ *                               Unsupported languages will fall back to English.
+ *                               Currently only "en" and "ja" are available.
  */
 
 /**
@@ -309,6 +314,12 @@ function createDrawingTools() {
  * @throws ChickenPaint.UnsupportedBrowserException if the web browser does not support ChickenPaint
  */
 export default function ChickenPaint(options) {
+    guessLanguage();
+
+    if (options.language) {
+        setLanguage(options.language);
+    }
+    
     let
         that = this,
 
@@ -1095,14 +1106,14 @@ export default function ChickenPaint(options) {
         });
         
         saver.on("savingFailure", function() {
-            alert("An error occurred while trying to save your drawing! Please try again!");
+            alert(_("Sorry, your drawing could not be saved, please try again later."));
         });
         
         saver.save();
     }
     
     function sendDrawing() {
-        if (!that.isActionSupported("CPContinue") && !confirm('Are you sure you want to send your drawing to the server and finish drawing now?')) {
+        if (!that.isActionSupported("CPContinue") && !confirm(_('Are you sure you want to send your drawing to the server and finish drawing now?'))) {
             return;
         }
 
@@ -1125,7 +1136,7 @@ export default function ChickenPaint(options) {
         });
 
         saver.on("savingFailure", function() {
-            alert("An error occurred while trying to save your drawing! Please try again!");
+            alert(_("Sorry, your drawing could not be saved, please try again later."));
         });
 
         // Allow the dialog to show before we begin serialization
@@ -1277,7 +1288,7 @@ export default function ChickenPaint(options) {
             uiElem.className += " no-flexbox";
         }
 
-        uiElem.className += " chickenpaint";
+        uiElem.className += " chickenpaint chickenpaint-lang-" + currentLanguage();
     }
 
     options.resourcesRoot = options.resourcesRoot || "chickenpaint/";
