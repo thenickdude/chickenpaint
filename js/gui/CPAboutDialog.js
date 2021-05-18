@@ -38,7 +38,7 @@ export default function CPAboutDialog(parent) {
                             <a class="chickenpaint-on-github" target="_blank" href="https://github.com/thenickdude/chickenpaint"><span class="fab fa-github"></span> ChickenPaint on GitHub</a>
                             
                             <p>
-                                ChickenPaint is a translation of <a href="http://www.chibipaint.com/" target="_blank">ChibiPaint</a>
+                                ChickenPaint is a translation of <a href="https://github.com/thenickdude/chibipaint" target="_blank">ChibiPaint</a>
                                 from Java to JavaScript by Nicholas Sherlock / Chicken Smoothie
                             </p>
                             <p>
@@ -55,15 +55,15 @@ export default function CPAboutDialog(parent) {
                                 ChickenPaint is distributed in the hope that it will be useful,
                                 but WITHOUT ANY WARRANTY; without even the implied warranty of
                                 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-                                <a target="_blank" href="http://www.gnu.org/licenses/">GNU General Public License</a> for more details.
+                                <a target="_blank" href="https://www.gnu.org/licenses/">GNU General Public License</a> for more details.
                             </p>
         
-                            <pre class="pre-scrollable chickenpaint-third-party-licenses">Includes icons from the <a href="http://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
+                            <pre class="pre-scrollable chickenpaint-third-party-licenses">Includes icons from the <a href="https://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
 
 Includes these MIT-licensed libraries:
 
     Includes the <a target="_blank" href="https://github.com/eligrey/FileSaver.js">FileSaver.js library</a>
-    FileSaver.js Copyright © 2015 <a target="_blank" href="http://eligrey.com/">Eli Grey</a>
+    FileSaver.js Copyright © 2015 <a target="_blank" href="https://eligrey.com/">Eli Grey</a>
 
     Includes the <a target="_blank" href="https://github.com/nodeca/pako">Pako zlib compression library</a>
     Copyright (C) 2014-2015 by Vitaly Puzrin
@@ -74,7 +74,7 @@ Includes these MIT-licensed libraries:
     Includes the <a target="_blank" href="https://github.com/stefanpenner/es6-promise">es6-promise</a> library
     Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors
 
-    Includes the <a target="_blank" href="http://benalman.com/projects/jquery-throttle-debounce-plugin/">jQuery throttle-debounce</a> library
+    Includes the <a target="_blank" href="https://benalman.com/projects/jquery-throttle-debounce-plugin/">jQuery throttle-debounce</a> library
     Copyright (c) 2010 "Cowboy" Ben Alman
 
     Permission is hereby granted, free of charge, to any person
@@ -98,7 +98,7 @@ Includes these MIT-licensed libraries:
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 
-Includes the <a href="http://www.jquery.com/" target="_blank">jQuery library</a> 
+Includes the <a href="https://www.jquery.com/" target="_blank">jQuery library</a> 
 Copyright <a href="https://jquery.org/" target="_blank">jQuery Foundation and other contributors</a>
     
     This software consists of voluntary contributions made by many
@@ -160,7 +160,7 @@ Copyright jQuery Foundation and other contributors, https://jquery.org/
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
     OTHER DEALINGS IN THE SOFTWARE.
 
-Includes Font Awesome by Dave Gandy - <a href="http://fontawesome.io" target="_blank">http://fontawesome.io</a>
+Includes Font Awesome by Dave Gandy - <a href="https://fontawesome.io" target="_blank">https://fontawesome.io</a>
                     </pre>
                 </div>
             </div>
