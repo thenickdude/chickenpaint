@@ -22,15 +22,16 @@
 
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
+import {_} from "../languages/lang.js";
 
 export default function CPSendDialog(controller, parent, resourceSaver) {
-    var
+    let
         dialog = 
             $(`<div class="modal fade chickenpaint-send-dialog" tabindex="-1" role="dialog">
                 <div class="modal-dialog">
                     <div class="modal-content" data-stage="saving">
                         <div class="modal-header">
-                            <h5 class="modal-title">Saving drawing...</h5>
+                            <h5 class="modal-title">${_("Saving drawing...")}</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -48,18 +49,18 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                     </div>
                     <div class="modal-content" data-stage="success-not-previously-posted" style="display:none">
                         <div class="modal-header">
-                            <h5 class="modal-title">Drawing saved!</h5>
+                            <h5 class="modal-title">${_("Drawing saved!")}</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                         <div class="modal-body">
-                            <p>Your drawing has been saved, would you like to post it to the forum now?</p>
+                            <p>${_("Your drawing has been saved, would you like to post it to the forum now?")}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, post it now</button>
-                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
-                            <button type="button" class="btn btn-light chickenpaint-exit" data-dismiss="modal">No, quit and I'll finish it later</button>
+                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">${_("Yes, post it now")}</button>
+                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">${_("No, keep drawing")}</button>
+                            <button type="button" class="btn btn-light chickenpaint-exit" data-dismiss="modal">${_("No, quit and I'll finish it later")}</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-already-posted" style="display:none">
@@ -70,11 +71,11 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </button>
                         </div>
                         <div class="modal-body">
-                            <p>Your drawing has been saved, would you like to view it on the forum now?</p>
+                            <p>${_("Your drawing has been saved, would you like to view it on the forum now?")}</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">Yes, view the post</button>
-                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">No, keep drawing</button>
+                            <button type="button" class="btn btn-primary chickenpaint-post-drawing" data-dismiss="modal">${_("Yes, view the post")}</button>
+                            <button type="button" class="btn btn-light chickenpaint-continue-drawing" data-dismiss="modal">${_("No, keep drawing")}</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-redirect" style="display:none">
@@ -85,7 +86,7 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </button>
                         </div>
                         <div class="modal-body">
-                            <p>Your drawing has been saved, redirecting you to view your new post now...</p>
+                            <p>${_("Your drawing has been saved, redirecting you to view your new post now...")}</p>
                         </div>
                     </div>
                 </div>
@@ -124,8 +125,8 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
     resourceSaver.on("savingFailure", function(serverMessage) {
         progressElem.addClass("progress-bar-danger");
         
-        var
-            errorMessage = "Sorry, your drawing could not be saved, please try again later.";
+        let
+            errorMessage = _("Sorry, your drawing could not be saved, please try again later.");
         
         if (serverMessage) {
             serverMessage = serverMessage.replace(/^CHIBIERROR\s*/, "");

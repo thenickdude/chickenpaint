@@ -3,6 +3,8 @@ import AdobeColorTable from "../util/AdobeColorTable.js";
 import EventEmitter from "wolfy87-eventemitter";
 import FileSaver from "file-saver";
 
+import {_} from "../languages/lang.js";
+
 /**
  * We generally can't do much with binary strings because various methods will try to UTF-8 mangle them.
  * This function converts such a string to a Uint8Array instead.
@@ -37,9 +39,9 @@ export default function CPResourceSaver(options) {
     
     function reportProgress(progress) {
         if (progress === null) {
-            that.emitEvent("savingProgress", [1.0, "Saving your drawing to the server..."]);
+            that.emitEvent("savingProgress", [1.0, _("Saving drawing...")]);
         } else {
-            that.emitEvent("savingProgress", [progress, "Saving your drawing to the server...  (" + Math.round(progress * 100) + "%)"]);
+            that.emitEvent("savingProgress", [progress, _("Saving drawing...") +" (" + Math.round(progress * 100) + "%)"]);
         }
     }
     
