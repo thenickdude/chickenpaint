@@ -29,6 +29,8 @@ import CPLayerGroup from "../engine/CPLayerGroup.js";
 import CPLayer from "../engine/CPLayer.js";
 import CPImageLayer from "../engine/CPImageLayer.js";
 
+import {_} from "../languages/lang.js";
+
 function absorbTouch(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -472,7 +474,7 @@ export default function CPLayersPalette(controller) {
                 thumbnail = layer.getImageThumbnail(),
                 thumbCanvas = thumbnail.getAsCanvas(imageRotation);
 
-            thumbCanvas.title = "Image";
+            thumbCanvas.title = _("Image");
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_IMAGE_THUMBNAIL;
 
             // Thumbnails are actually displayed at 25px high, set the display width appropriately for the aspect ratio
@@ -510,7 +512,7 @@ export default function CPLayersPalette(controller) {
                 thumbnail = layer.getMaskThumbnail(),
                 thumbCanvas = thumbnail.getAsCanvas(imageRotation);
 
-            thumbCanvas.title = "Layer mask";
+            thumbCanvas.title = _("Layer mask");
             thumbCanvas.className = CLASSNAME_LAYER_THUMBNAIL + " " + CLASSNAME_LAYER_MASK_THUMBNAIL;
 
             // Thumbnails are actually displayed at 25px high, set the display width appropriately for the aspect ratio
@@ -579,7 +581,7 @@ export default function CPLayersPalette(controller) {
                     let
                         locked = createChickenPaintIcon("lock-alpha");
                     
-                    locked.title = "Transparency locked";
+                    locked.title = _("Transparency locked");
                     statusDiv.appendChild(locked);
                 }
             } else if (layer instanceof CPLayerGroup) {
@@ -619,7 +621,7 @@ export default function CPLayersPalette(controller) {
             layerNameDiv.setAttribute("title", layerName);
             layerNameDiv.className = "chickenpaint-layer-name";
 
-            blendDiv.innerText = CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%";
+            blendDiv.innerText = _(CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode]) + ": " + layer.alpha + "%";
             blendDiv.className = "chickenpaint-layer-blend";
 
             mainDiv.appendChild(layerNameDiv);
@@ -1150,7 +1152,7 @@ export default function CPLayersPalette(controller) {
                     menuItemElem.className = menuItemElem.className + " " + action.require.map(requirement => "chickenpaint-action-require-" + requirement).join(" ");
                 }
                 menuItemElem.href = "#";
-                menuItemElem.innerHTML = action.title;
+                menuItemElem.innerHTML = _(action.title);
                 menuItemElem.setAttribute("data-action", action.action);
 
                 if (action.actionData) {
@@ -1276,7 +1278,7 @@ export default function CPLayersPalette(controller) {
 				let
 					option = document.createElement("option");
 
-				option.appendChild(document.createTextNode(CPBlend.BLEND_MODE_DISPLAY_NAMES[blendMode]));
+				option.appendChild(document.createTextNode(_(CPBlend.BLEND_MODE_DISPLAY_NAMES[blendMode])));
 
 				// Should we use the new LM_MULTIPLY2 blend mode in this spot instead of the legacy one?
 				if (blendMode === CPBlend.LM_MULTIPLY && activeLayer.blendMode !== blendMode && !activeLayer.useLegacyMultiply) {
@@ -1338,7 +1340,7 @@ export default function CPLayersPalette(controller) {
 
             elem.setAttribute("data-action", button.action);
             elem.className = 'chickenpaint-small-toolbar-button ' + (button.require ? "chickenpaint-action-require-" + button.require : "");
-            elem.title = button.title;
+            elem.title = _(button.title);
             elem.appendChild(button.icon);
             elem.addEventListener("click", function () {
                 controller.actionPerformed({action: button.action});
@@ -1598,7 +1600,7 @@ export default function CPLayersPalette(controller) {
     };
 
     blendCombo.className = "form-control form-control-sm";
-    blendCombo.title = "Layer blending mode";
+    blendCombo.title = _("Layer blending mode");
     blendCombo.addEventListener("change", function(e) {
         controller.actionPerformed({action: "CPSetLayerBlendMode", blendMode: parseInt(blendCombo.value, 10)});
     });
@@ -1606,7 +1608,7 @@ export default function CPLayersPalette(controller) {
     body.appendChild(blendCombo);
     
     alphaSlider.title = function(value) {
-        return "Opacity: " + value + "%";
+        return _("Opacity") + ": " + value + "%";
     };
     
     alphaSlider.on("valueChange", function(value) {
@@ -1621,7 +1623,7 @@ export default function CPLayersPalette(controller) {
         artwork.setSampleAllLayers(cbSampleAllLayers.checked);
     });
     
-    body.appendChild(wrapBootstrapCheckbox(cbSampleAllLayers, "Sample all layers"));
+    body.appendChild(wrapBootstrapCheckbox(cbSampleAllLayers, _("Sample all layers")));
 
     cbLockAlpha.id = "chickenpaint-chk-lock-alpha";
     cbLockAlpha.type = "checkbox";
@@ -1629,7 +1631,7 @@ export default function CPLayersPalette(controller) {
         controller.actionPerformed({action: "CPSetLayerLockAlpha", lock: cbLockAlpha.checked});
     });
         
-    body.appendChild(wrapBootstrapCheckbox(cbLockAlpha, "Lock transparency"));
+    body.appendChild(wrapBootstrapCheckbox(cbLockAlpha, _("Lock transparency")));
 
     body.appendChild(layerWidget.getElement());
 

@@ -22,6 +22,7 @@
 
 import $ from "jquery";
 import key from "../../lib/keymaster.js";
+import {_} from "../languages/lang.js";
 
 const
     MENU_ENTRIES = [
@@ -522,7 +523,7 @@ export default function CPMainMenu(controller, mainGUI) {
             let
                 topLevelMenuElem = $(
                     '<li class="nav-item dropdown">'
-                        + '<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + topLevelMenuEntry.name + '</a>'
+                        + '<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' + _(topLevelMenuEntry.name) + '</a>'
                         + '<div class="dropdown-menu">'
                         + '</div>'
                     + '</li>'
@@ -550,7 +551,7 @@ export default function CPMainMenu(controller, mainGUI) {
 
                 if (entry.action == "CPSend" && !controller.isActionSupported("CPContinue")) {
                     // User won't be able to come back after saving, so make it sound more final
-                    entry.name = "Post Oekaki";
+                    entry.name = _("Post Oekaki");
                     entry.shortcut = "ctrl+p";
                 }
 
@@ -561,7 +562,7 @@ export default function CPMainMenu(controller, mainGUI) {
                     entryElem = $('<div class="dropdown-divider"></div>');
                 } else {
                     entryElem = $(
-                        '<a class="dropdown-item" href="#" data-action="' + entry.action + '"><span>' + entry.name + '</span></a>'
+                        '<a class="dropdown-item" href="#" data-action="' + entry.action + '"><span>' + _(entry.name) + '</span></a>'
                     );
 
                     if (entry.checkbox) {
@@ -576,7 +577,7 @@ export default function CPMainMenu(controller, mainGUI) {
 
 
                 if (entry.title) {
-                    entryElem.attr('title', entry.title);
+                    entryElem.attr('title', _(entry.title));
                 }
 
                 if (entry.shortcut) {

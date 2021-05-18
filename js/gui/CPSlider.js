@@ -22,6 +22,7 @@
 
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
+import {_} from "../languages/lang";
 
 /**
  * A simple slider control.
@@ -65,7 +66,7 @@ export default function CPSlider(minValue, maxValue, centerMode, expMode) {
         let
             width = canvas.width,
             height = canvas.height,
-            title = typeof that.title === "string" ? that.title : that.title(that.value),
+            title = typeof that.title === "string" ? _(that.title) : that.title(that.value),
             textX = 3 * window.devicePixelRatio,
             textY = canvas.height * 0.75;
 

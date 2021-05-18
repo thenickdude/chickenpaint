@@ -22,11 +22,12 @@
 
 import $ from "jquery";
 import CPPalette from './CPPalette.js';
+import {_} from "../languages/lang.js";
 
 export default function CPMiscPalette(cpController) {
     CPPalette.call(this, cpController, "misc", "Misc");
     
-    var 
+    let 
         that = this,
 
         buttons = [
@@ -58,35 +59,31 @@ export default function CPMiscPalette(cpController) {
             {
                 className: "chickenpaint-tool-send",
                 command: "CPSend",
-                toolTip: "Save pic"
+                toolTip: "Save Oekaki"
             }
         ];
 
     function buildButtons() {
-        var
+        let
             body = that.getBodyElement(),
             listElem = document.createElement("ul");
         
         listElem.className = "chickenpaint-misc-tools list-unstyled";
         
-        for (var i in buttons) {
-            var 
+        for (let i in buttons) {
+            let 
                 button = buttons[i],
                 buttonElem = document.createElement("li"),
                 buttonIcon = document.createElement("div");
             
             if (button.command == 'CPSend' && !cpController.isActionSupported("CPContinue")) {
-                button.toolTip = "Send picture to server";
-                button.className = "chickenpaint-tool-send-and-end";
-            }
-            
-            if (button.command == 'CPSend' && !cpController.isActionSupported("CPContinue")) {
-                button.toolTip = "Send picture to server";
+                button.toolTip = "Post Oekaki";
                 button.className = "chickenpaint-tool-send-and-end";
             }
             
             buttonElem.className = "chickenpaint-toolbar-button " + button.className;
             buttonElem.setAttribute("data-buttonIndex", i);
+            buttonElem.setAttribute("title", _(button.toolTip));
 
             buttonIcon.className = "chickenpaint-toolbar-button-icon";
             buttonElem.appendChild(buttonIcon);
@@ -102,7 +99,7 @@ export default function CPMiscPalette(cpController) {
                 $(this).removeClass("selected");
             })
             .on("click", "li", function(e) {
-                var
+                let
                     button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
                 
                 cpController.actionPerformed({action: button.command});

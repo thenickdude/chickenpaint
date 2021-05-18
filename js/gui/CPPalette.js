@@ -22,9 +22,10 @@
 
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
+import {_} from "../languages/lang";
 
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
-    this.title = title;
+    this.title = _(title);
     this.name = className;
     this.resizeVert = resizeVert || false;
     this.resizeHorz = resizeHorz || false;
@@ -184,7 +185,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     titleContainer.className = 'modal-header';
 
     titleElem.className = 'modal-title';
-    titleElem.appendChild(document.createTextNode(this.title));
+    titleElem.appendChild(document.createTextNode(_(this.title)));
 
     titleContainer.appendChild(titleElem);
     titleContainer.appendChild(closeButton);

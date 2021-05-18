@@ -22,6 +22,7 @@
 
 import EventEmitter from "wolfy87-eventemitter";
 import $ from "jquery";
+import {_} from "../languages/lang.js";
 
 export default function CPConfirmTransformDialog(parent, controller) {
 	var
@@ -41,7 +42,7 @@ export default function CPConfirmTransformDialog(parent, controller) {
 							</p>
 	                    </div>
 	                    <div class="modal-footer">
-	                        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+	                        <button type="button" class="btn btn-light" data-dismiss="modal">${_("Cancel")}</button>
 	                        <button type="button" class="btn btn-light chickenpaint-reject-transform" data-dismiss="modal">Undo transform</button>
 	                        <button type="button" class="btn btn-primary chickenpaint-accept-transform" data-dismiss="modal">Apply transform</button>
 	                    </div>

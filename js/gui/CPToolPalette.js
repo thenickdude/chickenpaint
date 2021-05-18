@@ -26,6 +26,8 @@ import key from "../../lib/keymaster.js";
 import CPPalette from './CPPalette.js';
 import ChickenPaint from '../ChickenPaint.js';
 
+import {_} from "../languages/lang";
+
 export default function CPToolPalette(cpController) {
     CPPalette.call(this, cpController, "tool", "Tools");
     
@@ -136,7 +138,7 @@ export default function CPToolPalette(cpController) {
             {
                 className: "chickenpaint-tool-dodge",
                 command: "CPDodge",
-                toolTip: "Dodge",
+                toolTip: "Dodge (tool)",
                 shortcut: "o",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_DODGE
@@ -144,7 +146,7 @@ export default function CPToolPalette(cpController) {
             {
                 className: "chickenpaint-tool-burn",
                 command: "CPBurn",
-                toolTip: "Burn",
+                toolTip: "Burn (tool)",
                 shortcut: "p",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_BURN
@@ -189,7 +191,7 @@ export default function CPToolPalette(cpController) {
                     buttonElem.setAttribute('data-tool', button.tool);
                 }
                 
-                buttonElem.title = button.toolTip;
+                buttonElem.title = _(button.toolTip);
                 
                 if (button.shortcut) {
                     buttonElem.title += " (" + button.shortcut.toUpperCase() + ")";

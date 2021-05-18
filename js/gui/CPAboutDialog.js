@@ -60,6 +60,17 @@ export default function CPAboutDialog(parent) {
         
                             <pre class="pre-scrollable chickenpaint-third-party-licenses">Includes icons from the <a href="https://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
 
+Includes icons from the <a target="_blank" href="https://extensions.libreoffice.org/en/extensions/show/tango-icon-theme-for-libreoffice">Tango Icon Theme for LibreOffice</a>:
+    All artwork is licensed under the Creative Commons Attribution-Share Alike 3.0
+    United States License. To view a copy of this licence, visit
+    https://creativecommons.org/licenses/by-sa/3.0/ or send a letter to Creative
+    Commons, 171 Second Street, Suite 300, San Francisco, California 94105, USA.
+    
+    Credit for icons imported from git://git.gnome.org/gnome-icon-theme or derivatives
+    of these goes to the GNOME project (https://www.gnome.org)
+    Derivatives and new icons were created by Alexander Wilms &lt;f.alexander.wilms@gmail.com> 
+    and Miroslav Mazel &lt;mazelm@gmail.com>
+
 Includes these MIT-licensed libraries:
 
     Includes the <a target="_blank" href="https://github.com/eligrey/FileSaver.js">FileSaver.js library</a>

@@ -36,14 +36,14 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
                             </button>
                         </div>
                         <div class="modal-body">
-                            <p class="chickenpaint-saving-progress-message">Preparing your drawing to be saved, please wait...</p>
+                            <p class="chickenpaint-saving-progress-message">${_("Preparing your drawing to be saved, please wait...")}</p>
                             <pre class="chickenpaint-saving-error-message pre-scrollable"></pre>
                             <div class="progress">
                                 <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light chickenpaint-send-cancel" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-light chickenpaint-send-cancel" data-dismiss="modal">${_("Cancel")}</button>
                         </div>
                     </div>
                     <div class="modal-content" data-stage="success-not-previously-posted" style="display:none">

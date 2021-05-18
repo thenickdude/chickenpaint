@@ -21,15 +21,16 @@
 */
 
 import $ from "jquery";
+import {_} from "../languages/lang.js";
 
 export default function CPBoxBlurDialog(parent, controller) {
-    var
+    let
         dialog = 
             $(`<div class="modal fade" tabindex="-1" role="dialog">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Box blur</h5>
+                            <h5 class="modal-title">${_("Box blur")}</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -37,18 +38,18 @@ export default function CPBoxBlurDialog(parent, controller) {
                         <div class="modal-body">
                             <form>
                                 <div class="form-group">
-                                    <label>Blur amount (pixels)</label>
+                                    <label>${_("Blur amount (pixels)")}</label>
                                     <input type="text" class="form-control chickenpaint-blur-amount" value="3">
                                 </div>
                                 <div class="form-group">
-                                    <label>Iterations (1-8, larger gives smoother blur)</label>
+                                    <label>${_("Iterations (1-8, larger gives smoother blur)")}</label>
                                     <input type="text" class="form-control chickenpaint-blur-iterations" value="1">
                                 </div>
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary chickenpaint-apply-box-blur" data-dismiss="modal">Ok</button>
+                            <button type="button" class="btn btn-light" data-dismiss="modal">${_("Cancel")}</button>
+                            <button type="button" class="btn btn-primary chickenpaint-apply-box-blur" data-dismiss="modal">${_("Ok")}</button>
                         </div>
                     </div>
                 </div>
@@ -64,7 +65,7 @@ export default function CPBoxBlurDialog(parent, controller) {
     };
     
     applyButton.click(function(e) {
-        var
+        let
             blur = Math.max(parseInt(blurAmountElem.val(), 10), 1),
             iterations = Math.min(Math.max(parseInt(blurIterationsElem.val(), 10), 1), 8);
         
@@ -88,12 +89,4 @@ export default function CPBoxBlurDialog(parent, controller) {
     dialog.data("bs.modal").$body = $(parent);
     
     parent.appendChild(dialog[0]);
-    
-    /* TODO
-    panel.add(new JLabel("Blur amount:"));
-    SpinnerModel blurXSM = new SpinnerNumberModel(3, 1, 100, 1);
-    
-    panel.add(new JLabel("Iterations:"));
-    SpinnerModel iterSM = new SpinnerNumberModel(1, 1, 8, 1);
-    */
 }

@@ -28,6 +28,7 @@ import CPPalette from './CPPalette.js';
 
 import CPColor from '../util/CPColor.js';
 import AdobeColorTable from '../util/AdobeColorTable.js';
+import {_} from "../languages/lang";
 
 function padLeft(string, padding, len) {
     while (string.length < len) {
@@ -82,7 +83,7 @@ export default function CPSwatchesPalette(controller) {
 
         mnuRemove.className = "dropdown-item";
         mnuRemove.href = "#";
-        mnuRemove.innerHTML = "Remove";
+        mnuRemove.innerHTML = _("Remove");
         
         mnuRemove.addEventListener("click", function(e) {
             e.preventDefault();
@@ -93,7 +94,7 @@ export default function CPSwatchesPalette(controller) {
 
         mnuSetToCurrent.className = "dropdown-item";
         mnuSetToCurrent.href = "#";
-        mnuSetToCurrent.innerHTML = "Replace with current color";
+        mnuSetToCurrent.innerHTML = _("Replace with current color");
         
         mnuSetToCurrent.addEventListener("click", function(e) {
             e.preventDefault();
@@ -185,7 +186,7 @@ export default function CPSwatchesPalette(controller) {
                 if (swatches != null && swatches.length > 0) {
                     that.setSwatches(swatches);
                 } else {
-                    alert("The swatches could not be read, did you select an .aco file?");
+                    alert(_("The swatches could not be read, did you select an .aco file?"));
                 }
             };
             
@@ -275,7 +276,7 @@ export default function CPSwatchesPalette(controller) {
             mnuLoad  = document.createElement("a");
 
         btnAdd.type = "button";
-        btnAdd.title = "Add the current brush color as a new swatch";
+        btnAdd.title = _("Add the current brush color as a new swatch");
         btnAdd.className = "btn chickenpaint-small-toolbar-button chickenpaint-color-swatch-add";
         btnAdd.appendChild(createIcon("plus"));
 
@@ -286,7 +287,7 @@ export default function CPSwatchesPalette(controller) {
 
         mnuSave.className = "dropdown-item";
         mnuSave.href = "#";
-        mnuSave.innerHTML = "Save swatches to your computer...";
+        mnuSave.innerHTML = _("Save swatches to your computer...");
         mnuSave.addEventListener("click", function(e) {
             e.preventDefault();
             
@@ -295,7 +296,7 @@ export default function CPSwatchesPalette(controller) {
 
         mnuLoad.className = "dropdown-item";
         mnuLoad.href = "#";
-        mnuLoad.innerHTML = "Load swatches from your computer...";
+        mnuLoad.innerHTML = _("Load swatches from your computer...");
         mnuLoad.addEventListener("click", function(e) {
             e.preventDefault();
             
