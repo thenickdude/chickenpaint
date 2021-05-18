@@ -621,7 +621,7 @@ export default function CPLayersPalette(controller) {
             layerNameDiv.setAttribute("title", layerName);
             layerNameDiv.className = "chickenpaint-layer-name";
 
-            blendDiv.innerText = CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode] + ": " + layer.alpha + "%";
+            blendDiv.innerText = _(CPBlend.BLEND_MODE_DISPLAY_NAMES[layer.blendMode]) + ": " + layer.alpha + "%";
             blendDiv.className = "chickenpaint-layer-blend";
 
             mainDiv.appendChild(layerNameDiv);
