@@ -27,7 +27,7 @@ import CPColor from "../util/CPColor.js";
 import {_} from "../languages/lang";
 
 export default function CPColorPalette(cpController) {
-    CPPalette.call(this, cpController, "color", "Color");
+    CPPalette.call(this, cpController, "color", "Color (picker)");
     
     let
         colorSelect = new CPColorSelect(cpController),
