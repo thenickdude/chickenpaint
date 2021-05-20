@@ -1,12 +1,12 @@
 {
   "name": "chickenpaint",
-  "main": "resources/js/chickenpaint.js",
+  "main": "js/ChickenPaint.js",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/thenickdude/chickenpaint.git"
   },
-  "version": "0.1.1",
+  "version": "0.2.0",
   "devDependencies": {
     "@babel/cli": "^7.13.16",
     "@babel/core": "^7.14.0",
