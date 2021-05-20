@@ -31,13 +31,13 @@ export function guessLanguage() {
     try {
         if (typeof navigator !== "undefined") {
             let
-                languages = navigator.languages;
+                navLanguages = navigator.languages;
 
-            if (!Array.isArray(languages)) {
-                languages = [languages];
+            if (!Array.isArray(navLanguages)) {
+                navLanguages = [navLanguages];
             }
             
-            for (let language of languages) {
+            for (let language of navLanguages) {
                 let
                     matches = /^(..)([-_].+)?$/.exec(language);
                 
