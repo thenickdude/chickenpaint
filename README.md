@@ -111,3 +111,40 @@ drawing session.
 
 By default, `allowMultipleSends` is disabled, and the user will only have the option to post their drawing immediately.
 This allows a simpler image upload script.
+
+## Usage - NPM
+
+You can include ChickenPaint into a larger project which already has its own Babel/Webpack/Grunt/Browserify/etc system
+by installing it with NPM:
+
+```bash
+npm install --save chickenpaint
+```
+
+Then you can either load it onto the page from the node_modules folder similar to the traditional method:
+
+```html
+<script src="node_modules/chickenpaint/resources/js/chickenpaint.js"></script>
+<link rel="stylesheet" type="text/css" href="node_modules/chickenpaint/resources/css/chickenpaint.css">
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        new ChickenPaint({
+            ...
+```
+
+Or you can integrate those files into your project using your bundling framework instead:
+
+```js
+require("chickenpaint/resources/css/chickenpaint.css");
+
+const
+    ChickenPaint = require("chickenpaint");
+
+    document.addEventListener("DOMContentLoaded", function () {
+        new ChickenPaint({
+            ...
+```
+
+Note that in the second case, your application will almost certainly need to be licensed GPLv3 to comply with the license
+terms.
