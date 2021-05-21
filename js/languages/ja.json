@@ -21,7 +21,7 @@
     "Merge group": "グループ結合",
     "Merge all layers":  "全レイヤー結合",
     "Add layer mask": "レイヤーマスク追加",
-    "Clip to the layer below": "下のレイヤーにクリッピング",
+    "Clip to the layer below": "下のレイヤーでクリッピング",
 
   "Effects": "効果",
     "Clear": "消去",
@@ -158,8 +158,8 @@
   "Okay": "OK",
   "OK": "OK",
 
-  "Are you sure you want to send your drawing to the server and finish drawing now?": "お絵かきをサーバーへ送信し、終了してもよろしいですか？",
-  "Your drawing has unsaved changes! Are you sure to want to navigate away?": "お絵かきに未保存の変更があります。終了してもよろしいですか？",
+  "Are you sure you want to send your drawing to the server and finish drawing now?": "お絵かきをサーバーへ送信します。描画を終了してもよろしいですか？",
+  "Your drawing has unsaved changes! Are you sure to want to navigate away?": "お絵かきに未保存の変更があります。描画を終了してもよろしいですか？",
           
   "Save Oekaki": "保存",
   
