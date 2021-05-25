@@ -88,6 +88,7 @@ export default function CPStrokePalette(cpController) {
                 $(this).addClass("selected");
                 
                 cpController.actionPerformed({action: button.command});
+                that.toggleBodyElementVisibility();
             });
 
         body.appendChild(listElem);

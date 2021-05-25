@@ -223,6 +223,7 @@ export default function CPSwatchesPalette(controller) {
                 controller.setCurColor(new CPColor(parseInt(swatch.getAttribute("data-color"), 10)));
                 e.stopPropagation();
                 e.preventDefault();
+                that.toggleBodyElementVisibility();
             }
         });
         

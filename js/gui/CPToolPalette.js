@@ -167,6 +167,7 @@ export default function CPToolPalette(cpController) {
                 button = buttons[parseInt(this.getAttribute("data-buttonIndex"), 10)];
 
             cpController.actionPerformed({action: button.command});
+            that.toggleBodyElementVisibility();
         }
     }
 
