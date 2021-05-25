@@ -23,6 +23,8 @@
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
+const windowIsPortraitMode = window.innerHeight > window.innerWidth;
+
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
     this.title = title;
     this.name = className;
@@ -84,7 +86,13 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         this.setWidth(width);
         this.setHeight(height);
     };
-    
+
+    this.toggleBodyElementVisibility = function() {
+        if (windowIsPortraitMode) {
+            bodyElement.style.display = bodyElement.style.display === "none" ? "block" : "none";
+        }
+    };
+
     function paletteHeaderPointerMove(e) {
         if (e.buttons != 0 && dragAction == "move") {
             that.setLocation(e.pageX - dragOffset.x, e.pageY - dragOffset.y);
@@ -109,6 +117,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         if (dragAction == "move") {
             headElement.releasePointerCapture(e.pointerId);
             dragAction = false;
+            that.toggleBodyElementVisibility()
         }
     }
     
@@ -187,12 +196,13 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     titleElem.appendChild(document.createTextNode(this.title));
 
     titleContainer.appendChild(titleElem);
-    titleContainer.appendChild(closeButton);
+    if (!windowIsPortraitMode) titleContainer.appendChild(closeButton);
 
     headElement.appendChild(titleContainer);
 
     bodyElement.className = "chickenpaint-palette-body";
-    
+    bodyElement.style.display = windowIsPortraitMode ? "none" : "block";
+
     containerElement.appendChild(headElement);
     containerElement.appendChild(bodyElement);
 
