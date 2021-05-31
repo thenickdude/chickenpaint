@@ -220,6 +220,13 @@
 
     box-shadow: 0 1px 1px rgba(0,0,0,.05);
 }
+.chickenpaint-palette.collapsed {
+    min-height: 27px;
+    max-height: 27px;
+}
+.chickenpaint-palette.collapsed > .chickenpaint-palette-body {
+    display: none;
+}
 .chickenpaint-palette-head {
     background-color:#e8e8e8;
     color:#444;
@@ -476,6 +483,7 @@ body.chickenpaint-full-screen {
 }
 
 .chickenpaint-palette-brush {
+    min-width:200px;
     min-height:250px;
 }
 .chickenpaint-palette-brush .chickenpaint-slider {
@@ -540,7 +548,7 @@ body.chickenpaint-full-screen {
 
 .chickenpaint-palette-layers {
     min-height:250px;
-    min-width:150px;
+    min-width:160px;
 }
 .chickenpaint-palette-layers .chickenpaint-palette-body {
     display:flex;
