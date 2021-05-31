@@ -90,7 +90,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
 
     this.toggleBodyElementVisibility = function() {
         if (windowIsPortraitMode) {
-            bodyElement.style.display = bodyElement.style.display === "none" ? "block" : "none";
+            $(containerElement).toggleClass("collapsed");
         }
     };
 
@@ -202,7 +202,6 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     headElement.appendChild(titleContainer);
 
     bodyElement.className = "chickenpaint-palette-body";
-    bodyElement.style.display = windowIsPortraitMode ? "none" : "block";
 
     containerElement.appendChild(headElement);
     containerElement.appendChild(bodyElement);
