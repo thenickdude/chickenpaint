@@ -972,20 +972,23 @@ body.chickenpaint-full-screen {
 @include chickenpaint-icon-classes;
 
 /* More compact styles for small screens */
-@media (max-height: 768px) {
+@media (max-height: 768px), (max-width: 400px)  {
     .chickenpaint .navbar {
-        min-height: 40px;
+        min-height: 20px;
+        padding: 0.1rem;
+    }
+
+    .chickenpaint .navbar-toggler {
+        padding: 0;
     }
 
     .chickenpaint .navbar-nav > li > a {
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding-top: 3px;
+        padding-bottom: 3px;
     }
 
     .chickenpaint .navbar-brand {
-        padding-top: 10px;
-        padding-bottom: 10px;
-        height: 40px;
+        display: none;
     }
 
     .chickenpaint-palette-head {
