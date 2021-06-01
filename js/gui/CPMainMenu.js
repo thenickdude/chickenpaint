@@ -619,7 +619,7 @@ export default function CPMainMenu(controller, mainGUI) {
         menuElem.append(entries.filter(item => !!item.mnemonic && controller.isActionSupported(item.action)).map(entry => {
             let
                 widgetMenuElem = $(
-                    `<button class="widget-toggler" type="button" data-action="${entry.action}" data-checkbox="true" data-selected="${!entry.checked}">`
+                    `<button class="widget-toggler selected" type="button" data-action="${entry.action}" data-checkbox="true" data-selected="${!entry.checked}">`
                         + '<span>'
                             + entry.mnemonic
                         +'</span>'
