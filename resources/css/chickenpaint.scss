@@ -971,6 +971,20 @@ body.chickenpaint-full-screen {
 
 @include chickenpaint-icon-classes;
 
+.chickenpaint .widget-nav {
+    display: none;
+}
+.chickenpaint .widget-nav .widget-toggler {
+    padding: 0.1rem 0.5rem;
+    margin: 0.15rem;
+    font-size: 0.75rem;
+    background-color: transparent;
+    border: 1px solid #00000036;
+    border-radius: 0.25rem;
+}
+.chickenpaint .widget-nav .widget-toggler.selected {
+    background-color: #ffffc4;
+}
 /* More compact styles for small screens */
 @media (max-height: 768px), (max-width: 400px)  {
     .chickenpaint .navbar {
@@ -1018,6 +1032,10 @@ body.chickenpaint-full-screen {
     .chickenpaint .checkbox label {
         padding:0;
         padding-left:12px;
+    }
+
+    .chickenpaint .widget-nav {
+        display: block;
     }
 }
 

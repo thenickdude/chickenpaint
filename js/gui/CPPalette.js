@@ -23,7 +23,7 @@
 import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 
-const windowIsPortraitMode = window.innerHeight > window.innerWidth;
+const windowIsPortraitMode = window.innerHeight < 820 || window.innerWidth < 400;
 
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
     this.title = title;

@@ -432,6 +432,7 @@ export default function CPMainMenu(controller, mainGUI) {
                     + '<ul class="navbar-nav mr-auto">'
                     + '</ul>'
                 + '</div>'
+                + '<div class="widget-nav" id="chickenpaint-palette-toggler-content"/>'
             + '</nav>'
         ),
         macPlatform = /^Mac/i.test(navigator.platform);
@@ -612,12 +613,31 @@ export default function CPMainMenu(controller, mainGUI) {
             return topLevelMenuElem;
         }));
     }
-    
+
+    function fillWidgetTray(menuElem, entries) {
+        menuElem.append(entries.filter(item => !!item.mnemonic && controller.isActionSupported(item.action)).map(entry => {
+            let
+                widgetMenuElem = $(
+                    `<button class="widget-toggler" type="button" data-action="${entry.action}" data-checkbox="true" data-selected="${!entry.checked}">`
+                        + '<span>'
+                            + entry.mnemonic
+                        +'</span>'
+                    + '</button>'
+                );
+            widgetMenuElem.click(e => {
+                menuItemClicked(widgetMenuElem);
+                e.preventDefault();
+            })
+            return widgetMenuElem;
+        }));
+    }
+
     this.getElement = function() {
         return bar[0];
     };
     
     fillMenu($(".navbar-nav", bar), MENU_ENTRIES);
+    fillWidgetTray($(".widget-nav", bar), MENU_ENTRIES[5].children);
 
     $(bar).on('click', 'a:not(.dropdown-toggle)', function(e) {
         menuItemClicked($(this));
