@@ -750,12 +750,10 @@ body.chickenpaint-full-screen {
 
 .chickenpaint-palette-textures .chickenpaint-palette-body {
     display:flex;
-    flex-direction:row;
+    flex-direction: column;
+    padding: 0;
 }
 .chickenpaint-texture-swatches {
-    flex-basis: 0;
-    flex-shrink: 1;
-    flex-grow: 1;
     line-height:0;
     overflow-y:auto;
 }
