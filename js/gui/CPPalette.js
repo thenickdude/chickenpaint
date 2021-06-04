@@ -117,7 +117,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         if (dragAction == "move") {
             headElement.releasePointerCapture(e.pointerId);
             dragAction = false;
-            that.toggleBodyElementVisibility()
+            that.toggleBodyElementVisibility();
         }
     }
     
