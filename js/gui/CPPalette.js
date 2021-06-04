@@ -24,7 +24,7 @@ import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 import {_} from "../languages/lang";
 
-const windowIsPortraitMode = window.innerHeight < 820 || window.innerWidth < 400;
+const isInLowResolutionMode = window.innerHeight < 820 || window.innerWidth < 400;
 
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
     this.title = _(title);
@@ -89,7 +89,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     };
 
     this.toggleBodyElementVisibility = function() {
-        if (windowIsPortraitMode) {
+        if (isInLowResolutionMode) {
             $(containerElement).toggleClass("collapsed");
         }
     };
@@ -197,7 +197,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     titleElem.appendChild(document.createTextNode(_(this.title)));
 
     titleContainer.appendChild(titleElem);
-    if (!windowIsPortraitMode) titleContainer.appendChild(closeButton);
+    if (!isInLowResolutionMode) titleContainer.appendChild(closeButton);
 
     headElement.appendChild(titleContainer);
 
