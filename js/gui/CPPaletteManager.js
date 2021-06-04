@@ -169,6 +169,11 @@ export default function CPPaletteManager(cpController) {
         palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
 
         palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
+
+        for (var i in palettes) {
+            var palette = palettes[i];
+            palette.toggleBodyElementVisibility();
+        }
     };
     
     this.getElement = function() {
