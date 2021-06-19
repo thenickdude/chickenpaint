@@ -9,6 +9,6 @@ document.addEventListener("DOMContentLoaded", function() {
         allowDownload: true,
         resourcesRoot: "../resources/",
         disableBootstrapAPI: true,
-        fullScreenMode: "auto"
+        fullScreenMode: "force"
     });
 });

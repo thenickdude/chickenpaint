@@ -286,20 +286,6 @@
     user-select: none;
 }
 
-.chickenpaint.chickenpaint-full-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow: hidden;
-    background-color:white;
-    z-index:1000;
-}
-body.chickenpaint-full-screen {
-    overflow:hidden;
-}
-
 .chickenpaint-tools {
     width:80px;
     text-align:center;
@@ -990,6 +976,27 @@ body.chickenpaint-full-screen {
 .chickenpaint .widget-nav .widget-toggler.selected {
     background-color: #ffffc4;
 }
+
+/* Full screen mode */
+.chickenpaint.chickenpaint-full-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    background-color:white;
+    z-index:1000;
+}
+body.chickenpaint-full-screen {
+    overflow:hidden;
+}
+
+/* Small screen mode (UI behaviour changes for mobiles) */
+.chickenpaint-small-screen .chickenpaint-palette-head .close {
+    display: none;
+}
+
 /* More compact styles for small screens */
 @media (max-height: 768px), (max-width: 400px)  {
     .chickenpaint .navbar {
@@ -1021,6 +1028,7 @@ body.chickenpaint-full-screen {
 
     .chickenpaint-palette-head .close {
         font-size: 18px;
+        display: none;
     }
 
     .chickenpaint select.form-control {

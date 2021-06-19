@@ -89,6 +89,10 @@ function checkBrowserSupport() {
     return true;
 }
 
+function isSmallScreen() {
+    return $(window).width() < 400 || $(window).height() < 768;
+}
+
 function createDrawingTools() {
     let
         tools = new Array(ChickenPaint.T_MAX);
@@ -268,40 +272,45 @@ function createDrawingTools() {
 /**
  * @typedef {Object} ChickenPaintOptions
  *
- * @property {Element} uiElem   - DOM element to insert ChickenPaint into (required)
+ * @property {Element} uiElem   - DOM element to insert ChickenPaint into
  *
- * @property {Function} onLoaded - Callback to call when artwork loading completes
+ * @property {Function} [onLoaded] - Callback to call when artwork loading completes
  *
- * @property {int} canvasWidth  - Width in pixels to use when creating blank canvases (defaults to 800)
- * @property {int} canvasHeight - Height in pixels to use when creating blank canvases (defaults to 600)
- * @property {int} rotation     - Integer from [0..3], number of 90 degree right rotations that should be applied to
+ * @property {int} [canvasWidth]  - Width in pixels to use when creating blank canvases (defaults to 800)
+ * @property {int} [canvasHeight] - Height in pixels to use when creating blank canvases (defaults to 600)
+ * @property {int} [rotation]     - Integer from [0..3], number of 90 degree right rotations that should be applied to
  *                                the canvas after loading
  *
- * @property {string} saveUrl   - URL to POST the drawing to to save it
- * @property {string} postUrl   - URL to navigate to after saving is successful and the user chooses to see/publish
+ * @property {string} [saveUrl]   - URL to POST the drawing to to save it
+ * @property {string} [postUrl]   - URL to navigate to after saving is successful and the user chooses to see/publish
  *                                their finished product
- * @property {string} exitUrl   - URL to navigate to after saving is successful and the user chooses to exit (optional)
- * @property {string} testUrl   - URL that ChickenPaint can simulate a drawing upload to to test the user's
+ * @property {string} [exitUrl]   - URL to navigate to after saving is successful and the user chooses to exit (optional)
+ * @property {string} [testUrl]   - URL that ChickenPaint can simulate a drawing upload to to test the user's
  *                                permissions/connection (optional)
  *
- * @property {string} loadImageUrl     - URL of PNG/JPEG image to load for editing (optional)
- * @property {string} loadChibiFileUrl - URL of .chi file to load for editing (optional). Used in preference to loadImage.
- * @property {string} loadSwatchesUrl  - URL of an .aco palette to load (optional)
- * @property {CPArtwork} artwork       - Artwork to load into ChickenPaint (if you've already created one)
+ * @property {string} [loadImageUrl]     - URL of PNG/JPEG image to load for editing (optional)
+ * @property {string} [loadChibiFileUrl] - URL of .chi file to load for editing (optional). Used in preference to loadImage.
+ * @property {string} [loadSwatchesUrl]  - URL of an .aco palette to load (optional)
+ * @property {CPArtwork} [artwork]       - Artwork to load into ChickenPaint (if you've already created one)
  *
- * @property {boolean} allowMultipleSends - Allow the drawing to be sent to the server multiple times (saving does not
+ * @property {boolean} [allowMultipleSends] - Allow the drawing to be sent to the server multiple times (saving does not
  *                                          immediately end drawing session).
- * @property {boolean} allowDownload      - Allow the drawing to be saved to the user's computer
- * @property {boolean} allowFullScreen    - Allow the drawing tool to enter "full screen" mode, where the rest of the page
- *                                          contents will be hidden
+ * @property {boolean} [allowDownload]      - Allow the drawing to be saved to the user's computer
  *
- * @property {boolean} disableBootstrapAPI - Disable Bootstrap's data API on the root of the document. This speeds up
+ * @property {"allow"|"auto"|"force"|"disable"} [fullScreenMode] - Control the behaviour of the full screen option:
+ *                                              allow - Don't automatically enter full screen mode, but allow it to be
+ *                                                      chosen manually (default)
+ *                                              auto - Automatically enter full screen mode on startup on small screens
+ *                                              force - Enter full screen mode at startup and do not provide option to leave
+ *                                              disable - Don't allow full screen mode at all
+ *
+ * @property {boolean} [disableBootstrapAPI] - Disable Bootstrap's data API on the root of the document. This speeds up
  *                                           things considerably.
  *
  * @property {string} resourcesRoot - URL to the directory that contains the gfx/css etc directories (relative to the
  *                                    page that ChickenPaint is loaded on)
  *                                    
- * @property {string} language - Provide an explicit ISO language code here (e.g. "ja_JP") to override the guessed browser language
+ * @property {string} [language] - Provide an explicit ISO language code here (e.g. "ja_JP") to override the guessed browser language
  *                               Unsupported languages will fall back to English.
  *                               Currently only "en" and "ja" are available.
  */
@@ -349,7 +358,8 @@ export default function ChickenPaint(options) {
         preTransformMode = curMode,
         curGradient = [0xFF000000, 0xFFFFFFFF],
 
-        fullScreenMode = false,
+        smallScreenMode = false,
+        isFullScreen = false,
 
         tools = createDrawingTools(),
 
@@ -360,17 +370,10 @@ export default function ChickenPaint(options) {
 
             CPFullScreen: {
                 action: function () {
-                    fullScreenMode = !fullScreenMode;
-
-                    $("body").toggleClass("chickenpaint-full-screen", fullScreenMode);
-                    $(uiElem).toggleClass("chickenpaint-full-screen", fullScreenMode);
-
-                    setTimeout(function () {
-                        mainGUI.setFullScreenMode(fullScreenMode);
-                    }, 200);
+                    that.setFullScreen(!isFullScreen);
                 },
                 isSupported: function() {
-                    return options.allowFullScreen !== false;
+                    return !(options.fullScreenMode === "disable" || options.fullScreenMode === "force");
                 },
                 modifies: {gui: true}
             },
@@ -1231,7 +1234,31 @@ export default function ChickenPaint(options) {
 
         // callCPEventListeners(); TODO
     };
+    
+    this.setSmallScreenMode = function(small) {
+        if (smallScreenMode !== small) {
+            smallScreenMode = small;
 
+            $(uiElem).toggleClass("chickenpaint-small-screen", smallScreenMode);
+            that.emitEvent("smallScreen", [smallScreenMode]);
+        }
+    };
+    
+    this.getSmallScreenMode = function() {
+        return smallScreenMode;
+    };
+
+    this.setFullScreen = function(newVal) {
+        if (isFullScreen !== newVal) {
+            isFullScreen = newVal;
+
+            $("body").toggleClass("chickenpaint-full-screen", isFullScreen);
+            $(uiElem).toggleClass("chickenpaint-full-screen", isFullScreen);
+
+            that.emitEvent("fullScreen", [isFullScreen]);
+        }
+    };
+    
     function installUnsavedWarning() {
         if (isEventSupported("onbeforeunload")) {
             window.addEventListener("beforeunload", function(e) {
@@ -1256,11 +1283,14 @@ export default function ChickenPaint(options) {
         if (!uiElem) {
             return;
         }
-
+        
         that.artwork.on("editModeChanged", onEditModeChanged);
 
         mainGUI = new CPMainGUI(that, uiElem);
-
+        
+        that.emitEvent("fullScreen", [isFullScreen]);
+        that.emitEvent("smallScreen", [smallScreenMode]);
+        
         setTool(ChickenPaint.T_PEN);
         mainGUI.arrangePalettes();
         
@@ -1295,6 +1325,17 @@ export default function ChickenPaint(options) {
 
     if (options.disableBootstrapAPI) {
         $(document).off('.data-api');
+    }
+    
+    this.setSmallScreenMode(isSmallScreen());
+    
+    switch (options.fullScreenMode) {
+        case "force":
+            this.setFullScreen(true);
+            break;
+        case "auto":
+            this.setFullScreen(smallScreenMode);
+            break;
     }
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {

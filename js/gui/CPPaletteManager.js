@@ -33,7 +33,7 @@ import CPTexturePalette from "./CPTexturePalette.js";
 import CPSwatchesPalette from "./CPSwatchesPalette.js";
 
 export default function CPPaletteManager(cpController) {
-    var
+    let
         palettes = {
             tool: new CPToolPalette(cpController),
             misc: new CPMiscPalette(cpController),
@@ -55,7 +55,7 @@ export default function CPPaletteManager(cpController) {
     this.palettes = palettes;
 
     function showPalette(palette, show) {
-        var
+        let
             palElement = palette.getElement();
         
         if (show) {
@@ -70,7 +70,7 @@ export default function CPPaletteManager(cpController) {
     }
     
     this.showPaletteByName = function(paletteName, show) {
-        var 
+        let 
             palette = palettes[paletteName];
         
         if (palette) {
@@ -85,8 +85,8 @@ export default function CPPaletteManager(cpController) {
                 hiddenFrames.push(this);
             });
         } else {
-            for (var i = 0; i < hiddenFrames.length; i++) {
-                var 
+            for (let i = 0; i < hiddenFrames.length; i++) {
+                let 
                     frame = hiddenFrames[i];
                 
                 that.showPaletteByName(frame.getAttribute("data-paletteName"), true);
@@ -99,12 +99,12 @@ export default function CPPaletteManager(cpController) {
      * Pop palettes that are currently outside the visible area back into view.
      */
     this.constrainPalettes = function() {
-        var
+        let
             windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
             windowHeight = $(parentElem).parents(".chickenpaint-main-section").height();
 
-        for (var i in palettes) {
-            var palette = palettes[i];
+        for (let i in palettes) {
+            let palette = palettes[i];
             
             /* Move palettes that are more than half out of the frame back into it */
             if (palette.getX() + palette.getWidth() / 2 > windowWidth) {
@@ -120,7 +120,7 @@ export default function CPPaletteManager(cpController) {
         //palettes.swatches.moveToFront();
         
         //Special handling for the swatches palette being under the brush palette:
-        var
+        let
             widthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
 
         if (palettes.swatches.getX() + palettes.swatches.getWidth() ==  palettes.brush.getX() + palettes.brush.getWidth() &&
@@ -138,7 +138,7 @@ export default function CPPaletteManager(cpController) {
      * Rearrange the palettes from scratch into a useful arrangement.
      */
     this.arrangePalettes = function() {
-        var
+        let
             windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
             windowHeight = $(parentElem).parents(".chickenpaint-main-section").height(),
             
@@ -146,7 +146,7 @@ export default function CPPaletteManager(cpController) {
 
         palettes.brush.setLocation(windowWidth - palettes.brush.getWidth() - 15, 0);
 
-        var 
+        let 
             bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight(),
             layersY = windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 2 : bottomOfBrush;
 
@@ -169,12 +169,19 @@ export default function CPPaletteManager(cpController) {
         palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
 
         palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
-
-        for (var i in palettes) {
-            var palette = palettes[i];
-            palette.toggleBodyElementVisibility();
-        }
     };
+    
+    cpController.on("smallScreen", function(smallScreenMode) {
+        for (let paletteName in palettes) {
+            let
+                palette = palettes[paletteName];
+            
+            if (smallScreenMode) {
+                palette.show
+            }
+            palette.toggleCollapse(smallScreenMode);
+        }
+    });
     
     this.getElement = function() {
         return parentElem;

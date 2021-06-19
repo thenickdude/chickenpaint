@@ -78,10 +78,12 @@ export default function CPMainGUI(controller, uiElem) {
     };
 
     this.setFullScreenMode = function(value) {
-        fullScreenMode = value;
+        if (fullScreenMode !== value) {
+            fullScreenMode = value;
 
-        that.resize();
-        that.arrangePalettes();
+            that.resize();
+            that.arrangePalettes();
+        }
     };
 
     this.resize = function() {

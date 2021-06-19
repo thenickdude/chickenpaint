@@ -24,7 +24,15 @@ import $ from "jquery";
 import EventEmitter from "wolfy87-eventemitter";
 import {_} from "../languages/lang";
 
-const isInLowResolutionMode = window.innerHeight < 820 || window.innerWidth < 400;
+const
+    DRAG_START_THRESHOLD = 5;
+
+function distanceGreaterThan(a, b, threshold) {
+    let 
+        dist = (a.x - b.x) * (a.x - b.x) + (a.y - b.y)  * (a.y - b.y);
+    
+    return dist > threshold * threshold;
+}
 
 export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
     this.title = _(title);
@@ -41,6 +49,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         vertHandle = null,
         horzHandle = null,
         
+        dragStartPos,
         dragAction,
         dragOffset,
         
@@ -88,15 +97,29 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         this.setHeight(height);
     };
 
-    this.toggleBodyElementVisibility = function() {
-        if (isInLowResolutionMode) {
-            $(containerElement).toggleClass("collapsed");
-        }
+    /**
+     * @param {boolean} [collapse]
+     */
+    this.toggleCollapse = function(collapse) {
+        $(containerElement).toggleClass("collapsed", collapse);
     };
 
     function paletteHeaderPointerMove(e) {
-        if (e.buttons != 0 && dragAction == "move") {
-            that.setLocation(e.pageX - dragOffset.x, e.pageY - dragOffset.y);
+        if (e.buttons != 0) {
+            let
+                newX = e.pageX - dragOffset.x,
+                newY = e.pageY - dragOffset.y
+            
+            if (dragAction == "dragStart") {
+                if (distanceGreaterThan({x: newX, y: newY}, dragStartPos, DRAG_START_THRESHOLD)) {
+                    // Recognise this as a drag rather than a clink
+                    dragAction = "dragging";
+                }
+            }
+            
+            if (dragAction == "dragging") {
+                that.setLocation(newX, newY);    
+            }            
         }
     }
     
@@ -108,17 +131,33 @@ export default function CPPalette(cpController, className, title, resizeVert, re
             } else {
                 headElement.setPointerCapture(e.pointerId);
     
+                dragStartPos = {
+                    x: parseInt(containerElement.style.left, 10),
+                    y: parseInt(containerElement.style.top, 10),
+                };
                 dragOffset = {x: e.pageX - $(containerElement).position().left, y: e.pageY - $(containerElement).position().top};
-                dragAction = "move";
+                
+                if (cpController.getSmallScreenMode()) {
+                    // Wait for the cursor to move a certain amount before we classify this as a drag
+                    dragAction = "dragStart";
+                } else {
+                    dragAction = "dragging";
+                }
             }
         }
     }
 
     function paletteHeaderPointerUp(e) {
-        if (dragAction == "move") {
+        if (dragAction === "dragging" || dragAction === "dragStart") {
             headElement.releasePointerCapture(e.pointerId);
+            
+            if (dragAction === "dragStart") {
+                // We clicked the header. Cancel the drag and toggle the palette instead
+                that.setLocation(dragStartPos.x, dragStartPos.y);
+                that.toggleCollapse();
+            }
+            
             dragAction = false;
-            that.toggleBodyElementVisibility();
         }
     }
     
@@ -197,7 +236,7 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     titleElem.appendChild(document.createTextNode(_(this.title)));
 
     titleContainer.appendChild(titleElem);
-    if (!isInLowResolutionMode) titleContainer.appendChild(closeButton);
+    titleContainer.appendChild(closeButton);
 
     headElement.appendChild(titleContainer);
 
