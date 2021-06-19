@@ -373,7 +373,10 @@ export default function ChickenPaint(options) {
                     that.setFullScreen(!isFullScreen);
                 },
                 isSupported: function() {
-                    return !(options.fullScreenMode === "disable" || options.fullScreenMode === "force");
+                    return !(
+                        options.fullScreenMode === "disable" || options.fullScreenMode === "force" 
+                        || options.allowFullScreen === false /* For backwards compat */
+                    );
                 },
                 modifies: {gui: true}
             },

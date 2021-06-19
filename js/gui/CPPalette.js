@@ -34,15 +34,36 @@ function distanceGreaterThan(a, b, threshold) {
     return dist > threshold * threshold;
 }
 
-export default function CPPalette(cpController, className, title, resizeVert, resizeHorz) {
-    this.title = _(title);
+/**
+ * 
+ * @param {ChickenPaint} cpController
+ * @param {String} className
+ * @param {String} title
+ * @param {Object} [options]
+ * @param {boolean} options.resizeVert
+ * @param {boolean} options.resizeHorz
+ * @param {boolean} options.collapseDownwards
+ * 
+ * @constructor
+ */
+export default function CPPalette(cpController, className, title, options) {
+    // Use a shorter version of the title if needed and one is available
+    if (cpController.getSmallScreenMode() && _(title + " (shorter)") !== title + " (shorter)") {
+        this.title = _(title + " (shorter)");
+    } else {
+        this.title = _(title);
+    }
+    
+    options = options || {};
+    
     this.name = className;
-    this.resizeVert = resizeVert || false;
-    this.resizeHorz = resizeHorz || false;
+    this.resizeVert = options.resizeVert || false;
+    this.resizeHorz = options.resizeHorz || false;
     
     let
         containerElement = document.createElement("div"),
         headElement = document.createElement("div"),
+        collapseIcon = document.createElement("i"),
         closeButton = document.createElement("button"),
         bodyElement = document.createElement("div"),
         
@@ -96,12 +117,61 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         this.setWidth(width);
         this.setHeight(height);
     };
+    
+    this.setCollapseDownwards = function(collapseDownwards) {
+        options.collapseDownwards = collapseDownwards;
+    };
 
     /**
-     * @param {boolean} [collapse]
+     * @param {boolean} [collapse] True to collapse, false to uncollapse, omit to toggle state
      */
     this.toggleCollapse = function(collapse) {
-        $(containerElement).toggleClass("collapsed", collapse);
+        let 
+            $containerElement = $(containerElement);
+        
+        if (collapse === undefined) {
+            collapse = !$containerElement.hasClass("collapsed");
+        } else {
+            if ($containerElement.hasClass("collapsed") == collapse) {
+                return;
+            }
+        }
+        
+        let
+            windowHeight = $containerElement.parents(".chickenpaint").find(".chickenpaint-canvas").height(),
+            oldHeight = this.getHeight(),
+            oldBottom = this.getY() + oldHeight;
+        
+        $containerElement.toggleClass("collapsed", collapse);
+        
+        $(collapseIcon)
+            .toggleClass("fa-angle-down", !collapse)
+            .toggleClass("fa-angle-up", collapse);
+        
+        if (collapse) {
+            // Move the header down to the old base position
+            if (options.collapseDownwards) {
+                this.setLocation(this.getX(), Math.min(oldBottom, windowHeight) - this.getHeight());
+            }
+        } else {
+            let 
+                thisHeight = this.getHeight();
+
+            if (options.collapseDownwards) {
+                this.setLocation(this.getX(), Math.max(oldBottom - thisHeight, 0));
+            } else {
+                // Keep palettes inside the window when uncollapsing
+                if (this.getY() + thisHeight > windowHeight) {
+                    this.setLocation(this.getX(), Math.max(windowHeight - thisHeight, 0));
+                }
+            }
+        }
+    };
+    
+    this.userIsDoneWithUs = function() {
+        if (cpController.getSmallScreenMode()) {
+            this.toggleCollapse(true);
+        }  
     };
 
     function paletteHeaderPointerMove(e) {
@@ -125,6 +195,9 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     
     function paletteHeaderPointerDown(e) {
         if (e.button == 0) {/* Left */
+            e.stopPropagation();
+            e.preventDefault(); // Avoid generating further legacy mouse events
+            
             if (e.target.nodeName == "BUTTON") {
                 // Close button was clicked
                 that.emitEvent("paletteVisChange", [that, false]);
@@ -132,8 +205,8 @@ export default function CPPalette(cpController, className, title, resizeVert, re
                 headElement.setPointerCapture(e.pointerId);
     
                 dragStartPos = {
-                    x: parseInt(containerElement.style.left, 10),
-                    y: parseInt(containerElement.style.top, 10),
+                    x: parseInt(containerElement.style.left, 10) || 0,
+                    y: parseInt(containerElement.style.top, 10) || 0,
                 };
                 dragOffset = {x: e.pageX - $(containerElement).position().left, y: e.pageY - $(containerElement).position().top};
                 
@@ -149,15 +222,25 @@ export default function CPPalette(cpController, className, title, resizeVert, re
 
     function paletteHeaderPointerUp(e) {
         if (dragAction === "dragging" || dragAction === "dragStart") {
-            headElement.releasePointerCapture(e.pointerId);
-            
             if (dragAction === "dragStart") {
                 // We clicked the header. Cancel the drag and toggle the palette instead
-                that.setLocation(dragStartPos.x, dragStartPos.y);
-                that.toggleCollapse();
+                e.stopPropagation();
+                e.preventDefault();
+                
+                /* Don't move the dialog immediately, because otherwise a click event will be
+                 * dispatched on the element which ends up under the cursor afterwards.
+                 */
+                setTimeout(() => {
+                    that.setLocation(dragStartPos.x, dragStartPos.y);
+                    that.toggleCollapse();
+                }, 100);
             }
-            
+
             dragAction = false;
+
+            try {
+                headElement.releasePointerCapture(e.pointerId);
+            } catch (e) {}
         }
     }
     
@@ -216,6 +299,8 @@ export default function CPPalette(cpController, className, title, resizeVert, re
         
         containerElement.appendChild(horzHandle);
     }
+
+    collapseIcon.className = "collapse-icon fas fa-angle-down";
     
     closeButton.type = "button";
     closeButton.className = "close";
@@ -233,7 +318,8 @@ export default function CPPalette(cpController, className, title, resizeVert, re
     titleContainer.className = 'modal-header';
 
     titleElem.className = 'modal-title';
-    titleElem.appendChild(document.createTextNode(_(this.title)));
+    titleElem.appendChild(document.createTextNode(this.title));
+    titleElem.appendChild(collapseIcon);
 
     titleContainer.appendChild(titleElem);
     titleContainer.appendChild(closeButton);

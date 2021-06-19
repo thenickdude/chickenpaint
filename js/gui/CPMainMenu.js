@@ -335,9 +335,9 @@ const
                     name: "-"
                 },
                 {
-                    name: "Show tool options",
-                    action: "CPPalBrush",
-                    mnemonic: "B",
+                    name: "Show tools",
+                    action: "CPPalTool",
+                    mnemonic: "T",
                     checkbox: true,
                     checked: true
                 },
@@ -349,9 +349,9 @@ const
                     checked: true
                 },
                 {
-                    name: "Show layers",
-                    action: "CPPalLayers",
-                    mnemonic: "Y",
+                    name: "Show stroke",
+                    action: "CPPalStroke",
+                    mnemonic: "S",
                     checkbox: true,
                     checked: true
                 },
@@ -359,13 +359,6 @@ const
                     name: "Show misc",
                     action: "CPPalMisc",
                     mnemonic: "M",
-                    checkbox: true,
-                    checked: true
-                },
-                {
-                    name: "Show stroke",
-                    action: "CPPalStroke",
-                    mnemonic: "S",
                     checkbox: true,
                     checked: true
                 },
@@ -384,9 +377,16 @@ const
                     checked: true
                 },
                 {
-                    name: "Show tools",
-                    action: "CPPalTool",
-                    mnemonic: "T",
+                    name: "Show tool options",
+                    action: "CPPalBrush",
+                    mnemonic: "B",
+                    checkbox: true,
+                    checked: true
+                },
+                {
+                    name: "Show layers",
+                    action: "CPPalLayers",
+                    mnemonic: "L",
                     checkbox: true,
                     checked: true
                 }

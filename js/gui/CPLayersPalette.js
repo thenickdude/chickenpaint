@@ -100,7 +100,7 @@ function computeLayerPredicates(layer) {
 }
 
 export default function CPLayersPalette(controller) {
-    CPPalette.call(this, controller, "layers", "Layers", true, true);
+    CPPalette.call(this, controller, "layers", "Layers", {resizeHorz: true, resizeVert: true});
 
     const
         NOTIFICATION_HIDE_DELAY_MS_PER_CHAR = 70,

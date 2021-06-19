@@ -33,7 +33,7 @@ import CPTexturePalette from "./CPTexturePalette.js";
 import CPSwatchesPalette from "./CPSwatchesPalette.js";
 
 export default function CPPaletteManager(cpController) {
-    let
+    const
         palettes = {
             tool: new CPToolPalette(cpController),
             misc: new CPMiscPalette(cpController),
@@ -45,15 +45,36 @@ export default function CPPaletteManager(cpController) {
             swatches: new CPSwatchesPalette(cpController)
         },
         
-        paletteFrames = [],
-        hiddenFrames = [],
+        defaultCollapse = {
+            tool: false,
+            color: false,
+            misc: false
+        },
         
+        collapseDownwards = {
+            color: true,
+            textures: true,
+            layers: true
+        },
+
         parentElem = document.createElement("div"),
-        
+
         that = this;
+    
+    let
+        paletteFrames = [],
+        hiddenFrames = [];
     
     this.palettes = palettes;
 
+    function getPaletteDisplayArea() {
+        // Use the canvas as a positioning guide to avoid overlapping scrollbars
+        let 
+            canvas = $(parentElem).parents(".chickenpaint").find(".chickenpaint-canvas");
+        
+        return {width: canvas.width(), height: canvas.height()};
+    }
+    
     function showPalette(palette, show) {
         let
             palElement = palette.getElement();
@@ -100,19 +121,18 @@ export default function CPPaletteManager(cpController) {
      */
     this.constrainPalettes = function() {
         let
-            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
-            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height();
+            windowDim = getPaletteDisplayArea();
 
         for (let i in palettes) {
             let palette = palettes[i];
-            
+
             /* Move palettes that are more than half out of the frame back into it */
-            if (palette.getX() + palette.getWidth() / 2 > windowWidth) {
-                palette.setLocation(windowWidth - palette.getWidth(), palette.getY());
+            if (palette.getX() + palette.getWidth() / 2 > windowDim.width) {
+                palette.setLocation(windowDim.width - palette.getWidth(), palette.getY());
             }
 
-            if (palette.getY() + palette.getHeight() / 2 > windowHeight) {
-                palette.setLocation(palette.getX(), windowHeight - palette.getHeight());
+            if (palette.getY() + palette.getHeight() / 2 > windowDim.height) {
+                palette.setLocation(palette.getX(), windowDim.height - palette.getHeight());
             }
         }
         
@@ -121,7 +141,7 @@ export default function CPPaletteManager(cpController) {
         
         //Special handling for the swatches palette being under the brush palette:
         let
-            widthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
+            widthToSpare = windowDim.width - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
 
         if (palettes.swatches.getX() + palettes.swatches.getWidth() ==  palettes.brush.getX() + palettes.brush.getWidth() &&
                 Math.abs(palettes.swatches.getY() - palettes.brush.getY()) < 20) {
@@ -129,8 +149,8 @@ export default function CPPaletteManager(cpController) {
         }
         
         //Special handling for layers palette being too damn tall:
-        if (palettes.layers.getY() + palettes.layers.getHeight() > windowHeight) {
-            palettes.layers.setHeight(Math.max(windowHeight - palettes.layers.getY(), 200));
+        if (palettes.layers.getY() + palettes.layers.getHeight() > windowDim.height) {
+            palettes.layers.setHeight(Math.max(windowDim.height - palettes.layers.getY(), 200));
         }
     };
     
@@ -139,47 +159,65 @@ export default function CPPaletteManager(cpController) {
      */
     this.arrangePalettes = function() {
         let
-            windowWidth = $(parentElem).parents(".chickenpaint-main-section").width(),
-            windowHeight = $(parentElem).parents(".chickenpaint-main-section").height(),
-            
-            haveWidthToSpare = windowWidth - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
+            windowDim = getPaletteDisplayArea(),
 
-        palettes.brush.setLocation(windowWidth - palettes.brush.getWidth() - 15, 0);
+            haveWidthToSpare;
 
-        let 
-            bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight(),
-            layersY = windowHeight - bottomOfBrush > 300 ? bottomOfBrush + 2 : bottomOfBrush;
+        if (cpController.getSmallScreenMode()) {
+            palettes.tool.setLocation(0, 0);
+            palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + 1, 0);
+            palettes.brush.setLocation(windowDim.width - palettes.brush.getWidth() - 15, palettes.misc.getY() + palettes.misc.getHeight() + 1);
 
-        palettes.layers.setSize(palettes.brush.getWidth() + (haveWidthToSpare ? 30 : 0), windowHeight - layersY);
-        palettes.layers.setLocation(palettes.brush.getX() + palettes.brush.getWidth() - palettes.layers.getWidth(), layersY);
+            let 
+                layersY = 330;
 
-        palettes.tool.setLocation(0, 0);
-        
-        palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + (haveWidthToSpare ? 5 : 1), 0);
-        
-        if (haveWidthToSpare) {
-            palettes.stroke.setLocation(palettes.misc.getX() + palettes.misc.getWidth() + (haveWidthToSpare ? 5 : 1), 0);
-        } else {
+            palettes.textures.setWidth(windowDim.width - palettes.textures.getX());
+
+            palettes.layers.setLocation(palettes.brush.getX() + palettes.brush.getWidth() - palettes.layers.getWidth(), palettes.textures.getY() - palettes.layers.getHeight());
+            palettes.layers.setHeight(palettes.textures.getY() - layersY - 1);
+
             palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
+            palettes.swatches.setLocation(palettes.stroke.getX(), palettes.stroke.getY() + palettes.stroke.getHeight() + 1);
+        } else {
+            haveWidthToSpare = windowDim.width - palettes.tool.getWidth() - palettes.misc.getWidth() - palettes.stroke.getWidth() - palettes.color.getWidth() - palettes.brush.getWidth() - 15 > 0;
+
+            palettes.brush.setLocation(windowDim.width - palettes.brush.getWidth() - 15, 0);
+
+            let
+                bottomOfBrush = palettes.brush.getY() + palettes.brush.getHeight(),
+                layersY = windowDim.height - bottomOfBrush > 300 ? bottomOfBrush + 2 : bottomOfBrush;
+
+            palettes.layers.setSize(palettes.brush.getWidth() + (haveWidthToSpare ? 30 : 0), windowDim.height - layersY);
+            palettes.layers.setLocation(palettes.brush.getX() + palettes.brush.getWidth() - palettes.layers.getWidth(), layersY);
+
+            palettes.tool.setLocation(0, 0);
+
+            palettes.misc.setLocation(palettes.tool.getX() + palettes.tool.getWidth() + (haveWidthToSpare ? 5 : 1), 0);
+
+            if (haveWidthToSpare) {
+                palettes.stroke.setLocation(palettes.misc.getX() + palettes.misc.getWidth() + (haveWidthToSpare ? 5 : 1), 0);
+            } else {
+                palettes.stroke.setLocation(palettes.misc.getX(), palettes.misc.getY() + palettes.misc.getHeight() + 1);
+            }
+
+            palettes.swatches.setLocation(Math.max(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), palettes.tool.getX() + palettes.tool.getWidth()), 0);
+
+            palettes.textures.setWidth(Math.min(palettes.layers.getX() - palettes.textures.getX(), 490));
         }
-        
-        palettes.swatches.setLocation(palettes.brush.getX() - palettes.swatches.getWidth() - (haveWidthToSpare ? 5 : 1), 0);
 
-        palettes.textures.setWidth(Math.min(palettes.layers.getX() - palettes.textures.getX(), 490));
-        palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowHeight - palettes.textures.getHeight());
+        palettes.textures.setLocation(palettes.color.getX() + palettes.color.getWidth() + 4, windowDim.height - palettes.textures.getHeight());
 
-        palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowHeight - palettes.color.getHeight()));
+        palettes.color.setLocation(0, Math.max(palettes.tool.getY() + palettes.tool.getHeight(), windowDim.height - palettes.color.getHeight()));
     };
     
     cpController.on("smallScreen", function(smallScreenMode) {
-        for (let paletteName in palettes) {
-            let
-                palette = palettes[paletteName];
-            
-            if (smallScreenMode) {
-                palette.show
+        if (smallScreenMode) {
+            for (let paletteName in palettes) {
+                let
+                    palette = palettes[paletteName];
+
+                palette.toggleCollapse(smallScreenMode && (!(paletteName in defaultCollapse) || defaultCollapse[paletteName]));
             }
-            palette.toggleCollapse(smallScreenMode);
         }
     });
     
@@ -197,6 +235,10 @@ export default function CPPaletteManager(cpController) {
         palette.on("paletteVisChange", function() {
             showPalette(this, false);
         });
+        
+        if (paletteName in collapseDownwards) {
+            palette.setCollapseDownwards(true);
+        }
         
         palElement.setAttribute("data-paletteName", paletteName);
         paletteFrames.push(palElement);
