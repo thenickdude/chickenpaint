@@ -114,6 +114,9 @@
 }
 .chickenpaint-scrollbar-handle {
     position:relative;
+
+    touch-action:none;
+    pen-action:none;
 }
 .chickenpaint-scrollbar-handle-inner {
     background-color:#c1c1c1;

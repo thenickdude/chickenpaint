@@ -27,7 +27,7 @@ import EventEmitter from "wolfy87-eventemitter";
  * @param vertical boolean
  */
 export default function CPScrollbar(vertical) {
-    var
+    let
         bar = document.createElement("div"),
         handle = document.createElement("div"),
         handleInner = document.createElement("div"),
@@ -40,12 +40,13 @@ export default function CPScrollbar(vertical) {
         
         handleSize = 1,
         
+        dragging = false,
         dragLastOffset,
         
         that = this;
     
     function updateBar() {
-        var
+        let
             longDimension = vertical ? $(bar).height() : $(bar).width();
                     
             /* As the size of the document approaches the size of the container, handle size grows to fill the 
@@ -53,7 +54,7 @@ export default function CPScrollbar(vertical) {
              */
         handleSize = visibleRange / (max - min) * longDimension; 
         
-        var
+        let
             handleOffset = (offset - min) / (max - min) * (longDimension - handleSize);
         
         handleInner.style[vertical ? "height" : "width"] = handleSize + "px";
@@ -89,7 +90,7 @@ export default function CPScrollbar(vertical) {
     
     function onBarClick(e) {
         if (this == bar) {
-            var
+            let
                 clickPos = vertical ? e.pageY - $(bar).offset().top : e.pageX - $(bar).offset().left,
                 barPos = parseInt(handle.style[vertical ? "top" : "left"], 10);
             
@@ -106,11 +107,13 @@ export default function CPScrollbar(vertical) {
     
     function onHandlePress(e) {
         e.stopPropagation();
+
         dragLastOffset = vertical ? e.pageY - $(bar).offset().top : e.pageX - $(bar).offset().left;
-        
+
+        handle.setPointerCapture(e.pointerId);
+
         $(handle).addClass("dragging");
-        window.addEventListener("mouseup", onHandleRelease);
-        window.addEventListener("mousemove", onHandleDrag);
+        dragging = true;
     }
     
     function onHandleClick(e) {
@@ -118,39 +121,52 @@ export default function CPScrollbar(vertical) {
     }
     
     function onHandleDrag(e) {
-        valueIsAdjusting = true;
-        
-        var
-            longDimension = vertical ? $(bar).height() : $(bar).width(),
-            mouseOffset = vertical ? e.pageY - $(bar).offset().top : e.pageX - $(bar).offset().left;
-        
-        offset = offset + (mouseOffset - dragLastOffset) * (max - min) / (longDimension - handleSize);
-        
-        offset = Math.min(Math.max(offset, min), max);
-        
-        dragLastOffset = mouseOffset;
-        
-        that.emitEvent("valueChanged", [offset]);
-        updateBar();
-        
-        valueIsAdjusting = false;
+        if (dragging) {
+            valueIsAdjusting = true;
+
+            let
+                longDimension = vertical ? $(bar).height() : $(bar).width(),
+                mouseOffset = vertical ? e.pageY - $(bar).offset().top : e.pageX - $(bar).offset().left;
+
+            offset = offset + (mouseOffset - dragLastOffset) * (max - min) / (longDimension - handleSize);
+
+            offset = Math.min(Math.max(offset, min), max);
+
+            dragLastOffset = mouseOffset;
+
+            that.emitEvent("valueChanged", [offset]);
+            updateBar();
+
+            valueIsAdjusting = false;
+        }
     }
     
     function onHandleRelease(e) {
         e.stopPropagation();
-        $(handle).removeClass("dragging");
-        window.removeEventListener("mouseup", onHandleRelease);
-        window.removeEventListener("mousemove", onHandleDrag);
+
+        if (dragging) {
+            try {
+                handle.releasePointerCapture(e.pointerId);
+            } catch (e) {
+            }
+
+            $(handle).removeClass("dragging");
+            dragging = false;
+        }
     }
     
     bar.className = "chickenpaint-scrollbar "  + (vertical ? "chickenpaint-scrollbar-vertical" : "chickenpaint-scrollbar-horizontal");
     handle.className = "chickenpaint-scrollbar-handle";
+    handle.setAttribute("touch-action", "none");
     handleInner.className = "chickenpaint-scrollbar-handle-inner";
     
     handle.appendChild(handleInner);
     bar.appendChild(handle);
     
-    handle.addEventListener("mousedown", onHandlePress);
+    handle.addEventListener("pointerdown", onHandlePress);
+    handle.addEventListener("pointermove", onHandleDrag);
+    handle.addEventListener("pointerup", onHandleRelease);
+
     handle.addEventListener("click", onHandleClick);
     
     bar.addEventListener("click", onBarClick);
