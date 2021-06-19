@@ -879,7 +879,7 @@ export default function CPCanvas(controller) {
     CPColorPickerMode.prototype = Object.create(CPMode.prototype);
     CPColorPickerMode.prototype.constructor = CPColorPickerMode;
 
-    function CPPanMode() {
+    function CPPanCanvasMode() {
         var
             panningX, panningY,
             panningOffset,
@@ -909,7 +909,8 @@ export default function CPCanvas(controller) {
         this.mouseDown = function(e, button, pressure) {
             if (this.capture) {
                 return true;
-            } else if (button == BUTTON_WHEEL || key.isPressed("space") && button == BUTTON_PRIMARY) {
+            } else if (button == BUTTON_WHEEL || key.isPressed("space") && button == BUTTON_PRIMARY
+                    || !this.transient && button == BUTTON_PRIMARY) {
                 this.capture = true;
                 panningButton = button;
                 panningX = e.pageX;
@@ -952,8 +953,8 @@ export default function CPCanvas(controller) {
         };
     }
     
-    CPPanMode.prototype = Object.create(CPMode.prototype);
-    CPPanMode.prototype.constructor = CPFloodFillMode;
+    CPPanCanvasMode.prototype = Object.create(CPMode.prototype);
+    CPPanCanvasMode.prototype.constructor = CPPanCanvasMode;
 
     function CPFloodFillMode() {
     }
@@ -2493,7 +2494,11 @@ export default function CPCanvas(controller) {
             case ChickenPaint.M_ROTATE_CANVAS:
                 newMode = rotateCanvasMode;
                 break;
-    
+
+            case ChickenPaint.M_PAN_CANVAS:
+                newMode = panMode;
+                break;
+
             case ChickenPaint.M_COLOR_PICKER:
                 newMode = colorPickerMode;
                 break;
@@ -2530,7 +2535,7 @@ export default function CPCanvas(controller) {
     
     defaultMode = new CPDefaultMode();
     colorPickerMode = new CPColorPickerMode();
-    panMode = new CPPanMode();
+    panMode = new CPPanCanvasMode();
     rotateCanvasMode = new CPRotateCanvasMode();
     floodFillMode = new CPFloodFillMode();
     gradientFillMode = new CPGradientFillMode();

@@ -442,6 +442,7 @@ export default function ChickenPaint(options) {
             CPRectSelection: new ModeChangeAction(ChickenPaint.M_RECT_SELECTION),
             CPMoveTool:      new ModeChangeAction(ChickenPaint.M_MOVE_TOOL),
             CPRotateCanvas:  new ModeChangeAction(ChickenPaint.M_ROTATE_CANVAS),
+            CPPanCanvas:     new ModeChangeAction(ChickenPaint.M_PAN_CANVAS),
             CPColorPicker:   new ModeChangeAction(ChickenPaint.M_COLOR_PICKER),
 
             // Layer transform
@@ -1401,6 +1402,7 @@ ChickenPaint.M_ROTATE_CANVAS = 4;
 ChickenPaint.M_COLOR_PICKER = 5;
 ChickenPaint.M_GRADIENTFILL = 6;
 ChickenPaint.M_TRANSFORM = 7;
+ChickenPaint.M_PAN_CANVAS = 8;
 
 //
 // Definition of all the standard tools available

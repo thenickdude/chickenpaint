@@ -71,11 +71,11 @@ export default function CPToolPalette(cpController) {
                 mode: ChickenPaint.M_COLOR_PICKER
             },
             {
-                className: "chickenpaint-tool-rotate-canvas",
-                command: "CPRotateCanvas",
-                commandDoubleClick: "CPResetCanvasRotation",
-                toolTip: "Rotate canvas",
-                mode: ChickenPaint.M_ROTATE_CANVAS
+                className: "chickenpaint-tool-blur",
+                command: "CPBlur",
+                toolTip: "Blur",
+                mode: ChickenPaint.M_DRAW,
+                tool: ChickenPaint.T_BLUR
             },
             {
                 className: "chickenpaint-tool-pencil",
@@ -152,12 +152,18 @@ export default function CPToolPalette(cpController) {
                 tool: ChickenPaint.T_BURN
             },
             {
-                className: "chickenpaint-tool-blur",
-                command: "CPBlur",
-                toolTip: "Blur",
-                mode: ChickenPaint.M_DRAW,
-                tool: ChickenPaint.T_BLUR
-            }
+                className: "chickenpaint-tool-rotate-canvas",
+                command: "CPRotateCanvas",
+                commandDoubleClick: "CPResetCanvasRotation",
+                toolTip: "Rotate canvas",
+                mode: ChickenPaint.M_ROTATE_CANVAS
+            },
+            {
+                className: "chickenpaint-tool-pan-canvas",
+                command: "CPPanCanvas",
+                toolTip: "Grab canvas",
+                mode: ChickenPaint.M_PAN_CANVAS
+            },
         ],
         listElem = document.createElement("ul");
     
