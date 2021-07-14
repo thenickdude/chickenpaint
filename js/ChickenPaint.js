@@ -90,7 +90,7 @@ function checkBrowserSupport() {
 }
 
 function isSmallScreen() {
-    return $(window).width() < 400 || $(window).height() < 768;
+    return $(window).width() < 400 || $(window).height() < 400;
 }
 
 function createDrawingTools() {
