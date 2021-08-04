@@ -175,7 +175,7 @@ export default function CPPalette(cpController, className, title, options) {
     };
 
     function paletteHeaderPointerMove(e) {
-        if (e.buttons != 0) {
+        if ((dragAction === "dragStart" || dragAction === "dragging") && e.buttons !== 0) {
             let
                 newX = e.pageX - dragOffset.x,
                 newY = e.pageY - dragOffset.y
@@ -202,8 +202,6 @@ export default function CPPalette(cpController, className, title, options) {
                 // Close button was clicked
                 that.emitEvent("paletteVisChange", [that, false]);
             } else {
-                headElement.setPointerCapture(e.pointerId);
-    
                 dragStartPos = {
                     x: parseInt(containerElement.style.left, 10) || 0,
                     y: parseInt(containerElement.style.top, 10) || 0,
@@ -216,6 +214,8 @@ export default function CPPalette(cpController, className, title, options) {
                 } else {
                     dragAction = "dragging";
                 }
+                
+                e.target.setPointerCapture(e.pointerId);
             }
         }
     }
@@ -239,8 +239,11 @@ export default function CPPalette(cpController, className, title, options) {
             dragAction = false;
 
             try {
-                headElement.releasePointerCapture(e.pointerId);
-            } catch (e) {}
+                e.target.releasePointerCapture(e.pointerId);
+            } catch (e) {
+                // This can fail for a variety of reasons we don't care about and won't affect us
+                console.error(e);
+            }
         }
     }
     

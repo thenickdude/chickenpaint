@@ -23,6 +23,7 @@
     "mocha": "^8.4.0",
     "multipipe": "^2.0.3",
     "node-png": "^0.4.3",
+    "postcss": "^8.3.6",
     "postcss-cli": "^8.3.1",
     "sass": "^1.32.12",
     "serve": "^11.3.2",
