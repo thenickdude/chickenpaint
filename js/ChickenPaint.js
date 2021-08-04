@@ -1259,7 +1259,15 @@ export default function ChickenPaint(options) {
             $("body").toggleClass("chickenpaint-full-screen", isFullScreen);
             $(uiElem).toggleClass("chickenpaint-full-screen", isFullScreen);
 
-            that.emitEvent("fullScreen", [isFullScreen]);
+            if (isFullScreen && $("head meta[name=viewport]").length === 0) {
+                // Reset page zoom to zero if the host page didn't already set a viewport
+                $("head").append('<meta name="viewport" content="width=device-width,user-scalable=no">');
+                
+                // Give the browser time to adjust the viewport before we adapt to the new size
+                setTimeout(() => that.emitEvent("fullScreen", [isFullScreen]), 200);
+            } else {
+                that.emitEvent("fullScreen", [isFullScreen]);
+            }
         }
     };
     
@@ -1291,7 +1299,13 @@ export default function ChickenPaint(options) {
         if (!uiElem) {
             return;
         }
-        
+
+        // Prevent double-click iOS page zoom events
+        uiElem.addEventListener("dblclick", function(e){ 
+            e.preventDefault(); 
+            e.stopPropagation();
+        });
+
         that.artwork.on("editModeChanged", onEditModeChanged);
 
         mainGUI = new CPMainGUI(that, uiElem);
