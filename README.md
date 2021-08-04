@@ -75,6 +75,12 @@ Include ChickenPaint's main JS and CSS files:
 <link rel="stylesheet" type="text/css" href="chickenpaint/css/chickenpaint.css">
 ```
 
+Prevent zooming on mobile devices by adding this to your head:
+
+```html
+<meta name="viewport" content="width=device-width,user-scalable=no">
+```
+
 Add an element to serve as the container for ChickenPaint:
 
 ```html
