@@ -421,6 +421,12 @@ const
         }
     ];
 
+/**
+ * 
+ * @param {ChickenPaint} controller
+ * @param {CPMainGui} mainGUI
+ * @constructor
+ */
 export default function CPMainMenu(controller, mainGUI) {
     let
         bar = $(
@@ -660,4 +666,10 @@ export default function CPMainMenu(controller, mainGUI) {
     }
 
     mainGUI.getPaletteManager().on("paletteVisChange", onPaletteVisChange);
+
+    let 
+        fullScreenToggle = $(".dropdown-item[data-action=CPFullScreen]", bar);
+    
+    controller.on("fullScreen", isFullscreen => fullScreenToggle.toggleClass("selected", isFullscreen));
+    fullScreenToggle.toggleClass("selected", controller.isFullScreen());
 }

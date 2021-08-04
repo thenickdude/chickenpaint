@@ -1263,6 +1263,10 @@ export default function ChickenPaint(options) {
         }
     };
     
+    this.isFullScreen = function() {
+        return isFullScreen;
+    }
+    
     function installUnsavedWarning() {
         if (isEventSupported("onbeforeunload")) {
             window.addEventListener("beforeunload", function(e) {
