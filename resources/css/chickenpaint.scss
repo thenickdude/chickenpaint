@@ -997,9 +997,14 @@
     overflow: hidden;
     background-color:white;
     z-index:1000;
+
+    -webkit-touch-callout: initial;
 }
 body.chickenpaint-full-screen {
     overflow:hidden;
+
+    -webkit-touch-callout: none; /* iOS Safari only: Prevent long-press dialog on body text */
+    user-select: none;  
 }
 .chickenpaint.chickenpaint-full-screen .chickenpaint-send-dialog .modal-dialog {
     min-width:auto;
