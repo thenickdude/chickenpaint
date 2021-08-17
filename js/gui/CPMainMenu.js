@@ -332,6 +332,12 @@ const
                     title: "Hides or shows all palettes"
                 },
                 {
+                    name: "Use old icons",
+                    action: "CPToolbarStyle",
+                    checkbox: true,
+                    checked: false
+                },
+                {
                     name: "-"
                 },
                 {
@@ -668,8 +674,12 @@ export default function CPMainMenu(controller, mainGUI) {
     mainGUI.getPaletteManager().on("paletteVisChange", onPaletteVisChange);
 
     let 
-        fullScreenToggle = $(".dropdown-item[data-action=CPFullScreen]", bar);
+        fullScreenToggle = $(".dropdown-item[data-action=CPFullScreen]", bar),
+        toolbarStyleToggle = $(".dropdown-item[data-action=CPToolbarStyle]", bar);
     
     controller.on("fullScreen", isFullscreen => fullScreenToggle.toggleClass("selected", isFullscreen));
     fullScreenToggle.toggleClass("selected", controller.isFullScreen());
+
+    controller.on("toolbarStyleChange", newStyle => toolbarStyleToggle.toggleClass("selected", newStyle === "old"));
+    toolbarStyleToggle.toggleClass("selected", controller.getToolbarStyle() === "old");
 }
