@@ -456,6 +456,11 @@
 .chickenpaint-tool-send-and-end .chickenpaint-toolbar-button-icon {
     background-position: icon(30);
 }
+.chickenpaint-unsaved { 
+    .chickenpaint-tool-send, .chickenpaint-tool-send-and-end {
+        outline: 1px solid #aaa;
+    }
+} 
 
 .chickenpaint-tool-freehand .chickenpaint-toolbar-button-icon {
     background-position: icon(14);

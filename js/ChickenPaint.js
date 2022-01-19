@@ -1347,6 +1347,14 @@ export default function ChickenPaint(options) {
         CPWacomTablet.getRef().detectTablet();
         
         installUnsavedWarning();
+
+        that.artwork.on("unsavedChanges", unsavedChanges => {
+            // Only bug users to save if they can actually save multiple times per session.
+            // Otherwise they'll save when they're done with their drawing and not before:
+            if (options.allowMultipleSends) {
+                that.emitEvent("unsavedChanges", [unsavedChanges])
+            }
+        });
     }
     
     this.getResourcesRoot = function() {
@@ -1407,6 +1415,7 @@ export default function ChickenPaint(options) {
         }
 
         startMainGUI();
+        
         if (options.onLoaded) {
             options.onLoaded(this);
         }

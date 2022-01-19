@@ -127,6 +127,10 @@ export default function CPMainGUI(controller, uiElem) {
        $(uiElem).toggleClass("chickenpaint-toolbar-style-old", newStyle === "old"); 
     });
     
+    controller.on("unsavedChanges", unsaved => {
+        $(uiElem).toggleClass("chickenpaint-unsaved", unsaved);
+    })
+    
     setTimeout(this.resize.bind(this), 0);
 }
 
