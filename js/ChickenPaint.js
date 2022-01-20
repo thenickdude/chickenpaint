@@ -26,6 +26,7 @@ import "core-js/stable/promise/index.js";
 import "core-js/stable/map/index.js";
 import "core-js/stable/set/index.js";
 import "core-js/stable/typed-array/slice.js";
+import "core-js/stable/typed-array/fill.js";
 import "core-js/stable/array/iterator.js";
 import "core-js/stable/array/fill.js";
 import "core-js/stable/string/ends-with.js";

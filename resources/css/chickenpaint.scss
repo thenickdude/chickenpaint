@@ -328,7 +328,7 @@
 }
 .chickenpaint-toolbar-style-old .chickenpaint-toolbar-button-icon {
     background-image:url(../gfx/icons-old.png);
-    background-size:initial;
+    background-size:32px 1024px;
 }
 
 .chickenpaint .chickenpaint-small-toolbar-button {
@@ -1218,7 +1218,6 @@ only screen and (min-resolution: 120dpi) {
     .chickenpaint-toolbar-style-old {
         .chickenpaint-toolbar-button-icon {
             background-image: url(../gfx/icons-old-2x.png);
-            background-size: 32px 1024px;
         }
 
         &.chickenpaint-lang-ja .chickenpaint-toolbar-button-icon {
