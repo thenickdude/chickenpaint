@@ -49,6 +49,8 @@ ICON_LIGHT_COLOUR = \#e3e3e3
 
 OSASCRIPT := $(shell command -v osascript 2> /dev/null)
 
+CAIROSVG := $(shell command -v cairosvg 2> /dev/null)
+
 all : resources/css/chickenpaint.css resources/js/chickenpaint.js \
 	resources/gfx/icons-dark-32.png resources/gfx/icons-dark-64.png \
 	resources/gfx/icons-light-32.png resources/gfx/icons-light-64.png
@@ -84,14 +86,28 @@ resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/languages/* js/
 resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*
 	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --scss resources/fonts/ChickenPaint-Symbols.scss --fonts resources/fonts
 
+ifdef CAIROSVG
+# Render icons with CairoSVG (https://cairosvg.org/) - Preferred since results are much sharper at 32px size 
 resources/gfx/icons-dark-%.png : resources/gfx/icons-source/dark/Gradient_Dark.svg $(foreach icon,$(TOOLBAR_ICONS),resources/gfx/icons-source/dark/$(icon))
-	# Need ImageMagick built with rsvg2 enabled to render gradients properly 
+	for input in $^; do cairosvg --output-width $* --output-height $* --output $$input.png $$input; done
+	montage -background none $(addsuffix .png,$^) -tile 8x5 -geometry $*x$*+0+0 -depth 8 $@
+	-optipng $@
+
+resources/gfx/icons-light-%.png : resources/gfx/icons-source/dark/Gradient_Light.svg $(foreach icon,$(TOOLBAR_ICONS),resources/gfx/icons-source/light/$(icon))
+	for input in $^; do cairosvg --output-width $* --output-height $* --output $$input.png $$input; done
+	montage -background none $(addsuffix .png,$^) -tile 8x5 -geometry $*x$*+0+0 -depth 8 $@
+	-optipng $@
+else
+# Render icons with ImageMagick
+# ImageMagick needs to be built with rsvg2 support enabled to render gradients properly 
+resources/gfx/icons-dark-%.png : resources/gfx/icons-source/dark/Gradient_Dark.svg $(foreach icon,$(TOOLBAR_ICONS),resources/gfx/icons-source/dark/$(icon))
 	montage -background none $^ -tile 8x5 -geometry $*x$*+0+0 -depth 8 $@
 	-optipng $@
 
 resources/gfx/icons-light-%.png : resources/gfx/icons-source/dark/Gradient_Light.svg $(foreach icon,$(TOOLBAR_ICONS),resources/gfx/icons-source/light/$(icon))
 	montage -background none $^ -tile 8x5 -geometry $*x$*+0+0 -depth 8 $@
 	-optipng $@
+endif
 
 resources/gfx/icons-source/dark/%.svg : resources/gfx/icons-source/%.svg
 	mkdir -p resources/gfx/icons-source/dark
