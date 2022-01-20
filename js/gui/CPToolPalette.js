@@ -81,6 +81,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-pencil",
                 command: "CPPencil",
                 toolTip: "Pencil",
+                shortcut: "n",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_PENCIL
             },
@@ -89,6 +90,7 @@ export default function CPToolPalette(cpController) {
                 command: "CPPen",
                 toolTip: "Pen",
                 selected: true, // TODO a better mechanism for the controller to let us know the initial tool
+                shortcut: "b",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_PEN
             },
