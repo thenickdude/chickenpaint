@@ -20,7 +20,6 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPLayer from "./CPLayer.js";
 import CPImageLayer from "./CPImageLayer.js";
 import CPLayerGroup from "./CPLayerGroup.js";
 import CPBlend from "./CPBlend.js";
@@ -42,8 +41,16 @@ import {setCanvasInterpolation} from "../util/CPPolyfill.js";
 import {createCanvas} from "../util/Canvas.js";
 
 import EventEmitter from "wolfy87-eventemitter";
-import {CPBrushTool,CPBrushToolEraser,CPBrushToolDodge,CPBrushToolBurn,CPBrushToolWatercolor,
-    CPBrushToolBlur,CPBrushToolSmudge,CPBrushToolOil} from "./CPBrushTool.js";
+import {
+    CPBrushTool,
+    CPBrushToolBlur,
+    CPBrushToolBurn,
+    CPBrushToolDodge,
+    CPBrushToolEraser,
+    CPBrushToolOil,
+    CPBrushToolSmudge,
+    CPBrushToolWatercolor
+} from "./CPBrushTool.js";
 
 /**
  * Capitalize the first letter of the string.
@@ -326,12 +333,9 @@ export default function CPArtwork(_width, _height) {
 
         blendTree.resetTree();
 
-        let
-            rect = that.getBounds();
+        invalidateUndoBuffers();
 
-        undoImageInvalidRegion.set(rect);
-
-        callListenersUpdateRegion(rect);
+        callListenersUpdateRegion(that.getBounds());
     }
 
     /**
