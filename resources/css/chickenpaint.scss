@@ -1,3 +1,5 @@
+@use 'sass:math';
+
 @import "font-awesome/_variables";
 @import "font-awesome/_mixins";
 
@@ -320,8 +322,13 @@
 .chickenpaint-toolbar-button-icon {
     width:32px;
     height:32px;
-    background-image:url(../gfx/icons.png);
+    background-image:url(../gfx/icons-dark-32.png);
+    background-size:256px 160px;
     background-repeat:no-repeat;
+}
+.chickenpaint-toolbar-style-old .chickenpaint-toolbar-button-icon {
+    background-image:url(../gfx/icons-old.png);
+    background-size:32px 1024px;
 }
 
 .chickenpaint .chickenpaint-small-toolbar-button {
@@ -362,94 +369,202 @@
     padding:1px;
 }
 
+@function icon($index) {
+    $gridWidth: 8;
+    @return ($index % $gridWidth) * -32px math.div($index - ($index % $gridWidth), $gridWidth) * -32px;
+}
+
 .chickenpaint-tool-move .chickenpaint-toolbar-button-icon {
-    background-position:0 -32px;
+    background-position: icon(21);
 }
 .chickenpaint-tool-flood-fill .chickenpaint-toolbar-button-icon {
-    background-position:0 -64px;
+    background-position: icon(6);
 }
 .chickenpaint-tool-gradient-fill .chickenpaint-toolbar-button-icon {
-    background-position:0 -96px;
+    background-position: icon(0);
 }
 .chickenpaint-tool-rotate-canvas .chickenpaint-toolbar-button-icon {
-    background-position:0 -928px;
+    background-position: icon(29);
 }
 .chickenpaint-tool-pan-canvas .chickenpaint-toolbar-button-icon {
-    background-position:0 -672px;
+    background-position: icon(17);
 }
 .chickenpaint-tool-pencil .chickenpaint-toolbar-button-icon {
-    background-position:0 -160px;
+    background-position: icon(23);
 }
 .chickenpaint-tool-pen .chickenpaint-toolbar-button-icon {
-    background-position:0 -192px;
+    background-position: icon(22);
 }
 .chickenpaint-tool-airbrush .chickenpaint-toolbar-button-icon {
-    background-position:0 -224px;
+    background-position: icon(1);
 }
 .chickenpaint-tool-water .chickenpaint-toolbar-button-icon {
-    background-position:0 -576px;
+    background-position: icon(35);
 }
 .chickenpaint-tool-eraser .chickenpaint-toolbar-button-icon {
-    background-position:0 -256px;
+    background-position: icon(12);
 }
 .chickenpaint-tool-soft-eraser .chickenpaint-toolbar-button-icon {
-    background-position:0 -288px;
+    background-position: icon(13);
 }
 .chickenpaint-tool-smudge .chickenpaint-toolbar-button-icon {
-    background-position:0 -768px;
+    background-position: icon(32);
 }
 .chickenpaint-tool-blender .chickenpaint-toolbar-button-icon {
-    background-position:0 -896px;
+    background-position: icon(3);
 }
 .chickenpaint-tool-dodge .chickenpaint-toolbar-button-icon {
-    background-position:0 -512px;
+    background-position: icon(11);
 }
 .chickenpaint-tool-burn .chickenpaint-toolbar-button-icon {
-    background-position:0 -544px;
+    background-position: icon(7);
 }
 .chickenpaint-tool-blur .chickenpaint-toolbar-button-icon {
-    background-position:0 -736px;
+    background-position: icon(4);
 }
 .chickenpaint-tool-color-picker .chickenpaint-toolbar-button-icon {
-    background-position:0 -960px;
+    background-position: icon(10);
+}
+.chickenpaint-tool-rect-selection .chickenpaint-toolbar-button-icon {
+    background-position: icon(26);
 }
 
 .chickenpaint-tool-zoom-in .chickenpaint-toolbar-button-icon {
-    background-position:0 -416px;
+    background-position: icon(38);
 }
 .chickenpaint-tool-zoom-out .chickenpaint-toolbar-button-icon {
-    background-position:0 -448px;
+    background-position: icon(39);
 }
 .chickenpaint-tool-zoom-100 .chickenpaint-toolbar-button-icon {
-    background-position:0 -480px;
+    background-position: icon(37);
 }
 .chickenpaint-tool-undo{
     margin-left:8px;
 }
 .chickenpaint-tool-undo .chickenpaint-toolbar-button-icon {
-    background-position:0 -320px;
+    background-position: icon(34);
 }
 .chickenpaint-tool-redo {
     margin-right:8px;
 }
 .chickenpaint-tool-redo .chickenpaint-toolbar-button-icon {
-    background-position:0 -352px;
+    background-position: icon(27);
 }
 .chickenpaint-tool-send .chickenpaint-toolbar-button-icon {
-    background-position:0 -384px;
+    background-position: icon(30);
 }
 .chickenpaint-tool-send-and-end .chickenpaint-toolbar-button-icon {
-    background-position:0 -992px;
+    background-position: icon(30);
 }
+.chickenpaint-unsaved { 
+    .chickenpaint-tool-send, .chickenpaint-tool-send-and-end {
+        outline: 1px solid #aaa;
+    }
+} 
 
 .chickenpaint-tool-freehand .chickenpaint-toolbar-button-icon {
-    background-position:0 -608px;
+    background-position: icon(14);
 }
 .chickenpaint-tool-line .chickenpaint-toolbar-button-icon {
-    background-position:0 -640px;
+    background-position: icon(33);
 }
 .chickenpaint-tool-bezier .chickenpaint-toolbar-button-icon {
-    background-position:0 -704px;
+    background-position: icon(2);
+}
+
+.chickenpaint-toolbar-style-old {
+    .chickenpaint-tool-rect-selection .chickenpaint-toolbar-button-icon {
+        background-position:0 0;
+    }
+    .chickenpaint-tool-move .chickenpaint-toolbar-button-icon {
+        background-position:0 -32px;
+    }
+    .chickenpaint-tool-flood-fill .chickenpaint-toolbar-button-icon {
+        background-position:0 -64px;
+    }
+    .chickenpaint-tool-gradient-fill .chickenpaint-toolbar-button-icon {
+        background-position:0 -96px;
+    }
+    .chickenpaint-tool-rotate-canvas .chickenpaint-toolbar-button-icon {
+        background-position:0 -928px;
+    }
+    .chickenpaint-tool-pan-canvas .chickenpaint-toolbar-button-icon {
+        background-position:0 -672px;
+    }
+    .chickenpaint-tool-pencil .chickenpaint-toolbar-button-icon {
+        background-position:0 -160px;
+    }
+    .chickenpaint-tool-pen .chickenpaint-toolbar-button-icon {
+        background-position:0 -192px;
+    }
+    .chickenpaint-tool-airbrush .chickenpaint-toolbar-button-icon {
+        background-position:0 -224px;
+    }
+    .chickenpaint-tool-water .chickenpaint-toolbar-button-icon {
+        background-position:0 -576px;
+    }
+    .chickenpaint-tool-eraser .chickenpaint-toolbar-button-icon {
+        background-position:0 -256px;
+    }
+    .chickenpaint-tool-soft-eraser .chickenpaint-toolbar-button-icon {
+        background-position:0 -288px;
+    }
+    .chickenpaint-tool-smudge .chickenpaint-toolbar-button-icon {
+        background-position:0 -768px;
+    }
+    .chickenpaint-tool-blender .chickenpaint-toolbar-button-icon {
+        background-position:0 -896px;
+    }
+    .chickenpaint-tool-dodge .chickenpaint-toolbar-button-icon {
+        background-position:0 -512px;
+    }
+    .chickenpaint-tool-burn .chickenpaint-toolbar-button-icon {
+        background-position:0 -544px;
+    }
+    .chickenpaint-tool-blur .chickenpaint-toolbar-button-icon {
+        background-position:0 -736px;
+    }
+    .chickenpaint-tool-color-picker .chickenpaint-toolbar-button-icon {
+        background-position:0 -960px;
+    }
+
+    .chickenpaint-tool-zoom-in .chickenpaint-toolbar-button-icon {
+        background-position:0 -416px;
+    }
+    .chickenpaint-tool-zoom-out .chickenpaint-toolbar-button-icon {
+        background-position:0 -448px;
+    }
+    .chickenpaint-tool-zoom-100 .chickenpaint-toolbar-button-icon {
+        background-position:0 -480px;
+    }
+    .chickenpaint-tool-undo{
+        margin-left:8px;
+    }
+    .chickenpaint-tool-undo .chickenpaint-toolbar-button-icon {
+        background-position:0 -320px;
+    }
+    .chickenpaint-tool-redo {
+        margin-right:8px;
+    }
+    .chickenpaint-tool-redo .chickenpaint-toolbar-button-icon {
+        background-position:0 -352px;
+    }
+    .chickenpaint-tool-send .chickenpaint-toolbar-button-icon {
+        background-position:0 -384px;
+    }
+    .chickenpaint-tool-send-and-end .chickenpaint-toolbar-button-icon {
+        background-position:0 -992px;
+    }
+
+    .chickenpaint-tool-freehand .chickenpaint-toolbar-button-icon {
+        background-position:0 -608px;
+    }
+    .chickenpaint-tool-line .chickenpaint-toolbar-button-icon {
+        background-position:0 -640px;
+    }
+    .chickenpaint-tool-bezier .chickenpaint-toolbar-button-icon {
+        background-position:0 -704px;
+    }
 }
 
 .chickenpaint-colorpicker-show {
@@ -1088,28 +1203,26 @@ body.chickenpaint-full-screen {
     }
 }
 
-/* Language overrides */
-.chickenpaint-lang-ja {
-    .chickenpaint-toolbar-button-icon {
-        background-image:url(../gfx/icons-ja.png);
-    }
-}
-
 /* High resolution alternatives */
 @media only screen and (min-device-pixel-ratio: 1.3),
 only screen and (min-resolution: 120dpi) {
     .chickenpaint-toolbar-button-icon {
-        background-image:url(../gfx/icons-2x.png);
-        background-size:32px 1024px;
-    }
-
-    .chickenpaint-lang-ja .chickenpaint-toolbar-button-icon {
-        background-image:url(../gfx/icons-ja-2x.png);
+        background-image:url(../gfx/icons-dark-64.png);
     }
 
     .chickenpaint-layer-thumbnail {
         background-image: url(../gfx/trans-grid-4px.png);
         background-size: 4px 4px;
+    }
+    
+    .chickenpaint-toolbar-style-old {
+        .chickenpaint-toolbar-button-icon {
+            background-image: url(../gfx/icons-old-2x.png);
+        }
+
+        &.chickenpaint-lang-ja .chickenpaint-toolbar-button-icon {
+            background-image: url(../gfx/icons-old-ja-2x.png);
+        }
     }
 }
 

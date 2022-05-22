@@ -58,7 +58,8 @@ export default function CPAboutDialog(parent) {
                                 <a target="_blank" href="https://www.gnu.org/licenses/">GNU General Public License</a> for more details.
                             </p>
         
-                            <pre class="pre-scrollable chickenpaint-third-party-licenses">Includes icons from the <a href="https://tango.freedesktop.org/" target="_blank">Tango Desktop Project</a>
+                            <pre class="pre-scrollable chickenpaint-third-party-licenses">Toolbar icons designed by <a target="_blank" href="https://github.com/Anteira">Miglena Lapavicheva (Anteira)</a>
+    These icons are dual-licensed under <a target="_blank" href="https://spdx.org/licenses/GPL-3.0-or-later.html">GPL-3.0-or-later</a> and <a target="_blank" href="https://creativecommons.org/licenses/by/3.0/">CC-BY-3.0</a>
 
 Includes icons from the <a target="_blank" href="https://extensions.libreoffice.org/en/extensions/show/tango-icon-theme-for-libreoffice">Tango Icon Theme for LibreOffice</a>:
     All artwork is licensed under the Creative Commons Attribution-Share Alike 3.0
@@ -70,7 +71,7 @@ Includes icons from the <a target="_blank" href="https://extensions.libreoffice.
     of these goes to the GNOME project (https://www.gnome.org)
     Derivatives and new icons were created by Alexander Wilms &lt;f.alexander.wilms@gmail.com> 
     and Miroslav Mazel &lt;mazelm@gmail.com>
-
+    
 Includes these MIT-licensed libraries:
 
     Includes the <a target="_blank" href="https://github.com/eligrey/FileSaver.js">FileSaver.js library</a>

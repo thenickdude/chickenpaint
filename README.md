@@ -81,6 +81,17 @@ Prevent zooming on mobile devices by adding this to your head:
 <meta name="viewport" content="width=device-width,user-scalable=no">
 ```
 
+For iOS Safari support, you also need to add this to the head to block the long-press text
+selection popup from appearing on your body elements (when not in ChickenPaint full-screen mode):
+
+```html
+<style>
+body {
+	-webkit-user-select: none; /* For iOS Safari: Prevent long-press from popping up a selection dialog on body text */
+}
+</style>
+```
+
 Add an element to serve as the container for ChickenPaint:
 
 ```html

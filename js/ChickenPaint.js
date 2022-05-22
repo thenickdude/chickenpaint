@@ -26,6 +26,7 @@ import "core-js/stable/promise/index.js";
 import "core-js/stable/map/index.js";
 import "core-js/stable/set/index.js";
 import "core-js/stable/typed-array/slice.js";
+import "core-js/stable/typed-array/fill.js";
 import "core-js/stable/array/iterator.js";
 import "core-js/stable/array/fill.js";
 import "core-js/stable/string/ends-with.js";
@@ -60,6 +61,7 @@ import CPRect from "./util/CPRect.js";
 
 import EventEmitter from "wolfy87-eventemitter";
 import {currentLanguage, guessLanguage, setLanguage, _} from "./languages/lang.js";
+import CPUserPreferences from "./gui/CPUserPreferences.js";
 
 /* Check for native pointer event support before PEP adds its polyfill */
 if (window.PointerEvent) {
@@ -362,6 +364,8 @@ export default function ChickenPaint(options) {
         isFullScreen = false,
 
         tools = createDrawingTools(),
+        
+        preferences = new CPUserPreferences(),
 
         boxBlurDialog, gridDialog,
 
@@ -395,6 +399,12 @@ export default function ChickenPaint(options) {
             CPZoom100: {
                 action: function () {
                     canvas.zoom100();
+                },
+                modifies: {gui: true}
+            },
+            CPToolbarStyle: {
+                action: function() {
+                    that.setToolbarStyle(preferences.toolbarStyle === "new" ? "old" : "new");
                 },
                 modifies: {gui: true}
             },
@@ -1275,6 +1285,15 @@ export default function ChickenPaint(options) {
         return isFullScreen;
     }
     
+    this.setToolbarStyle = function(styleName) {
+        preferences.set("toolbarStyle", styleName);
+        preferences.save(); // Eager save, so we don't lose it upon a crash
+    };
+    
+    this.getToolbarStyle = function() {
+        return preferences.get("toolbarStyle");
+    };
+    
     function installUnsavedWarning() {
         if (isEventSupported("onbeforeunload")) {
             window.addEventListener("beforeunload", function(e) {
@@ -1313,6 +1332,8 @@ export default function ChickenPaint(options) {
         that.emitEvent("fullScreen", [isFullScreen]);
         that.emitEvent("smallScreen", [smallScreenMode]);
         
+        preferences.load();
+        
         setTool(ChickenPaint.T_PEN);
         mainGUI.arrangePalettes();
         
@@ -1327,6 +1348,14 @@ export default function ChickenPaint(options) {
         CPWacomTablet.getRef().detectTablet();
         
         installUnsavedWarning();
+
+        that.artwork.on("unsavedChanges", unsavedChanges => {
+            // Only bug users to save if they can actually save multiple times per session.
+            // Otherwise they'll save when they're done with their drawing and not before:
+            if (options.allowMultipleSends) {
+                that.emitEvent("unsavedChanges", [unsavedChanges])
+            }
+        });
     }
     
     this.getResourcesRoot = function() {
@@ -1359,6 +1388,8 @@ export default function ChickenPaint(options) {
             this.setFullScreen(smallScreenMode);
             break;
     }
+    
+    preferences.on("toolbarStyle", newStyle => this.emitEvent("toolbarStyleChange", [newStyle]));
 
     if (options.loadImageUrl || options.loadChibiFileUrl) {
         let
@@ -1385,6 +1416,7 @@ export default function ChickenPaint(options) {
         }
 
         startMainGUI();
+        
         if (options.onLoaded) {
             options.onLoaded(this);
         }

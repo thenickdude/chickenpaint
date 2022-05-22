@@ -201,7 +201,7 @@ export default function CPCanvas(controller) {
         CURSOR_MOVE = "move", CURSOR_NESW_RESIZE = "nesw-resize", CURSOR_NWSE_RESIZE = "nwse-resize",
         CURSOR_NS_RESIZE = "ns-resize", CURSOR_EW_RESIZE = "ew-resize";
 
-    var
+    let
         that = this,
     
         canvasContainer = document.createElement("div"),
@@ -232,9 +232,11 @@ export default function CPCanvas(controller) {
         gridSize = 32,
         
         mouseX = 0, mouseY = 0,
-
         mouseIn = false, mouseDown = [false, false, false] /* Track each button independently */, wacomPenDown = false,
-        
+
+        sawPen = false,
+        sawTouchWithPressure = false,
+
         /* The area of the document that should have its layers fused and repainted to the screen
          * (i.e. an area modified by drawing tools). 
          * 
@@ -2081,27 +2083,53 @@ export default function CPCanvas(controller) {
     };
     
     /**
-     * Add the pointer pressure field to the given pointer event.
+     * Get the current pen pressure, given a pointer event.
+     * 
+     * @param {PointerEvent} e
+     * 
+     * @return {Number}
      */
     function getPointerPressure(e) {
         // Use Wacom pressure in preference to pointer event pressure (if present)
         if (wacomPenDown) {
             return tablet.getPressure();
-        } else {
-            /* In the Pointer Events API, mice have a default pressure of 0.5, but we want 1.0. Since we can't 
-             * distinguish between mice and pens at this point, we don't have any better options:
-             */
-            return e.pressure * 2;
         }
+        
+        // Safari fails to set pressure = 0.5 for mouse button down like it is supposed to
+        if (e.pointerType === "mouse" && e.buttons !== 0 && e.pressure === 0) {
+            return 1;
+        }
+        
+        if (e.pointerType === "touch") {
+            /* Some devices like iOS set pressure = 0 for all touch events, so detect that absence of pressure
+             * and override to use a pressure of 1.0.
+             * 
+             * Android provides useful pressure based on the finger's contact area with the screen (Pixel 4A).
+             */
+            if (e.pressure !== 0) {
+                sawTouchWithPressure = true;
+            }
+
+            if (sawTouchWithPressure) {
+                return e.pressure * 2;
+            }
+            
+            return 1.0;
+        }
+        
+        /* In the Pointer Events API, mice have a default pressure of 0.5, but we want 1.0. Since we can't 
+         * reliably distinguish between mice and pens, we don't have any better options:
+         */
+        return e.pressure * 2;
     }
 
-    var
+    let
         mouseWheelDebounce = false;
 
     function handleMouseWheel(e) {
         if (e.deltaY != 0) {
             if (!mouseWheelDebounce || Math.abs(e.deltaY) > 20) {
-                var
+                let
                     factor;
 
                 if (e.deltaY > 0) {
@@ -2110,7 +2138,7 @@ export default function CPCanvas(controller) {
                     factor = 1.15;
                 }
 
-                var
+                let
                     canvasPoint = mouseCoordToCanvas({x: e.pageX, y: e.pageY}),
                     docPoint = coordToDocument(canvasPoint);
 
@@ -2137,13 +2165,18 @@ export default function CPCanvas(controller) {
         }
     }
 
-    var
+    let
         canvasClientRect;
 
     function handlePointerMove(e) {
         // Use the cached position of the canvas on the page if possible
         if (!canvasClientRect) {
             canvasClientRect = canvas.getBoundingClientRect();
+        }
+        
+        if (sawPen && e.pointerType === "touch") {
+            // Palm rejection for devices that support pens
+            return;
         }
 
         /* Store these globally for the event handlers to refer to (we'd write to the event itself but some browsers
@@ -2152,18 +2185,17 @@ export default function CPCanvas(controller) {
         mouseX = e.clientX - canvasClientRect.left;
         mouseY = e.clientY - canvasClientRect.top;
 
-        // Flags used by e.buttons
         const
+            // Flags used by e.buttons:
             FLAG_PRIMARY = 1,
             FLAG_SECONDARY = 2,
-            FLAG_WHEEL = 4;
-
-        var
-            isDragging = e.buttons != 0,
-            pressure = getPointerPressure(e);
-
+            FLAG_WHEEL = 4,
+            
+            isDragging = e.buttons !== 0,
+            pressure = isDragging ? getPointerPressure(e) : 0;
+        
 		// Did any of our buttons change state?
-        if (((e.buttons & FLAG_PRIMARY) != 0) != mouseDown[BUTTON_PRIMARY]) {
+        if (((e.buttons & FLAG_PRIMARY) !== 0) != mouseDown[BUTTON_PRIMARY]) {
             if (e.mozPressure === 0.5) {
                 /* We received a Mozilla "click" level of pressure (0.5) as a pointer-move
                  * before we received the actual mouseDown event (which carries the correct pressure).
@@ -2182,7 +2214,7 @@ export default function CPCanvas(controller) {
             }
         }
 
-        if (((e.buttons & FLAG_SECONDARY) != 0) != mouseDown[BUTTON_SECONDARY]) {
+        if (((e.buttons & FLAG_SECONDARY) !== 0) != mouseDown[BUTTON_SECONDARY]) {
             mouseDown[BUTTON_SECONDARY] = !mouseDown[BUTTON_SECONDARY];
 
             if (mouseDown[BUTTON_SECONDARY]) {
@@ -2192,7 +2224,7 @@ export default function CPCanvas(controller) {
             }
         }
 
-        if (((e.buttons & FLAG_WHEEL) != 0) != mouseDown[BUTTON_WHEEL]) {
+        if (((e.buttons & FLAG_WHEEL) !== 0) != mouseDown[BUTTON_WHEEL]) {
             mouseDown[BUTTON_WHEEL] = !mouseDown[BUTTON_WHEEL];
 
             if (mouseDown[BUTTON_WHEEL]) {
@@ -2206,6 +2238,10 @@ export default function CPCanvas(controller) {
             modeStack.mouseDrag(e, pressure);
         } else {
             modeStack.mouseMove(e, pressure);
+        }
+        
+        if (!sawPen && e.pointerType === "pen") {
+            sawPen = true;
         }
     }
 
@@ -2222,6 +2258,11 @@ export default function CPCanvas(controller) {
 
     // Called when the first button on the pointer is depressed / pen touches the surface
     function handlePointerDown(e) {
+        if (sawPen && e.pointerType === "touch") {
+            // Palm rejection for devices that support pens
+            return;
+        }
+
         canvas.setPointerCapture(e.pointerId);
 
         canvasClientRect = canvas.getBoundingClientRect();

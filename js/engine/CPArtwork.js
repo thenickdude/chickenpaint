@@ -465,7 +465,10 @@ export default function CPArtwork(_width, _height) {
     }
 
     this.setHasUnsavedChanges = function(value) {
-        hasUnsavedChanges = value;
+        if (value != hasUnsavedChanges) {
+            hasUnsavedChanges = value;
+            this.emitEvent("unsavedChanges", [value]);
+        }
     };
     
     this.getHasUnsavedChanges = function() {
@@ -1152,9 +1155,10 @@ export default function CPArtwork(_width, _height) {
         if (!this.isUndoAllowed()) {
             return;
         }
-        hasUnsavedChanges = true;
         
-        var
+        this.setHasUnsavedChanges(true);
+        
+        let
             undo = undoList.pop();
         
         undo.undo();
@@ -1166,9 +1170,10 @@ export default function CPArtwork(_width, _height) {
         if (!this.isRedoAllowed()) {
             return;
         }
-        hasUnsavedChanges = true;
+        
+        this.setHasUnsavedChanges(true);
 
-        var
+        let
             redo = redoList.pop();
 	
         redo.redo();
@@ -1237,7 +1242,7 @@ export default function CPArtwork(_width, _height) {
 	 * @param {CPUndo} undo
 	 */
 	function addUndo(undo) {
-        hasUnsavedChanges = true;
+        that.setHasUnsavedChanges(true);
 
         if (redoList.length > 0) {
             redoList = [];
@@ -1543,7 +1548,7 @@ export default function CPArtwork(_width, _height) {
         if (!copy && activeOp instanceof CPActionMoveSelection && activeOp.layer == this.getActiveLayer()) {
             activeOp.amend(offsetX, offsetY);
             redoList = [];
-            hasUnsavedChanges = true;
+            this.setHasUnsavedChanges(true);
         } else {
             let
                 action = new CPActionMoveSelection(offsetX, offsetY, copy);
