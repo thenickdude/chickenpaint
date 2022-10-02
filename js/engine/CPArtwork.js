@@ -20,7 +20,6 @@
     along with ChickenPaint. If not, see <http://www.gnu.org/licenses/>.
 */
 
-import CPLayer from "./CPLayer.js";
 import CPImageLayer from "./CPImageLayer.js";
 import CPLayerGroup from "./CPLayerGroup.js";
 import CPBlend from "./CPBlend.js";
@@ -42,8 +41,16 @@ import {setCanvasInterpolation} from "../util/CPPolyfill.js";
 import {createCanvas} from "../util/Canvas.js";
 
 import EventEmitter from "wolfy87-eventemitter";
-import {CPBrushTool,CPBrushToolEraser,CPBrushToolDodge,CPBrushToolBurn,CPBrushToolWatercolor,
-    CPBrushToolBlur,CPBrushToolSmudge,CPBrushToolOil} from "./CPBrushTool.js";
+import {
+    CPBrushTool,
+    CPBrushToolBlur,
+    CPBrushToolBurn,
+    CPBrushToolDodge,
+    CPBrushToolEraser,
+    CPBrushToolOil,
+    CPBrushToolSmudge,
+    CPBrushToolWatercolor
+} from "./CPBrushTool.js";
 
 /**
  * Capitalize the first letter of the string.
@@ -64,7 +71,7 @@ function arrayEquals(a, b) {
         return false;
     }
 
-    for (var i = 0; i < a.length; i++) {
+    for (let i = 0; i < a.length; i++) {
         if (a[i] != b[i]) {
             return false;
         }
@@ -303,16 +310,11 @@ export default function CPArtwork(_width, _height) {
      * @returns {CPRect}
      */
     this.getSelectionAutoSelect = function() {
-        var
-            r;
-
         if (!curSelection.isEmpty()) {
-            r = curSelection.clone();
-        } else {
-            r = this.getBounds();
+            return this.getSelection();
         }
 
-        return r;
+        return this.getBounds();
     };
     
     this.getSelection = function() {
@@ -331,12 +333,9 @@ export default function CPArtwork(_width, _height) {
 
         blendTree.resetTree();
 
-        var
-            rect = that.getBounds();
+        invalidateUndoBuffers();
 
-        undoImageInvalidRegion.set(rect);
-
-        callListenersUpdateRegion(rect);
+        callListenersUpdateRegion(that.getBounds());
     }
 
     /**
@@ -573,11 +572,11 @@ export default function CPArtwork(_width, _height) {
      * @param {int} numChildren - Number of layers from the parent group to wrap
      */
     this.addLayerGroupObject = function(parent, group, numChildren) {
-        var
+        let
             children = [];
 
         // Grab our child layers off the stack and add them to us.
-        for (var i = 0; i < numChildren; i++) {
+        for (let i = 0; i < numChildren; i++) {
             children.unshift(parent.layers.pop());
         }
 
@@ -618,7 +617,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.isMergeDownAllowed = function() {
-        var
+        let
             layerIndex = curLayer.parent.indexOf(curLayer);
 
         return layerIndex > 0 && curLayer instanceof CPImageLayer && curLayer.parent.layers[layerIndex - 1] instanceof CPImageLayer;
@@ -777,7 +776,7 @@ export default function CPArtwork(_width, _height) {
 
         paintUndoArea.union(imageRect);
 
-        var
+        let
             destImage = maskEditingMode ? curLayer.mask : curLayer.image,
             sampleImage = sampleAllLayers && !maskEditingMode ? fusion : destImage;
 
@@ -804,14 +803,14 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.getDefaultLayerName = function(isGroup) {
-        var
+        let
             prefix = isGroup ? "Group " : "Layer ",
             nameRegex = isGroup ? /^Group [0-9]+$/ : /^Layer [0-9]+$/,
             highestLayerNb = 0,
             layers = layersRoot.getLinearizedLayerList(false);
         
-        for (var i = 0; i < layers.length; i++) {
-            var
+        for (let i = 0; i < layers.length; i++) {
+            let
                 layer = layers[i];
             
             if (nameRegex.test(layer.name)) {
@@ -838,7 +837,7 @@ export default function CPArtwork(_width, _height) {
     function mergeStrokeBuffer() {
         if (!strokedRegion.isEmpty()) {
             if (maskEditingMode) {
-                var
+                let
                     destMask = curLayer.mask;
 
                 // Can't erase on masks, so just paint black instead
@@ -848,7 +847,7 @@ export default function CPArtwork(_width, _height) {
                     paintingModes[curBrush.brushMode].mergeOntoMask(destMask, undoMask, curColor & 0xFF);
                 }
             } else {
-                var
+                let
                     destImage = curLayer.image,
                     lockAlpha = curLayer.getLockAlpha();
 
@@ -878,7 +877,7 @@ export default function CPArtwork(_width, _height) {
     }
 
     this.addBackgroundLayer = function() {
-        var
+        let
             layer = new CPImageLayer(that.width, that.height, this.getDefaultLayerName(false));
         
         layer.image.clearAll(EMPTY_BACKGROUND_COLOR);
@@ -988,7 +987,7 @@ export default function CPArtwork(_width, _height) {
     };
 
     this.isCreateClippingMaskAllowed = function() {
-        var
+        let
             layerIndex = curLayer.parent.indexOf(curLayer),
             underLayer = curLayer.parent.layers[layerIndex - 1];
 
@@ -1125,7 +1124,7 @@ export default function CPArtwork(_width, _height) {
      * @returns {number}
      */
     this.getUndoMemoryUsed = function() {
-        var
+        let
             total = 0;
 
         for (let redo of redoList) {
@@ -1218,7 +1217,7 @@ export default function CPArtwork(_width, _height) {
      * buffer won't contain any data from the new layer to begin with).
      */
     function invalidateUndoBuffers() {
-        var
+        let
             bounds = that.getBounds();
 
         undoImageInvalidRegion.set(bounds);
@@ -1376,7 +1375,7 @@ export default function CPArtwork(_width, _height) {
      * @param {boolean} horizontal
      */
     this.flip = function(horizontal) {
-        var
+        let
             rect = this.getSelection(),
 
             flipWholeLayer = rect.isEmpty(),
@@ -1671,7 +1670,7 @@ export default function CPArtwork(_width, _height) {
 
     this.copySelectionMerged = function() {
         if (this.isCopySelectionMergedAllowed()) {
-            var
+            let
                 selection = that.getSelection();
 
             clipboard = new CPClip(this.fusionLayers().cloneRect(selection), selection.left, selection.top);
@@ -1870,7 +1869,7 @@ export default function CPArtwork(_width, _height) {
             paintedMask = maskEditingMode;
         }
 
-        var
+        let
             rect = paintUndoArea.clone(),
 
             xorImage = paintedImage ? undoImage.copyRectXOR(curLayer.image, rect) : null,
@@ -1925,7 +1924,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            var
+            let
                 newMask = new CPGreyBmp(that.width, that.height, 8);
             
             newMask.clearAll(255);
@@ -1955,7 +1954,7 @@ export default function CPArtwork(_width, _height) {
      * @constructor
      */
     function CPActionRemoveLayerMask(layer, apply) {
-        var
+        let
             oldMask = layer.mask,
             oldLayerImage,
             maskWasSelected = false;
@@ -2025,7 +2024,7 @@ export default function CPArtwork(_width, _height) {
         this.undo = function() {
             parentGroup.removeLayer(newLayer);
 
-            var
+            let
                 newSelection = parentGroup.layers[newLayerIndex - 1] || parentGroup.layers[0] || parentGroup;
 
             if (toBelowLayer instanceof CPImageLayer) {
@@ -2069,7 +2068,7 @@ export default function CPArtwork(_width, _height) {
      * @constructor
      */
     function CPActionDuplicateLayer(sourceLayer) {
-        var
+        let
             newLayer = sourceLayer.clone(),
             oldMask = maskEditingMode;
 
@@ -2084,7 +2083,7 @@ export default function CPArtwork(_width, _height) {
             const
                 COPY_SUFFIX = " Copy";
 
-            var
+            let
                 newLayerName = sourceLayer.name;
             
             if (!newLayerName.endsWith(COPY_SUFFIX)) {
@@ -2144,7 +2143,7 @@ export default function CPArtwork(_width, _height) {
 
             oldGroup.removeLayerAtIndex(oldIndex);
 
-            var
+            let
                 newSelectedLayer;
 
             /* Attempt to select the layer underneath the one that was removed, otherwise the one on top,
@@ -2177,7 +2176,7 @@ export default function CPArtwork(_width, _height) {
      * @constructor
      */
     function CPActionMergeGroup(layerGroup) {
-        var
+        let
             oldGroupIndex = layerGroup.parent.indexOf(layerGroup),
             fromMask = maskEditingMode,
             mergedLayer = new CPImageLayer(that.width, that.height, "");
@@ -2200,7 +2199,7 @@ export default function CPArtwork(_width, _height) {
             return undone ? 0 : layerGroup.getMemoryUsed();
         };
 
-        var
+        let
             blendTree = new CPBlendTree(layerGroup, that.width, that.height, false),
             blended;
 
@@ -2233,7 +2232,7 @@ export default function CPArtwork(_width, _height) {
      * @constructor
      */
     function CPActionMergeDownLayer(topLayer) {
-        var
+        let
             group = topLayer.parent,
 
             underLayer = group.layers[group.indexOf(topLayer) - 1],
@@ -2242,7 +2241,7 @@ export default function CPArtwork(_width, _height) {
             fromMask = maskEditingMode;
 
         this.undo = function() {
-            var
+            let
                 mergedIndex = group.indexOf(mergedLayer);
 
             group.removeLayerAtIndex(mergedIndex);
@@ -2270,7 +2269,7 @@ export default function CPArtwork(_width, _height) {
                 CPBlend.fuseImageOntoImage(mergedLayer.image, true, topLayer.image, topLayer.alpha, topLayer.blendMode, topLayer.getBounds(), topLayer.mask);
             }
             
-            var
+            let
                 underIndex = group.indexOf(underLayer);
 
             // Remove both of the layers to be merged
@@ -2295,7 +2294,7 @@ export default function CPArtwork(_width, _height) {
     CPActionMergeDownLayer.prototype.constructor = CPActionMergeDownLayer;
 
     function CPActionMergeAllLayers() {
-        var 
+        let 
             oldActiveLayer = that.getActiveLayer(),
             oldRootLayers = layersRoot.layers.slice(0), // Clone old layers array
             flattenedLayer = new CPImageLayer(that.width, that.height, "");
@@ -2308,7 +2307,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            var
+            let
                 oldFusion = that.fusionLayers();
 
             flattenedLayer.copyImageFrom(oldFusion);
@@ -2380,7 +2379,7 @@ export default function CPArtwork(_width, _height) {
         this.undo = function() {
             layer.parent.removeLayer(layer);
 
-            var
+            let
                 newIndex = fromBelowLayer ? fromGroup.indexOf(fromBelowLayer) : fromGroup.layers.length;
 
             fromGroup.insertLayer(newIndex, layer);
@@ -2408,7 +2407,7 @@ export default function CPArtwork(_width, _height) {
 
             layer.parent.removeLayer(layer);
 
-            var
+            let
                 newIndex = toBelowLayer ? toGroup.indexOf(toBelowLayer) : toGroup.layers.length;
 
             toGroup.insertLayer(newIndex, layer);
@@ -2451,7 +2450,7 @@ export default function CPArtwork(_width, _height) {
      * @param {string} propertyName
      * @param {boolean} invalidatesLayer
      *
-     * @returns {CPUndo}
+     * @returns {typeof CPUndo}
      */
     function generateLayerPropertyChangeAction(propertyName, invalidatesLayer) {
         let
@@ -2492,7 +2491,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         ChangeAction.prototype.noChange = function () {
-            for (var i = 0; i < this.from.length; i++) {
+            for (let i = 0; i < this.from.length; i++) {
                 if (this.from[i] != this.to) {
                     return false;
                 }
@@ -2503,7 +2502,7 @@ export default function CPArtwork(_width, _height) {
         return ChangeAction;
     }
 
-    var
+    let
         CPActionChangeLayerAlpha = generateLayerPropertyChangeAction("alpha", true),
         CPActionChangeLayerMode = generateLayerPropertyChangeAction("blendMode", true),
         CPActionChangeLayerVisible = generateLayerPropertyChangeAction("visible", true),
@@ -3082,7 +3081,7 @@ export default function CPArtwork(_width, _height) {
          * @override
          */
         getMemoryUsed(undone, param) {
-            var
+            let
                 result = super.getMemoryUsed(undone, param);
             
             result += memoryUsedByCanvas(this.composeCanvas);
@@ -3218,7 +3217,7 @@ export default function CPArtwork(_width, _height) {
             invalidateLayer(this.movingLayers.map(layerInfo => layerInfo.layer), invalidateRegion, true, true);
 
             if (!this.fromSelection.isEmpty()) {
-                var
+                let
                     toSelection = this.fromSelection.clone();
                 toSelection.translate(this.offsetX, this.offsetY);
                 that.setSelection(toSelection);
@@ -3313,7 +3312,7 @@ export default function CPArtwork(_width, _height) {
         };
 
         this.redo = function() {
-            var
+            let
                 layerIndex = parentGroup.indexOf(oldLayer),
                 sourceRect = clip.bmp.getBounds(),
                 x, y;
@@ -3330,7 +3329,7 @@ export default function CPArtwork(_width, _height) {
 
             if (clip.bmp instanceof CPGreyBmp) {
                 // Need to convert greyscale to color before we can paste
-                var
+                let
                     clone = new CPColorBmp(clip.bmp.width, clip.bmp.height);
 
                 clone.copyPixelsFromGreyscale(clip.bmp);
