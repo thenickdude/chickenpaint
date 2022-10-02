@@ -46,7 +46,7 @@ CPGreyBmp.prototype.constructor = CPGreyBmp;
 
 CPGreyBmp.prototype.createBitmap = function(width, height, bitDepth) {
     this.bitDepth = bitDepth;
-    
+
     switch (bitDepth) {
         case 32:
             this.data = new Uint32Array(width * height);
@@ -100,19 +100,28 @@ CPGreyBmp.prototype.clearAll = function(value) {
     this.data.fill(value);
 };
 
+/**
+ * Fill the given rectangle with the given value
+ *
+ * @param {CPRect} rect
+ * @param {int} value
+ */
 CPGreyBmp.prototype.clearRect = function(rect, value) {
     rect = this.getBounds().clipTo(rect);
 
-    var
-        yStride = this.width - rect.getWidth(),
-        pixIndex = this.offsetOfPixel(rect.left, rect.top);
+    if (rect.equals(this.getBounds())) {
+        this.clearAll(value);
+    } else {
+        let
+            yStride = this.width,
+            fillWidth = rect.right - rect.left,
+            rowStartIndex = this.offsetOfPixel(rect.left, rect.top);
 
-    for (var y = rect.top; y < rect.bottom; y++, pixIndex += yStride) {
-        for (var x = rect.left; x < rect.right; x++, pixIndex++) {
-            this.data[pixIndex] = value;
+        for (let y = rect.top; y < rect.bottom; y++, rowStartIndex += yStride) {
+            this.data.fill(value, rowStartIndex, rowStartIndex + fillWidth);
         }
     }
-};
+}
 
 /**
  * Use nearest-neighbor (subsampling) to scale that bitmap to replace the pixels of this one.
@@ -149,20 +158,20 @@ CPGreyBmp.prototype.floodFill = function(x, y, color) {
     if (!this.isInside(x, y)) {
         return;
     }
-    
+
     color = color & 0xFF;
-    
+
     let
         oldColor = this.getPixel(x, y),
-        
+
         stack = [],
         clip = this.getBounds(),
-        
+
         data = this.data;
-    
+
     stack.push({x1: x, x2: x, y: y, dy: -1});
     stack.push({x1: x, x2: x, y: y + 1, dy: 1});
-    
+
     if (color == oldColor) {
         return;
     }
@@ -348,7 +357,7 @@ CPGreyBmp.prototype.getImageData = function(x, y, width, height) {
 
         srcIndex = this.offsetOfPixel(x, y),
         dstIndex = 0,
-        
+
         ySkip = this.width - width;
 
     for (let y = 0; y < height; y++, srcIndex += ySkip) {
@@ -374,15 +383,15 @@ CPGreyBmp.prototype.pasteImageData = function(imageData, x, y) {
     let
         srcIndex = 0,
         dstIndex = this.offsetOfPixel(x, y),
-        
+
         ySkip = this.width - imageData.width;
-    
+
     for (let y = 0; y < imageData.height; y++, dstIndex += ySkip) {
         for (let x = 0; x < imageData.width; x++, srcIndex += 4, dstIndex++) {
             this.data[dstIndex] = imageData.data[srcIndex]; // Use the first (red) channel as the intensity
         }
     }
-    
+
     return imageData;
 };
 
@@ -709,33 +718,33 @@ CPGreyBmp.prototype.getValueBounds = function(initialBounds, value) {
         x, y,
         yStride,
         found;
-    
+
     // Find the first non-matching row
     yStride = this.width - result.getWidth();
     pixIndex = this.offsetOfPixel(result.left, result.top);
-    
+
     for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
         found = false;
-        
+
         for (x = result.left; x < result.right; x++, pixIndex++) {
             if (this.data[pixIndex] != value) {
                 found = true;
                 break;
             }
         }
-        
+
         if (found) {
             break;
         }
     }
-    
+
     result.top = y;
-    
+
     if (result.top == result.bottom) {
         // Rect is empty, no opaque pixels in the initialBounds
         return result;
     }
-    
+
     // Now the last non-matching row
     pixIndex = this.offsetOfPixel(result.right - 1, result.bottom - 1);
     for (y = result.bottom - 1; y >= result.top; y--, pixIndex -= yStride) {
@@ -746,19 +755,19 @@ CPGreyBmp.prototype.getValueBounds = function(initialBounds, value) {
                 break;
             }
         }
-        
+
         if (found) {
             break;
         }
     }
-    
+
     result.bottom = y + 1; /* +1 since the bottom/right edges of the rect are exclusive */
-    
+
     // Now columns from the left
     yStride = this.width;
     for (x = result.left; x < result.right; x++) {
         pixIndex = this.offsetOfPixel(x, result.top);
-        
+
         found = false;
         for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
             if (this.data[pixIndex] != value) {
@@ -766,18 +775,18 @@ CPGreyBmp.prototype.getValueBounds = function(initialBounds, value) {
                 break;
             }
         }
-        
+
         if (found) {
             break;
         }
     }
-    
+
     result.left = x;
-    
+
     // And columns from the right
     for (x = result.right - 1; x >= result.left; x--) {
         pixIndex = this.offsetOfPixel(x, result.top);
-        
+
         found = false;
         for (y = result.top; y < result.bottom; y++, pixIndex += yStride) {
             if (this.data[pixIndex] != value) {
@@ -785,14 +794,14 @@ CPGreyBmp.prototype.getValueBounds = function(initialBounds, value) {
                 break;
             }
         }
-        
+
         if (found) {
             break;
         }
     }
-    
+
     result.right = x + 1;
-    
+
     return result;
 };
 
@@ -1053,12 +1062,12 @@ CPGreyBmp.prototype.equals = function(that) {
 	if (this.width != that.width || this.height != that.height) {
 		return false;
 	}
-	
+
 	for (let pixIndex = 0; pixIndex < this.data.length; pixIndex++) {
 		if (this.data[pixIndex] != that.data[pixIndex]) {
 			return false;
 		}
 	}
-	
+
 	return true;
 };
