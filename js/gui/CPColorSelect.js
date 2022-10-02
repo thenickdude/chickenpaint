@@ -26,40 +26,94 @@ import CPColor from "../util/CPColor.js";
 import CPColorBmp from "../engine/CPColorBmp.js";
 import {setContrastingDrawStyle} from "./CPGUIUtils.js";
 
+const
+    CONTROL_WIDTH = 128,
+    CONTROL_HEIGHT = 128,
+
+    PIXEL_SCALE = (window.devicePixelRatio || 1),
+
+    CANVAS_WIDTH = Math.round(CONTROL_WIDTH * PIXEL_SCALE),
+    CANVAS_HEIGHT = Math.round(CONTROL_HEIGHT * PIXEL_SCALE);
+
 /**
  *
  * @param controller
  * @param {CPColor} initialColor
  * @constructor
  */
-export default function CPColorSelect(controller, initialColor) {
-    const
-        CONTROL_WIDTH = 128,
-        CONTROL_HEIGHT = 128,
+export default class CPColorSelect {
 
-        PIXEL_SCALE = (window.devicePixelRatio || 1),
+    _controller;
 
-        CANVAS_WIDTH = Math.round(CONTROL_WIDTH * PIXEL_SCALE),
-        CANVAS_HEIGHT = Math.round(CONTROL_HEIGHT * PIXEL_SCALE);
+    _canvas;
+    _canvasContext;
+    _imageData;
 
-    const
-        canvas = document.createElement("canvas"),
-        canvasContext = canvas.getContext("2d"),
+    _bitmapInvalid = true;
+    _capturedMouse = false;
+    _greyscale = false;
 
-        imageData = canvasContext.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT),
-        data = imageData.data,
-        color = new CPColor(0);
+    color = new CPColor(0);
 
-    var
-        bitmapInvalid = true,
-        capturedMouse = false,
-        greyscale = false;
+    constructor(controller, initialColor) {
+        this._controller = controller;
 
-    function makeBitmap() {
         let
-            pixIndex = 0;
+            canvas =  document.createElement("canvas");
 
-        if (greyscale) {
+        this._canvas = canvas;
+
+        canvas.className = 'chickenpaint-colorpicker-select';
+        canvas.setAttribute("touch-action", "none");
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        canvas.style.width = CONTROL_WIDTH + "px";
+        canvas.style.height = CONTROL_HEIGHT + "px";
+
+        this._canvasContext = canvas.getContext("2d");
+        this._imageData = this._canvasContext.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // Workaround for Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=1350157:
+        this._canvasContext.getImageData(0, 0, 1, 1);
+
+        this._handleEndDrag = this._endDrag.bind(this);
+        this._handleMousePickColor = this._mousePickColor.bind(this);
+
+        canvas.addEventListener("pointerdown", e => this._startDrag(e));
+
+        if (initialColor) {
+            this.color.copyFrom(initialColor);
+        }
+
+        controller.on("colorChange", c => {
+            this.color.copyFrom(c);
+
+            this._bitmapInvalid = true;
+            this.paint();
+        });
+
+        controller.on("colorModeChange", newMode => {
+            this._greyscale = (newMode == "greyscale");
+
+            this._bitmapInvalid = true;
+            this.paint();
+        });
+
+        this.paint();
+    }
+
+    _makeBitmap() {
+        if (!this._bitmapInvalid) {
+            return;
+        }
+
+        let
+            pixIndex = 0,
+            data = this._imageData.data;
+
+        if (this._greyscale) {
             for (let y = 0; y < CANVAS_HEIGHT; y++) {
                 let
                     col = 255 - Math.round(y / (CANVAS_HEIGHT - 1) * 255);
@@ -75,7 +129,7 @@ export default function CPColorSelect(controller, initialColor) {
             }
         } else {
             let
-                col = color.clone();
+                col = this.color.clone();
 
             for (let y = 0; y < CANVAS_HEIGHT; y++) {
                 col.setValue(255 - ~~(y / (CANVAS_HEIGHT - 1) * 255));
@@ -93,119 +147,82 @@ export default function CPColorSelect(controller, initialColor) {
             }
         }
 
-        bitmapInvalid = false;
+        this._bitmapInvalid = false;
     }
 
-    function paint() {
-        if (bitmapInvalid) {
-            makeBitmap();
-        }
+    paint() {
+        this._makeBitmap();
 
-        canvasContext.putImageData(imageData, 0, 0, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        this._canvasContext.putImageData(this._imageData, 0, 0);
 
-        var
-            cursorX = color.getSaturation() / 255 * (CANVAS_WIDTH - 1),
-            cursorY = (255 - color.getValue()) / 255 * (CANVAS_HEIGHT - 1);
+        let
+            cursorX = this.color.getSaturation() / 255 * (CANVAS_WIDTH - 1),
+            cursorY = (255 - this.color.getValue()) / 255 * (CANVAS_HEIGHT - 1);
 
-        setContrastingDrawStyle(canvasContext, "stroke");
+        setContrastingDrawStyle(this._canvasContext, "stroke");
 
-        canvasContext.lineWidth = 1.5 * PIXEL_SCALE;
+        this._canvasContext.lineWidth = 1.5 * PIXEL_SCALE;
 
-        canvasContext.beginPath();
+        this._canvasContext.beginPath();
 
-        if (greyscale) {
-            canvasContext.moveTo(0, cursorY);
-            canvasContext.lineTo(CANVAS_WIDTH, cursorY);
+        if (this._greyscale) {
+            this._canvasContext.moveTo(0, cursorY);
+            this._canvasContext.lineTo(CANVAS_WIDTH, cursorY);
         } else {
-            canvasContext.arc(cursorX, cursorY, 5 * PIXEL_SCALE, 0, Math.PI * 2);
+            this._canvasContext.arc(cursorX, cursorY, 5 * PIXEL_SCALE, 0, Math.PI * 2);
         }
 
-        canvasContext.stroke();
+        this._canvasContext.stroke();
 
-        canvasContext.globalCompositeOperation = 'source-over';
+        this._canvasContext.globalCompositeOperation = 'source-over';
     }
 
-    function mousePickColor(e) {
-        var
-            x = e.pageX - $(canvas).offset().left,
-            y = e.pageY - $(canvas).offset().top,
+    _mousePickColor(e) {
+        let
+            x = e.pageX - $(this._canvas).offset().left,
+            y = e.pageY - $(this._canvas).offset().top,
 
             value = Math.max(Math.min(255 - ~~(y * 255 / (CONTROL_HEIGHT - 1)), 255), 0);
 
-        if (greyscale) {
-            color.setGreyscale(value);
+        if (this._greyscale) {
+            this.color.setGreyscale(value);
         } else {
-            var
+            let
                 sat = Math.max(Math.min(~~(x * 255 / (CONTROL_WIDTH - 1)), 255), 0);
 
-            color.setHsv(color.getHue(), sat, value);
+            this.color.setHsv(this.color.getHue(), sat, value);
         }
 
-        paint();
-        controller.setCurColor(color);
+        this.paint();
+        this._controller.setCurColor(this.color);
     }
 
-    function continueDrag(e) {
-        mousePickColor(e);
+    _endDrag(e) {
+        this._canvas.releasePointerCapture(e.pointerId);
+        this._capturedMouse = false;
+        this._canvas.removeEventListener("pointerup", this._handleEndDrag);
+        this._canvas.removeEventListener("pointermove", this._handleMousePickColor);
     }
 
-    function endDrag(e) {
-        canvas.releasePointerCapture(e.pointerId);
-        capturedMouse = false;
-        canvas.removeEventListener("pointerup", endDrag);
-        canvas.removeEventListener("pointermove", continueDrag);
-    }
-
-    function startDrag(e) {
-        if (!capturedMouse) {
-            capturedMouse = true;
-            canvas.setPointerCapture(e.pointerId);
-            canvas.addEventListener("pointerup", endDrag);
-            canvas.addEventListener("pointermove", continueDrag);
+    _startDrag(e) {
+        if (!this._capturedMouse) {
+            this._capturedMouse = true;
+            this._canvas.setPointerCapture(e.pointerId);
+            this._canvas.addEventListener("pointerup", this._handleEndDrag);
+            this._canvas.addEventListener("pointermove", this._handleMousePickColor);
         }
 
-        mousePickColor(e);
+        this._handleMousePickColor(e);
     }
 
-    this.setHue = function(hue) {
-        if (color.getHue() != hue) {
-            color.setHue(hue);
-            controller.setCurColor(color);
+    setHue(hue) {
+        if (this.color.getHue() != hue) {
+            this.color.setHue(hue);
+            this._controller.setCurColor(this.color);
         }
-    };
-
-    this.getElement = function() {
-        return canvas;
-    };
-
-    controller.on("colorChange", function(c) {
-        color.copyFrom(c);
-
-        bitmapInvalid = true;
-        paint();
-    });
-
-    controller.on("colorModeChange", function(newMode) {
-        greyscale = (newMode == "greyscale");
-
-        bitmapInvalid = true;
-        paint();
-    });
-
-    canvas.addEventListener("pointerdown", startDrag);
-
-    canvas.className = 'chickenpaint-colorpicker-select';
-    canvas.setAttribute("touch-action", "none");
-
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
-
-    canvas.style.width = CONTROL_WIDTH + "px";
-    canvas.style.height = CONTROL_HEIGHT + "px";
-
-    if (initialColor) {
-        color.copyFrom(initialColor);
     }
 
-    paint();
+    getElement() {
+        return this._canvas;
+    }
 }
