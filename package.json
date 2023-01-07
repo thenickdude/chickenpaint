@@ -26,7 +26,7 @@
     "postcss": "^8.4.5",
     "postcss-cli": "^9.1.0",
     "sass": "^1.49.0",
-    "serve": "^13.0.2",
+    "serve": "^14.1.2",
     "uglify-js": "=3.4.8"
   },
   "scripts": {
