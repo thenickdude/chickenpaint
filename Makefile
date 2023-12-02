@@ -68,8 +68,8 @@ chickenpaint.zip: resources/css/chickenpaint.css resources/js/chickenpaint.js re
 	git archive -o $@ HEAD
 	zip $@ $^
 
-node_modules/.bin/sass node_modules/.bin/browserify node_modules/.bin/icomoon-build :
-	npm install
+# node_modules/.bin/sass node_modules/.bin/browserify node_modules/.bin/icomoon-build :
+# 	npm install
 
 resources/css/chickenpaint.css : resources/css/chickenpaint.scss resources/fonts/ChickenPaint-Symbols.scss node_modules/.bin/sass
 	node_modules/.bin/sass $< > $@
@@ -83,8 +83,8 @@ resources/js/chickenpaint.js : js/engine/* js/gui/* js/util/* js/languages/* js/
 	mkdir -p resources/js
 	node_modules/.bin/browserify --standalone ChickenPaint --debug --entry js/ChickenPaint.js --transform babelify | node_modules/.bin/exorcist $@.map > $@
 
-resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*
-	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --scss resources/fonts/ChickenPaint-Symbols.scss --fonts resources/fonts
+# resources/fonts/ChickenPaint-Symbols.scss : resources/fonts/chickenpaint-symbols-source/*
+# 	node_modules/.bin/icomoon-build -p "resources/fonts/chickenpaint-symbols-source/ChickenPaint Symbols.json" --scss resources/fonts/ChickenPaint-Symbols.scss --fonts resources/fonts
 
 ifdef CAIROSVG
 # Render icons with CairoSVG (https://cairosvg.org/) - Preferred since results are much sharper at 32px size 

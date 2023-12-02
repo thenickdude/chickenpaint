@@ -64,7 +64,7 @@ export default function CPBoxBlurDialog(parent, controller) {
         dialog.modal("show");
     };
     
-    applyButton.click(function(e) {
+    applyButton.on('click',function(e) {
         let
             blur = Math.max(parseInt(blurAmountElem.val(), 10), 1),
             iterations = Math.min(Math.max(parseInt(blurIterationsElem.val(), 10), 1), 8);
@@ -77,11 +77,11 @@ export default function CPBoxBlurDialog(parent, controller) {
             show: false
         })
         .on('shown.bs.modal', function() {
-            blurAmountElem.focus();
+            blurAmountElem.trigger('focus');
         })
         .on('keypress', function(e) {
-            if (e.keyCode == 13) {
-                applyButton.click();
+            if (e.key === "Enter") {
+                applyButton.trigger('click');
             }
         });
     

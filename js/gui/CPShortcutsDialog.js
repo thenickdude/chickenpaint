@@ -127,7 +127,7 @@ export default function CPShortcutsDialog(parent) {
                                                     Move the canvas around
                                                 </dd>
                                                 <dt>
-                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Alt</span> + <span class="fa fa-mouse-pointer"></span> Middle</span> <span class="chickenpaint-shortcut-alternate">or</span> <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">Alt</span> + <span class="chickenpaint-shortcut-key">Space</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
+                                                    <span class="chickenpaint-shortcut"><span class="chickenpaint-shortcut-key">R</span> + <span class="fa fa-mouse-pointer"></span> Left</span>
                                                 </dt>
                                                 <dd>
                                                     Rotate the canvas

@@ -57,7 +57,7 @@ export default function CPGridDialog(parent, canvas) {
     
     gridSizeElem.val(canvas.getGridSize());
     
-    $(".chickenpaint-apply-grid-settings", dialog).click(function(e) {
+    $(".chickenpaint-apply-grid-settings", dialog).on('click',function(e) {
         var
             gridSize = parseInt(gridSizeElem.val(), 10);
         
@@ -69,10 +69,10 @@ export default function CPGridDialog(parent, canvas) {
             show: false
         })
         .on('shown.bs.modal', function() {
-            gridSizeElem.focus();
+            gridSizeElem.trigger('focus');
         }).on('keypress', function(e) {
-            if (e.keyCode == 13) {
-                applyButton.click();
+            if (e.key === "Enter") {
+                applyButton.trigger('click');
             }
         });
     

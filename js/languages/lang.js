@@ -12,8 +12,8 @@ let
     currentLangName = "en";
 
 export function setLanguage(languageCode) {
-    languageCode = languageCode.replace(/[-_].+$/, "").toLowerCase();
-    
+	languageCode = languageCode.split(/[-_]/, 1)[0].toLowerCase();
+
     if (languageCode in languages) {
         currentLang = languages[languageCode];
         currentLangName = languageCode;

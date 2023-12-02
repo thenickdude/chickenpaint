@@ -1306,7 +1306,7 @@ export default function ChickenPaint(options) {
             });
         } else {
             // Fall back to just catching links
-            $("a").click(function(e) {
+            $("a").on('click',function(e) {
                 if (this.getAttribute("href") != "#" && that.artwork.getHasUnsavedChanges()) {
                     return confirm("Your drawing has unsaved changes! Are you sure to want to navigate away?");
                 }

@@ -2855,7 +2855,10 @@ export default function CPArtwork(_width, _height) {
 		
 		        this.composeCanvas = createCanvas(that.width, that.height);
 		
-		        this.composeCanvasContext = this.composeCanvas.getContext("2d");
+				// willReadFrequently
+				this.composeCanvasContext = this.composeCanvas.getContext("2d", {	
+					willReadFrequently: true,
+				});
 		        setCanvasInterpolation(this.composeCanvasContext, this.interpolation == "smooth");
 		        
 		        /* Calling getImageData on the canvas forces Chrome to disable hardware acceleration for it, see

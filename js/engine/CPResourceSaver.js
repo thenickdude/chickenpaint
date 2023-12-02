@@ -49,7 +49,7 @@ export default function CPResourceSaver(options) {
         that.emitEvent("savingFailure", [serverMessage]);
     }
     
-    function postDrawing(formData) {
+		function postDrawing(formData) {
         var
             xhr = new XMLHttpRequest();
     

@@ -98,6 +98,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-airbrush",
                 command: "CPAirbrush",
                 toolTip: "Airbrush",
+                shortcut: "a",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_AIRBRUSH
             },
@@ -105,6 +106,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-water",
                 command: "CPWater",
                 toolTip: "Waterpaint",
+                shortcut: "w",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_WATER
             },
@@ -120,6 +122,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-soft-eraser",
                 command: "CPSoftEraser",
                 toolTip: "Soft eraser",
+                shortcut: "s",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_SOFTERASER
             },
@@ -127,6 +130,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-smudge",
                 command: "CPSmudge",
                 toolTip: "Smudge",
+                shortcut: "d",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_SMUDGE
             },
@@ -134,6 +138,7 @@ export default function CPToolPalette(cpController) {
                 className: "chickenpaint-tool-blender",
                 command: "CPBlender",
                 toolTip: "Blender",
+                shortcut: "c",
                 mode: ChickenPaint.M_DRAW,
                 tool: ChickenPaint.T_BLENDER
             },
@@ -158,7 +163,7 @@ export default function CPToolPalette(cpController) {
                 command: "CPRotateCanvas",
                 commandDoubleClick: "CPResetCanvasRotation",
                 toolTip: "Rotate canvas",
-                mode: ChickenPaint.M_ROTATE_CANVAS
+				mode: ChickenPaint.M_ROTATE_CANVAS
             },
             {
                 className: "chickenpaint-tool-pan-canvas",

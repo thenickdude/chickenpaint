@@ -1499,14 +1499,14 @@ export default function CPLayersPalette(controller) {
         });
 
         textBox.addEventListener("keypress", function(e) {
-            if (e.keyCode == 13) { // Enter
+            if (e.key === "Enter") { // Enter
                 that.renameAndHide();
             }
             e.stopPropagation();
         });
 
         textBox.addEventListener("keyup", function(e) {
-            if (e.keyCode == 27) { // Escape
+            if (e.key === "Escape") { // Escape
                 that.hide();
             }
             e.stopPropagation();

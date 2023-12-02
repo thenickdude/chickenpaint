@@ -56,12 +56,12 @@ export default function CPConfirmTransformDialog(parent, controller) {
 		applyButton = $(".chickenpaint-accept-transform", dialog),
 		rejectButton = $(".chickenpaint-reject-transform", dialog);
 
-	applyButton.click(function(e) {
+	applyButton.on('click',function(e) {
 		controller.actionPerformed({action: "CPTransformAccept"});
 		that.emitEvent("accept");
 	});
 
-	rejectButton.click(function(e) {
+	rejectButton.on('click',function(e) {
 		controller.actionPerformed({action: "CPTransformReject"});
 		that.emitEvent("reject");
 	});
@@ -78,8 +78,8 @@ export default function CPConfirmTransformDialog(parent, controller) {
 			dialog.remove();
 		})
 		.on('keypress', function(e) {
-			if (e.keyCode == 13) {
-				applyButton.click();
+			if (e.key === "Enter") {
+				applyButton.trigger('click');
 			}
 		});
 

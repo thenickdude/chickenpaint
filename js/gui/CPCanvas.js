@@ -344,29 +344,25 @@ export default function CPCanvas(controller) {
             modeStack.push(colorPickerMode, true);
             // Avoid infinite recursion by only delivering the event to the new mode (don't let it bubble back to us!)
             modeStack.peek().mouseDown(e, button, pressure);
-        } else if (button == BUTTON_WHEEL || spacePressed && button == BUTTON_PRIMARY) {
-            if (e.altKey) {
-                modeStack.push(rotateCanvasMode, true);
+        } else if (!spacePressed && button == BUTTON_PRIMARY && !e.altKey && key.isPressed("r")) {
+			modeStack.push(rotateCanvasMode, true);
                 modeStack.peek().mouseDown(e, button, pressure);
-            } else {
+            } else if (button == BUTTON_WHEEL || !e.altKey && spacePressed && button == BUTTON_PRIMARY){
                 modeStack.push(panMode, true);
                 modeStack.peek().mouseDown(e, button, pressure);
             }
-        }
     };
     
     CPDefaultMode.prototype.keyDown = function(e) {
-        if (e.keyCode == 32 /* Space */) {
-            if (e.altKey) {
+			if (e.key.toLowerCase()==="r" && e.key !== " ") {
                 modeStack.push(rotateCanvasMode, true);
                 modeStack.peek().keyDown(e);
-            } else {
+			} else if (e.key.toLowerCase() !== "r" && e.key === " " && !e.altKey){
                 // We can start the pan mode before the mouse button is even pressed, so that the "grabbable" cursor appears
                 modeStack.push(panMode, true);
                 modeStack.peek().keyDown(e);
+				return true;
             }
-            return true;
-        }
     };
 
 	/**
@@ -888,7 +884,7 @@ export default function CPCanvas(controller) {
             panningButton;
 
         this.keyDown = function(e) {
-            if (e.keyCode == 32 /* Space */) {
+            if (e.key === " ") {
                 // If we're not already panning, then advertise that a left-click would pan
                 if (!this.capture) {
                     setCursor(CURSOR_PANNABLE);
@@ -899,7 +895,7 @@ export default function CPCanvas(controller) {
         };
 
         this.keyUp = function(e) {
-            if (this.transient && panningButton != BUTTON_WHEEL && e.keyCode == 32 /* Space */) {
+            if (this.transient && panningButton != BUTTON_WHEEL && e.key === " ") {
                 setCursor(CURSOR_DEFAULT);
 
                 modeStack.pop(); // yield control to the default mode
@@ -1115,7 +1111,7 @@ export default function CPCanvas(controller) {
     CPMoveToolMode.prototype.constructor = CPMoveToolMode;
 
     CPMoveToolMode.prototype.mouseMove = function(e) {
-        if (!key.isPressed("space") && !e.altKey) {
+        if (!key.isPressed("r")) {
             setCursor(CURSOR_MOVE);
             return true;
         }
@@ -1546,11 +1542,11 @@ export default function CPCanvas(controller) {
         };
 
         this.keyDown = function(e) {
-            if (e.keyCode == 13 /* Enter */) {
+            if (e.key === "Enter") {
                 controller.actionPerformed({action: "CPTransformAccept"});
 
                 return true;
-            } else if (e.keyCode == 27 /* Escape */) {
+            } else if (e.key === "Escape") {
                 controller.actionPerformed({action: "CPTransformReject"});
 
                 return true;
@@ -1606,9 +1602,10 @@ export default function CPCanvas(controller) {
         this.mouseDown = function(e, button, pressure) {
             if (this.capture) {
                 return true;
-            } else if (!this.transient && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
-                    || e.altKey && (button == BUTTON_WHEEL || button == BUTTON_PRIMARY && key.isPressed("space"))) {
-                firstClick = {x: mouseX, y: mouseY};
+				} else if (!this.transient && button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space")
+					|| (button == BUTTON_PRIMARY && !e.altKey && !key.isPressed("space") && key.isPressed("r"))) {
+
+				firstClick = {x: mouseX, y: mouseY};
 
                 initAngle = that.getRotation();
                 initTransform = transform.clone();
@@ -1690,7 +1687,7 @@ export default function CPCanvas(controller) {
 
                 this.capture = false;
 
-                if (this.transient && !(key.isPressed("space") && key.alt)) {
+                if (this.transient && !key.isPressed("r")) {
                     modeStack.pop();
                 }
 
@@ -1699,7 +1696,7 @@ export default function CPCanvas(controller) {
         };
 
         this.keyUp = function(e) {
-            if (this.transient && rotateButton != BUTTON_WHEEL && e.keyCode == 32 /* Space */) {
+            if (this.transient && rotateButton != BUTTON_WHEEL && e.key === " ") {
                 setCursor(CURSOR_DEFAULT);
 
                 modeStack.pop(); // yield control to the default mode
@@ -1709,7 +1706,7 @@ export default function CPCanvas(controller) {
         };
 
         this.keyDown = function(e) {
-            if (e.keyCode == 32 /* Space */ && e.altKey) {
+            if (e.key.toLowerCase() === "r") {
                 // That's our hotkey, so stay in this mode (don't forward to CPDefaultMode)
                 return true;
             }
@@ -2287,6 +2284,10 @@ export default function CPCanvas(controller) {
     }
     
     function handleKeyUp(e) {
+		//altキーを押下した直後にショートカットキーが動作しなくなる問題を修正
+		if (e.key.toLowerCase()==="alt") {//altキーが離された時のDefaultの動作をキャンセル
+			e.preventDefault();
+		}
         modeStack.keyUp(e);
     }
     

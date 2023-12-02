@@ -209,6 +209,7 @@ const
                     name: "Flip horizontal",
                     action: "CPHFlip",
                     mnemonic: "H",
+                    shortcut: "h",
                     title: "Flips the current selected area horizontally"
                 },
                 {
@@ -637,7 +638,7 @@ export default function CPMainMenu(controller, mainGUI) {
                         +'</span>'
                     + '</button>'
                 );
-            widgetMenuElem.click(e => {
+            widgetMenuElem.on('click',e => {
                 menuItemClicked(widgetMenuElem);
                 e.preventDefault();
             })
@@ -658,7 +659,7 @@ export default function CPMainMenu(controller, mainGUI) {
     });
 
     // Since we don't use the data-api
-    $(".navbar-toggler", bar).click(e => {
+    $(".navbar-toggler", bar).on('click',e => {
         $('.collapse', bar).collapse('toggle');
         e.preventDefault();
     });

@@ -144,19 +144,19 @@ export default function CPSendDialog(controller, parent, resourceSaver) {
         
     });
     
-    $(".chickenpaint-post-drawing", dialog).click(function() {
+    $(".chickenpaint-post-drawing", dialog).on('click',function() {
         controller.actionPerformed({action: "CPPost"});
     });
 
     $(".chickenpaint-exit", dialog)
         .toggle(controller.isActionSupported("CPExit"))
-        .click(function() {
+        .on('click',function() {
             alert("When you want to come back and finish your drawing, just click the 'new drawing' button again and "
                 + "you can choose to continue this drawing.");
             controller.actionPerformed({action: "CPExit"});
         });
     
-    $(".chickenpaint-send-cancel", dialog).click(function() {
+    $(".chickenpaint-send-cancel", dialog).on('click',function() {
         resourceSaver.cancel();
     });
     
