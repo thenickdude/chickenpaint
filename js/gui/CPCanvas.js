@@ -2284,8 +2284,8 @@ export default function CPCanvas(controller) {
     }
     
     function handleKeyUp(e) {
-		//altキーを押下した直後にショートカットキーが動作しなくなる問題を修正
-		if (e.key.toLowerCase()==="alt") {//altキーが離された時のDefaultの動作をキャンセル
+		// Fixes an issue where shortcut keys stop working immediately after pressing the alt key
+		if (e.key.toLowerCase()==="alt") {
 			e.preventDefault();
 		}
         modeStack.keyUp(e);
