@@ -2,6 +2,7 @@ import {save as chiSave} from "../../js/engine/CPChibiFile.js";
 import AdobeColorTable from "../util/AdobeColorTable.js";
 import EventEmitter from "wolfy87-eventemitter";
 import FileSaver from "file-saver";
+import JSZip from "jszip";
 
 import {_} from "../languages/lang.js";
 
@@ -170,14 +171,18 @@ export default function CPResourceSaver(options) {
 
                     postDrawing(formData);
                 } else {
-                    FileSaver.saveAs(flatBlob, "oekaki.png");
-
+                    var zip = new JSZip();
+                    zip.file("oekaki.png", flatBlob);
                     if (chibiResult) {
-                        FileSaver.saveAs(chibiResult.bytes, "oekaki.chi");
+                        zip.file("oekaki.chi", chibiResult.bytes);
                     }
                     if (swatchesBlob) {
-                        FileSaver.saveAs(swatchesBlob, "oekaki.aco");
+                        zip.file("oekaki.aco", swatchesBlob);
                     }
+                    zip.generateAsync({ type: "blob" }).then(function(content) {
+                        FileSaver.saveAs(content, "oekaki.zip");
+                        that.emitEvent("savingComplete");
+                    });
                 }
             })
             .catch(function(e) {
