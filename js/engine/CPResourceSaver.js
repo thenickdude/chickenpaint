@@ -33,11 +33,11 @@ export function binaryStringToByteArray(s) {
 export default function CPResourceSaver(options) {
     var
         that = this,
-        
+
         cancelled = false;
-    
+
     options.rotation = options.rotation || 0;
-    
+
     function reportProgress(progress) {
         if (progress === null) {
             that.emitEvent("savingProgress", [1.0, _("Saving drawing...")]);
@@ -45,58 +45,58 @@ export default function CPResourceSaver(options) {
             that.emitEvent("savingProgress", [progress, _("Saving drawing...") +" (" + Math.round(progress * 100) + "%)"]);
         }
     }
-    
+
     function reportFatal(serverMessage) {
         that.emitEvent("savingFailure", [serverMessage]);
     }
-    
+
     function postDrawing(formData) {
         var
             xhr = new XMLHttpRequest();
-    
+
         xhr.upload.addEventListener("progress", function(evt) {
             var
                 progress;
-            
+
             if (evt.lengthComputable) {
                 progress = evt.loaded / evt.total;
             } else {
                 progress = null;
             }
-            
+
             reportProgress(progress);
         }, false);
-    
+
         xhr.addEventListener("load", function(evt) {
             reportProgress(1.0);
-            
+
             if (this.status == 200 && /^CHIBIOK/.test(this.response)) {
                 that.emitEvent("savingComplete");
             } else {
                 reportFatal(this.response);
             }
         }, false);
-    
+
         xhr.addEventListener("error", function() {
             reportFatal(this.response);
         }, false);
-    
+
         reportProgress(0);
-    
+
         xhr.open("POST", options.url, true);
-        
+
         xhr.responseType = "text";
-        
+
         xhr.send(formData);
     }
-    
+
     /**
      * Begin saving the data provided in the constructor. Returns immediately, and fires these events to report the
      * saving progress:
-     * 
-     * savingProgress(progress) - Progress is [0.0 ... 1.0] and reports how much has uploaded so far, or null if the 
+     *
+     * savingProgress(progress) - Progress is [0.0 ... 1.0] and reports how much has uploaded so far, or null if the
      *                            total progress could not be determined.
-     * savingFailure(error)     - When saving fails, along with a string error message to display to the user. 
+     * savingFailure(error)     - When saving fails, along with a string error message to display to the user.
      * savingComplete()         - When saving completes succesfully
      */
     this.save = function() {
@@ -108,7 +108,7 @@ export default function CPResourceSaver(options) {
         flat = binaryStringToByteArray(options.artwork.getFlatPNG(options.rotation));
         flatBlob = new Blob([flat], {type: "image/png"});
         flat = null; // Don't need this any more
-        
+
         var
             serializeLayers;
 
@@ -117,7 +117,7 @@ export default function CPResourceSaver(options) {
         } else {
             serializeLayers = chiSave(options.artwork);
         }
-        
+
         serializeLayers
             .then(function(chibiResult) {
                 if (cancelled) {
@@ -189,7 +189,7 @@ export default function CPResourceSaver(options) {
                 that.emitEvent("savingFailure");
             });
     };
-    
+
     this.cancel = function() {
         cancelled = true;
     };
