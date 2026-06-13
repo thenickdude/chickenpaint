@@ -23,13 +23,13 @@
 import {createCanvas} from "./Canvas.js";
 
 function getCanvasInterpolationPropName(canvasContext) {
-	var
+	let
 		browserProperties = [
 			"imageSmoothingEnabled", "mozImageSmoothingEnabled", "webkitImageSmoothingEnabled",
 			"msImageSmoothingEnabled"
 		];
 
-	for (var i = 0; i < browserProperties.length; i++) {
+	for (let i = 0; i < browserProperties.length; i++) {
 		if (browserProperties[i] in canvasContext) {
 			return browserProperties[i];
 		}
@@ -39,7 +39,7 @@ function getCanvasInterpolationPropName(canvasContext) {
 }
 
 export function isCanvasInterpolationSupported() {
-	var
+	let
 		canvas = createCanvas(0, 0),
 		canvasContext = canvas.getContext("2d");
 
@@ -47,7 +47,7 @@ export function isCanvasInterpolationSupported() {
 }
 
 export function setCanvasInterpolation(canvasContext, enabled) {
-	var
+	let
 		propName = getCanvasInterpolationPropName(canvasContext);
 
 	if (propName) {
@@ -56,11 +56,26 @@ export function setCanvasInterpolation(canvasContext, enabled) {
 }
 
 export function isEventSupported(eventName) {
-	var
+	let
 		isSupported = eventName in window;
 
 	if (!isSupported) {
-		var
+		let
+			el = document.createElement('div');
+		el.setAttribute(eventName, 'return;');
+
+		isSupported = typeof el[eventName] == 'function';
+	}
+
+	return isSupported;
+}
+
+export function isDocumentEventSupported(eventName) {
+	let
+		isSupported = eventName in document;
+
+	if (!isSupported) {
+		let
 			el = document.createElement('div');
 		el.setAttribute(eventName, 'return;');
 
@@ -71,7 +86,7 @@ export function isEventSupported(eventName) {
 }
 
 export function isCanvasSupported(){
-	var
+	let
 		elem = createCanvas(0, 0);
 	
 	return !!(elem.getContext && elem.getContext('2d'));

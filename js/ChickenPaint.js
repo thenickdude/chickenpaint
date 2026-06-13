@@ -54,7 +54,10 @@ import CPTabletDialog from "./gui/CPTabletDialog.js";
 import CPGridDialog from "./gui/CPGridDialog.js";
 import CPSendDialog from "./gui/CPSendDialog.js";
 
-import {isCanvasInterpolationSupported, isEventSupported, isCanvasSupported, isFlexboxSupported} from "./util/CPPolyfill.js";
+import {
+    isCanvasInterpolationSupported, isEventSupported, isCanvasSupported, isFlexboxSupported,
+    isDocumentEventSupported
+} from "./util/CPPolyfill.js";
 import CPColor from "./util/CPColor.js";
 import CPWacomTablet from "./util/CPWacomTablet.js";
 import CPRect from "./util/CPRect.js";
@@ -1312,6 +1315,25 @@ export default function ChickenPaint(options) {
                 }
             });
         }
+
+        if (isDocumentEventSupported("onvisibilitychange")) {
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden' && that.artwork.getHasUnsavedChanges()) {
+                    /* Make title update while the tab is in the background.
+                     * This causes Chrome's lifecycle API to not discard us
+                     */
+                    setTimeout(() => {
+                        const
+                            /* Make sure suffix character toggles (● or ○), Chrome ignores us if we
+                             * just re-assign the same title
+                             */
+                            char = document.title.match(/\u25CF$/) ? `\u25CB` : `\u25CF`;
+
+                        document.title = document.title.replace(/ [\u25CF\u25CB]$/, "") + ` ${char}`;
+                    }, 3000);
+                }
+            });
+        }
     }
     
     function startMainGUI(swatches, initialRotation90) {
@@ -1354,6 +1376,11 @@ export default function ChickenPaint(options) {
             // Otherwise they'll save when they're done with their drawing and not before:
             if (options.allowMultipleSends) {
                 that.emitEvent("unsavedChanges", [unsavedChanges])
+            }
+
+            if (!unsavedChanges) {
+                // Remove "unsaved changes" marker from document title
+                document.title = document.title.replace(/ [\u25CF\u25CB]$/, "");
             }
         });
     }
