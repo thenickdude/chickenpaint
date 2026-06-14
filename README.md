@@ -45,11 +45,11 @@ which shows how ChickenPaint can be fetched using NPM and loaded into your page.
 ## Building
 Building ChickenPaint requires [Node](https://nodejs.org/en/) to be installed (I'm using v10 LTS) along with GNU Make.
 
-In the root of ChickenPaint, run `npm install` to install required dependencies. 
+In the root of ChickenPaint, run `npm ci` to install required dependencies. 
 
 One of the development dependencies is `node-canvas`, which has some required system packages like `libcairo2`. 
 [Check out the full list of packages on their site](https://github.com/Automattic/node-canvas). You'll need to install 
-these for `npm install` to succeed.
+these for `npm ci` to succeed.
 
 Then run `make all` to build ChickenPaint.
 The resulting `chickenpaint.js` file will be written to `resources/js`, and `chickenpaint.css` will be written to `resources/css`.
