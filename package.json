@@ -19,7 +19,7 @@
     "browserify": "^17.0.0",
     "canvas": "^2.7.0",
     "exorcist": "^2.0.0",
-    "mocha": "^9.1.4",
+    "mocha": "^11.7.6",
     "multipipe": "^2.0.3",
     "node-png": "^0.4.3",
     "postcss": "^8.4.5",
